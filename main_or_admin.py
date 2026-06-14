@@ -1,0 +1,4134 @@
+"""
+Main OR Admin Dashboard — หน้าบริหารจัดการสำหรับหัวหน้า/ผู้บริหาร
+ดูอย่างเดียว ไม่ต้องกดอะไร — เปิดมาเห็นภาพรวมทันที
+"""
+import time
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta, timezone
+_BKK = timezone(timedelta(hours=7))
+
+def _now_bkk():
+    """Return current datetime in Bangkok timezone (naive, for comparisons with stored timestamps)."""
+    return datetime.now(_BKK).replace(tzinfo=None)
+from main_or_db import (
+    get_room_status, get_kpi, get_delay_alerts, get_workload,
+    get_summary, get_nurse_stats, div_name, DIV_CODE_MAP,
+    get_historical_analytics, export_cases_csv, export_summary_excel, get_cases,
+    get_wait_stats, get_handover_stats, get_admin_pin,
+    # Procedure-name fuzzy normalization (moved to db layer for sharing
+    # with predict_from_local_history). Same rules apply across heatmap +
+    # AI prediction so groupings stay consistent.
+    _normalize_procedure_name, _PROC_RULES,
+)
+import numpy as np
+import re
+import html
+
+
+def _esc(v) -> str:
+    """🔒 M-01: หนี HTML กันค่าจาก CSV/DB (ชื่อ/หัตถการ/แพทย์) ฝัง <script> หรือทำ layout พัง"""
+    return html.escape(str(v)) if v is not None else ''
+
+
+def _admin_mask_nm(v):
+    """🔒 mask ชื่อผู้ป่วยก่อนแสดงบนหน้าบริหาร (มาตรา 3.6.4) — ว่าง/ไม่มีคืน ''"""
+    if not v:
+        return ''
+    try:
+        from main_or_db import mask_patient_name
+        return mask_patient_name(v)
+    except Exception:
+        return ''
+
+
+# ════════════════════════════════════════════════════════════════════
+# 🚀 Cache สถิติจาก cloud — ลด latency (ดึง Supabase ครั้งเดียว แล้วใช้ซ้ำ)
+#    กดครั้งแรกช้า (ดึงจริง) · ครั้งต่อไป/สลับ tab/กลับมาดู → เร็วทันที
+#    ปุ่ม 🔄 รีเฟรช bump version → ดึงใหม่ · auto-expire ทุก 15 นาที
+# ════════════════════════════════════════════════════════════════════
+def _stats_ver() -> int:
+    return int(st.session_state.get('_stats_cache_ver', 0))
+
+
+@st.cache_data(ttl=900, show_spinner="กำลังโหลดสถิติจาก cloud (ครั้งแรกช้าหน่อย)…")
+def _ca_historical(date_from, date_to, _v):
+    return get_historical_analytics(date_from, date_to)
+
+
+@st.cache_data(ttl=900, show_spinner="กำลังโหลดสรุปจาก cloud…")
+def _ca_summary(date_from, date_to, _v):
+    return get_summary(date_from, date_to)
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def _ca_handover(date_from, date_to, _v):
+    return get_handover_stats(date_from, date_to)
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def _ca_turnover(date_from, date_to, _v):
+    from main_or_db import get_turnover_stats
+    return get_turnover_stats(date_from, date_to)
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def _ca_surgeon_list(date_from, date_to, sort_by, _v):
+    from main_or_db import get_surgeon_list
+    return get_surgeon_list(date_from, date_to, sort_by=sort_by)
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def _ca_surgeon_detail(surgeon, date_from, date_to, _v):
+    from main_or_db import get_surgeon_detail
+    return get_surgeon_detail(surgeon, date_from, date_to)
+from difflib import SequenceMatcher
+
+
+def _fuzzy_merge(df: pd.DataFrame, name_col: str = 'procedure_name',
+                 threshold: float = 0.88) -> pd.DataFrame:
+    """หลังผ่าน rule แล้ว ถ้ายังมีชื่อใกล้เคียงกันมาก (เช่น พิมพ์ผิดเล็กน้อย)
+    ให้รวมเข้ากลุ่มที่มีจำนวนเคสมากกว่า"""
+    if df.empty:
+        return df
+    df = df.sort_values('n', ascending=False).reset_index(drop=True)
+    canonical_for = {}      # raw name → canonical
+    canonical_list = []     # canonical names ที่เลือกแล้ว
+    for raw in df[name_col].tolist():
+        best_canon, best_ratio = None, 0.0
+        rl = raw.lower()
+        for canon in canonical_list:
+            r = SequenceMatcher(None, rl, canon.lower()).ratio()
+            if r > best_ratio:
+                best_ratio, best_canon = r, canon
+        if best_canon is not None and best_ratio >= threshold:
+            canonical_for[raw] = best_canon
+        else:
+            canonical_for[raw] = raw
+            canonical_list.append(raw)
+    df['_canon'] = df[name_col].map(canonical_for)
+    # weighted mean ของ avg_min
+    df['_total_min'] = df['n'] * df['avg_min'].fillna(0)
+    g = (df.groupby('_canon', as_index=False)
+           .agg(n=('n', 'sum'), _total_min=('_total_min', 'sum')))
+    g['avg_min'] = (g['_total_min'] / g['n']).round(0)
+    g = g.rename(columns={'_canon': name_col}).drop(columns=['_total_min'])
+    return g.sort_values('n', ascending=False).reset_index(drop=True)
+
+
+def group_top_procedures(proc_df: pd.DataFrame, top_n: int = 10,
+                         fuzzy_threshold: float = 0.88) -> pd.DataFrame:
+    """รวมหัตถการที่คล้ายกันเข้าด้วยกัน แล้วคืน Top-N
+    Returns DataFrame[procedure_name, n, avg_min]
+    """
+    if proc_df is None or proc_df.empty:
+        return proc_df
+    df = proc_df.copy()
+    df['procedure_name'] = (df['procedure_name']
+                            .fillna('UNKNOWN').astype(str)
+                            .apply(_normalize_procedure_name))
+    if 'avg_min' not in df.columns:
+        df['avg_min'] = 0
+    # rollup ครั้งแรกหลัง normalize (weighted mean)
+    df['_total_min'] = df['n'] * df['avg_min'].fillna(0)
+    df = (df.groupby('procedure_name', as_index=False)
+            .agg(n=('n', 'sum'), _total_min=('_total_min', 'sum')))
+    df['avg_min'] = (df['_total_min'] / df['n']).round(0)
+    df = df.drop(columns=['_total_min'])
+    # fuzzy merge รอบสองสำหรับชื่อที่หลุด rule
+    df = _fuzzy_merge(df, 'procedure_name', threshold=fuzzy_threshold)
+    return df.head(top_n).reset_index(drop=True)
+
+
+# ============================================================================
+# CSS
+# ============================================================================
+
+_ADMIN_CSS = """
+<style>
+/* Unified page header — flat clinical (เลิก gradient ให้ตรงธีมกลาง ui_theme) */
+.admin-header {
+    background: #ffffff; border: 1px solid #eef2f6;
+    border-left: 5px solid #1565c0;
+    padding: 16px 22px; border-radius: 12px;
+    margin-bottom: 14px;
+}
+.admin-header h1 { margin: 0; font-size: 23px; font-weight: 600; color: #0f172a; }
+.admin-header p { margin: 5px 0 0; font-size: 13.5px; color: #64748b; }
+
+.room-card {
+    border-radius: 12px; padding: 16px; text-align: center;
+    min-height: 140px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+.room-free  { background: #f5f5f5; border-top: 4px solid #bdbdbd; }
+.room-busy  { background: #e3f2fd; border-top: 4px solid #1976d2; }
+.room-done  { background: #e8f5e9; border-top: 4px solid #388e3c; }
+
+.kpi-card {
+    background: white; border-radius: 12px; padding: 16px; text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,.06); min-height: 100px;
+}
+.kpi-value { font-size: 32px; font-weight: 700; margin: 4px 0; }
+.kpi-label { font-size: 13px; color: #757575; }
+
+/* CSS hover tooltip — popup ลอยขึ้นเมื่อ hover ⓘ icon */
+.cw-tip { position: relative; display: inline-block; cursor: help;
+          color: #90a4ae; font-size: 11px; margin-left: 4px; }
+.cw-tip .cw-tip-body {
+    visibility: hidden; opacity: 0; transition: opacity .15s;
+    position: absolute; z-index: 999;
+    bottom: 125%; left: 50%; transform: translateX(-50%);
+    width: 280px; background: #263238; color: #eceff1;
+    text-align: left; padding: 12px 14px; border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.25);
+    font-size: 12px; line-height: 1.55; font-weight: 400;
+    white-space: normal;
+}
+.cw-tip .cw-tip-body::after {
+    content: ""; position: absolute; top: 100%; left: 50%;
+    margin-left: -6px; border: 6px solid transparent;
+    border-top-color: #263238;
+}
+.cw-tip:hover .cw-tip-body { visibility: visible; opacity: 1; }
+.cw-tip-title { font-weight: 600; color: #4fc3f7; margin-bottom: 6px;
+                font-size: 12.5px; }
+
+.alert-card {
+    border-radius: 10px; padding: 12px 16px; margin: 6px 0;
+    display: flex; align-items: center; gap: 10px;
+}
+.alert-high   { background: #ffebee; border-left: 4px solid #d32f2f; }
+.alert-medium { background: #fff8e1; border-left: 4px solid #f9a825; }
+.alert-info   { background: #f5f5f5; border-left: 4px solid #9e9e9e; }
+
+.section-title {
+    font-size: 16px; font-weight: 700; color: #37474f;
+    margin: 20px 0 10px; padding-bottom: 6px;
+    border-bottom: 2px solid #e0e0e0;
+}
+/* Group header (level 1): big BOLD colored heading for major sections */
+.group-header {
+    font-size: 22px; font-weight: 800; color: #0d47a1;
+    margin: 40px 0 18px; padding: 14px 22px;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f5fbff 100%);
+    border-left: 8px solid #1565c0; border-radius: 10px;
+    letter-spacing: 0.2px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.group-header.green   { color: #1b5e20; background: linear-gradient(135deg,#e8f5e9 0%,#f5fbf5 100%); border-left-color: #2e7d32; }
+.group-header.purple  { color: #4a148c; background: linear-gradient(135deg,#f3e5f5 0%,#fbf5fb 100%); border-left-color: #6a1b9a; }
+.group-header.orange  { color: #bf360c; background: linear-gradient(135deg,#fff3e0 0%,#fff9f0 100%); border-left-color: #e65100; }
+.group-header.teal    { color: #004d40; background: linear-gradient(135deg,#e0f2f1 0%,#f0faf9 100%); border-left-color: #00695c; }
+.group-header.indigo  { color: #1a237e; background: linear-gradient(135deg,#e8eaf6 0%,#f5f6fc 100%); border-left-color: #283593; }
+/* Subsection (level 2): clear divider with accent line */
+.sub-title {
+    font-size: 16px; font-weight: 600; color: #37474f;
+    margin: 22px 0 10px; padding: 8px 12px;
+    background: #fafafa;
+    border-left: 4px solid #90a4ae; border-radius: 4px;
+}
+</style>
+"""
+
+
+# ============================================================================
+# COMPONENTS
+# ============================================================================
+
+# ============================================================================
+# Demo Mode — จำลอง 1 วันของห้องผ่าตัด ภายใน 5 นาที (real time)
+# ใช้ session_state — ไม่บันทึก DB
+# ============================================================================
+
+# Timeline (นาทีจาก 8:00 AM): arr, in_or, op_end, dc, room, name, hn, dx, proc, surgeon, ai_min, override
+_DEMO_CASES = [
+    (15, 30, 60, 75, 90, 'นาย สมชาย ทดสอบ', 'DEMO001',
+        'Lipoma at neck', 'Excision', 'นพ.เอ ทดสอบ', 30, None),
+    (30, 45, 105, 120, 91, 'น.ส. มาลี ทดลองใช้', 'DEMO002',
+        'Rt. Renal stone', 'ESWL', 'นพ.บี ทดสอบ', 60, None),
+    (90, 120, 145, 160, 92, 'นาย สมศักดิ์ ทดสอบ', 'DEMO003',
+        'Abscess Lt. arm', 'I+D', 'นพ.ซี ทดสอบ', 25, None),
+    (150, None, None, None, 93, 'นาง พรรณี ทดลองใช้', 'DEMO004',
+        'Mass at chest', 'Excision', 'นพ.เอ ทดสอบ', 30, 'cancelled'),
+    (180, 210, 230, 240, 93, 'นาย วิชัย ทดสอบ', 'DEMO005',
+        'ESRD', 'Off PERM', 'นพ.บี ทดสอบ', 20, None),
+    (300, 330, 365, 380, 94, 'น.ส. กัญญา ทดลองใช้', 'DEMO006',
+        'Melasma', 'Q-Switch', 'นพ.ดี ทดสอบ', 35, None),
+    (480, 510, 560, 580, 95, 'นาย ปรีชา ทดสอบ', 'DEMO007',
+        'Aging Face', 'Morpheus', 'นพ.ดี ทดสอบ', 50, None),  # นอกเวลา
+]
+_DEMO_END_MIN = 600  # 8:00 + 10hr = 18:00
+
+
+def _demo_to_real_ts(sim_min, current_sim_min):
+    """Map demo sim minute → real timestamp string ที่ render card คำนวณ
+    elapsed ได้ถูกต้อง (now - timestamp = elapsed sim minutes)."""
+    if sim_min is None or current_sim_min < sim_min:
+        return None
+    delta = current_sim_min - sim_min
+    real_dt = _now_bkk() - timedelta(minutes=delta)
+    return real_dt.strftime('%Y-%m-%d %H:%M:%S')
+
+
+def _get_demo_cases_df(current_sim_min):
+    """Return demo cases เป็น DataFrame (เหมือน get_cases) สำหรับ Upcoming Queue
+    + Hourly Throughput."""
+    rows = []
+    for c in _DEMO_CASES:
+        (arr_m, ior_m, end_m, dc_m, room, name, hn, dx, proc,
+         surg, ai_min, override) = c
+
+        # Determine status at current sim_min (same logic as _get_demo_rooms)
+        if override == 'cancelled':
+            status = 'cancelled' if current_sim_min >= arr_m else 'scheduled'
+        elif current_sim_min < arr_m:
+            status = 'scheduled'
+        elif ior_m and current_sim_min < ior_m:
+            status = 'arrived'
+        elif end_m and current_sim_min < end_m:
+            status = 'in_or'
+        elif dc_m and current_sim_min < dc_m:
+            status = 'post_op'
+        elif dc_m and current_sim_min >= dc_m:
+            status = 'discharged'
+        else:
+            status = 'arrived'
+
+        rows.append({
+            'case_id': hn,
+            'name': name,
+            'hn': hn,
+            'procedure_name': proc,
+            'surgeon_name': surg,
+            'status': status,
+            'arrived_at': _demo_to_real_ts(arr_m, current_sim_min),
+            'in_or_at': _demo_to_real_ts(ior_m, current_sim_min),
+            'op_end_at': _demo_to_real_ts(end_m, current_sim_min),
+            'discharged_at': _demo_to_real_ts(dc_m, current_sim_min),
+            'ai_predicted_min': ai_min,
+            'room_no': room,
+        })
+    return pd.DataFrame(rows)
+
+
+def _get_demo_rooms(current_sim_min):
+    """Return rooms list (เหมือน get_room_status) สำหรับ demo mode."""
+    from room_config import get_active_rooms, room_label
+    rooms_data = {r: [] for r in get_active_rooms(None)}   # ตึกใหม่ 90–97
+
+    for c in _DEMO_CASES:
+        (arr_m, ior_m, end_m, dc_m, room, name, hn, dx, proc,
+         surg, ai_min, override) = c
+
+        # Determine status at current sim_min
+        if override == 'cancelled':
+            status = 'cancelled' if current_sim_min >= arr_m else 'scheduled'
+        elif current_sim_min < arr_m:
+            status = 'scheduled'
+        elif ior_m and current_sim_min < ior_m:
+            status = 'arrived'
+        elif end_m and current_sim_min < end_m:
+            status = 'in_or'
+        elif dc_m and current_sim_min < dc_m:
+            status = 'post_op'
+        elif dc_m and current_sim_min >= dc_m:
+            status = 'discharged'
+        else:
+            status = 'arrived'
+
+        case = {
+            'case_id': hn,
+            'name': name,
+            'hn': hn,
+            'diagnosis': dx,
+            'procedure_name': proc,
+            'surgeon_name': surg,
+            'status': status,
+            'arrived_at': _demo_to_real_ts(arr_m, current_sim_min),
+            'in_or_at': _demo_to_real_ts(ior_m, current_sim_min),
+            'op_end_at': _demo_to_real_ts(end_m, current_sim_min),
+            'discharged_at': _demo_to_real_ts(dc_m, current_sim_min),
+            'ai_predicted_min': ai_min,
+            'actual_duration_min': (
+                (end_m - ior_m) if (end_m and ior_m
+                                    and current_sim_min >= end_m) else None),
+            '_ai_n_cases': 5,                    # mock
+            '_ai_confidence': 'สูง',              # mock
+            '_ai_source': 'local_history',
+        }
+        rooms_data[room].append(case)
+
+    result = []
+    for rm in get_active_rooms(None):
+        cases_in_rm = rooms_data[rm]
+        active = [c for c in cases_in_rm if c['status'] == 'in_or']
+        done = [c for c in cases_in_rm
+                if c['status'] in ('post_op', 'discharged')]
+        waiting = [c for c in cases_in_rm
+                   if c['status'] in ('scheduled', 'arrived')]
+        result.append({
+            'room_no': rm,
+            'room_label': room_label(rm),
+            'total': len([c for c in cases_in_rm
+                          if c['status'] != 'cancelled']),
+            'done': len(done),
+            'waiting': len(waiting),
+            'active_case': active[0] if active else None,
+            'cases': cases_in_rm,
+        })
+    return result
+
+
+def _get_demo_kpi(current_sim_min):
+    """Build KPI dict for demo mode (matches get_kpi schema)."""
+    total = done = cancelled = in_or = pending = 0
+    total_op_min = 0  # for utilization calc
+    for c in _DEMO_CASES:
+        arr_m, ior_m, end_m, dc_m, room, *_rest, override = c
+        if override == 'cancelled':
+            if current_sim_min >= arr_m:
+                cancelled += 1
+                total += 1
+            continue
+        if current_sim_min >= arr_m:
+            total += 1
+            # in_or right now?
+            if ior_m and current_sim_min >= ior_m:
+                if end_m and current_sim_min >= end_m:
+                    done += 1
+                    total_op_min += (end_m - ior_m)
+                else:
+                    in_or += 1
+                    total_op_min += (current_sim_min - ior_m)
+            else:
+                pending += 1
+        # else: not yet arrived
+
+    # Utilization: total op minutes / (จำนวนห้อง × elapsed sim time)
+    from room_config import get_active_rooms
+    elapsed = max(current_sim_min, 1)
+    n_rooms = max(len(get_active_rooms(None)), 1)
+    utilization = round(total_op_min / (n_rooms * elapsed) * 100, 0)
+
+    return {
+        'total': total, 'done': done, 'cancelled': cancelled,
+        'in_or': in_or, 'pending': pending,
+        'utilization': int(utilization),
+        'avg_turnover': 12,  # mock
+    }
+
+
+def _render_demo_controls():
+    """แสดง toggle + controls ของ Demo Mode. Return current sim_min หรือ None."""
+    state = st.session_state.setdefault('demo', {
+        'active': False, 'playing': True, 'speed': 1,
+        'real_started': time.time(), 'paused_at_sim': 0.0,
+    })
+
+    col_t, col_info, col_rf = st.columns([1, 2.2, 0.8])
+    with col_rf:
+        if st.button("🔄 รีเฟรช", key="admin_refresh", width='stretch',
+                     help="ดึงข้อมูลล่าสุดมาแสดง — ใช้แทนการกด F5 (ข้อมูลไม่หาย)"):
+            st.session_state['_stats_cache_ver'] = _stats_ver() + 1  # ล้าง cache สถิติ → ดึง cloud ใหม่
+            st.rerun()
+    with col_t:
+        new_active = st.toggle(
+            '🎬 Demo Mode', value=state['active'], key='demo_toggle',
+            help='จำลองการทำงาน 1 วัน ภายใน 5 นาที — ไม่บันทึก DB จริง')
+    if new_active != state['active']:
+        state['active'] = new_active
+        if new_active:
+            state['real_started'] = time.time()
+            state['paused_at_sim'] = 0.0
+            state['playing'] = True
+        st.rerun()
+
+    if not state['active']:
+        return None
+
+    # Compute current sim_min
+    if state['playing']:
+        real_elapsed = time.time() - state['real_started']
+        # 5 นาทีจริง = 600 นาทีจำลอง → 1 วินาทีจริง = 2 นาทีจำลอง
+        sim_min = state['paused_at_sim'] + (real_elapsed * 2.0 * state['speed'])
+    else:
+        sim_min = state['paused_at_sim']
+
+    # Cap at end of day
+    sim_min = min(sim_min, _DEMO_END_MIN)
+    if sim_min >= _DEMO_END_MIN and state['playing']:
+        state['playing'] = False
+        state['paused_at_sim'] = _DEMO_END_MIN
+
+    # Display info
+    sim_hour = 8 + sim_min / 60
+    sim_time_str = f'{int(sim_hour):02d}:{int((sim_hour % 1) * 60):02d}'
+    pct = sim_min / _DEMO_END_MIN * 100
+
+    with col_info:
+        st.markdown(f"""
+        <div style="background:#fff3e0;border-radius:8px;padding:8px 12px;
+                    border-left:4px solid #ef6c00;margin-top:6px;">
+          <span style="font-size:13px;color:#e65100;font-weight:700;">
+            🕐 เวลาจำลอง: <b>{sim_time_str}</b></span>
+          <span style="font-size:11px;color:#bf360c;margin-left:12px;">
+            ({sim_min:.0f}/{_DEMO_END_MIN} นาที · {pct:.0f}%)
+            · 🔇 ไม่บันทึก DB จริง</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Controls row
+    c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
+    with c1:
+        play_label = '⏸ หยุด' if state['playing'] else '▶ เล่น'
+        if st.button(play_label, use_container_width=True, key='demo_play'):
+            if state['playing']:
+                # Pause: save current sim_min
+                real_elapsed = time.time() - state['real_started']
+                state['paused_at_sim'] += (real_elapsed * 2.0 * state['speed'])
+                state['playing'] = False
+            else:
+                state['real_started'] = time.time()
+                state['playing'] = True
+            st.rerun()
+    with c2:
+        if st.button('⏹ รีเซ็ต', use_container_width=True, key='demo_reset'):
+            state['real_started'] = time.time()
+            state['paused_at_sim'] = 0.0
+            state['playing'] = True
+            st.rerun()
+    with c3:
+        new_speed = st.selectbox(
+            'ความเร็ว', [1, 2, 5],
+            index=[1, 2, 5].index(state['speed']),
+            key='demo_speed_select', label_visibility='collapsed')
+        if new_speed != state['speed']:
+            real_elapsed = time.time() - state['real_started']
+            state['paused_at_sim'] += (real_elapsed * 2.0 * state['speed'])
+            state['real_started'] = time.time()
+            state['speed'] = new_speed
+            st.rerun()
+    with c4:
+        st.caption(
+            "💡 เคสจะค่อย ๆ ผ่าน flow: รอ → เข้าห้อง → กำลังผ่า → เสร็จ "
+            "(7 เคส รวม 1 cancel + 1 นอกเวลา)"
+        )
+
+    return sim_min
+
+
+def _render_one_room_card(rm):
+    """Linear/Stripe-style minimal room card."""
+    active = rm['active_case']
+    room_no = rm['room_no']
+    room_title = rm.get('room_label') or f'ห้อง {room_no}'   # เช่น 'OR1 · SCOPE'
+
+    # 🔒 ห้องที่ถูกปิดในหน้าตั้งค่า → การ์ด "ปิดให้บริการ"
+    if rm.get('closed'):
+        st.markdown(
+            f'<div style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:12px;'
+            f'padding:18px 16px;text-align:center;min-height:110px;display:flex;'
+            f'flex-direction:column;justify-content:center;">'
+            f'<div style="font-size:14px;font-weight:600;color:#64748b;">{room_title}</div>'
+            f'<div style="font-size:13px;margin-top:6px;color:#94a3b8;">🔒 ปิดให้บริการ</div>'
+            f'</div>', unsafe_allow_html=True)
+        return
+
+    # 🤖 บรรทัด "คาดเสร็จ" (ใช้ room_forecast เดียวกับ section ไทม์ไลน์ → ตรงกันเสมอ)
+    try:
+        from command_center import room_forecast, forecast_caption_html
+        _fc_html = forecast_caption_html(room_forecast(rm, _now_bkk()))
+    except Exception:
+        _fc_html = ''
+
+    # ── ค่าเริ่มต้น (ว่าง) — flat clinical เข้าชุดกับธีม ──
+    status_dot = '#94a3b8'
+    status_label = 'ว่าง'
+    status_color = '#64748b'
+    procedure = 'ไม่มีเคสวันนี้'
+    procedure_color = '#94a3b8'
+    bar_html = ('<div style="background:#eef2f6;height:5px;'
+                'border-radius:3px;margin:10px 0;"></div>')
+    info_left = 'ห้องว่าง'
+    info_right = '—'
+    info_right_color = '#94a3b8'
+    card_border = '0.5px solid #e2e8f0'
+    card_bg = '#f6f8fa'  # idle = subtle gray bg
+    sub_html = ''  # extra row (e.g. surgeon)
+
+    if active:
+        # ── กำลังผ่าตัด ──
+        card_bg = '#ffffff'
+        elapsed_min = 0
+        if active.get('in_or_at'):
+            try:
+                start = datetime.strptime(active['in_or_at'],
+                                          '%Y-%m-%d %H:%M:%S')
+                elapsed_min = int(
+                    (_now_bkk() - start).total_seconds() / 60)
+            except (ValueError, TypeError):
+                pass
+
+        ai_min = active.get('ai_predicted_min') or 0
+        proc = active.get('procedure_name') or '—'
+        procedure = proc
+        procedure_color = '#0f172a'
+
+        if ai_min and elapsed_min > ai_min:
+            # 🔴 เกินเวลา
+            over_min = elapsed_min - ai_min
+            status_dot = '#e24b4a'
+            status_label = 'เกินเวลา'
+            status_color = '#c0392b'
+            bar_color = '#e24b4a'
+            bar_pct = min(elapsed_min / ai_min * 100, 110)
+            info_left = f'ผ่าไป {elapsed_min} นาที'
+            info_right = f'เกิน {over_min} นาที'
+            info_right_color = '#c0392b'
+            card_border = '0.5px solid #f3c0bf'
+        elif ai_min:
+            # 🟢 กำลังผ่า
+            status_dot = '#22a565'
+            status_label = 'กำลังผ่า'
+            status_color = '#1b7f4b'
+            bar_color = '#22a565'
+            bar_pct = max(min(elapsed_min / ai_min * 100, 100), 5)
+            est_left = max(ai_min - elapsed_min, 0)
+            info_left = f'ผ่าไป {elapsed_min} นาที'
+            info_right = f'เหลือ ~{est_left} นาที'
+        else:
+            # 🟢 กำลังผ่า (ไม่มี AI)
+            status_dot = '#22a565'
+            status_label = 'กำลังผ่า'
+            status_color = '#1b7f4b'
+            bar_color = '#94a3b8'
+            bar_pct = 50
+            info_left = f'ผ่าไป {elapsed_min} นาที'
+            info_right = 'ไม่มี AI ประเมิน'
+
+        bar_html = (
+            f'<div style="background:#eef2f6;height:5px;border-radius:3px;'
+            f'margin:10px 0;overflow:hidden;">'
+            f'<div style="background:{bar_color};height:100%;'
+            f'width:{bar_pct}%;border-radius:3px;'
+            f'transition:width 1s ease;"></div>'
+            f'</div>'
+        )
+        # Surgeon line (small)
+        surg = (active.get('surgeon_name') or '').strip()
+        if surg:
+            surg_clean = _normalize_nurse_name(surg) or surg
+            sub_html = (f'<div style="font-size:11px;color:#94a3b8;'
+                        f'margin-top:-2px;white-space:nowrap;overflow:hidden;'
+                        f'text-overflow:ellipsis;">👨‍⚕️ {_esc(surg_clean)}</div>')
+
+    elif rm['done'] > 0 and rm['waiting'] == 0:
+        # ✅ ผ่าครบทุกเคสแล้ว — ห้องว่าง
+        status_dot = '#22a565'
+        status_label = 'ผ่าครบแล้ว'
+        status_color = '#1b7f4b'
+        procedure = f'ผ่าครบทุกเคสแล้ว ({rm["done"]} เคส)'
+        procedure_color = '#475569'
+        info_left = 'ห้องว่าง'
+        info_right = '—'
+        card_bg = '#ffffff'
+    elif rm['waiting'] > 0:
+        # 🟡 มีเคสรอเข้าห้อง / Turnover
+        status_dot = '#e3920b'
+        status_label = 'รอเข้าห้อง'
+        status_color = '#9a6700'
+        procedure = f'มีเคสรอ {rm["waiting"]} เคส'
+        procedure_color = '#475569'
+        info_left = f'ผ่าแล้ว {rm["done"]} / {rm["total"]} เคส'
+        info_right = '—'
+        info_right_color = '#94a3b8'
+        card_bg = '#ffffff'
+
+    # ── Card HTML ──
+    proc_safe = _esc(procedure)   # 🔒 M-01: หนี HTML เต็มรูปแบบ (ไม่ใช่แค่ ")
+    card_html = (
+        f'<div style="background:{card_bg};border:{card_border};'
+        f'border-radius:12px;padding:13px 15px;">'
+        f'<div style="font-size:12px;color:#1565c0;font-weight:500;margin-bottom:5px;">'
+        f'{room_title}</div>'
+        f'<div style="display:flex;align-items:center;gap:6px;'
+        f'margin-bottom:8px;">'
+        f'<span style="width:8px;height:8px;background:{status_dot};'
+        f'border-radius:50%;display:inline-block;"></span>'
+        f'<span style="font-size:12px;color:{status_color};'
+        f'font-weight:500;">{status_label}</span></div>'
+        f'<div style="font-size:14px;font-weight:500;color:{procedure_color};'
+        f'line-height:1.3;min-height:38px;overflow:hidden;'
+        f'text-overflow:ellipsis;white-space:nowrap;" title="{proc_safe}">'
+        f'{proc_safe}</div>'
+        f'{sub_html}'
+        f'{bar_html}'
+        f'<div style="display:flex;justify-content:space-between;'
+        f'font-size:11px;color:#64748b;">'
+        f'<span>{info_left}</span>'
+        f'<span style="color:{info_right_color};">{info_right}</span></div>'
+        f'{_fc_html}'
+        f'</div>'
+    )
+    st.markdown(card_html, unsafe_allow_html=True)
+
+
+def _render_room_cards(rooms):
+    """Adaptive grid — 4 cards per row (Linear-style minimal)"""
+    n = len(rooms)
+    # 1-2 rooms = แสดงเต็มแถว · 3-4+ = 4 cols
+    per_row = min(n, 4) if n > 0 else 1
+    for row_start in range(0, n, per_row):
+        row_rooms = rooms[row_start:row_start + per_row]
+        cols = st.columns(per_row)
+        for i, rm in enumerate(row_rooms):
+            with cols[i]:
+                _render_one_room_card(rm)
+
+
+def _render_kpi(kpi):
+    """แสดง KPI cards."""
+    c1, c2, c3, c4, c5 = st.columns(5)
+
+    with c1:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">เคสทั้งหมด</div>
+            <div class="kpi-value" style="color:#1565c0;">{kpi['total']}</div>
+        </div>""", unsafe_allow_html=True)
+    with c2:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">ผ่าเสร็จแล้ว</div>
+            <div class="kpi-value" style="color:#2e7d32;">{kpi['done']}</div>
+        </div>""", unsafe_allow_html=True)
+    with c3:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">กำลังผ่าตัด</div>
+            <div class="kpi-value" style="color:#1976d2;">{kpi['in_or']}</div>
+        </div>""", unsafe_allow_html=True)
+    with c4:
+        color = '#2e7d32' if kpi['utilization'] <= 80 else ('#f57f17' if kpi['utilization'] <= 100 else '#d32f2f')
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">Utilization</div>
+            <div class="kpi-value" style="color:{color};">{kpi['utilization']}%</div>
+        </div>""", unsafe_allow_html=True)
+    with c5:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">Turnover เฉลี่ย</div>
+            <div class="kpi-value" style="color:#6a1b9a;">{kpi['avg_turnover']:.0f}<span style="font-size:14px;"> นาที</span></div>
+        </div>""", unsafe_allow_html=True)
+
+
+def _render_alerts(alerts):
+    """แสดง Delay / Alert cards."""
+    if not alerts:
+        st.markdown("""
+        <div style="background:#e8f5e9;padding:16px;border-radius:10px;text-align:center;">
+            <span style="font-size:20px;">✅</span>
+            <span style="font-size:14px;color:#2e7d32;font-weight:600;"> ไม่มีปัญหา — ทุกอย่างปกติ</span>
+        </div>
+        """, unsafe_allow_html=True)
+        return
+
+    for a in alerts:
+        icon = '🔴' if a['severity'] == 'high' else ('🟡' if a['severity'] == 'medium' else '⚪')
+        css_class = f"alert-{a['severity']}"
+        st.markdown(f"""
+        <div class="alert-card {css_class}">
+            <span style="font-size:18px;">{icon}</span>
+            <div>
+                <div style="font-size:13px;font-weight:600;">ห้อง {a['room_no']} — {_esc(a['procedure'] or '-')}</div>
+                <div style="font-size:12px;color:#666;">{_esc(a['name'] or '-')} | {_esc(a['message'])}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+def _render_workload(wl):
+    """แสดงภาระงาน — แพทย์ + สาขา + ประเภท."""
+    col_left, col_right = st.columns(2)
+
+    with col_left:
+        # Top แพทย์
+        st.markdown('<div class="section-title">👨‍⚕️ แพทย์วันนี้</div>', unsafe_allow_html=True)
+        if len(wl['top_surgeons']) > 0:
+            for _, row in wl['top_surgeons'].iterrows():
+                n_total = int(row['n'])
+                n_done = int(row['done'])
+                pct = int(n_done / n_total * 100) if n_total > 0 else 0
+                bar_color = '#4caf50' if pct == 100 else '#42a5f5'
+                st.markdown(f"""
+                <div style="margin:6px 0;">
+                    <div style="display:flex;justify-content:space-between;font-size:13px;">
+                        <span><b>{_esc(row['surgeon_name'])}</b></span>
+                        <span style="color:#666;">{n_done}/{n_total} เคส</span>
+                    </div>
+                    <div style="background:#e0e0e0;border-radius:4px;height:8px;margin-top:3px;">
+                        <div style="background:{bar_color};height:100%;width:{pct}%;border-radius:4px;"></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.caption("ยังไม่มีข้อมูลแพทย์")
+
+    with col_right:
+        # สาขา (pie)
+        st.markdown('<div class="section-title">🏥 สาขาที่ทำวันนี้</div>', unsafe_allow_html=True)
+        if len(wl['div_stats']) > 0:
+            div_df = wl['div_stats'].copy()
+            div_df['division_name'] = div_df['division_code'].apply(div_name)
+            fig = px.pie(div_df, values='n', names='division_name',
+                         color_discrete_sequence=px.colors.qualitative.Set3)
+            fig.update_layout(
+                margin=dict(t=10, b=10, l=10, r=10), height=220,
+                showlegend=True, legend=dict(font=dict(size=11)),
+            )
+            fig.update_traces(textposition='inside', textinfo='value+label',
+                              textfont_size=11)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.caption("ยังไม่มีข้อมูลสาขา")
+
+    # ประเภทเคส — แถว badges
+    st.markdown('<div class="section-title">📊 ประเภทเคส</div>', unsafe_allow_html=True)
+    badges_html = f"""
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
+        <div style="background:#e0f2f1;padding:8px 16px;border-radius:20px;font-size:13px;">
+            📋 SET <b>{wl['n_set']}</b></div>
+        <div style="background:#e3f2fd;padding:8px 16px;border-radius:20px;font-size:13px;">
+            🚶 Walk-in <b>{wl['n_walkin']}</b></div>
+        <div style="background:#e0f7fa;padding:8px 16px;border-radius:20px;font-size:13px;">
+            🏥 OPD <b>{wl['n_opd']}</b></div>
+        <div style="background:#fff3e0;padding:8px 16px;border-radius:20px;font-size:13px;">
+            🛏️ IPD <b>{wl['n_ipd']}</b></div>
+        <div style="background:#fce4ec;padding:8px 16px;border-radius:20px;font-size:13px;">
+            🌙 นอกเวลา <b>{wl['n_after']}</b></div>
+    </div>
+    """
+    st.markdown(badges_html, unsafe_allow_html=True)
+
+
+def _render_ai_research_tab():
+    """🤖 AI Prediction (งานวิจัย) — แสดงศักยภาพของ AI ทำนายเวลาผ่าตัด
+
+    แสดง 4 ส่วน:
+    1. Filter (หัตถการ — รวมกลุ่ม fuzzy ด้วย _normalize_procedure_name)
+    2. KPI Cards (4): n, MAE, % within ±10 min, R²
+    3. Scatter plot (predicted vs actual)
+    4. Error distribution histogram
+    """
+    st.markdown('<div class="section-title">🤖 AI ทำนายเวลาผ่าตัด — ผลการวิจัย</div>',
+                unsafe_allow_html=True)
+
+    # แสดงผลลัพธ์ re-backfill หลัง rerun
+    if st.session_state.get('_ai_rebf_msg'):
+        st.success(st.session_state.pop('_ai_rebf_msg'))
+
+    # ── เลือกแหล่งข้อมูลให้ผู้ใช้เห็นชัด (ไม่สลับเงียบๆ) ──
+    #    1) ชุดทดสอบปี 2567 = hold-out ของโมเดลในเล่ม (out-of-sample) — ตัวเลขตรงวิทยานิพนธ์
+    #    2) ข้อมูลสดจากระบบ ปี 2568+ = เคสที่ผ่าเสร็จจริงหลังเริ่มใช้งาน (prospective)
+    import pandas as _pd
+    from pathlib import Path as _P
+    _vf = _P(__file__).resolve().parent / 'models' / 'honest_v1' / 'validation_room_use.csv'
+
+    # โหลด 2 แหล่งแยกกัน:
+    #   _calib_raw = ชุดทดสอบปี 2567 (hold-out ของโมเดลในเล่ม — โมเดลไม่เคยเห็นตอนเรียน)
+    #   _live_raw  = ข้อมูลสดจากระบบ (เคสจริงหลังเริ่มใช้งาน ปี 2568+) → แยกเป็น 68 / 69
+    _calib_raw = None
+    if _vf.exists():
+        try:
+            _calib_raw = _pd.read_csv(_vf)
+        except Exception:
+            _calib_raw = None
+    try:
+        _live_raw = (_ca_summary(None, None, _stats_ver()) or {}).get('ai_df')
+    except Exception:
+        _live_raw = None
+
+    _is_calib_src = _calib_raw is not None and len(_calib_raw) > 0
+    # ตัวแปรหลักสำหรับส่วนเทคนิค/วิจัยด้านล่าง = ชุดทดสอบ 2567 ถ้ามี ไม่งั้นใช้ข้อมูลสด
+    ai_df = _calib_raw if _is_calib_src else _live_raw
+    if ai_df is None or len(ai_df) == 0:
+        st.info("ยังไม่มีข้อมูล AI prediction ในแหล่งนี้ — ต้องมีเคสที่ทำเสร็จแล้ว "
+                "และมีทั้ง ai_predicted_min และ actual_duration_min")
+        return
+
+    ai_df = ai_df.copy()
+    ai_df['error'] = ai_df['ai_predicted_min'] - ai_df['actual_duration_min']
+    ai_df['abs_error'] = ai_df['error'].abs()
+    ai_df['pct_error'] = (ai_df['abs_error']
+                          / ai_df['actual_duration_min'].replace(0, np.nan)
+                          * 100)
+
+    # ── กรอง elective (ค่าเริ่มต้น) — ตรง scope งานวิจัย · ติ๊กเพื่อรวมฉุกเฉิน ──
+    _inc_emer = False   # ประเมินเฉพาะเคส elective (ตรง scope วิทยานิพนธ์)
+    if not _inc_emer and 'op_type' in ai_df.columns:
+        ai_df = ai_df[ai_df['op_type'].fillna('elective').astype(str)
+                      .str.lower() != 'emergency'].copy()
+        if len(ai_df) == 0:
+            st.info("ไม่มีเคส elective ที่ประเมินได้ — ติ๊ก 'รวมเคสฉุกเฉิน' เพื่อดูทั้งหมด")
+            return
+
+    # ════════════════════════════════════════════════════════════════
+    # 😊 การทำงานของ AI — แบ่งตามปี (อ่านง่าย ไม่ต้องรู้ศัพท์เทคนิค)
+    #    67 = ตอนทดสอบโมเดล · 68 = เคสจริงหลังใช้งาน · 69 = ปีนี้ (กำลังเก็บ)
+    # ════════════════════════════════════════════════════════════════
+    st.markdown('<div class="section-title">การทำงานของ AI</div>', unsafe_allow_html=True)
+    st.caption("AI เรียนรู้จากเคสผ่าตัดที่ผ่านมา แล้วทำนายว่าเคสใหม่จะใช้เวลานานเท่าไร "
+               "· ตัวเลขข้างล่างบอกว่าทำนายได้ใกล้เวลาจริงแค่ไหน "
+               "(เฉพาะเคสนัดล่วงหน้า · ไม่มีข้อมูลส่วนตัวผู้ป่วย)")
+
+    # --- ตัวช่วย: เตรียม df (คำนวณความคลาด + กรองเฉพาะเคสนัดล่วงหน้า) ---
+    def _prep_ai(d):
+        if d is None or len(d) == 0:
+            return None
+        d = d.copy()
+        if 'ai_predicted_min' not in d.columns or 'actual_duration_min' not in d.columns:
+            return None
+        d['abs_error'] = (_pd.to_numeric(d['ai_predicted_min'], errors='coerce')
+                          - _pd.to_numeric(d['actual_duration_min'], errors='coerce')).abs()
+        d = d.dropna(subset=['abs_error'])
+        if 'op_type' in d.columns:
+            d = d[d['op_type'].fillna('elective').astype(str).str.lower() != 'emergency']
+        return d if len(d) else None
+
+    def _be_year_col(d):
+        # รองรับทั้ง ค.ศ. (เช่น 2025) และ พ.ศ. (เช่น 2568) → คืนเป็น พ.ศ. เสมอ
+        _y = _pd.to_datetime(d['op_date'], errors='coerce').dt.year
+        return _y.where(_y >= 2500, _y + 543)
+
+    def _stat(d):
+        n = len(d) if d is not None else 0
+        if not n:
+            return None
+        w15 = int((d['abs_error'] <= 15).sum())
+        return dict(n=n, med=float(d['abs_error'].median()),
+                    mae=float(d['abs_error'].mean()), w15=w15,
+                    pct15=round(w15 / n * 100))
+
+    _calib = _prep_ai(_calib_raw)
+    _live = _prep_ai(_live_raw)
+    _live68 = _live69 = None
+    if _live is not None and 'op_date' in _live.columns:
+        _by = _be_year_col(_live)
+        _t68, _t69 = _live[_by == 2568], _live[_by == 2569]
+        _live68 = _t68 if len(_t68) else None
+        _live69 = _t69 if len(_t69) else None
+
+    def _render_year_block(num, year_be, title, plain, accent, bg, stat):
+        st.markdown(
+            f'<div style="border-left:3px solid {accent};padding-left:12px;margin:16px 0 6px;">'
+            f'<div style="font-size:15px;font-weight:600;color:#222;">{num} ปี {year_be} — {title}</div>'
+            f'<div style="font-size:12px;color:#777;margin-top:1px;">{plain}</div></div>',
+            unsafe_allow_html=True)
+        if stat is None:
+            st.markdown(
+                f'<div style="background:{bg};border-radius:10px;padding:12px 14px;'
+                f'font-size:13px;color:#888;">ยังไม่มีเคสที่ผ่าเสร็จในปีนี้ — '
+                f'ระบบจะแสดงตัวเลขเมื่อมีข้อมูลมากพอ</div>', unsafe_allow_html=True)
+            return
+        c1, c2, c3 = st.columns(3)
+        c1.markdown(
+            f'<div class="kpi-card" style="background:{bg};">'
+            f'<div class="kpi-label">ทำนายพลาด (เคสทั่วไป)</div>'
+            f'<div class="kpi-value" style="color:{accent};">±{stat["med"]:.0f}</div>'
+            f'<div style="font-size:11px;color:#999;">นาที · โดยทั่วไปทำนายห่างจากเวลาจริงประมาณนี้ '
+            f'(เฉลี่ย ±{stat["mae"]:.0f})</div></div>', unsafe_allow_html=True)
+        c2.markdown(
+            f'<div class="kpi-card" style="background:{bg};">'
+            f'<div class="kpi-label">ทำนายแม่น (±15 นาที)</div>'
+            f'<div class="kpi-value" style="color:{accent};">{stat["pct15"]}%</div>'
+            f'<div style="font-size:11px;color:#999;">ทำนายห่างไม่เกิน 15 นาที '
+            f'({stat["w15"]:,}/{stat["n"]:,} เคส)</div></div>', unsafe_allow_html=True)
+        c3.markdown(
+            f'<div class="kpi-card" style="background:{bg};">'
+            f'<div class="kpi-label">จำนวนเคส</div>'
+            f'<div class="kpi-value" style="color:{accent};">{stat["n"]:,}</div>'
+            f'<div style="font-size:11px;color:#999;">เคสที่ใช้ประเมิน</div></div>',
+            unsafe_allow_html=True)
+
+    _render_year_block(
+        '①', 2567, 'ผลตอนทดสอบโมเดล',
+        'เอาเคสที่โมเดล "ไม่เคยเห็น" ตอนเรียนมาทดสอบ — เป็นตัวเลขที่ใช้อ้างอิงในเล่มวิทยานิพนธ์',
+        '#1565c0', '#f4f8fd', _stat(_calib))
+    _render_year_block(
+        '②', 2568, 'เคสจริงหลังเริ่มใช้งาน',
+        'เคสจริงในห้องผ่าตัดเราเอง หลังเปิดใช้ระบบ — พิสูจน์ว่าใช้กับงานจริงได้',
+        '#1b7f4b', '#eef7f1', _stat(_live68))
+
+    # ปี 2569 — แถบติดตามสด (โชว์แค่จำนวนเคส เพราะข้อมูลยังน้อย ตัวเลขยังไม่นิ่ง)
+    _s69 = _stat(_live69)
+    _n69 = _s69['n'] if _s69 else 0
+    st.markdown(
+        f'<div style="background:#f7f9fb;border:1px dashed #c9d6e2;border-radius:10px;'
+        f'padding:11px 14px;margin:16px 0 4px;display:flex;align-items:center;gap:12px;">'
+        f'<div style="flex:1;"><div style="font-size:14px;font-weight:600;color:#222;">'
+        f'③ ปี 2569 — กำลังติดตามผลสด</div>'
+        f'<div style="font-size:12px;color:#777;margin-top:1px;">ปีปัจจุบัน ระบบกำลังเก็บเคสจริง '
+        f'และวัดความแม่นต่อเนื่อง (ข้อมูลยังน้อย จึงยังไม่สรุปเป็นตัวเลขหลัก)</div></div>'
+        f'<div style="text-align:right;"><div style="font-size:22px;font-weight:700;color:#1565c0;">'
+        f'{_n69:,}</div><div style="font-size:11px;color:#777;">เคสจนถึงตอนนี้</div></div></div>',
+        unsafe_allow_html=True)
+
+    # ค่าที่ส่วนเทคนิคด้านล่างต้องใช้ (คำนวณบนชุดหลัก = 2567 ถ้ามี) — คงไว้
+    _pmae = float(ai_df['abs_error'].mean())
+    _pmed = float(ai_df['abs_error'].median())
+    _pn = len(ai_df)
+    _pw15 = int((ai_df['abs_error'] <= 15).sum())
+    _ppct15 = round(_pw15 / _pn * 100) if _pn else 0
+    _p1630 = int(((ai_df['abs_error'] > 15) & (ai_df['abs_error'] <= 30)).sum())
+    _pover = int((ai_df['abs_error'] > 30).sum())
+
+    # (ส่วนเทียบ baseline เอาออก — การเทียบที่ยุติธรรม (out-of-sample) อยู่ใน compare_models เชิงวิจัย
+    #  ไม่ทำในแอป เพราะ baseline ต่อหัตถการแบบ in-sample จะ leak ทำให้ตัวเลขเพี้ยน)
+
+    # 📏 ความครอบคลุมของช่วงทำนาย (split conformal ±q90) — รายงานคู่ MAE เสมอ
+    try:
+        import or_time_model as _otm_cov
+        _q90 = _otm_cov.conformal_q('room_use', '0.90')
+    except Exception:
+        _q90 = None
+    if _q90:
+        _cov = float((ai_df['abs_error'] <= _q90).mean() * 100)
+        _cov_note = ('บนชุดคาลิเบรตเอง (in-sample ของการคาลิเบรต — ดู temporal check '
+                     'ใน conformal.json ประกอบ)' if _is_calib_src
+                     else 'วัดไปข้างหน้าบนข้อมูลสด (prospective coverage)')
+        _cov_color = '#43a047' if _cov >= 85 else ('#fb8c00' if _cov >= 75 else '#e53935')
+        st.markdown(
+            f'<div style="background:#f0f9ff;border-left:4px solid #0284c7;'
+            f'border-radius:8px;padding:10px 14px;margin:10px 0;font-size:13px;">'
+            f'📏 <b>ช่วงทำนาย 90% (split conformal):</b> ±{_q90:.0f} นาที — '
+            f'ครอบคลุมเวลาจริง <b style="color:{_cov_color};">{_cov:.1f}%</b> '
+            f'ของเคสที่ประเมิน (เป้า ~90%) · {_cov_note}</div>',
+            unsafe_allow_html=True)
+
+    # (กล่องข้อจำกัด + โน้ตไทม์ไลน์ เอาออกจากหน้าแอป — เขียนในเล่มวิจัยแทน)
+
+    st.markdown('---')
+    # 🔬 ส่วนเทคนิค (กราฟ + ตาราง + re-backfill) ซ่อนไว้ — ติ๊กเพื่อดู (สำหรับวิทยานิพนธ์/อาจารย์)
+    if not st.checkbox('🔬 ดูรายละเอียดเทคนิคแบบเต็ม (สำหรับวิทยานิพนธ์ / อาจารย์)',
+                       value=False, key='ai_show_tech'):
+        return
+    st.markdown('<div class="sub-title">🔬 รายละเอียดเทคนิค (สำหรับงานวิจัย)</div>',
+                unsafe_allow_html=True)
+
+    # 📈 พระเอก — ผิดพลาดเฉลี่ยรายวัน 30 วันล่าสุด (เห็นว่า AI แม่นขึ้นไหม)
+    st.markdown('<div class="sub-title">📈 ผิดพลาดเฉลี่ยรายวัน (นาที) — 30 วันล่าสุด '
+                '<span style="font-weight:400;color:#9e9e9e;">ยิ่งต่ำยิ่งแม่น</span>'
+                '</div>', unsafe_allow_html=True)
+    _dd = ai_df.copy()
+    _dd['_d'] = pd.to_datetime(_dd['op_date'], errors='coerce')
+    _dd = _dd.dropna(subset=['_d'])
+    _g = ((_dd.groupby(_dd['_d'].dt.normalize())['abs_error']
+           .agg(mae='mean', n='size').reset_index())
+          if not _dd.empty else pd.DataFrame(columns=['_d', 'mae', 'n']))
+    if not _g.empty:
+        _g.columns = ['วันที่', 'mae', 'n']
+        _g = _g[_g['n'] >= 3]                 # ตัดวันที่มีน้อยเคส (กัน spike หลอกตา)
+        _g = _g.sort_values('วันที่').tail(30)
+    if not _g.empty:
+        _ycap = max(60.0, float(_g['mae'].quantile(0.9)) * 1.2)
+        _figd = px.line(_g, x='วันที่', y='mae', markers=True,
+                        labels={'mae': 'ผิดพลาดเฉลี่ย (นาที)', 'วันที่': ''},
+                        color_discrete_sequence=['#1565c0'])
+        _figd.add_hline(y=30, line_dash='dash', line_color='#43a047',
+                        annotation_text='เป้าหมาย 30 นาที',
+                        annotation_position='top right')
+        _figd.update_layout(margin=dict(t=10, b=30, l=45, r=10), height=240,
+                            plot_bgcolor='white',
+                            yaxis=dict(gridcolor='#f0f0f0', range=[0, _ycap]))
+        st.plotly_chart(_figd, use_container_width=True,
+                        config={'displayModeBar': False})
+        if len(_g) >= 2:
+            _f, _l = float(_g['mae'].iloc[0]), float(_g['mae'].iloc[-1])
+            _trend = 'ลดลง' if _l < _f - 0.5 else ('เพิ่มขึ้น' if _l > _f + 0.5 else 'ทรงตัว')
+            st.caption(f"💡 ผิดพลาดเฉลี่ย{_trend}จาก {_f:.0f} → {_l:.0f} นาที "
+                       "ในช่วง 30 วันล่าสุด (เฉพาะวันที่มี ≥3 เคส · ต่ำกว่าเป้า 30 = ดี)")
+    else:
+        st.caption("ยังไม่มีข้อมูลวันที่เพียงพอสำหรับกราฟรายวัน")
+
+    # 🎯 การกระจายความแม่น — แถบสี ±15 / ±16–30 / เกิน 30
+    st.markdown('<div class="sub-title">🎯 การกระจายความแม่น — '
+                'แบ่งทุกเคสตามระยะที่ทำนายคลาด</div>', unsafe_allow_html=True)
+    if _pn:
+        _s15 = round(_pw15 / _pn * 100)
+        _s1630 = round(_p1630 / _pn * 100)
+        _sover = max(0, 100 - _s15 - _s1630)
+        st.markdown(
+            f'<div style="display:flex;height:34px;border-radius:8px;'
+            f'overflow:hidden;font-size:12px;color:white;font-weight:600;">'
+            f'<div style="width:{_s15}%;background:#43a047;display:flex;'
+            f'align-items:center;justify-content:center;min-width:0;">{_s15}%</div>'
+            f'<div style="width:{_s1630}%;background:#fb8c00;display:flex;'
+            f'align-items:center;justify-content:center;min-width:0;">{_s1630}%</div>'
+            f'<div style="width:{_sover}%;background:#e53935;display:flex;'
+            f'align-items:center;justify-content:center;min-width:0;">{_sover}%</div>'
+            f'</div>'
+            f'<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:8px;'
+            f'font-size:12px;color:#666;">'
+            f'<span>🟢 ภายใน ±15 นาที ({_pw15:,} เคส)</span>'
+            f'<span>🟡 ±16–30 นาที ({_p1630:,} เคส)</span>'
+            f'<span>🔴 เกิน 30 นาที ({_pover:,} เคส)</span></div>',
+            unsafe_allow_html=True)
+
+    # 🏆 หัตถการที่ AI แม่นที่สุด — โชว์จุดแข็ง (ไม่ใช่ทุกอันพลาด)
+    # ⚠️ validation CSV รุ่นใหม่ (จาก train_honest_model) ไม่มีคอลัมน์ procedure_name
+    #    → ข้าม section นี้แทนที่จะ KeyError ทั้งหน้า
+    if 'procedure_name' not in ai_df.columns:
+        ai_df = ai_df.assign(procedure_name='UNKNOWN')
+    _byp = (ai_df.assign(
+                _p=ai_df['procedure_name'].apply(_normalize_procedure_name))
+            .groupby('_p')['abs_error'].agg(mae='mean', n='size').reset_index())
+    _byp = _byp[(_byp['n'] >= 20)
+                & (~_byp['_p'].isin(['UNKNOWN', '', None]))].sort_values('mae')
+    if not _byp.empty:
+        st.markdown('<div class="sub-title">🏆 หัตถการที่ AI ทำนายแม่นที่สุด '
+                    '<span style="font-weight:400;color:#9e9e9e;">'
+                    '(หัตถการที่ทำบ่อย ≥20 เคส)</span></div>', unsafe_allow_html=True)
+        _rows = ''
+        for _, _r in _byp.head(6).iterrows():
+            _mm = float(_r['mae'])
+            _cc = '#43a047' if _mm <= 15 else ('#fb8c00' if _mm <= 30 else '#e53935')
+            _rows += (f'<div style="display:flex;justify-content:space-between;'
+                      f'align-items:center;padding:6px 2px;'
+                      f'border-bottom:0.5px solid #f0f0f0;">'
+                      f'<span style="font-size:13px;color:#333;">{_r["_p"]}</span>'
+                      f'<span style="font-size:13px;font-weight:600;color:{_cc};">'
+                      f'±{_mm:.0f} นาที <span style="color:#bbb;font-weight:400;">'
+                      f'· {int(_r["n"])} เคส</span></span></div>')
+        st.markdown(f'<div style="background:white;border:0.5px solid #e0e0e0;'
+                    f'border-radius:10px;padding:6px 14px;">{_rows}</div>',
+                    unsafe_allow_html=True)
+        st.caption("💡 หัตถการที่ทำบ่อย + มีแบบแผน AI แม่นระดับใช้งานจริงได้ · "
+                   "ค่าเฉลี่ยรวมสูงเพราะหัตถการที่เวลาแปรปรวนสูง (เดายากโดยธรรมชาติ)")
+
+    st.markdown("---")
+    st.markdown('<div class="section-title">🔬 สำหรับวิทยานิพนธ์ '
+                '<span style="font-size:13px;font-weight:400;color:#9e9e9e;">'
+                '— ตัวชี้วัดเชิงสถิติ + กราฟวิเคราะห์</span></div>',
+                unsafe_allow_html=True)
+
+    # ── Apply fuzzy normalization to procedure names (canonical groups) ──
+    # ทำให้ filter dropdown แสดงชื่อแบบรวมแล้ว เช่น
+    # "ESWL", "ESWL Right" → "ESWL"  /  "QS", "Q-Switch" → "Q-Switch ND:YAG"
+    ai_df['proc_canonical'] = ai_df['procedure_name'].apply(_normalize_procedure_name)
+
+    # ── Filter Control (เฉพาะหัตถการ — เอาแพทย์ออก) ──
+    proc_options = sorted(
+        [p for p in ai_df['proc_canonical'].dropna().unique() if p != 'UNKNOWN']
+    )
+    sel_procs = st.multiselect(
+        "🔬 หัตถการ (รวมกลุ่ม fuzzy แล้ว)", proc_options, default=[],
+        placeholder="ทั้งหมด — เลือกเพื่อกรอง",
+        key="ai_filter_proc",
+    )
+
+    df = ai_df.copy()
+    if sel_procs:
+        df = df[df['proc_canonical'].isin(sel_procs)]
+
+    n = len(df)
+    if n == 0:
+        st.warning("ไม่มีเคสที่ตรงกับ filter ที่เลือก")
+        return
+
+    # ── คำนวณ metrics ──
+    mae = float(df['abs_error'].mean())
+    med_ae = float(df['abs_error'].median())
+    rmse = float(np.sqrt((df['error'] ** 2).mean()))
+    bias = float(df['error'].mean())
+    within_10 = int((df['abs_error'] <= 10).sum())
+    pct_within_10 = round(within_10 / n * 100, 1) if n > 0 else 0
+    within_15 = int((df['abs_error'] <= 15).sum())
+    pct_within_15 = round(within_15 / n * 100, 1) if n > 0 else 0
+    within_30 = int((df['abs_error'] <= 30).sum())
+    pct_within_30 = round(within_30 / n * 100, 1) if n > 0 else 0
+    within_p20 = int((df['pct_error'] <= 20).sum())
+    pct_within_p20 = round(within_p20 / n * 100, 1) if n > 0 else 0
+    # R² computation
+    actual = df['actual_duration_min'].astype(float)
+    pred = df['ai_predicted_min'].astype(float)
+    ss_res = float(((actual - pred) ** 2).sum())
+    ss_tot = float(((actual - actual.mean()) ** 2).sum())
+    r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+
+    # ── Judgment label & color ──
+    # เกณฑ์อิงงานวิจัย OR-time prediction (เคสผสมหลายหัตถการ):
+    # MAE 25–45 นาที และ within ±15 นาที 40–60% เป็นช่วงที่งานตีพิมพ์รายงานกัน
+    def _judge_mae(v):
+        if v <= 25: return ('🟢 ดีมาก', '#43a047')
+        if v <= 45: return ('🟡 ตามเกณฑ์วิจัย', '#fb8c00')
+        return ('🔴 ต้องปรับ', '#e53935')
+
+    def _judge_pct(v):
+        if v >= 55: return ('🟢 ดีมาก', '#43a047')
+        if v >= 35: return ('🟡 ตามเกณฑ์วิจัย', '#fb8c00')
+        return ('🔴 ต้องปรับ', '#e53935')
+
+    def _judge_r2(v):
+        if v >= 0.6: return ('🟢 ดีมาก', '#43a047')
+        if v >= 0.35: return ('🟡 ใช้ได้', '#fb8c00')
+        return ('🔴 ต้องปรับ', '#e53935')
+
+    mae_label, mae_color = _judge_mae(mae)
+    pct_label, pct_color = _judge_pct(pct_within_15)
+    r2_label, r2_color = _judge_r2(r2)
+
+    # ── KPI Cards (5 ตัว) ──
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">เคสที่ใช้ประเมิน</div>
+            <div class="kpi-value" style="color:#1565c0;">{n}</div>
+            <div style="font-size:11px;color:#999;">เคส</div>
+        </div>""", unsafe_allow_html=True)
+    k2.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">ผิดพลาดเฉลี่ย (MAE)</div>
+            <div class="kpi-value" style="color:{mae_color};">±{mae:.1f}</div>
+            <div style="font-size:11px;color:#999;">นาที • {mae_label}</div>
+        </div>""", unsafe_allow_html=True)
+    k3.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">ผิดค่ากลาง (Median)</div>
+            <div class="kpi-value" style="color:#1565c0;">±{med_ae:.0f}</div>
+            <div style="font-size:11px;color:#999;">นาที • ครึ่งหนึ่งของเคสผิดไม่เกินนี้</div>
+        </div>""", unsafe_allow_html=True)
+    k4.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">ทำนายแม่น (±15 นาที)</div>
+            <div class="kpi-value" style="color:{pct_color};">{pct_within_15:.0f}%</div>
+            <div style="font-size:11px;color:#999;">{within_15}/{n} เคส • {pct_label}</div>
+        </div>""", unsafe_allow_html=True)
+    k5.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">R² Score</div>
+            <div class="kpi-value" style="color:{r2_color};">{r2:.2f}</div>
+            <div style="font-size:11px;color:#999;">model fit • {r2_label}</div>
+        </div>""", unsafe_allow_html=True)
+
+    st.caption(
+        f"เกณฑ์อื่น: ±10 นาที {pct_within_10:.0f}% · ±30 นาที {pct_within_30:.0f}% · "
+        f"ผิดไม่เกิน 20% ของเวลาจริง {pct_within_p20:.0f}% · "
+        f"bias {bias:+.1f} นาที (ติดลบ = ทำนายต่ำกว่าจริง)"
+    )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Scatter + Histogram (2 columns) ──
+    col_s, col_h = st.columns(2)
+
+    with col_s:
+        st.markdown('<div class="section-title">📍 AI ทำนาย vs เวลาจริง</div>',
+                    unsafe_allow_html=True)
+        # สี categorize ตาม abs_error
+        def _err_color(e):
+            if e <= 10: return 'แม่น (≤10 นาที)'
+            if e <= 20: return 'พอใช้ (11-20)'
+            return 'ผิดมาก (>20)'
+        df_plot = df.copy()
+        df_plot['error_cat'] = df_plot['abs_error'].apply(_err_color)
+        # hover เฉพาะคอลัมน์ที่มีจริง — แหล่ง 'ชุดทดสอบปี 2567' ไม่มี surgeon_name
+        # (ตัดออกตอนสร้างไฟล์เพื่อไม่เก็บชื่อแพทย์ · ระบุคอลัมน์เกินทำ plotly ValueError)
+        _hover = {'proc_canonical': True, 'error': ':.0f', 'error_cat': False}
+        for _hc in ('procedure_name', 'surgeon_name'):
+            if _hc in df_plot.columns:
+                _hover[_hc] = False
+        fig = px.scatter(
+            df_plot, x='actual_duration_min', y='ai_predicted_min',
+            color='error_cat',
+            color_discrete_map={
+                'แม่น (≤10 นาที)': '#43a047',
+                'พอใช้ (11-20)':  '#fb8c00',
+                'ผิดมาก (>20)':   '#e53935',
+            },
+            hover_data=_hover,
+            labels={'actual_duration_min': 'เวลาจริง (นาที)',
+                    'ai_predicted_min': 'AI ทำนายเวลาใช้ห้อง (นาที)'},
+        )
+        max_v = float(max(df['actual_duration_min'].max(),
+                          df['ai_predicted_min'].max()) * 1.1)
+        # Perfect prediction line (y = x)
+        fig.add_trace(go.Scatter(
+            x=[0, max_v], y=[0, max_v], mode='lines',
+            line=dict(dash='dash', color='#9e9e9e', width=1.5),
+            name='ทำนายแม่น (y=x)', hoverinfo='skip',
+        ))
+        fig.update_layout(
+            margin=dict(t=10, b=40, l=50, r=10), height=320,
+            legend=dict(orientation='h', y=-0.15),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col_h:
+        st.markdown('<div class="section-title">📊 การกระจายของ Error</div>',
+                    unsafe_allow_html=True)
+        fig = px.histogram(
+            df, x='error', nbins=15,
+            labels={'error': 'AI − จริง (นาที)', 'count': 'จำนวนเคส'},
+            color_discrete_sequence=['#5c6bc0'],
+        )
+        fig.add_vline(x=0, line_dash='dash', line_color='#43a047',
+                      annotation_text='ทำนายแม่น',
+                      annotation_position='top right')
+        fig.add_vline(x=bias, line_dash='dot', line_color='#e53935',
+                      annotation_text=f'เฉลี่ย bias = {bias:+.1f}',
+                      annotation_position='top left')
+        fig.update_layout(
+            margin=dict(t=10, b=40, l=40, r=10), height=320,
+            xaxis_title='AI − จริง (นาที)  ←ต่ำกว่า | เกินจริง→',
+            yaxis_title='จำนวนเคส',
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ── 📏 ความแม่นแยกตามความยาวเคสจริง ──
+    st.markdown('<div class="section-title">📏 ความแม่นแยกตามความยาวเคสจริง</div>',
+                unsafe_allow_html=True)
+    _bands = [(0, 60, 'สั้น (<60 นาที)'), (60, 120, 'กลาง (60–120)'),
+              (120, 240, 'ยาว (120–240)'), (240, 10 ** 6, 'ยาวมาก (>240)')]
+    _band_rows = []
+    for _lo, _hi, _lbl in _bands:
+        _m = (df['actual_duration_min'] >= _lo) & (df['actual_duration_min'] < _hi)
+        if int(_m.sum()) == 0:
+            continue
+        _sub = df[_m]
+        _band_rows.append({
+            'กลุ่มเคส': _lbl,
+            'จำนวน': int(_m.sum()),
+            'จริงเฉลี่ย (นาที)': round(float(_sub['actual_duration_min'].mean())),
+            'AI เฉลี่ย (นาที)': round(float(_sub['ai_predicted_min'].mean())),
+            'MAE (นาที)': round(float(_sub['abs_error'].mean()), 1),
+            'Bias (นาที)': round(float(_sub['error'].mean()), 1),
+            '±15 นาที (%)': round(float((_sub['abs_error'] <= 15).mean() * 100), 1),
+        })
+    if _band_rows:
+        st.dataframe(pd.DataFrame(_band_rows), hide_index=True,
+                     use_container_width=True)
+        st.caption("💡 Bias ติดลบ = AI ทำนายต่ำกว่าจริง — เคสยาวหายากทำนายยาก"
+                   "เป็นปกติของทุกระบบ (รับมือด้วย alert เกินเวลา + คนแก้ค่า ✏️)")
+
+    # Footer note: data scope (ตามแหล่งข้อมูลที่เลือกด้านบน)
+    if _is_calib_src:
+        st.caption(
+            f"📌 ใช้ข้อมูล {len(ai_df)} เคสจาก**ชุดทดสอบปี 2567** (hold-out — "
+            "โมเดลเทรนด้วยปี 2564–2566 ไม่เคยเห็นชุดนี้) ตัวเลขชุดเดียวกับเล่มวิจัย "
+            "· Filter ทำงานบน scatter / histogram"
+        )
+    else:
+        st.caption(
+            f"📌 ใช้ข้อมูล {len(ai_df)} เคสที่ทำเสร็จแล้ว **ตั้งแต่ปี 68 เป็นต้นไปเท่านั้น** "
+            "(ข้อมูล 64–67 เป็นชุดเทรนของโมเดล — กันออกเพื่อไม่ให้ตัวเลขสวยเกินจริง) "
+            "· ตัดเคสนอกเวลาออก · Filter ทำงานบน scatter / histogram"
+        )
+
+    # ── 🧑‍⚕️ คนแก้เวลา vs 🤖 AI (จาก override_log บนกระดาน) ──
+    try:
+        from main_or_db import get_override_stats
+        _ovs = get_override_stats()
+    except Exception:
+        _ovs = None
+    if _ovs is not None:
+        st.markdown('<div class="section-title">🧑‍⚕️ คนแก้เวลา vs 🤖 AI '
+                    '(human override)</div>', unsafe_allow_html=True)
+        _ov_all, _ov_done = _ovs['all'], _ovs['done']
+        if len(_ov_done):
+            _mae_ai = float(_ov_done['ai_err'].mean())
+            _mae_hm = float(_ov_done['hm_err'].mean())
+            _hm_win = int((_ov_done['hm_err'] < _ov_done['ai_err']).sum())
+            _tie = int((_ov_done['hm_err'] == _ov_done['ai_err']).sum())
+            o1, o2, o3, o4 = st.columns(4)
+            o1.metric("เคสที่ถูกแก้ (จบแล้ว)", f"{len(_ov_done)}",
+                      help=f"บันทึกการแก้ทั้งหมด {len(_ov_all)} ครั้ง")
+            o2.metric("MAE ของ AI", f"±{_mae_ai:.1f} นาที",
+                      help="เฉพาะเคสที่ถูกคนแก้เวลา")
+            o3.metric("MAE ของคน", f"±{_mae_hm:.1f} นาที",
+                      delta=f"{_mae_hm - _mae_ai:+.1f} นาที",
+                      delta_color="inverse",
+                      help="ติดลบ (เขียว) = คนแก้แล้วแม่นกว่า AI")
+            o4.metric("คนแม่นกว่า AI", f"{_hm_win}/{len(_ov_done)} เคส",
+                      help=f"เท่ากัน {_tie} เคส")
+            with st.expander(f"ดูรายเคส ({len(_ov_done)} เคสล่าสุด)"):
+                _ov_show = _ov_done[['logged_at', 'procedure_name',
+                                     'ai_predicted_min', 'override_min',
+                                     'actual_duration_min']].head(30).rename(
+                    columns={'logged_at': 'เวลาที่แก้',
+                             'procedure_name': 'หัตถการ',
+                             'ai_predicted_min': 'AI (นาที)',
+                             'override_min': 'คนแก้ (นาที)',
+                             'actual_duration_min': 'จริง (นาที)'})
+                st.dataframe(_ov_show, hide_index=True,
+                             use_container_width=True)
+            st.caption("💡 มุมวิจัย human-AI collaboration: ถ้าคนแม่นกว่าในเคสซับซ้อน "
+                       "= override มีคุณค่า · ข้อมูลนี้เก็บอัตโนมัติจากปุ่ม ✏️ บนกระดาน")
+        else:
+            st.caption(f"มีบันทึกการแก้เวลา {len(_ov_all)} ครั้ง — "
+                       "รอเคสผ่าเสร็จเพื่อเทียบกับเวลาจริง")
+
+    # ── ⚙️ จัดการคำทำนายในฐานข้อมูล (re-backfill ด้วยโมเดลปัจจุบัน) ──
+    with st.expander("⚙️ คำนวณคำทำนายใหม่ด้วยโมเดลปัจจุบัน (re-backfill)"):
+        try:
+            from main_or_db import get_conn as _gc
+            _c = _gc()
+            _cols = [x[1] for x in _c.execute("PRAGMA table_info(cases)").fetchall()]
+            if 'ai_model_ver' in _cols:
+                _mix = _c.execute(
+                    "SELECT COALESCE(ai_model_ver, 'รุ่นเก่า (ตอน import)') AS ver, "
+                    "COUNT(*) FROM cases WHERE ai_predicted_min IS NOT NULL "
+                    "GROUP BY ver").fetchall()
+                st.caption("ที่มาของคำทำนายใน DB ตอนนี้: "
+                           + " · ".join(f"โมเดล {v}: {c:,} เคส" for v, c in _mix))
+            else:
+                st.caption("⚠️ คำทำนายทั้งหมดถูกบันทึกตอน import ด้วยโมเดลรุ่นเก่า "
+                           "— ตัวเลขด้านบนยังไม่สะท้อนโมเดลปัจจุบัน")
+            _c.close()
+        except Exception:
+            pass
+        st.markdown(
+            "คำทำนายใน DB ถูกคำนวณ ณ ตอน import ด้วยโมเดลรุ่นที่ใช้ขณะนั้น "
+            "ปุ่มนี้จะคำนวณใหม่ทั้งหมดด้วย**โมเดลปัจจุบัน** (active version) "
+            "— ค่าเดิมถูกสำรองไว้ที่คอลัมน์ `ai_predicted_min_legacy` "
+            "เพื่อใช้เทียบ before/after ในงานวิจัย (ใช้เวลาประมาณ 1–3 นาที)")
+        if st.button("🔄 คำนวณคำทำนายใหม่ทั้งหมดด้วยโมเดลปัจจุบัน",
+                     key="ai_rebackfill", type="primary"):
+            from main_or_db import rebackfill_ai_predictions
+            _pb = st.progress(0.0, text="กำลังคำนวณ…")
+            _n_up, _ver = rebackfill_ai_predictions(
+                progress_cb=lambda p: _pb.progress(
+                    min(p, 1.0), text=f"กำลังคำนวณ… {p * 100:.0f}%"))
+            st.session_state['_ai_rebf_msg'] = (
+                f"✅ คำนวณใหม่ {_n_up:,} เคส ด้วยโมเดล {_ver} แล้ว "
+                f"(ค่าเก่าสำรองไว้ใน ai_predicted_min_legacy)")
+            st.rerun()
+
+
+def _render_ai_accuracy(op_date: str = None):
+    """AI Prediction Accuracy — ส่วนเล็กๆ สำหรับวิจัย."""
+    summary = get_summary(date_from=op_date, date_to=op_date)
+    ai_df = summary.get('ai_df')
+    if ai_df is None or len(ai_df) == 0:
+        st.caption("ยังไม่มีข้อมูล AI prediction วันนี้")
+        return
+
+    # Calculate MAE, MAPE
+    ai_df = ai_df.copy()
+    ai_df['error'] = (ai_df['ai_predicted_min'] - ai_df['actual_duration_min']).abs()
+    ai_df['pct_error'] = ai_df['error'] / ai_df['actual_duration_min'] * 100
+    mae = ai_df['error'].mean()
+    mape = ai_df['pct_error'].mean()
+    n = len(ai_df)
+    within_15 = (ai_df['pct_error'] <= 15).sum()
+    accuracy_pct = round(within_15 / n * 100, 1) if n > 0 else 0
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("MAE", f"{mae:.1f} นาที")
+    c2.metric("MAPE", f"{mape:.1f}%")
+    c3.metric(f"ทำนายแม่น (±15%)", f"{within_15}/{n} ({accuracy_pct}%)")
+
+    # Mini scatter
+    fig = px.scatter(ai_df, x='actual_duration_min', y='ai_predicted_min',
+                     hover_data=['procedure_name', 'surgeon_name'],
+                     labels={'actual_duration_min': 'จริง (นาที)', 'ai_predicted_min': 'AI ทำนาย (นาที)'},
+                     color_discrete_sequence=['#5c6bc0'])
+    # Perfect prediction line
+    max_val = max(ai_df['actual_duration_min'].max(), ai_df['ai_predicted_min'].max()) * 1.1
+    fig.add_trace(go.Scatter(x=[0, max_val], y=[0, max_val],
+                             mode='lines', line=dict(dash='dash', color='#bdbdbd'),
+                             showlegend=False))
+    fig.update_layout(margin=dict(t=10, b=30, l=40, r=10), height=200,
+                      xaxis_title='จริง (นาที)', yaxis_title='AI (นาที)')
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# 🔐 PIN ผู้ดูแล — อ่านจาก st.secrets['admin_pin'] ผ่าน get_admin_pin() (fail-closed)
+# (เดิม hardcode 'muke' ในซอร์ส = ใครอ่านโค้ดบน GitHub ก็ปลดล็อก Maintenance/Wipe ได้)
+
+
+# ───────────────────────────── Helper functions ─────────────────────────────
+_NURSE_TITLE_RE = re.compile(
+    r'^\s*'
+    r'(?:ว่าที่\s*)?'      # ว่าที่ (ก่อนยศ)
+    r'(?:'
+    # Compound civilian (LONG first — alternation is left-to-right)
+    r'นายแพทย์|ทันตแพทย์|เภสัชกรหญิง|เภสัชกรชาย|เภสัชกร|'
+    r'แพทย์หญิง|แพทย์ชาย|แพทย์|'
+    # ตำรวจ
+    r'พล\.?ต\.?[อทต]\.?|'      # พล.ต.อ./ท/ต
+    r'พ\.?ต\.?[อทต]\.?|'        # พ.ต.อ./ท/ต
+    r'ร\.?ต\.?[อทต]\.?|'        # ร.ต.อ./ท/ต
+    r'ด\.?ต\.?|'                # ด.ต.
+    r'จ\.?ส\.?ต\.?|จ\.?ส\.?[อทต]\.?|'  # จ.ส.ต./อ/ท
+    r'ส\.?ต\.?[อทต]\.?|'        # ส.ต.อ./ท/ต
+    # ทหาร
+    r'พล\.?[อทต]\.?|พล\.?จ\.?|'
+    r'พ\.?[อทต]\.?|'
+    r'ร\.?[อทต]\.?|'
+    # พลเรือน — นางสาว ต้องอยู่ก่อน นาย+นาง
+    r'นางสาว|นาย|นาง|น\.?ส\.?|'
+    r'เด็กชาย|เด็กหญิง|ด\.?ช\.?|ด\.?ญ\.?|'
+    # ตัวย่อแพทย์/อาจารย์
+    r'นพ\.?|พญ\.?|ดร\.?|ผศ\.?|รศ\.?|ศ\.?'
+    r')'
+    r'\s*(?:หญิง|ชาย)?\s*'   # \s+ → \s* รองรับกรณีไม่มีช่องว่าง
+)
+
+
+def _normalize_nurse_name(name: str) -> str:
+    """ตัดยศ/คำนำหน้าออก: 'ส.ต.อ.หญิงพิมพ์ชนก จิตรา' → 'พิมพ์ชนก จิตรา'"""
+    if not name or not isinstance(name, str):
+        return name or ''
+    s = name.strip()
+    # ลบยศ/คำนำหน้า (ลบซ้ำจนหมด)
+    prev = None
+    while prev != s:
+        prev = s
+        s = _NURSE_TITLE_RE.sub('', s)
+    return re.sub(r'\s+', ' ', s).strip()
+
+
+def _read_his_file(uploaded_file):
+    """อ่านไฟล์ HIS — ลองหลาย format (HIS export มักเป็น HTML/XML ปลอม).
+
+    Returns pd.DataFrame หรือ raise Exception.
+    """
+    import pandas as pd
+    name = uploaded_file.name.lower()
+
+    # 1. CSV utf-16 (HIS export มาตรฐาน)
+    if name.endswith('.csv'):
+        for enc in ('utf-16', 'utf-8', 'utf-8-sig', 'cp874'):
+            try:
+                uploaded_file.seek(0)
+                return pd.read_csv(uploaded_file, encoding=enc)
+            except (UnicodeDecodeError, UnicodeError):
+                continue
+        raise ValueError("อ่าน CSV ไม่ได้ — encoding ไม่ตรง")
+
+    # 2. xlsx (openpyxl)
+    if name.endswith('.xlsx'):
+        uploaded_file.seek(0)
+        return pd.read_excel(uploaded_file, engine='openpyxl')
+
+    # 3. xls — ลอง xlrd ก่อน (BIFF จริง)
+    if name.endswith('.xls'):
+        last_err = None
+        # ลอง xlrd
+        try:
+            uploaded_file.seek(0)
+            return pd.read_excel(uploaded_file, engine='xlrd')
+        except Exception as e:
+            last_err = e
+        # ลอง html (HIS export มักเป็น HTML disguised as .xls)
+        try:
+            uploaded_file.seek(0)
+            tables = pd.read_html(uploaded_file)
+            if tables:
+                return tables[0]
+        except Exception as e:
+            last_err = e
+        # ลอง openpyxl (เผื่อเป็น xlsx เปลี่ยนนามสกุล)
+        try:
+            uploaded_file.seek(0)
+            return pd.read_excel(uploaded_file, engine='openpyxl')
+        except Exception as e:
+            last_err = e
+        raise ValueError(
+            f"อ่านไฟล์ {name} ไม่ได้ — ลองทั้ง xlrd, html, openpyxl "
+            f"แล้ว (last error: {last_err})\n"
+            f"💡 ทางแก้: เปิดไฟล์ใน Excel แล้ว Save As → xlsx แล้ว upload ใหม่"
+        )
+
+    raise ValueError(f"ไม่รองรับนามสกุล {name}")
+
+
+def _render_nurse_progress_history(date_from: str, date_to: str):
+    """👥 Progress รายบุคคล (history version) — ใช้ date range จาก สถิติย้อนหลัง
+    PIN-protected · Fuzzy grouping ของหัตถการ · แยก Scrub/Circ"""
+
+    # ---- PIN Lock ----
+    if not st.session_state.get('nurse_unlocked'):
+        st.markdown(
+            '<div style="background:#f5f5f5;border-radius:10px;padding:16px;'
+            'text-align:center;margin:8px 0;">'
+            '<span style="font-size:24px;">🔒</span><br>'
+            '<span style="font-size:14px;color:#616161;font-weight:600;">'
+            'Progress รายบุคคล — ใส่รหัสเพื่อดู (ป้องกันข้อมูลส่วนตัว)</span></div>',
+            unsafe_allow_html=True,
+        )
+        _pin_cfg = get_admin_pin()
+        if not _pin_cfg:
+            st.caption("🔒 ล็อกไว้ — ยังไม่ได้ตั้ง `admin_pin` ใน secrets")
+            return
+        pc1, pc2 = st.columns([3, 1])
+        with pc1:
+            pin_input = st.text_input("รหัส PIN", type="password",
+                                      key="nurse_pin_hist", placeholder="กรอก PIN")
+        with pc2:
+            st.markdown('<div style="height:28px;"></div>', unsafe_allow_html=True)
+            if st.button("🔓 ปลดล็อค", key="nurse_unlock_hist",
+                         use_container_width=True):
+                if pin_input == _pin_cfg:
+                    st.session_state['nurse_unlocked'] = True
+                    st.rerun()
+                else:
+                    st.error("❌ PIN ไม่ถูกต้อง")
+        return
+
+    # ---- Unlocked ----
+    from main_or_db import get_nurse_stats, _normalize_procedure_name
+    ns = get_nurse_stats(date_from=date_from, date_to=date_to)
+    summary = ns['nurse_summary']
+    cases_df = ns['nurse_cases']
+    if summary.empty:
+        st.info("ยังไม่มีข้อมูลพยาบาลในช่วงนี้")
+        if st.button("🔒 ล็อคอีกครั้ง", key="nurse_lock_hist_empty"):
+            st.session_state['nurse_unlocked'] = False
+            st.rerun()
+        return
+
+    # Select nurse
+    nurse_names = sorted(summary['nurse_name'].tolist())
+    sel_nurse = st.selectbox(
+        "🧑‍⚕️ เลือกพยาบาล",
+        nurse_names, key="sel_nurse_hist",
+        help="แสดงเฉพาะข้อมูลของพยาบาลที่เลือก",
+    )
+
+    ind = cases_df[cases_df['nurse_name'] == sel_nurse].copy()
+    if ind.empty:
+        st.info(f"ไม่พบเคสของ {sel_nurse} ในช่วงนี้")
+        return
+
+    # ── 3 KPI cards ──
+    total = len(ind)
+    n_scrub = int((ind['role'] == 'Scrub').sum())
+    n_circ = int((ind['role'] == 'Circ').sum())
+    pct_scrub = (n_scrub / total * 100) if total else 0
+    pct_circ = (n_circ / total * 100) if total else 0
+
+    k1, k2, k3 = st.columns(3)
+    with k1:
+        st.markdown(
+            f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
+            f'<div style="font-size:12px;color:#757575;">📊 รวม</div>'
+            f'<div style="font-size:28px;font-weight:500;color:#1565c0;">{total}</div>'
+            f'<div style="font-size:11px;color:#9e9e9e;">เคสทั้งหมด</div>'
+            f'</div>', unsafe_allow_html=True)
+    with k2:
+        st.markdown(
+            f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
+            f'<div style="font-size:12px;color:#757575;">🧤 Scrub</div>'
+            f'<div style="font-size:28px;font-weight:500;color:#2e7d32;">{n_scrub}</div>'
+            f'<div style="font-size:11px;color:#9e9e9e;">{pct_scrub:.1f}% ของงาน</div>'
+            f'</div>', unsafe_allow_html=True)
+    with k3:
+        st.markdown(
+            f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
+            f'<div style="font-size:12px;color:#757575;">🔁 Circulate</div>'
+            f'<div style="font-size:28px;font-weight:500;color:#e65100;">{n_circ}</div>'
+            f'<div style="font-size:11px;color:#9e9e9e;">{pct_circ:.1f}% ของงาน</div>'
+            f'</div>', unsafe_allow_html=True)
+
+    # ── Top 10 หัตถการ (fuzzy grouped + แยก scrub/circ) ──
+    st.markdown(
+        '<div style="font-size:13px;color:#666;margin:18px 0 6px;font-weight:500;">'
+        '🔬 หัตถการที่ทำ (Top 10 · รวมหัตถการคล้ายกัน)</div>',
+        unsafe_allow_html=True)
+
+    # Fuzzy normalize procedure name
+    ind['_proc_norm'] = ind['procedure_name'].fillna('-').apply(_normalize_procedure_name)
+    grouped = (ind.groupby('_proc_norm')
+                  .agg(total=('case_id', 'count'),
+                       scrub=('role', lambda x: (x == 'Scrub').sum()),
+                       circ=('role', lambda x: (x == 'Circ').sum()))
+                  .reset_index()
+                  .sort_values('total', ascending=False)
+                  .head(10))
+    grouped.columns = ['หัตถการ', 'รวม', '🧤 Scrub', '🔁 Circ']
+    st.dataframe(grouped, hide_index=True, use_container_width=True)
+
+    st.caption(
+        "💡 หัตถการคล้ายกันถูกรวมแล้ว (เช่น 'off PERM cath' + 'off TCC' → 'Off catheter') · "
+        "นับ real-time จากทุกแหล่ง (พยาบาลกดในแอป + upload HIS)")
+
+    # ── Lock button ──
+    if st.button("🔒 ล็อคอีกครั้ง", key="nurse_lock_hist",
+                 use_container_width=False):
+        st.session_state['nurse_unlocked'] = False
+        st.rerun()
+
+
+def _render_nurse_progress(op_date: str):
+    """Progress รายบุคคล — ล็อคด้วย PIN."""
+
+    # ---- PIN Lock ----
+    if not st.session_state.get('nurse_unlocked'):
+        st.markdown(
+            '<div style="background:#f5f5f5;border-radius:10px;padding:16px;'
+            'text-align:center;margin:8px 0;">'
+            '<span style="font-size:24px;">🔒</span><br>'
+            '<span style="font-size:14px;color:#616161;font-weight:600;">'
+            'Nurse Progress — ต้องใส่รหัสเพื่อดู</span></div>',
+            unsafe_allow_html=True,
+        )
+        _pin_cfg = get_admin_pin()
+        if not _pin_cfg:
+            st.caption("🔒 ล็อกไว้ — ยังไม่ได้ตั้ง `admin_pin` ใน secrets")
+            return
+        pc1, pc2 = st.columns([3, 1])
+        with pc1:
+            pin_input = st.text_input("รหัส PIN", type="password",
+                                       key="nurse_pin_input",
+                                       placeholder="กรอก PIN")
+        with pc2:
+            st.markdown('<div style="height:28px;"></div>', unsafe_allow_html=True)
+            if st.button("🔓 ปลดล็อค", key="nurse_unlock_btn",
+                         use_container_width=True):
+                if pin_input == _pin_cfg:
+                    st.session_state['nurse_unlocked'] = True
+                    st.rerun()
+                else:
+                    st.error("❌ PIN ไม่ถูกต้อง")
+        return
+
+    # ---- Unlocked: show Progress รายบุคคล ----
+    # เลือกช่วงเวลา
+    period = st.radio("ช่วงเวลา", ["วันนี้", "7 วัน", "30 วัน", "ทั้งหมด"],
+                      horizontal=True, key="nurse_period", label_visibility='collapsed')
+    from datetime import timedelta
+    if period == "วันนี้":
+        d_from, d_to = op_date, op_date
+    elif period == "7 วัน":
+        d_from = (datetime.strptime(op_date, '%Y-%m-%d') - timedelta(days=6)).strftime('%Y-%m-%d')
+        d_to = op_date
+    elif period == "30 วัน":
+        d_from = (datetime.strptime(op_date, '%Y-%m-%d') - timedelta(days=29)).strftime('%Y-%m-%d')
+        d_to = op_date
+    else:
+        d_from, d_to = None, None
+
+    ns = get_nurse_stats(date_from=d_from, date_to=d_to)
+    summary = ns['nurse_summary']
+    cases_df = ns['nurse_cases']
+
+    if summary.empty:
+        st.info("ยังไม่มีข้อมูลพยาบาล")
+        return
+
+    # ---- Progress รายบุคคล ----
+    nurse_names = sorted(summary['nurse_name'].tolist())
+    sel_nurse = st.selectbox("เลือกพยาบาล", nurse_names, key="sel_nurse_detail")
+    individual = cases_df[cases_df['nurse_name'] == sel_nurse].copy()
+    if not individual.empty:
+        total = len(individual)
+        n_scrub = len(individual[individual['role'] == 'Scrub'])
+        n_circ = len(individual[individual['role'] == 'Circ'])
+        n_procs = individual['procedure_name'].nunique()
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("เคสทั้งหมด", total)
+        m2.metric("🧤 Scrub", n_scrub)
+        m3.metric("📋 Circ", n_circ)
+        m4.metric("หัตถการ", f"{n_procs} ชนิด")
+
+        # Procedure breakdown
+        proc_counts = individual.groupby(['procedure_name', 'role']).size().reset_index(name='n')
+        st.markdown(f"**{sel_nurse}** — หัตถการที่เคยทำ:")
+        for _, p in proc_counts.iterrows():
+            role_icon = '🧤' if p['role'] == 'Scrub' else '📋'
+            st.markdown(f"- {role_icon} **{p['procedure_name']}** × {p['n']} ครั้ง ({p['role']})")
+
+        # Timeline chart
+        daily = individual.groupby('op_date').size().reset_index(name='n')
+        if len(daily) > 1:
+            fig = px.bar(daily, x='op_date', y='n',
+                         labels={'op_date': 'วันที่', 'n': 'จำนวนเคส'},
+                         color_discrete_sequence=['#5c6bc0'])
+            fig.update_layout(margin=dict(t=10, b=30, l=40, r=10), height=200)
+            st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("ยังไม่มีข้อมูลสำหรับพยาบาลที่เลือก")
+
+    # Lock button
+    if st.button("🔒 ล็อคอีกครั้ง", key="nurse_lock_btn"):
+        st.session_state['nurse_unlocked'] = False
+        st.rerun()
+
+
+# ============================================================================
+# MAIN PAGE
+# ============================================================================
+
+def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
+    """Tab สถิติย้อนหลัง — จัดเรียงตามหลัก information architecture (general→specific):
+    1. 🎯 KPI Highlights → 2. 📋 สรุปยอดสะสม → 3. 📈 กราฟจำนวนเคสรายเดือน →
+    4. 🏆 อันดับยอดนิยม → 5. ⏱️ ประสิทธิภาพ → 6. 🌙 นอกเวลา → 7. 💾 Export
+    """
+    if _secs is None:
+        _secs = {'kpi', 'sum', 'trend', 'rank', 'eff', 'night'}
+
+    data = (_ca_historical(date_from, date_to, _stats_ver())
+            if _secs & {'kpi', 'trend', 'rank'} else None)
+
+    if data is not None and data['total_cases'] == 0:
+        st.info("ยังไม่มีข้อมูลเคสที่เสร็จแล้วในช่วงนี้ — เริ่มใช้งานแล้วสถิติจะสะสมอัตโนมัติ")
+        return
+
+    # 📑 Sticky sidebar TOC (Notion-style) — fixed มุมขวา + smooth scroll + collapse
+    import streamlit.components.v1 as _hist_components
+    _hist_components.html("""
+    <script>
+    (function() {
+        const parent = window.parent.document;
+        // ลบของเดิมก่อน (กรณี rerun)
+        ['hist-toc', 'hist-toc-mini'].forEach(id => {
+            const old = parent.getElementById(id);
+            if (old) old.remove();
+        });
+
+        // อ่านสถานะ collapsed จาก sessionStorage
+        const isCollapsed = window.parent.sessionStorage.getItem(
+            'hist_toc_collapsed') === '1';
+
+        // 🔽 TOC แบบเต็ม
+        const TOC_HTML = `
+        <div id="hist-toc" style="
+            position: fixed; right: 20px; top: 120px; width: 220px;
+            background: white; border: 0.5px solid #e0e0e0;
+            border-radius: 10px; padding: 14px 12px;
+            font-family: 'Sarabun', sans-serif; font-size: 13px;
+            z-index: 999; max-height: 75vh; overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: ${isCollapsed ? 'none' : 'block'};">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 6px;">
+            <span style="font-size:10px;color:#757575;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">
+              📑 ไปที่ section
+            </span>
+            <span id="toc-minimize" title="ย่อหน้าต่าง" onclick="window.__toc_minimize && window.__toc_minimize()" style="cursor:pointer;color:#9e9e9e;font-size:16px;line-height:1;padding:2px 6px;border-radius:4px;user-select:none;">−</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <a class="toc-item" data-target="sec-kpi" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">1</span>🎯 KPI Highlights</a>
+            <a class="toc-item" data-target="sec-sum" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">2</span>📋 สรุปยอดสะสม</a>
+            <a class="toc-item" data-target="sec-trend" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">3</span>📈 กราฟจำนวนเคสรายเดือน</a>
+            <a class="toc-item" data-target="sec-rank" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">4</span>🏆 อันดับยอดนิยม</a>
+            <a class="toc-item" data-target="sec-eff" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">5</span>⏱️ ประสิทธิภาพ</a>
+            <a class="toc-item" data-target="sec-night" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">6</span>🌙 นอกเวลา</a>
+            <a class="toc-item" data-target="sec-nurse" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">7</span>👥 Progress (PIN)</a>
+            <a class="toc-item" data-target="sec-export" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">8</span>💾 Export</a>
+          </div>
+          <div style="border-top:0.5px solid #eceff1;margin-top:10px;padding-top:10px;">
+            <a id="toc-top" style="display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;border-radius:6px;color:#1976d2;text-decoration:none;cursor:pointer;">⬆ กลับด้านบน</a>
+          </div>
+        </div>`;
+
+        // 🔼 TOC แบบย่อ (ปุ่มเล็กกลม)
+        const MINI_HTML = `
+        <div id="hist-toc-mini" title="เปิด TOC" onclick="window.__toc_expand && window.__toc_expand()" style="
+            position: fixed; right: 20px; top: 120px;
+            width: 44px; height: 44px; border-radius: 50%;
+            background: white; border: 0.5px solid #e0e0e0;
+            display: ${isCollapsed ? 'flex' : 'none'};
+            align-items: center; justify-content: center;
+            cursor: pointer; z-index: 999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            font-size: 20px; user-select: none;">📑</div>`;
+
+        parent.body.insertAdjacentHTML('beforeend', TOC_HTML);
+        parent.body.insertAdjacentHTML('beforeend', MINI_HTML);
+
+        // 🎯 Smooth scroll handler
+        function scrollToSection(id) {
+            const target = parent.getElementById(id);
+            if (target) {
+                target.scrollIntoView({behavior: 'smooth', block: 'start'});
+            }
+        }
+        parent.querySelectorAll('#hist-toc .toc-item').forEach(a => {
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                scrollToSection(a.getAttribute('data-target'));
+            });
+            a.addEventListener('mouseenter', () => {
+                if (!a.classList.contains('active'))
+                    a.style.background = '#f5f5f5';
+            });
+            a.addEventListener('mouseleave', () => {
+                if (!a.classList.contains('active'))
+                    a.style.background = 'transparent';
+            });
+        });
+
+        // ⬆ Back-to-top — ใช้ scrollIntoView ของ section แรก (เชื่อถือได้กว่า)
+        const topBtn = parent.getElementById('toc-top');
+        if (topBtn) {
+            topBtn.addEventListener('click', () => {
+                // ลองหลายวิธี - Streamlit version ต่างกัน
+                const first = parent.getElementById('sec-kpi');
+                if (first) {
+                    first.scrollIntoView({behavior: 'smooth', block: 'start'});
+                } else {
+                    // Fallback selectors
+                    const sels = ['section.main', '[data-testid="stMain"]',
+                                  '[data-testid="stAppViewContainer"]',
+                                  'div.main', 'main'];
+                    for (const s of sels) {
+                        const el = parent.querySelector(s);
+                        if (el && el.scrollTo) {
+                            el.scrollTo({top: 0, behavior: 'smooth'});
+                            return;
+                        }
+                    }
+                    window.parent.scrollTo({top: 0, behavior: 'smooth'});
+                }
+            });
+            topBtn.addEventListener('mouseenter', () => {
+                topBtn.style.background = '#e3f2fd';
+            });
+            topBtn.addEventListener('mouseleave', () => {
+                topBtn.style.background = 'transparent';
+            });
+        }
+
+        // 🔽🔼 Toggle TOC ผ่าน global functions (robust — ไม่หลุดตอน rerun)
+        // ใช้ inline onclick attribute → ไม่ต้อง re-attach listener ทุกครั้ง
+        window.parent.__toc_minimize = function() {
+            const toc = parent.getElementById('hist-toc');
+            const mini = parent.getElementById('hist-toc-mini');
+            if (toc) toc.style.display = 'none';
+            if (mini) mini.style.display = 'flex';
+            window.parent.sessionStorage.setItem('hist_toc_collapsed', '1');
+        };
+        window.parent.__toc_expand = function() {
+            const toc = parent.getElementById('hist-toc');
+            const mini = parent.getElementById('hist-toc-mini');
+            if (toc) toc.style.display = 'block';
+            if (mini) mini.style.display = 'none';
+            window.parent.sessionStorage.setItem('hist_toc_collapsed', '0');
+        };
+        // Hover effects (ที่ยังต้องใช้ listener — แต่ไม่ critical ถ้าหลุด)
+        const _minBtn = parent.getElementById('toc-minimize');
+        const _miniBtn = parent.getElementById('hist-toc-mini');
+        if (_minBtn) {
+            _minBtn.onmouseenter = () => {
+                _minBtn.style.background = '#f5f5f5';
+                _minBtn.style.color = '#424242';
+            };
+            _minBtn.onmouseleave = () => {
+                _minBtn.style.background = 'transparent';
+                _minBtn.style.color = '#9e9e9e';
+            };
+        }
+        if (_miniBtn) {
+            _miniBtn.onmouseenter = () => {
+                _miniBtn.style.transform = 'scale(1.08)';
+            };
+            _miniBtn.onmouseleave = () => {
+                _miniBtn.style.transform = 'scale(1.0)';
+            };
+        }
+
+        // Active state via IntersectionObserver
+        const sections = ['sec-kpi','sec-sum','sec-trend','sec-rank',
+                          'sec-eff','sec-night','sec-nurse','sec-export'];
+        const sectionEls = sections.map(id => parent.getElementById(id))
+                                    .filter(x => x);
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    parent.querySelectorAll('#hist-toc .toc-item').forEach(a => {
+                        a.classList.remove('active');
+                        a.style.background = 'transparent';
+                        a.style.color = '#455a64';
+                        a.style.fontWeight = '400';
+                        a.style.borderLeft = 'none';
+                    });
+                    const active = parent.querySelector(
+                        `#hist-toc .toc-item[data-target="${entry.target.id}"]`);
+                    if (active) {
+                        active.classList.add('active');
+                        active.style.background = '#f3e5f5';
+                        active.style.color = '#4a148c';
+                        active.style.fontWeight = '600';
+                        active.style.borderLeft = '3px solid #6a1b9a';
+                        active.style.paddingLeft = '7px';
+                    }
+                }
+            });
+        }, {threshold: 0.2, rootMargin: '-80px 0px -50% 0px'});
+        sectionEls.forEach(el => observer.observe(el));
+    })();
+    </script>
+    """, height=0)
+
+    if 'kpi' in _secs:
+        _hist_sec_kpi(date_from, date_to, data)
+    if 'sum' in _secs:
+        _hist_sec_sum(date_from, date_to, data)
+    if 'trend' in _secs:
+        _hist_sec_trend(date_from, date_to, data)
+    if 'rank' in _secs:
+        _hist_sec_rank(date_from, date_to, data)
+    if 'eff' in _secs:
+        _hist_sec_eff(date_from, date_to, data)
+    if 'night' in _secs:
+        _hist_sec_night(date_from, date_to, data)
+
+    # ════════════════════════════════════════════════════════════════
+    # 7️⃣  💾 Export ข้อมูล
+    # ════════════════════════════════════════════════════════════════
+    st.markdown('<div id="sec-export" class="group-header" '
+                'style="color:#546e7a;background:#eceff1;'
+                'border-left-color:#546e7a;">💾 Export ข้อมูล</div>',
+                unsafe_allow_html=True)
+    st.caption("ดาวน์โหลดข้อมูลสำหรับผู้บริหารหรือวิทยานิพนธ์")
+    col_e1, col_e2 = st.columns([1, 3])
+    with col_e1:
+        export_scope = st.radio("ช่วง export", ["ตามที่เลือก", "ทั้งหมด"],
+                                horizontal=True, key="export_scope",
+                                label_visibility='collapsed')
+    with col_e2:
+        if export_scope == "ทั้งหมด":
+            exp_from, exp_to = None, None
+        else:
+            exp_from, exp_to = date_from, date_to
+
+        df_export = export_cases_csv(exp_from, exp_to)
+        if not df_export.empty:
+            dl_a, dl_b = st.columns(2)
+            with dl_a:
+                xlsx_data = export_summary_excel(exp_from, exp_to)
+                fname_xlsx = f"main_or_summary_{_now_bkk().strftime('%Y%m%d_%H%M')}.xlsx"
+                st.download_button(
+                    label=f"📊 สรุปสถิติ (Excel+กราฟ)",
+                    data=xlsx_data,
+                    file_name=fname_xlsx,
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                )
+            with dl_b:
+                csv_bytes = df_export.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+                fname_csv = f"main_or_data_{_now_bkk().strftime('%Y%m%d_%H%M')}.csv"
+                st.download_button(
+                    label=f"📥 ข้อมูลดิบ (CSV — {len(df_export)} เคส)",
+                    data=csv_bytes,
+                    file_name=fname_csv,
+                    mime='text/csv',
+                )
+        else:
+            st.caption("ไม่มีข้อมูลให้ export")
+
+
+
+
+def _hist_sec_kpi(date_from, date_to, data=None):
+    # ════════════════════════════════════════════════════════════════
+    # 1️⃣  🎯 KPI HIGHLIGHTS — เลขสำคัญที่กรรมการต้องเห็นก่อน
+    # ════════════════════════════════════════════════════════════════
+    st.markdown('<div id="sec-kpi" class="group-header">🎯 KPI Highlights</div>',
+                unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">เคสรวม</div>
+            <div class="kpi-value" style="color:#1565c0;">{data['total_cases']}</div>
+        </div>""", unsafe_allow_html=True)
+    with c2:
+        # การ์ดใหม่: รวม "วันที่ยุ่ง (จ-ศ) + ช่วงเวลายุ่ง"
+        _tdn = data.get('top_dow_name', '-')
+        _tdh = data.get('top_dow_hour', 0)
+        _tdc = data.get('top_dow_count', 0)
+        if _tdn != '-':
+            _peak_dh = f"{_tdn} {_tdh:02d}:00 น."
+        else:
+            _peak_dh = '—'
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">วัน+ช่วงเวลาเคสเยอะ</div>
+            <div class="kpi-value" style="color:#1565c0;font-size:18px;">{_peak_dh}</div>
+            <div style="font-size:12px;color:#999;">วัน{_tdn}รวม {_tdc} เคส</div>
+        </div>""", unsafe_allow_html=True)
+    with c3:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">สาขาเยอะสุด</div>
+            <div class="kpi-value" style="color:#6a1b9a;font-size:16px;">{data['top_div_name']}</div>
+            <div style="font-size:12px;color:#999;">{data['top_div_count']} เคส ({data['top_div_pct']}%)</div>
+        </div>""", unsafe_allow_html=True)
+
+
+def _hist_sec_sum(date_from, date_to, data=None):
+    # ════════════════════════════════════════════════════════════════
+    # 2️⃣  📋 สรุปยอดสะสม — categorical breakdowns
+    # ════════════════════════════════════════════════════════════════
+    st.markdown('<div id="sec-sum" class="group-header green">📋 สรุปยอดสะสม</div>',
+                unsafe_allow_html=True)
+    s_all = _ca_summary(date_from, date_to, _stats_ver())
+
+    # 📊 ภาพรวม + ผู้ป่วย — รวมเป็น row เดียว 4 cards (sub-info ใต้)
+    st.markdown('<div class="sub-title">📊 ภาพรวม</div>', unsafe_allow_html=True)
+    cancel_r = s_all['cancelled'] / s_all['total'] * 100 if s_all['total'] > 0 else 0
+    opd_pct = (s_all['n_opd'] / s_all['total'] * 100) if s_all['total'] > 0 else 0
+    ipd_pct = (s_all['n_ipd'] / s_all['total'] * 100) if s_all['total'] > 0 else 0
+
+    def _stat_card(label, value, sub_text, value_color='#212121'):
+        return (
+            f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
+            f'<div style="font-size:12px;color:#757575;margin-bottom:4px;">{label}</div>'
+            f'<div style="font-size:26px;font-weight:500;line-height:1;color:{value_color};">{value}</div>'
+            f'<div style="font-size:11px;color:#9e9e9e;margin-top:4px;">{sub_text}</div>'
+            f'</div>'
+        )
+
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        st.markdown(_stat_card("📊 เคสทั้งหมด", s_all['total'],
+                               f"✓ ผ่าตัดสำเร็จ {s_all['completed']}",
+                               value_color='#1565c0'), unsafe_allow_html=True)
+    with k2:
+        st.markdown(_stat_card("🏥 OPD", s_all['n_opd'], f"{opd_pct:.1f}%"),
+                    unsafe_allow_html=True)
+    with k3:
+        st.markdown(_stat_card("🏨 IPD", s_all['n_ipd'], f"{ipd_pct:.1f}%"),
+                    unsafe_allow_html=True)
+    with k4:
+        st.markdown(_stat_card("⚠️ ยกเลิก", s_all['cancelled'],
+                               f"อัตรา {cancel_r:.0f}%",
+                               value_color='#c62828'), unsafe_allow_html=True)
+
+    # ⚠️ ระดับความเร่งด่วน — Elective (มี breakdown นัดหมาย/Walk-in) / Urgent / Emergency
+    # 🆕 Filter เฉพาะเคสที่ผ่าตัดสำเร็จ (consistent กับ "เคสสะสม" 701)
+    df_op = get_cases()
+    df_op = df_op[(df_op['op_date'] >= date_from)
+                  & (df_op['op_date'] <= date_to)
+                  & (df_op['status'].isin(['post_op', 'discharged', 'done']))]
+    if 'op_type' in df_op.columns:
+        op_norm = (df_op['op_type'].fillna('elective')
+                   .astype(str).str.lower().str.strip()
+                   .replace('', 'elective'))
+        n_elec = int((op_norm == 'elective').sum())
+        n_urg = int((op_norm == 'urgent').sum())
+        n_emer = int((op_norm == 'emergency').sum())
+        n_other = len(df_op) - n_elec - n_urg - n_emer
+
+        if 'case_category' in df_op.columns:
+            mask_elec = (op_norm == 'elective')
+            n_elec_set = int(((df_op['case_category'] == 'เคสนัดหมาย') & mask_elec).sum())
+            n_elec_walkin = int(((df_op['case_category'] == 'Walk-in') & mask_elec).sum())
+        else:
+            n_elec_set = s_all.get('n_set', 0)
+            n_elec_walkin = s_all.get('n_walkin', 0)
+
+        st.markdown('<div class="sub-title">⚠️ ระดับความเร่งด่วน</div>',
+                    unsafe_allow_html=True)
+        ko1, ko2, ko3 = st.columns(3)
+        with ko1:
+            st.markdown(
+                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
+                f'<div style="font-size:13px;color:#666;margin-bottom:4px;">📋 Elective</div>'
+                f'<div style="font-size:28px;font-weight:500;line-height:1.1;margin-bottom:8px;">{n_elec}</div>'
+                f'<div style="font-size:12px;color:#888;display:flex;gap:10px;">'
+                f'<span>นัดหมาย <b style="color:#444;font-weight:500;">{n_elec_set}</b></span>'
+                f'<span style="color:#ccc;">|</span>'
+                f'<span>Walk-in <b style="color:#444;font-weight:500;">{n_elec_walkin}</b></span>'
+                f'</div></div>',
+                unsafe_allow_html=True)
+        with ko2:
+            st.markdown(
+                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
+                f'<div style="font-size:13px;color:#666;margin-bottom:4px;">⚡ Urgent</div>'
+                f'<div style="font-size:28px;font-weight:500;line-height:1.1;">{n_urg}</div>'
+                f'</div>',
+                unsafe_allow_html=True)
+        with ko3:
+            st.markdown(
+                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
+                f'<div style="font-size:13px;color:#666;margin-bottom:4px;">🚨 Emergency</div>'
+                f'<div style="font-size:28px;font-weight:500;line-height:1.1;">{n_emer}</div>'
+                f'</div>',
+                unsafe_allow_html=True)
+        if n_other > 0:
+            st.caption(f"⚠️ มี {n_other} เคสที่ op_type เป็นค่าอื่น "
+                       f"(re-upload schedule.xls เพื่ออัปเดต)")
+
+    # NOTE (thesis mode): ซ่อน KPI cost/patho — เปิดกลับโดย uncomment
+    # k9, k10, k11, k12 = st.columns(4)
+    # k9.metric("💰 ค่าหัตถการ", f"{s_all['total_treatment']:,} ฿")
+    # k10.metric("💵 รายได้รวม", f"{s_all['total_revenue']:,} ฿")
+    # k11.metric("🧬 ส่งชิ้นเนื้อ", f"{s_all['n_patho_sent']} ราย")
+    # k12.metric("🔬 ค่าชิ้นเนื้อ", f"{s_all['total_patho']:,} ฿")
+
+
+def _hist_sec_trend(date_from, date_to, data=None):
+    # ════════════════════════════════════════════════════════════════
+    # 3️⃣  📈 กราฟจำนวนเคสรายเดือน — เคสรายวัน + heatmap (เห็น pattern)
+    # ════════════════════════════════════════════════════════════════
+    st.markdown('<div id="sec-trend" class="group-header purple">📈 กราฟจำนวนเคสรายเดือน</div>',
+                unsafe_allow_html=True)
+
+    # 📅 รายเดือน — Monthly trend (main view) + KPI cards + expander Heatmap
+    st.markdown('<div class="sub-title">📅 จำนวนเคสรายเดือน</div>',
+                unsafe_allow_html=True)
+    daily = data['daily_total']
+    if not daily.empty:
+        # เตรียม monthly aggregation
+        _daily_h = daily.copy()
+        _daily_h['op_date'] = _daily_h['op_date'].astype(str)
+        _daily_h['_dt'] = pd.to_datetime(_daily_h['op_date'])
+        _daily_h['month'] = _daily_h['_dt'].dt.strftime('%Y-%m')
+
+        _monthly = _daily_h.groupby('month').agg(
+            total=('n_cases', 'sum'),
+            n_days=('op_date', 'count'),
+        ).reset_index().sort_values('month')
+
+        _THAI_M = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+                   'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+        # เดือน + ปี พ.ศ. 2 หลัก (เช่น "ม.ค. 64") — แกนเวลาต่อเนื่องเส้นเดียว
+        # กันเส้นพันกันเมื่อช่วงข้อมูลยาวเกิน 1 ปี
+        _monthly['month_th'] = _monthly['month'].apply(
+            lambda x: f"{_THAI_M[int(x.split('-')[1])]} "
+                      f"{(int(x.split('-')[0]) + 543) % 100:02d}")
+
+        # 📊 Stats
+        _total_all = int(_monthly['total'].sum())
+        _peak_idx = _monthly['total'].idxmax()
+        _peak_month = _monthly.loc[_peak_idx, 'month_th']
+        _peak_count = int(_monthly.loc[_peak_idx, 'total'])
+
+        # Trend (last 2 months)
+        if len(_monthly) >= 2:
+            _last = int(_monthly.iloc[-1]['total'])
+            _prev = int(_monthly.iloc[-2]['total'])
+            if _last < _prev:
+                _trend_label = '▼ ลด'
+                _trend_color = '#2e7d32'
+                _trend_bg = '#e8f5e9'
+                _trend_text_color = '#1b5e20'
+            elif _last > _prev:
+                _trend_label = '▲ เพิ่ม'
+                _trend_color = '#c62828'
+                _trend_bg = '#ffebee'
+                _trend_text_color = '#b71c1c'
+            else:
+                _trend_label = '▬ คงที่'
+                _trend_color = '#757575'
+                _trend_bg = '#f5f5f5'
+                _trend_text_color = '#424242'
+            _trend_sub = (
+                f"{_monthly.iloc[-2]['month_th']}→{_monthly.iloc[-1]['month_th']}"
+            )
+        else:
+            _trend_label = '—'
+            _trend_color = '#757575'
+            _trend_bg = '#f5f5f5'
+            _trend_text_color = '#424242'
+            _trend_sub = 'ข้อมูลไม่พอ'
+
+        # 🎴 3 KPI cards (รวม · เดือนเยอะสุด · แนวโน้ม)
+        k1, k2, k3 = st.columns(3)
+        with k1:
+            st.markdown(
+                f'<div style="background:#e3f2fd;border-radius:10px;'
+                f'padding:14px 16px;border-left:5px solid #1976d2;">'
+                f'<div style="font-size:12px;color:#1565c0;">รวมทั้งช่วง</div>'
+                f'<div style="font-size:32px;font-weight:600;color:#0d47a1;'
+                f'line-height:1;margin:4px 0;">{_total_all:,}</div>'
+                f'<div style="font-size:11px;color:#1565c0;">เคส</div>'
+                f'</div>', unsafe_allow_html=True)
+        with k2:
+            st.markdown(
+                f'<div style="background:#ffebee;border-radius:10px;'
+                f'padding:14px 16px;border-left:5px solid #c62828;">'
+                f'<div style="font-size:12px;color:#b71c1c;">เดือนเยอะสุด</div>'
+                f'<div style="font-size:32px;font-weight:600;color:#c62828;'
+                f'line-height:1;margin:4px 0;">{_peak_month}</div>'
+                f'<div style="font-size:11px;color:#b71c1c;">'
+                f'{_peak_count} เคส</div>'
+                f'</div>', unsafe_allow_html=True)
+        with k3:
+            st.markdown(
+                f'<div style="background:{_trend_bg};border-radius:10px;'
+                f'padding:14px 16px;border-left:5px solid {_trend_color};">'
+                f'<div style="font-size:12px;color:{_trend_text_color};">'
+                f'แนวโน้มล่าสุด</div>'
+                f'<div style="font-size:32px;font-weight:600;'
+                f'color:{_trend_color};line-height:1;margin:4px 0;">'
+                f'{_trend_label}</div>'
+                f'<div style="font-size:11px;color:{_trend_text_color};">'
+                f'{_trend_sub}</div>'
+                f'</div>', unsafe_allow_html=True)
+
+        # 📈 Monthly line chart (เส้นเวลาต่อเนื่อง + peak ★)
+        # ช่วงยาวหลายปี (>18 เดือน) → ลดความรก: โชว์ label เฉพาะ peak,
+        # จุดเล็กลง, แกน x โชว์ทุก 6 เดือน
+        _y_max_m = max(int(_monthly['total'].max()) * 1.45, 10)
+        _many_m = len(_monthly) > 18
+        _marker_colors = [
+            '#c62828' if v == _peak_count else '#1976d2'
+            for v in _monthly['total']
+        ]
+        _marker_sizes = [
+            (12 if v == _peak_count else 5) if _many_m
+            else (14 if v == _peak_count else 10)
+            for v in _monthly['total']
+        ]
+        _text_labels = [
+            (f"{v} ★" if v == _peak_count else ("" if _many_m else f"{v}"))
+            for v in _monthly['total']
+        ]
+        fig_m_main = go.Figure()
+        fig_m_main.add_trace(go.Scatter(
+            x=_monthly['month_th'], y=_monthly['total'],
+            mode='lines+markers+text',
+            line=dict(color='#1976d2', width=2 if _many_m else 3),
+            marker=dict(size=_marker_sizes, color=_marker_colors,
+                        line=dict(width=2, color='white')),
+            text=_text_labels,
+            textposition='top center',
+            textfont=dict(size=14, color='#0d47a1'),
+            fill='tozeroy',
+            fillcolor='rgba(25, 118, 210, 0.10)',
+            hovertemplate='<b>%{x}</b><br>%{y} เคส<extra></extra>',
+            cliponaxis=False,  # ไม่ตัด label เมื่อชน edge
+        ))
+        _xaxis_m = dict(title='', tickfont=dict(size=11 if _many_m else 14))
+        if _many_m:
+            _xaxis_m['dtick'] = 6   # โชว์ tick ทุก 6 เดือน
+            _xaxis_m['tickangle'] = -30
+        fig_m_main.update_layout(
+            margin=dict(t=70, b=30, l=50, r=20), height=320,
+            xaxis=_xaxis_m,
+            yaxis=dict(title='จำนวนเคส', range=[0, _y_max_m],
+                       gridcolor='#eceff1'),
+            showlegend=False,
+            plot_bgcolor='white',
+        )
+        st.plotly_chart(fig_m_main, use_container_width=True)
+        st.caption(
+            "💡 จุดแดง ★ = เดือนที่เคสเยอะสุด · "
+            "พื้นที่ฟ้าอ่อน = ระดับเคส · "
+            "hover ดูจำนวนเคส")
+
+        # ⤵️ ซ่อน Calendar Heatmap ใน expander — แยกเดือน + wk 1-4
+        with st.expander("📅 ดูแนวโน้มรายวัน (กราฟเส้น)"):
+            # Stat summary
+            _max_n_d = int(_daily_h['n_cases'].max())
+            _max_date_d = _daily_h.loc[_daily_h['n_cases'].idxmax(), 'op_date']
+            _max_date_th_d = pd.to_datetime(_max_date_d).strftime('%d/%m/%Y')
+            _avg_per_day_d = round(_daily_h['n_cases'].mean(), 1)
+
+            # เติม full date range (กัน gap)
+            _full_dates = pd.date_range(date_from, date_to)
+            _cal_df = pd.DataFrame({'_dt': _full_dates})
+            _cal_df['op_date'] = _cal_df['_dt'].dt.strftime('%Y-%m-%d')
+            _cal_df = _cal_df.merge(
+                _daily_h[['op_date', 'n_cases']], on='op_date',
+                how='left').fillna(0)
+            _cal_df['n_cases'] = _cal_df['n_cases'].astype(int)
+            # exclude weekends (Sat=5, Sun=6)
+            _cal_df['dow'] = _cal_df['_dt'].dt.dayofweek
+            _cal_df_wd = _cal_df[_cal_df['dow'].between(0, 4)].copy()
+            _cal_df_wd['date_label'] = _cal_df_wd['_dt'].dt.strftime('%d %b')
+            # 7-day rolling average
+            _cal_df_wd['rolling_avg'] = (
+                _cal_df_wd['n_cases'].rolling(window=7, min_periods=1).mean()
+            )
+
+            fig_line = go.Figure()
+            # Bar (actual daily cases) — subtle
+            fig_line.add_trace(go.Bar(
+                x=_cal_df_wd['_dt'], y=_cal_df_wd['n_cases'],
+                name='เคสต่อวัน',
+                marker=dict(color='#bbdefb', line=dict(width=0)),
+                hovertemplate='<b>%{x|%d %b %Y (%a)}</b><br>%{y} เคส<extra></extra>',
+            ))
+            # Line (rolling avg) — main signal
+            fig_line.add_trace(go.Scatter(
+                x=_cal_df_wd['_dt'], y=_cal_df_wd['rolling_avg'],
+                name='ค่าเฉลี่ย 7 วัน',
+                mode='lines',
+                line=dict(color='#1565c0', width=3),
+                hovertemplate='<b>%{x|%d %b %Y}</b><br>เฉลี่ย 7 วัน: %{y:.1f} เคส<extra></extra>',
+            ))
+            # Mark peak day
+            _peak_dt = pd.to_datetime(_max_date_d)
+            fig_line.add_trace(go.Scatter(
+                x=[_peak_dt], y=[_max_n_d],
+                name=f'⭐ Peak ({_max_n_d} เคส)',
+                mode='markers+text',
+                marker=dict(size=14, color='#d32f2f',
+                            line=dict(color='white', width=2)),
+                text=[f'{_max_n_d}'], textposition='top center',
+                textfont=dict(color='#d32f2f', size=11, family='Inter'),
+                hovertemplate=f'<b>วันที่เคสเยอะสุด</b><br>{_max_date_th_d}<br>{_max_n_d} เคส<extra></extra>',
+            ))
+            fig_line.update_layout(
+                height=340,
+                margin=dict(t=20, b=40, l=40, r=20),
+                xaxis=dict(title='', showgrid=False,
+                           tickformat='%d %b'),
+                yaxis=dict(title='จำนวนเคส', gridcolor='#f0f0f0'),
+                plot_bgcolor='white',
+                hovermode='x unified',
+                legend=dict(orientation='h', yanchor='bottom', y=1.02,
+                            xanchor='right', x=1, bgcolor='rgba(0,0,0,0)'),
+            )
+            st.plotly_chart(fig_line, use_container_width=True,
+                            config={'displayModeBar': False})
+
+            # Summary card
+            st.markdown(
+                f'<div style="background:#fff3e0;border-radius:10px;'
+                f'padding:10px 14px;border-left:4px solid #c62828;'
+                f'margin-top:10px;">'
+                f'<span style="font-size:13px;color:#bf360c;">'
+                f'<b>📈 วันที่เคสเยอะสุด:</b> {_max_n_d} เคส · '
+                f'วันที่ {_max_date_th_d} · '
+                f'เฉลี่ย/วัน {_avg_per_day_d} เคส</span></div>',
+                unsafe_allow_html=True)
+            st.caption(
+                "💡 แท่งฟ้าอ่อน = จำนวนเคสจริงของวันนั้น · "
+                "เส้นน้ำเงิน = ค่าเฉลี่ยเคลื่อนที่ 7 วัน (smooth trend) · "
+                "★ จุดแดง = peak day · เฉพาะวันธรรมดา (จ-ศ)")
+    else:
+        st.caption("ยังไม่มีข้อมูลรายวัน")
+
+    # 📊 เฉลี่ยเคสตามวันในสัปดาห์ — ย้ายมาก่อน 🔥 heatmap
+    from main_or_db import get_cases as _get_cases_for_dow
+    _df_dow_section = _get_cases_for_dow()
+    _df_dow_section = _df_dow_section[
+        (_df_dow_section['op_date'] >= date_from) &
+        (_df_dow_section['op_date'] <= date_to) &
+        (_df_dow_section['status'] != 'cancelled')]
+    if not _df_dow_section.empty:
+        st.markdown('<div class="sub-title">📊 เฉลี่ยเคสตามวันในสัปดาห์ '
+                    '(วันไหนงานหนักสุด)</div>',
+                    unsafe_allow_html=True)
+        _dow_df = _df_dow_section.copy()
+        _dow_df['_dt'] = pd.to_datetime(_dow_df['op_date'])
+        _dow_df['dow'] = _dow_df['_dt'].dt.dayofweek
+        _dow_only = _dow_df[_dow_df['dow'].between(0, 6)]   # จ.-อา.
+        # เฉลี่ยต่อ "วันปฏิทินจริง" ในช่วง (ไม่ใช่เฉพาะวันที่มีเคส) — สะท้อนความจริง
+        _tot_by_dow_s = _dow_only.groupby('dow').size()
+        _cal_dow_s = pd.Series(
+            pd.date_range(date_from, date_to, freq='D').dayofweek).value_counts()
+        _THAI_DAY_S = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์', 'อาทิตย์']
+        _dow_avg_s = pd.DataFrame({'dow': range(7)})
+        _dow_avg_s['n'] = _dow_avg_s['dow'].apply(
+            lambda d: round(_tot_by_dow_s.get(d, 0) / max(int(_cal_dow_s.get(d, 0)), 1), 1))
+        _dow_avg_s['day_name'] = _dow_avg_s['dow'].apply(
+            lambda d: _THAI_DAY_S[d])
+        _max_dow_s = _dow_avg_s['n'].max()
+        _max_dow_name_s = _dow_avg_s.loc[_dow_avg_s['n'].idxmax(), 'day_name']
+        _dow_avg_s['color_flag'] = _dow_avg_s['n'].apply(
+            lambda v: 'peak' if v == _max_dow_s and v > 0 else 'normal')
+
+        fig_dow_s = px.bar(_dow_avg_s, x='day_name', y='n', text='n',
+                           color='color_flag',
+                           color_discrete_map={
+                               'peak': '#c62828', 'normal': '#4fc3f7'},
+                           labels={'day_name': '', 'n': 'เคสเฉลี่ย/วัน'},
+                           category_orders={'day_name': _THAI_DAY_S})
+        fig_dow_s.update_traces(
+            textposition='outside',
+            hovertemplate='<b>%{x}</b><br>เฉลี่ย %{y} เคส/วัน<extra></extra>')
+        _y_max_dow_s = max(float(_dow_avg_s['n'].max()), 1.0)
+        fig_dow_s.update_layout(
+            margin=dict(t=40, b=30, l=40, r=10), height=240,
+            xaxis_title='',
+            yaxis=dict(title='เคสเฉลี่ย/วัน',
+                       range=[0, _y_max_dow_s * 1.25]),
+            showlegend=False,
+        )
+        st.plotly_chart(fig_dow_s, use_container_width=True)
+        _min_dow_s = _dow_avg_s[_dow_avg_s['n'] > 0]['n'].min()
+        if _min_dow_s > 0:
+            _pct_heavier_s = round((_max_dow_s / _min_dow_s - 1) * 100)
+            st.markdown(
+                f'<div style="background:#ffebee;border-left:3px solid #c62828;'
+                f'padding:8px 12px;border-radius:0 6px 6px 0;'
+                f'font-size:12px;color:#b71c1c;margin-top:6px;">'
+                f'<b>วัน{_max_dow_name_s}</b> หนักสุด เฉลี่ย {_max_dow_s} เคส/วัน · '
+                f'หนักกว่าวันที่น้อยที่สุด {_pct_heavier_s}%</div>',
+                unsafe_allow_html=True)
+
+    # 🔥 ภาระงานห้องผ่าตัด (full width — ส่วนของ "📈 กราฟจำนวนเคสรายเดือน" group)
+    with st.container():
+        st.markdown('<div class="sub-title">🔥 ภาระงานห้องผ่าตัด (เฉลี่ยเคสต่อครั้ง)</div>',
+                    unsafe_allow_html=True)
+        try:
+            _hm_info = st.popover("ℹ️ วิธีอ่าน heatmap")
+        except Exception:
+            _hm_info = st.expander("ℹ️ วิธีอ่าน heatmap")
+        with _hm_info:
+            st.markdown(
+                "**อ่านแบบเร็ว:**\n"
+                "- แต่ละช่อง = เฉลี่ยจำนวนเคสที่ใช้ห้องในชั่วโมงนั้น (ต่อ 1 วันของวันนั้น)\n"
+                "- 🔴 **สียิ่งเข้ม = ยิ่งยุ่ง** (เคสเยอะ) · ช่องว่าง = ไม่มีเคส\n"
+                "- แกนตั้ง = **วัน** · แกนนอน = **ชั่วโมง** (8:00–16:00)\n"
+                "- ใช้ดูว่า **ช่วงไหนห้องแน่นสุด** → วางแผนคน/ห้องล่วงหน้าได้")
+        hm = data['heatmap_df']
+        dow_counts = data.get('dow_counts', {})
+        if not hm.empty and dow_counts:
+            _THAI_DAYS = ['จันทร์','อังคาร','พุธ','พฤหัสฯ','ศุกร์','เสาร์','อาทิตย์']
+
+            # raw count: เคส (overlapping) ในแต่ละ (dow, hour) รวมทั้งช่วง
+            pivot_total = hm.pivot_table(index='dow', columns='hour', values='n',
+                                         fill_value=0, aggfunc='sum')
+            for d in range(5):
+                if d not in pivot_total.index:
+                    pivot_total.loc[d] = 0
+            for h in range(8, 17):
+                if h not in pivot_total.columns:
+                    pivot_total[h] = 0
+            pivot_total = pivot_total.reindex(index=range(5),
+                                              columns=range(8, 17), fill_value=0)
+
+            # avg per occurrence: หารด้วยจำนวน dow ในช่วง
+            # ตัวอย่าง: ศุกร์ 13:00 มี 12 เคสรวมจาก 4 ศุกร์ → 12/4 = 3 เคส/ครั้ง
+            pivot = pivot_total.copy().astype(float)
+            for d in pivot.index:
+                cnt = max(dow_counts.get(int(d), 1), 1)
+                pivot.loc[d] = pivot_total.loc[d] / cnt
+            pivot = pivot.round(1)
+
+            # Format ค่าในช่อง: ว่างเปล่าถ้า 0, อื่น ๆ แสดงเลข (1 ทศนิยมถ้า <1)
+            def _fmt_cell(v):
+                if v == 0: return ''
+                if v < 1:  return f'{v:.1f}'
+                # >= 1 → แสดงทศนิยม 1 ตำแหน่งเสมอเพื่อความสม่ำเสมอ
+                return f'{v:.1f}'
+
+            text_overlay = [[_fmt_cell(pivot.loc[d, h]) for h in range(8, 17)]
+                            for d in range(5)]
+
+            customdata = []
+            for d_idx in range(5):
+                row_hover = []
+                for h in range(8, 17):
+                    avg = float(pivot.loc[d_idx, h])
+                    total = int(pivot_total.loc[d_idx, h])
+                    n_days = dow_counts.get(d_idx, 0)
+                    if avg == 0:
+                        line = 'ไม่มีเคสในช่วงนี้'
+                    else:
+                        line = (f'เฉลี่ย {avg:.1f} เคส/ครั้ง<br>'
+                                f'(รวม {total} เคส จาก {n_days} '
+                                f'{_THAI_DAYS[d_idx]})')
+                    row_hover.append(line)
+                customdata.append(row_hover)
+
+            # Auto color scale (ยิ่งเคสเยอะ ยิ่งเข้ม) — ใช้ max ของข้อมูลจริง
+            zmax_val = max(float(pivot.values.max()), 1.0)
+
+            fig = go.Figure(data=go.Heatmap(
+                z=pivot.values,
+                x=[f'{h}:00' for h in range(8, 17)],
+                y=[_THAI_DAYS[i] for i in range(5)],
+                colorscale='OrRd',
+                zmin=0, zmax=zmax_val,
+                colorbar=dict(title='เคสเฉลี่ย'),
+                text=text_overlay,
+                texttemplate='%{text}',
+                textfont=dict(size=11, color='black'),
+                customdata=customdata,
+                hovertemplate=('<b>%{y} เวลา %{x}</b><br>%{customdata}'
+                               '<extra></extra>'),
+            ))
+            fig.update_layout(
+                margin=dict(t=10, b=10, l=80, r=10), height=260,
+                xaxis_title='ชั่วโมง', yaxis=dict(autorange='reversed'),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            # ── สรุปภาพรวม: เคสเยอะ/น้อยสุด → วัน + ช่วงเช้า/บ่าย ──
+            def _period(h):
+                """แปลงชั่วโมง → ช่วงเช้า / ช่วงบ่าย"""
+                return 'ช่วงเช้า' if h < 12 else 'ช่วงบ่าย'
+
+            flat = pivot.stack()
+            peak_idx = flat.idxmax() if flat.max() > 0 else None
+            quiet_nonzero = flat[flat > 0]
+            quiet_idx = quiet_nonzero.idxmin() if not quiet_nonzero.empty else None
+
+            insight_html = """
+<div style="background:#f5f5f5;border-radius:8px;padding:12px 14px;
+            margin-top:8px;font-size:14px;line-height:1.8;">
+  <div style="font-weight:700;color:#333;margin-bottom:6px;">
+    📊 สรุปภาพรวม
+  </div>
+"""
+            if peak_idx is not None:
+                p_dow, p_hour = _THAI_DAYS[peak_idx[0]], int(peak_idx[1])
+                insight_html += (
+                    f'  🔝 <b>เคสเยอะสุด</b>: วัน{p_dow} {_period(p_hour)} '
+                    f'(เฉลี่ย {float(flat[peak_idx]):.1f} เคส/{p_dow})<br>\n'
+                )
+            if quiet_idx is not None:
+                q_dow, q_hour = _THAI_DAYS[quiet_idx[0]], int(quiet_idx[1])
+                insight_html += (
+                    f'  😴 <b>เคสน้อยสุด</b>: วัน{q_dow} {_period(q_hour)} '
+                    f'(เฉลี่ย {float(flat[quiet_idx]):.1f} เคส/{q_dow})\n'
+                )
+            insight_html += "</div>"
+            st.markdown(insight_html, unsafe_allow_html=True)
+
+            with st.expander("💡 วิธีอ่านกราฟนี้", expanded=False):
+                st.markdown("""
+**ตัวเลขในช่อง = เฉลี่ยจำนวนเคสที่อยู่ในช่วงเวลานั้น ๆ ของวันนั้น ๆ**
+
+**วิธีคำนวณ:** นับเคสที่คร่อมชั่วโมงนั้น (เคสที่ทำคร่อม 13:18-14:50
+จะถูกนับใน slot 13:00 และ 14:00) แล้วหารด้วยจำนวนวันนั้น ๆ ในช่วงที่เลือก
+
+**ตัวอย่าง:**
+> "ศุกร์ 13:00 = 3.0" หมายความว่า ในช่วงที่เลือก (เช่น 4 สัปดาห์)
+> ทุกวันศุกร์ตอน 13:00 มีเคสอยู่ในห้องผ่าตัดเฉลี่ย **3 เคส**
+
+**ตีความสี:** ยิ่งสีเข้ม = เคสยิ่งเยอะในช่วงนั้น
+- ⬜ ขาว/อ่อนมาก → เคสน้อย หรือไม่มีเคส
+- 🟧 ส้มอ่อน → เคสปานกลาง
+- 🟥 ส้มเข้ม → เคสเยอะ
+- 🟫 แดงเข้ม → เคสเยอะที่สุดในช่วงเวลาที่เลือก
+
+**ใช้ประโยชน์:**
+- 📅 ดูว่า**ภาระงานหนักช่วงไหน** ของสัปดาห์
+- 🗓️ หา **ช่วงเคสน้อย** เพื่อจองเคสเพิ่ม / นัด standby case
+- 📈 ดู pattern ของหน่วย — เปรียบเทียบวัน/ช่วงเวลา
+                """)
+        else:
+            st.caption("ยังไม่มีข้อมูลเวลา (ต้องมีเคสที่กดปุ่ม 'เข้าห้อง' และ 'เสร็จ' แล้ว)")
+
+
+def _hist_sec_rank(date_from, date_to, data=None):
+    # ════════════════════════════════════════════════════════════════
+    # 4️⃣  🏆 อันดับยอดนิยม — สาขา + Top หัตถการ + Top แพทย์
+    # ════════════════════════════════════════════════════════════════
+    # Header + Toggle V/H ขวาบน (default = แนวตั้ง)
+    _hdr_l, _hdr_r = st.columns([3, 1])
+    with _hdr_l:
+        st.markdown('<div id="sec-rank" class="group-header orange">🏆 อันดับยอดนิยม</div>',
+                    unsafe_allow_html=True)
+    with _hdr_r:
+        st.markdown('<div style="height:24px;"></div>', unsafe_allow_html=True)
+        _bar_orient = st.radio(
+            "ทิศทางกราฟ",
+            options=['แนวตั้ง', 'แนวนอน'],
+            horizontal=True, label_visibility='collapsed',
+            key='ranking_bar_orient',
+        )
+    _is_v = (_bar_orient == 'แนวตั้ง')
+
+    # Helper: ย่อชื่อสาขา (ตัด "ศัลยกรรม" ออก)
+    def _short_div(name):
+        if not isinstance(name, str):
+            return str(name)
+        return name.replace('ศัลยกรรม', '').strip() or name
+
+    # 🏥 สาขาที่ผ่าตัดเยอะ
+    st.markdown('<div class="sub-title">🏥 สาขาที่ผ่าตัดเยอะ</div>',
+                unsafe_allow_html=True)
+    div_df = data['div_df']
+    if not div_df.empty:
+        _div_show = div_df.head(8).copy()
+        _div_show['division_short'] = _div_show['division_name'].apply(_short_div)
+        if _is_v:
+            _y_max_div = max(int(_div_show['n'].max()) * 1.20, 5)
+            fig = px.bar(_div_show, x='division_short', y='n', text='n',
+                         labels={'n': 'จำนวนเคส', 'division_short': 'สาขา'},
+                         color_discrete_sequence=['#7e57c2'],
+                         hover_data={'division_name': True, 'division_short': False})
+            fig.update_traces(
+                textposition='outside',
+                hovertemplate='<b>%{customdata[0]}</b><br>%{y} เคส<extra></extra>')
+            fig.update_layout(
+                margin=dict(t=30, b=80, l=40, r=10), height=320,
+                xaxis=dict(tickangle=-30, title='สาขา'),
+                yaxis=dict(title='จำนวนเคส', range=[0, _y_max_div]),
+            )
+        else:
+            fig = px.bar(_div_show, x='n', y='division_short', orientation='h',
+                         text='n',
+                         labels={'n': 'จำนวนเคส', 'division_short': 'สาขา'},
+                         color_discrete_sequence=['#7e57c2'],
+                         hover_data={'division_name': True, 'division_short': False})
+            _x_max_div = max(int(_div_show['n'].max()) * 1.12, 5)
+            fig.update_traces(
+                textposition='outside',
+                hovertemplate='<b>%{customdata[0]}</b><br>%{x} เคส<extra></extra>')
+            fig.update_layout(
+                margin=dict(t=10, b=30, l=10, r=40), height=300,
+                yaxis=dict(autorange='reversed'),
+                xaxis=dict(range=[0, _x_max_div]),
+            )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.caption("ยังไม่มีข้อมูลสาขา")
+
+    # 🔬 Top หัตถการที่ทำบ่อยของแต่ละสาขา (เลือกสาขาได้ · รวม fuzzy)
+    #    + ตาราง Excel แยกสาขา (ชื่อดิบ ไม่รวม fuzzy)
+    st.markdown('<div class="sub-title">🔬 Top หัตถการที่ทำบ่อยของแต่ละสาขา</div>',
+                unsafe_allow_html=True)
+    from main_or_db import get_cases as _get_cases_proc
+    _dfp = _get_cases_proc()
+    _dfp = _dfp[(_dfp['op_date'] >= date_from) & (_dfp['op_date'] <= date_to)
+                & (_dfp['status'] != 'cancelled')].copy()
+    _dfp['_pname'] = (_dfp['procedure_name'].fillna('').astype(str).str.strip())
+    _dfp = _dfp[~_dfp['_pname'].str.lower().isin(['', 'nan', 'none'])]
+    if _dfp.empty:
+        st.caption("ยังไม่มีข้อมูลหัตถการในช่วงนี้")
+    else:
+        _dfp['_div'] = _dfp['division_code'].fillna('-').astype(str).apply(
+            lambda c: div_name(c) if c not in ('-', '', 'None', 'nan')
+            else 'ไม่ระบุสาขา')
+        _dfp['_canon'] = _dfp['_pname'].apply(_normalize_procedure_name)
+
+        # ── ตัวเลือกสาขา = ปุ่มชิปกดเลือก (เรียงตามจำนวนเคส) ──
+        _divs_avail = _dfp['_div'].value_counts().index.tolist()
+        _chips = ['ทุกสาขา'] + _divs_avail
+        if st.session_state.get('proc_div_sel') not in _chips:
+            st.session_state['proc_div_sel'] = 'ทุกสาขา'
+        st.caption("เลือกสาขา (ไม่เลือก = รวมทุกสาขา)")
+        # จัดปุ่มเป็นแถวละ 4 ปุ่ม — ปุ่มที่เลือกอยู่เป็น primary (น้ำเงินทึบ)
+        _sel_now = st.session_state['proc_div_sel']
+        for _i in range(0, len(_chips), 4):
+            _cols = st.columns(4)
+            for _j, _ch in enumerate(_chips[_i:_i + 4]):
+                if _cols[_j].button(
+                        _ch, key=f'procchip_{_i + _j}', width='stretch',
+                        type='primary' if _ch == _sel_now else 'secondary'):
+                    st.session_state['proc_div_sel'] = _ch
+                    st.rerun()
+        _sel_div = st.session_state['proc_div_sel']
+        _scope = _dfp if _sel_div == 'ทุกสาขา' else _dfp[_dfp['_div'] == _sel_div]
+        _top_n = 5
+
+        # ── กราฟแนวนอน รวม fuzzy ──
+        _fz = (_scope[_scope['_canon'].astype(str).str.upper() != 'UNKNOWN']
+               .groupby('_canon').size().reset_index(name='n')
+               .sort_values('n', ascending=False).head(_top_n))
+        if _fz.empty:
+            st.caption("ยังไม่มีหัตถการในสาขานี้")
+        else:
+            _fz['label'] = _fz['_canon'].apply(
+                lambda x: (x[:45] + '…') if isinstance(x, str) and len(x) > 45 else x)
+            _x_max = max(int(_fz['n'].max()) * 1.12, 5)
+            fig = px.bar(_fz.iloc[::-1], x='n', y='label', orientation='h',
+                         text='n', labels={'n': 'จำนวนเคส', 'label': ''},
+                         color_discrete_sequence=['#1D9E75'])
+            fig.update_traces(textposition='outside', cliponaxis=False)
+            fig.update_layout(
+                margin=dict(t=10, b=20, l=10, r=40),
+                height=max(220, 60 + len(_fz) * 30),
+                xaxis=dict(range=[0, _x_max], gridcolor='#f0f0f0'),
+                yaxis=dict(tickfont=dict(size=12)),
+                plot_bgcolor='white',
+            )
+            _scope_lbl = ('ทุกสาขา' if _sel_div == 'ทุกสาขา' else _sel_div)
+            st.caption(f"🔬 {_scope_lbl} · แสดง {len(_fz)} อันดับแรก · "
+                       f"รวม {int(_scope.shape[0]):,} เคส · "
+                       "รวมหัตถการคล้ายกันอัตโนมัติ (fuzzy)")
+            st.plotly_chart(fig, use_container_width=True,
+                            config={'displayModeBar': False})
+
+        # ── ตารางชื่อดิบแยกสาขา + ดาวน์โหลด Excel (1 ชีต/สาขา) ──
+        _raw = (_dfp.groupby(['_div', '_pname']).size()
+                .reset_index(name='n')
+                .sort_values(['_div', 'n'], ascending=[True, False]))
+        import io as _io_xl
+
+        def _safe_sheet(name, used):
+            s = re.sub(r'[\\/?*\[\]:]', ' ', str(name)).strip()[:28] or 'สาขา'
+            base, i = s, 1
+            while s in used:
+                i += 1
+                s = f'{base[:25]}_{i}'
+            used.add(s)
+            return s
+
+        _buf = _io_xl.BytesIO()
+        try:
+            with pd.ExcelWriter(_buf, engine='openpyxl') as _w:
+                _used = set()
+                for _dv, _g in _raw.groupby('_div'):
+                    _out = (_g[['_pname', 'n']]
+                            .rename(columns={'_pname': 'หัตถการ', 'n': 'จำนวนเคส'}))
+                    _out.to_excel(_w, sheet_name=_safe_sheet(_dv, _used),
+                                  index=False)
+            st.download_button(
+                "📥 ดาวน์โหลด Excel — รายการหัตถการแยกสาขา (ทั้งหมด)",
+                data=_buf.getvalue(),
+                file_name=f"หัตถการแยกสาขา_{date_from}_{date_to}.xlsx",
+                mime='application/vnd.openxmlformats-officedocument.'
+                     'spreadsheetml.sheet',
+                key='proc_xlsx_dl')
+            st.caption("ไฟล์ Excel แยก 1 ชีตต่อ 1 สาขา · ชื่อหัตถการดิบจากระบบ "
+                       "(ไม่รวม fuzzy) เรียงมาก→น้อย")
+        except Exception as _xe:
+            st.caption(f"สร้างไฟล์ Excel ไม่สำเร็จ: {_xe}")
+
+        with st.expander("ดูตัวอย่างรายการ (ชื่อดิบ ไม่รวม fuzzy)"):
+            st.dataframe(
+                _raw.rename(columns={'_div': 'สาขา', '_pname': 'หัตถการ',
+                                     'n': 'จำนวนเคส'}),
+                hide_index=True, use_container_width=True)
+
+    # ── 👨‍⚕️ Top 5 แพทย์ (แนวนอนเสมอ + ตัดยศ/คำนำหน้าออก) ──
+    from main_or_db import get_cases as _get_cases_for_surg
+    _df_surg = _get_cases_for_surg()
+    _df_surg = _df_surg[(_df_surg['op_date'] >= date_from) &
+                        (_df_surg['op_date'] <= date_to) &
+                        (_df_surg['status'] != 'cancelled')]
+    st.markdown('<div class="sub-title">👨‍⚕️ Top 5 แพทย์</div>',
+                unsafe_allow_html=True)
+    if not _df_surg.empty and 'surgeon_name' in _df_surg.columns:
+        _surg = _df_surg.dropna(subset=['surgeon_name']).copy()
+        _surg = _surg[_surg['surgeon_name'].astype(str).str.strip() != '']
+        # 🪒 ตัดยศ/คำนำหน้าออก (พ.ต.อ., นพ., พญ., นาย, นาง ฯลฯ)
+        _surg['surgeon_clean'] = _surg['surgeon_name'].apply(
+            _normalize_nurse_name)
+        # กรองเคสที่ชื่อหลัง normalize ยังว่าง
+        _surg = _surg[_surg['surgeon_clean'].astype(str).str.strip() != '']
+        if not _surg.empty:
+            _top_surg = (_surg['surgeon_clean'].value_counts()
+                         .head(5).reset_index())
+            _top_surg.columns = ['surgeon', 'n_cases']
+            # แนวนอนเสมอ — ไม่ตาม toggle (ชื่อยาว ต้องเห็นเต็ม)
+            fig = px.bar(_top_surg, x='n_cases', y='surgeon',
+                         orientation='h', text='n_cases',
+                         labels={'n_cases': 'จำนวนเคส', 'surgeon': 'แพทย์'},
+                         color_discrete_sequence=['#5e35b1'])
+            _x_max_s = max(int(_top_surg['n_cases'].max()) * 1.12, 5)
+            fig.update_traces(
+                textposition='outside',
+                hovertemplate='<b>%{y}</b><br>%{x} เคส<extra></extra>')
+            fig.update_layout(
+                margin=dict(t=10, b=10, l=10, r=40), height=280,
+                yaxis=dict(autorange='reversed'),
+                xaxis=dict(range=[0, _x_max_s]),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.caption("ยังไม่มีข้อมูล surgeon_name")
+    else:
+        st.caption("ยังไม่มีข้อมูล surgeon_name")
+
+    # ── 🔍 ดูรายละเอียดแพทย์รายคน (sub-section ของ Top 5 แพทย์) ──
+    st.markdown('<div class="sub-title">🔍 ดูรายละเอียดแพทย์รายคน</div>',
+                unsafe_allow_html=True)
+    from main_or_db import get_surgeon_list, get_surgeon_detail
+    # ใช้ sort by 'actual' (จำนวนผ่าตัด) — สอดคล้องกับ Top 5 ด้านบน
+    _surg_list = _ca_surgeon_list(date_from, date_to, 'actual', _stats_ver())
+
+    if _surg_list.empty:
+        st.caption("ยังไม่มีข้อมูลแพทย์ในช่วงนี้")
+    else:
+        # Dropdown: Top 15 แพทย์ — default ว่าง รอผู้ใช้เลือก
+        _top_surg_list = _surg_list.head(15).copy()
+        _options = [
+            f"{row['surgeon']} — set {row['n_scheduled']} / "
+            f"ผ่าตัด {row['n_actual']} เคส"
+            for _, row in _top_surg_list.iterrows()
+        ]
+        _name_map = dict(zip(_options, _top_surg_list['surgeon']))
+        _selected_label = st.selectbox(
+            "เลือกแพทย์เพื่อดูรายละเอียด",
+            options=_options, key='surgeon_detail_select',
+            index=None,
+            placeholder='-- เลือกแพทย์เพื่อดูรายละเอียด --',
+        )
+
+        if _selected_label is None:
+            st.caption("👆 เลือกแพทย์จาก dropdown ด้านบนเพื่อดู KPI + หัตถการที่ทำ")
+        else:
+            _selected_surgeon = _name_map[_selected_label]
+
+            # ดึงรายละเอียด
+            _detail = _ca_surgeon_detail(_selected_surgeon, date_from, date_to, _stats_ver())
+
+            # ชื่อแพทย์
+            st.markdown(
+                f'<div style="background:linear-gradient(135deg,#fafafa,white);'
+                f'border-radius:10px;padding:10px 14px;margin:8px 0;'
+                f'border:0.5px solid #e0e0e0;">'
+                f'<div style="font-size:16px;font-weight:600;color:#4a148c;">'
+                f'👨‍⚕️ {_esc(_selected_surgeon)}</div></div>',
+                unsafe_allow_html=True)
+
+            # 3 KPI cards
+            kc1, kc2, kc3 = st.columns(3)
+            with kc1:
+                st.markdown(
+                    f'<div style="background:#e3f2fd;border-left:5px solid #1976d2;'
+                    f'border-radius:10px;padding:12px;">'
+                    f'<div style="font-size:11px;color:#1565c0;">📋 เคสที่ set ผ่าตัดทั้งหมด</div>'
+                    f'<div style="font-size:30px;font-weight:600;color:#0d47a1;'
+                    f'line-height:1.1;margin:4px 0;">{_detail["n_scheduled"]}</div>'
+                    f'<div style="font-size:11px;color:#1565c0;">เคส</div>'
+                    f'</div>', unsafe_allow_html=True)
+            with kc2:
+                st.markdown(
+                    f'<div style="background:#e8f5e9;border-left:5px solid #2e7d32;'
+                    f'border-radius:10px;padding:12px;">'
+                    f'<div style="font-size:11px;color:#1b5e20;">🩺 เคสที่ผ่าตัด</div>'
+                    f'<div style="font-size:30px;font-weight:600;color:#1b5e20;'
+                    f'line-height:1.1;margin:4px 0;">{_detail["n_actual"]}</div>'
+                    f'<div style="font-size:11px;color:#1b5e20;">เคส</div>'
+                    f'</div>', unsafe_allow_html=True)
+            with kc3:
+                st.markdown(
+                    f'<div style="background:#fff3e0;border-left:5px solid #ef6c00;'
+                    f'border-radius:10px;padding:12px;">'
+                    f'<div style="font-size:11px;color:#bf360c;">🤝 มอบหมายให้ resident</div>'
+                    f'<div style="font-size:30px;font-weight:600;color:#bf360c;'
+                    f'line-height:1.1;margin:4px 0;">{_detail["n_delegated"]}</div>'
+                    f'<div style="font-size:11px;color:#bf360c;">เคส</div>'
+                    f'</div>', unsafe_allow_html=True)
+
+            # Top procedures (จากที่ทำจริง)
+            _top_proc = _detail['top_procedures']
+            if not _top_proc.empty:
+                st.markdown(
+                    '<div style="font-size:13px;color:#37474f;margin:14px 0 6px;'
+                    'font-weight:500;">🔬 หัตถการที่ทำ (Top 5)</div>',
+                    unsafe_allow_html=True)
+                _x_max_p = max(int(_top_proc['n_cases'].max()) * 1.15, 5)
+                fig_p = px.bar(_top_proc, x='n_cases', y='procedure',
+                               orientation='h', text='n_cases',
+                               labels={'n_cases': 'จำนวนเคส',
+                                       'procedure': 'หัตถการ'},
+                               color_discrete_sequence=['#00838f'])
+                fig_p.update_traces(
+                    textposition='outside',
+                    hovertemplate='<b>%{y}</b><br>%{x} เคส<extra></extra>')
+                fig_p.update_layout(
+                    margin=dict(t=10, b=10, l=10, r=40),
+                    height=max(220, len(_top_proc) * 40 + 80),
+                    yaxis=dict(autorange='reversed'),
+                    xaxis=dict(range=[0, _x_max_p]),
+                )
+                st.plotly_chart(fig_p, use_container_width=True)
+            else:
+                st.caption("ยังไม่มีหัตถการที่ทำจริง (intraop) สำหรับแพทย์คนนี้")
+
+
+def _hist_sec_eff(date_from, date_to, data=None):
+    # ════════════════════════════════════════════════════════════════
+    # 5️⃣  ⏱️ ประสิทธิภาพการให้บริการ — เวลารอ + รับเวร + Turnover
+    # ════════════════════════════════════════════════════════════════
+    st.markdown('<div id="sec-eff" class="group-header teal">⏱️ ประสิทธิภาพการให้บริการ</div>',
+                unsafe_allow_html=True)
+    with st.expander("💡 อธิบายส่วนนี้", expanded=False):
+        st.markdown("""
+บอก **คุณภาพการให้บริการ** — ผู้ป่วยรอนานไหม ทีมทำงานเร็วแค่ไหน
+
+- **⏱️ เวลารอ** = (กำลังพัฒนา) จะคิดจากตอนพยาบาลกด "พร้อมเข้าห้อง"
+  - เป้า: รอ ≤60 นาที
+- **🔄 รับเวร** = เคสที่ทำหลัง 15:30 น. → ทีมต้องอยู่ OT
+  - เฉพาะ จ.-ศ. ไม่นับเคสนอกเวลา
+- **🔄 Turnover Time** = ช่วงพักห้องระหว่างเคส (เคสก่อนออก → เคสถัดไปเข้า)
+  - เป้า: **≤15 นาที** (ยิ่งสั้น = ใช้ห้องคุ้ม)
+""")
+    col_wt, col_ho = st.columns(2)
+
+    with col_wt:
+        st.markdown('<div class="sub-title">⏱️ เวลารอผู้ป่วย</div>',
+                    unsafe_allow_html=True)
+        # NOTE: รอข้อมูลจาก workflow ใหม่ (พยาบาลกด "พร้อมเข้าห้อง")
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            st.metric("เฉลี่ยรอ", "—")
+        with m2:
+            st.metric("นานสุด", "—")
+        with m3:
+            st.metric("รอ >60 นาที", "—")
+        st.caption(
+            "⏳ ยังไม่พร้อมใช้งาน · กำลังพัฒนา workflow ให้พยาบาลกด "
+            "\"พร้อมเข้าห้อง\" → จะคิดเวลารอจริงได้"
+        )
+
+    with col_ho:
+        st.markdown('<div class="sub-title">🔄 สถิติรับเวร '
+                    '(หลัง 15:30 น. · เฉพาะ จ.-ศ.)</div>',
+                    unsafe_allow_html=True)
+        from main_or_db import get_handover_stats
+        ho = _ca_handover(date_from, date_to, _stats_ver())
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            st.metric("เคสรับเวร", f"{ho['n_handover']} เคส")
+        with m2:
+            st.metric("จากทั้งหมด", f"{ho['total']} เคส")
+        with m3:
+            st.metric("สัดส่วน", f"{ho['pct']}%")
+        st.caption("📌 เฉพาะวันธรรมดา (จันทร์-ศุกร์) · ไม่นับเคสนอกเวลา")
+
+        # 🅰️ Day-of-Week bar
+        hc = ho.get('handover_cases')
+        if hc is not None and not hc.empty:
+            hc_dow = hc.copy()
+            hc_dow['_dt'] = pd.to_datetime(hc_dow['op_date'], errors='coerce')
+            hc_dow = hc_dow.dropna(subset=['_dt'])
+            hc_dow['dow'] = hc_dow['_dt'].dt.dayofweek
+            _THAI_DAY = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์']
+            dow_summary = (hc_dow[hc_dow['dow'].between(0, 4)]
+                              .groupby('dow').size().reset_index(name='n_cases'))
+            all_dows = pd.DataFrame({'dow': range(5)})
+            dow_summary = all_dows.merge(dow_summary, on='dow', how='left').fillna(0)
+            dow_summary['day_name'] = dow_summary['dow'].apply(lambda d: _THAI_DAY[d])
+            dow_summary['n_cases'] = dow_summary['n_cases'].astype(int)
+            max_n = dow_summary['n_cases'].max()
+            dow_summary['color_flag'] = dow_summary['n_cases'].apply(
+                lambda n: 'peak' if n == max_n and n > 0 else 'normal')
+
+            st.markdown(
+                '<div style="font-size:12px;color:#666;margin:10px 0 4px;'
+                'font-weight:500;border-left:3px solid #ef6c00;padding-left:8px;">'
+                '🗓️ <b>A.</b> รับเวรตามวันในสัปดาห์ '
+                '<span style="color:#999;font-weight:400;">(สีส้ม)</span></div>',
+                unsafe_allow_html=True)
+            fig_dow = px.bar(
+                dow_summary, x='day_name', y='n_cases',
+                text='n_cases', color='color_flag',
+                color_discrete_map={'peak': '#d84315', 'normal': '#ef6c00'},
+                labels={'day_name': '', 'n_cases': 'เคส'},
+            )
+            fig_dow.update_traces(textposition='outside')
+            _y_max_ho = max(float(dow_summary['n_cases'].max()), 1.0)
+            fig_dow.update_layout(
+                margin=dict(t=30, b=30, l=30, r=10), height=220,
+                xaxis_title='',
+                yaxis=dict(title='', range=[0, _y_max_ho * 1.25]),
+                showlegend=False,
+                plot_bgcolor='#fff8f0',
+            )
+            st.plotly_chart(fig_dow, use_container_width=True)
+
+        # 🅱️ Monthly Bar — จำนวนเคสรับเวรต่อเดือน (สีต่างจาก A ให้รู้ว่าคนละ chart)
+        monthly = ho.get('monthly')
+        if monthly is not None and not monthly.empty:
+            # Visual divider
+            st.markdown(
+                '<div style="border-top:1px dashed #cfd8dc;margin:14px 0 0;"></div>',
+                unsafe_allow_html=True)
+            st.markdown(
+                '<div style="font-size:12px;color:#666;margin:10px 0 4px;'
+                'font-weight:500;border-left:3px solid #1565c0;padding-left:8px;">'
+                '📈 <b>B.</b> เคสรับเวรรายเดือน '
+                '<span style="color:#999;font-weight:400;">(สีน้ำเงิน)</span></div>',
+                unsafe_allow_html=True)
+            _thai_m = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+                       'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+            _m = monthly.copy().sort_values('month')
+            # เดือน + ปี พ.ศ. 2 หลัก — แกนเวลาต่อเนื่อง กันเส้นพันเมื่อดูหลายปี
+            _m['month_th'] = _m['month'].apply(
+                lambda x: (f"{_thai_m[int(x.split('-')[1])]} "
+                           f"{(int(x.split('-')[0]) + 543) % 100:02d}")
+                if x and '-' in x else x)
+            _y1_max = max(int(_m['n_cases'].max()), 1)
+            # 📈 LINE chart (time series — ใช้ line ดีกว่า bar)
+            _max_n = _m['n_cases'].max()
+            _many_b = len(_m) > 18
+            _marker_colors = [
+                '#0d47a1' if n == _max_n and n > 0 else '#1976d2'
+                for n in _m['n_cases']
+            ]
+            _marker_sizes_b = [
+                (10 if n == _max_n else 5) if _many_b else 12
+                for n in _m['n_cases']
+            ]
+            _text_b = [
+                (f"{n}" if (n == _max_n or not _many_b) else "")
+                for n in _m['n_cases']
+            ]
+            fig_m = go.Figure()
+            fig_m.add_trace(go.Scatter(
+                x=_m['month_th'], y=_m['n_cases'],
+                mode='lines+markers+text',
+                line=dict(color='#1976d2', width=2 if _many_b else 3),
+                marker=dict(size=_marker_sizes_b, color=_marker_colors,
+                            line=dict(width=2, color='white')),
+                text=_text_b,
+                textposition='top center',
+                textfont=dict(size=12, color='#0d47a1'),
+                hovertemplate='<b>%{x}</b><br>เคสรับเวร: %{y}<extra></extra>',
+                fill='tozeroy',
+                fillcolor='rgba(25, 118, 210, 0.10)',
+            ))
+            # เส้นค่าเฉลี่ย (reference line)
+            _mean_n = _m['n_cases'].mean()
+            fig_m.add_hline(y=_mean_n, line_dash='dot', line_color='#90a4ae',
+                            annotation_text=f'เฉลี่ย {_mean_n:.1f}',
+                            annotation_position='top right',
+                            annotation_font_size=10,
+                            annotation_font_color='#546e7a')
+            _xaxis_b = dict(title='', tickfont=dict(size=11 if _many_b else 12))
+            if _many_b:
+                _xaxis_b['dtick'] = 6
+                _xaxis_b['tickangle'] = -30
+            fig_m.update_layout(
+                margin=dict(t=30, b=30, l=50, r=10), height=240,
+                xaxis=_xaxis_b,
+                showlegend=False,
+                yaxis=dict(title='จำนวนเคสรับเวร',
+                           range=[0, _y1_max * 1.30]),
+                plot_bgcolor='#f0f7ff',
+            )
+            st.plotly_chart(fig_m, use_container_width=True)
+            st.caption("💡 จุดน้ำเงินเข้ม = เดือนรับเวรเยอะสุด · "
+                       "เส้นประ = ค่าเฉลี่ย · "
+                       "ดูชั่วโมง OT ในตาราง 'สรุปรายเดือน' ด้านล่าง")
+
+    st.caption(
+        "🔄 **Turnover + Utilization รายห้อง/รายเดือน** — ดูแบบเต็มที่ที่แท็บ "
+        "**📊 Utilization** (รวมไว้ที่เดียว ไม่ให้ตัวเลขซ้ำ/ขัดกัน)")
+
+
+def _hist_sec_night(date_from, date_to, data=None):
+    # ════════════════════════════════════════════════════════════════
+    # 6️⃣  🌙 เคสนอกเวลา (สะสม)
+    # ════════════════════════════════════════════════════════════════
+    st.markdown('<div id="sec-night" class="group-header indigo">🌙 เคสนอกเวลา (สะสม)</div>',
+                unsafe_allow_html=True)
+    df_range = get_cases()
+    df_range = df_range[
+        (df_range['op_date'] >= date_from) &
+        (df_range['op_date'] <= date_to)
+    ]
+    aft_range = df_range[df_range['patient_type'] == 'นอกเวลา'].copy()
+    if aft_range.empty:
+        st.info("ไม่มีเคสนอกเวลาในช่วงนี้")
+    else:
+        # KPI row: total + done + top-division + peak-day (4 cols)
+        _n_total_aft = len(aft_range)
+        _n_done_aft = len(aft_range[aft_range['status'].isin(['discharged', 'post_op'])])
+        _done_rate = round(_n_done_aft / _n_total_aft * 100, 1) if _n_total_aft else 0
+
+        # 🏥 สาขาที่มีเคสนอกเวลามากสุด
+        _div_top_name = '-'
+        _div_top_count = 0
+        _div_top_pct = 0
+        if 'division_code' in aft_range.columns:
+            _div_counts = (aft_range['division_code'].fillna('-')
+                           .astype(str).value_counts())
+            if not _div_counts.empty:
+                _top_code = _div_counts.index[0]
+                _div_top_count = int(_div_counts.iloc[0])
+                _div_top_name = div_name(_top_code) if _top_code != '-' else '-'
+                _div_top_pct = round(_div_top_count / _n_total_aft * 100, 1)
+
+        # 📅 วันในสัปดาห์ที่มีเคสนอกเวลาบ่อยสุด (จ.-อา. นับรวมทั้งช่วง —
+        # บอกแค่ชื่อวัน ไม่ระบุวันที่เจาะจง)
+        _aft_dt = aft_range.copy()
+        _aft_dt['_dt'] = pd.to_datetime(_aft_dt['op_date'])
+        _peak_day_label = '-'
+        _peak_day_count = 0
+        if not _aft_dt.empty:
+            _thai_dows = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์', 'อาทิตย์']
+            _by_dow = _aft_dt['_dt'].dt.weekday.value_counts()
+            _peak_day_count = int(_by_dow.max())
+            _peak_day_label = _thai_dows[int(_by_dow.idxmax())]
+
+        a1, a2, a3, a4 = st.columns(4)
+        with a1:
+            st.markdown(
+                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
+                f'<div style="font-size:12px;color:#757575;margin-bottom:4px;">'
+                f'🌙 เคสนอกเวลาทั้งหมด</div>'
+                f'<div style="font-size:26px;font-weight:600;line-height:1;color:#5e35b1;">'
+                f'{_n_total_aft}</div>'
+                f'<div style="font-size:11px;color:#9e9e9e;margin-top:4px;">เคส</div>'
+                f'</div>', unsafe_allow_html=True)
+        with a2:
+            st.markdown(
+                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
+                f'<div style="font-size:12px;color:#757575;margin-bottom:4px;">'
+                f'✅ ผ่าตัดเสร็จ</div>'
+                f'<div style="font-size:26px;font-weight:600;line-height:1;color:#2e7d32;">'
+                f'{_n_done_aft}</div>'
+                f'<div style="font-size:11px;color:#9e9e9e;margin-top:4px;">'
+                f'คิดเป็น {_done_rate}% ของเคสนอกเวลา</div>'
+                f'</div>', unsafe_allow_html=True)
+        with a3:
+            st.markdown(
+                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
+                f'<div style="font-size:12px;color:#757575;margin-bottom:4px;">'
+                f'🏥 สาขาที่มีเคสมากสุด</div>'
+                f'<div style="font-size:18px;font-weight:600;line-height:1.2;color:#6a1b9a;'
+                f'margin-top:4px;min-height:36px;">'
+                f'{_div_top_name}</div>'
+                f'<div style="font-size:11px;color:#9e9e9e;margin-top:4px;">'
+                f'{_div_top_count} เคส ({_div_top_pct}%)</div>'
+                f'</div>', unsafe_allow_html=True)
+        with a4:
+            st.markdown(
+                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
+                f'<div style="font-size:12px;color:#757575;margin-bottom:4px;">'
+                f'📅 วันที่มีเคสบ่อยสุด</div>'
+                f'<div style="font-size:18px;font-weight:600;line-height:1.2;color:#c62828;'
+                f'margin-top:4px;min-height:36px;">'
+                f'{_peak_day_label}</div>'
+                f'<div style="font-size:11px;color:#9e9e9e;margin-top:4px;">'
+                f'{_peak_day_count} เคสรวมทั้งช่วง</div>'
+                f'</div>', unsafe_allow_html=True)
+
+        st.markdown("")  # spacer
+
+        # ════ Bar chart: เฉลี่ยเคสนอกเวลาตามวันในสัปดาห์ (จ.-ศ.) ════
+        # คำนวณแบบเดียวกับ "📊 เฉลี่ยเคสตามวันในสัปดาห์" — เฉลี่ยต่อวันที่มีข้อมูล
+        _aft_wd2 = _aft_dt.copy()   # ทุกวัน จ.-อา. (เสาร์-อาทิตย์ = นอกเวลาทั้งวัน)
+        if not _aft_wd2.empty:
+            st.markdown(
+                '<div class="sub-title">📊 เฉลี่ยเคสนอกเวลาตามวันในสัปดาห์ '
+                '<span style="font-size:12px;color:#999;font-weight:400;">'
+                '(วันไหนงานหนักสุด · จ.-อา.)</span></div>',
+                unsafe_allow_html=True)
+            _aft_wd2['dow'] = _aft_wd2['_dt'].dt.dayofweek
+            # เฉลี่ยต่อ "วันปฏิทินจริง" ในช่วง (ไม่ใช่เฉพาะวันที่มีเคสนอกเวลา)
+            _tot_by_dow_aft = _aft_wd2.groupby('dow').size()
+            _cal_dow_aft = pd.Series(
+                pd.date_range(date_from, date_to, freq='D').dayofweek).value_counts()
+            _THAI_DAY_AFT = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์', 'อาทิตย์']
+            _aft_dow_avg = pd.DataFrame({'dow': range(7)})
+            _aft_dow_avg['n'] = _aft_dow_avg['dow'].apply(
+                lambda d: round(_tot_by_dow_aft.get(d, 0) / max(int(_cal_dow_aft.get(d, 0)), 1), 1))
+            _aft_dow_avg['day_name'] = _aft_dow_avg['dow'].apply(
+                lambda d: _THAI_DAY_AFT[d])
+            _max_dow_aft = _aft_dow_avg['n'].max()
+            _aft_dow_avg['color_flag'] = _aft_dow_avg['n'].apply(
+                lambda v: 'peak' if v == _max_dow_aft and v > 0 else 'normal')
+
+            fig_aft_dow = px.bar(
+                _aft_dow_avg, x='day_name', y='n', text='n',
+                color='color_flag',
+                color_discrete_map={'peak': '#5e35b1', 'normal': '#b39ddb'},
+                labels={'day_name': '', 'n': 'เคสนอกเวลาเฉลี่ย/วัน'},
+                category_orders={'day_name': _THAI_DAY_AFT})
+            fig_aft_dow.update_traces(
+                textposition='outside',
+                hovertemplate='<b>%{x}</b><br>เฉลี่ย %{y} เคส/วัน<extra></extra>')
+            _y_max_aft = max(float(_aft_dow_avg['n'].max()), 1.0)
+            fig_aft_dow.update_layout(
+                margin=dict(t=40, b=30, l=40, r=10), height=260,
+                xaxis_title='',
+                yaxis=dict(title='เคสนอกเวลาเฉลี่ย/วัน',
+                           range=[0, _y_max_aft * 1.25]),
+                showlegend=False, plot_bgcolor='white',
+            )
+            st.plotly_chart(fig_aft_dow, use_container_width=True,
+                            config={'displayModeBar': False})
+
+            # caption — เปรียบเทียบวันหนัก vs วันเบา
+            _min_dow_aft = _aft_dow_avg[_aft_dow_avg['n'] > 0]['n'].min() \
+                if (_aft_dow_avg['n'] > 0).any() else 0
+            _max_dow_name_aft = _aft_dow_avg.loc[
+                _aft_dow_avg['n'].idxmax(), 'day_name'] if _max_dow_aft > 0 else '-'
+            if _min_dow_aft > 0 and _max_dow_aft > _min_dow_aft:
+                _pct_heavier_aft = round((_max_dow_aft / _min_dow_aft - 1) * 100)
+                st.markdown(
+                    f'<div style="background:#ede7f6;border-left:3px solid #5e35b1;'
+                    f'padding:8px 12px;border-radius:0 6px 6px 0;'
+                    f'font-size:12px;color:#311b92;margin-top:6px;">'
+                    f'<b>วัน{_max_dow_name_aft}</b> เคสนอกเวลาหนักสุด '
+                    f'เฉลี่ย {_max_dow_aft} เคส/วัน · '
+                    f'หนักกว่าวันที่น้อยที่สุด {_pct_heavier_aft}%</div>',
+                    unsafe_allow_html=True)
+            elif _max_dow_aft > 0:
+                st.caption(
+                    f"💡 วัน{_max_dow_name_aft}เคสนอกเวลาเฉลี่ยมากสุด "
+                    f"({_max_dow_aft} เคส/วัน)")
+        else:
+            st.info("ไม่มีเคสนอกเวลาในช่วงนี้")
+
+    # ════════════════════════════════════════════════════════════════
+    # ⏱️ เคสรับเวร (ผ่าตัดจบหลัง 15:30 · ไม่นับนอกเวลา) — เวลาจาก intraop
+    # ════════════════════════════════════════════════════════════════
+    st.markdown('<div class="sub-title">⏱️ เคสรับเวร (ผ่าตัดจบหลัง 15:30 น. · ไม่นับเป็นนอกเวลา)</div>',
+                unsafe_allow_html=True)
+    try:
+        from main_or_db import get_conn as _gc_ho
+        _ho_where = "status IN ('post_op','discharged','done')"
+        _ho_params = []
+        if date_from:
+            _ho_where += " AND op_date >= ?"
+            _ho_params.append(date_from)
+        if date_to:
+            _ho_where += " AND op_date <= ?"
+            _ho_params.append(date_to)
+        _conn_ho = _gc_ho()
+        _ho_df = pd.read_sql_query(
+            f"SELECT op_date, diagnosis, procedure_name, division_code, "
+            f"in_or_at, op_end_at, discharged_at "
+            f"FROM cases WHERE {_ho_where} AND op_end_at IS NOT NULL "
+            f"AND (patient_type IS NULL OR patient_type != 'นอกเวลา') "
+            f"AND CAST(strftime('%H%M', op_end_at) AS INTEGER) > 1530 "
+            f"ORDER BY op_date DESC, op_end_at DESC", _conn_ho, params=_ho_params)
+        _conn_ho.close()
+        if _ho_df.empty:
+            st.info("ไม่มีเคสรับเวรในช่วงนี้")
+        else:
+            # ── Executive view: สาขาไหนรับเวรเยอะสุด — ดูปราดเดียวรู้เรื่อง ──
+            _ho_df['_div'] = (_ho_df['division_code'].fillna('-').astype(str)
+                              .map(lambda c: div_name(c)
+                                   if c not in ('-', '', 'None', 'nan')
+                                   else 'ไม่ระบุ'))
+            _div_ho = (_ho_df['_div'].value_counts().head(8)
+                       .rename_axis('สาขา').reset_index(name='n'))
+            st.caption(f"รวม {len(_ho_df)} เคสรับเวรในช่วงที่เลือก · "
+                       "เวลาจากไฟล์ intraop")
+            fig_ho = px.bar(
+                _div_ho.sort_values('n'), x='n', y='สาขา', orientation='h',
+                text='n', labels={'n': 'จำนวนเคสรับเวร', 'สาขา': ''},
+                color_discrete_sequence=['#1565c0'],
+            )
+            fig_ho.update_traces(textposition='outside', cliponaxis=False)
+            fig_ho.update_layout(
+                margin=dict(t=10, b=30, l=10, r=40),
+                height=max(190, 70 + 34 * len(_div_ho)),
+                plot_bgcolor='white',
+                xaxis=dict(gridcolor='#f0f0f0'),
+                yaxis=dict(tickfont=dict(size=13)),
+            )
+            st.plotly_chart(fig_ho, use_container_width=True,
+                            config={'displayModeBar': False})
+
+            # รายละเอียดรายเคส — พับเก็บ ไม่รกหน้า
+            with st.expander(f"ดูรายเคส ({len(_ho_df)} เคส)", expanded=False):
+                def _hhmm(ts):
+                    s = str(ts)
+                    return s[11:16] if len(s) >= 16 else '-'
+                _ho_show = pd.DataFrame({
+                    'วันที่': pd.to_datetime(_ho_df['op_date'], errors='coerce').dt.strftime('%d/%m/%Y'),
+                    'สาขา': _ho_df['_div'],
+                    'Diagnosis': _ho_df['diagnosis'].fillna('-'),
+                    'Operation': _ho_df['procedure_name'].fillna('-'),
+                    'Start': _ho_df['in_or_at'].map(_hhmm),
+                    'End': _ho_df['op_end_at'].map(_hhmm),
+                    'Discharge': _ho_df['discharged_at'].map(_hhmm),
+                })
+                st.dataframe(_ho_show, use_container_width=True, hide_index=True)
+    except Exception as _e_ho:
+        st.caption(f"โหลดเคสรับเวรไม่สำเร็จ: {_e_ho}")
+
+    # ════════════════════════════════════════════════════════════════
+    # 6.5️⃣  👥 Progress รายบุคคล — เอาออกตามคำขอ 2026-06
+    # (ถ้าอยากคืน: เปิดบล็อกด้านล่าง)
+    # ════════════════════════════════════════════════════════════════
+    # st.markdown('<div id="sec-nurse" class="group-header" '
+    #             'style="color:#5e35b1;background:#ede7f6;'
+    #             'border-left-color:#5e35b1;">👥 Progress รายบุคคล</div>',
+    #             unsafe_allow_html=True)
+    # with st.expander("💡 อธิบายส่วนนี้", expanded=False):
+    #     st.markdown("""
+    # ดู **ผลงานของพยาบาลแต่ละคน** ในช่วงเวลาที่เลือก
+    # - 🔒 **ป้องกัน PIN** (ข้อมูลส่วนตัว)
+    # - 🧑‍⚕️ **เลือกพยาบาล** → เห็น scrub/circulate ที่ทำ + หัตถการที่ทำ
+    # - ✨ **Real-time** — นับทันทีเมื่อพยาบาลกดบันทึกในแอป (ไม่ต้องรอ upload HIS)
+    # """)
+    # _render_nurse_progress_history(date_from, date_to)
+
+
+def _render_after_hours_admin(op_date: str):
+    """แสดงสรุปเคสนอกเวลาในหน้า Admin."""
+    df = get_cases(op_date=op_date)
+    if df.empty:
+        st.info("ไม่มีเคสนอกเวลา")
+        return
+
+    aft = df[df['patient_type'] == 'นอกเวลา'].copy()
+    if aft.empty:
+        st.info("ไม่มีเคสนอกเวลา")
+        return
+
+    n_total = len(aft)
+    n_done = len(aft[aft['status'] == 'discharged'])
+    n_cancel = len(aft[aft['status'] == 'cancelled'])
+    n_pending = n_total - n_done - n_cancel
+    # NOTE (thesis mode): ซ่อนรายได้
+    # (revenue feature removed)
+
+    # Metrics
+    a1, a2, a3 = st.columns(3)
+    a1.metric("เคสนอกเวลา", n_total)
+    a2.metric("ยืนยันแล้ว", n_done)
+    a3.metric("ยกเลิก", n_cancel)
+    # a4.metric("💰 รายได้", f"{revenue:,} ฿")
+
+    if n_pending > 0:
+        st.caption(f"⏳ รอดำเนินการ {n_pending} เคส")
+
+    # Top procedures
+    done_aft = aft[aft['status'] == 'discharged']
+    if not done_aft.empty:
+        col_l, col_r = st.columns(2)
+        with col_l:
+            st.markdown("**หัตถการนอกเวลา**")
+            proc_counts = done_aft['procedure_name'].str.upper().value_counts().head(5)
+            for proc_name, n in proc_counts.items():
+                st.markdown(f"- {proc_name} — {n} ราย")
+        with col_r:
+            st.markdown("**แพทย์นอกเวลา**")
+            surg_counts = done_aft['surgeon_name'].value_counts().head(5)
+            for surg, n in surg_counts.items():
+                st.markdown(f"- {surg} — {n} ราย")
+
+
+def _render_daily_summary():
+    """สรุปรายวัน + เคสรับเวร — ดึงจากเคสใน OR Board (session) ของวันนี้.
+    ย้ายมาจากหน้า 'ตารางผ่าตัด' เพื่อให้หน้านั้นเหลือเฉพาะงานหน้างาน."""
+    from main_or_pages import case_shift_class
+    cases = st.session_state.get('patient_cases', [])
+    if not cases:
+        st.info("ยังไม่มีเคสวันนี้ — อัปโหลด/ส่งเข้า OR Board ที่หน้า 'ตารางผ่าตัด' ก่อน")
+        return
+
+    # 🕞 รับเวร = (ก) เคสที่ระบบประเมินว่าจบหลัง 15:30 (case_shift_class)
+    #            (ข) เคสที่ "ผู้ป่วยมาแล้ว" (กดรับเข้า/เข้าห้องแล้ว) + ยังไม่จำหน่าย
+    #                และตอนนี้เลย 15:30 น. แล้ว → ส่งต่อเวรถัดไปทันที (ตามที่หัวหน้าขอ)
+    _CUT_MIN = 15 * 60 + 30          # 15:30 น.
+    _now = _now_bkk()
+    _now_min = _now.hour * 60 + _now.minute
+    _ARRIVED = ('holding_pre', 'in_or', 'overrun', 'holding_post', 'recovery', 'arrived')
+
+    def _is_handover(c):
+        if case_shift_class(c) == 'นอกเวลา':   # นอกเวลา = คนละหมวด ไม่นับรับเวร
+            return False
+        if case_shift_class(c) == 'รับเวร':     # (ก) ประเมินว่าจบหลัง 15:30
+            return True
+        # (ข) ผู้ป่วยมาแล้ว + ยังไม่จำหน่าย + ตอนนี้เกิน 15:30
+        return (c.get('status') in _ARRIVED and _now_min >= _CUT_MIN)
+
+    n_done = sum(1 for c in cases if c.get('status') == 'discharged')
+    _handover = [c for c in cases if _is_handover(c)]
+    _after = [c for c in cases if case_shift_class(c) == 'นอกเวลา']
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("เคสทั้งหมด", len(cases))
+    k2.metric("✅ ผ่าเสร็จ", n_done)
+    k3.metric("🌙 นอกเวลา", len(_after))
+    k4.metric("⏱️ รับเวร", len(_handover))
+
+    st.markdown("##### ⏱️ เคสรับเวร — ผู้ป่วยมาแล้ว/กำลังผ่า ยังไม่จบเมื่อเลย 15:30 น.")
+    st.caption("รายการที่ต้องส่งต่อเวรถัดไป")
+    if not _handover:
+        st.info("ไม่มีเคสรับเวรวันนี้")
+    else:
+        _hcols = [1, 4, 5]
+        _hh = st.columns(_hcols)
+        for _col, _lbl in zip(_hh, ["#", "Diagnosis", "Operation"]):
+            _col.markdown(f"<span style='font-size:12px;color:#607d8b;font-weight:600;'>{_lbl}</span>",
+                          unsafe_allow_html=True)
+        for c in _handover:
+            _r = st.columns(_hcols)
+            _r[0].write(str(c.get('ororder', '-')))
+            _r[1].write(c.get('diagnosis') or '-')
+            _r[2].write(c.get('procedure') or '-')
+
+    if _after:
+        st.markdown("##### 🌙 เคสนอกเวลา (นัด ≥ 15:30 หรือระบุนอกเวลา)")
+        for c in _after:
+            st.markdown(
+                f"- **{c.get('procedure','-')}** · {c.get('name','-')} · "
+                f"นัด {c.get('sched_hour',0):02d}:{c.get('sched_min',0):02d}")
+
+
+def page_admin(section='today'):
+    """หน้าบริหารจัดการ — สำหรับหัวหน้าพยาบาล / ผู้บริหาร.
+    section: 'today' | 'history' | 'util' | 'ai' — เรนเดอร์เฉพาะ section ที่เลือก
+    (ถูกยกขึ้นเป็นแท็บบนสุดร่วมกับ ตารางผ่าตัด/ตั้งค่า)."""
+    try:
+        from ui_theme import inject_theme
+        inject_theme()
+    except Exception:
+        pass
+    st.markdown(_ADMIN_CSS, unsafe_allow_html=True)
+
+    today = _now_bkk().strftime('%Y-%m-%d')
+
+    # (เอาบรรทัด "ข้อมูล ณ วันที่..." ออก — วันที่/เวลาปรับล่าสุดโชว์ที่ชิปบนแถบหัวแล้ว)
+
+    # ===== TABS =====
+    # NOTE (thesis mode): ซ่อนแท็บ "💰 ใส่ราคารายวัน" ชั่วคราว
+    # เปิดกลับเมื่อต้องการ → uncomment 4 บรรทัดล่าง + กลับมา 4 tabs
+    # tab_today, tab_cost, tab_history, tab_ai = st.tabs([
+    #     "📋 ภาพรวมวันนี้",
+    #     "💰 ใส่ราคารายวัน",
+    #     "📈 สถิติย้อนหลัง",
+    #     "🤖 AI Prediction (งานวิจัย)",
+    # ])
+    # with tab_cost:
+    #     _render_cost_entry_tab()
+    # (ยุบ "🌙 สรุปรายวัน / รับเวร" รวมเข้าแท็บภาพรวมวันนี้ — section ท้ายหน้า)
+    # แต่ละ section ถูกยกขึ้นเป็น "แท็บบนสุด" (เรียกผ่าน page_admin(section=...)) — เรนเดอร์เฉพาะอันที่เลือก
+    _sec = section
+
+    if _sec == 'ai':
+        _render_ai_research_tab()
+
+    if _sec == 'util':
+        from main_or_utilization import page_utilization
+        page_utilization()
+
+    # 🔄 จำ tab ที่เลือกไว้ผ่าน sessionStorage — กด refresh แล้วอยู่ tab เดิม
+    import streamlit.components.v1 as _components
+    _components.html("""
+    <script>
+    const KEY = 'admin_active_tab';
+    function restoreTab() {
+        const tabs = window.parent.document.querySelectorAll('button[role="tab"]');
+        if (!tabs.length) return false;
+        const saved = window.parent.sessionStorage.getItem(KEY);
+        if (saved !== null && tabs[parseInt(saved)]) {
+            tabs[parseInt(saved)].click();
+        }
+        tabs.forEach((t, i) => {
+            t.addEventListener('click', () => {
+                window.parent.sessionStorage.setItem(KEY, i);
+            }, { once: false });
+        });
+        return true;
+    }
+    // ลองหลายๆ ครั้งเพราะ DOM โหลดช้า
+    let tries = 0;
+    const iv = setInterval(() => {
+        if (restoreTab() || tries++ > 20) clearInterval(iv);
+    }, 100);
+    </script>
+    """, height=0)
+
+    # -- TAB 1: Today overview --
+    if _sec == 'today':
+        op_date = _now_bkk().strftime('%Y-%m-%d')
+
+        # ── Demo Mode toggle + controls (ด้านบนสุด) ──
+        sim_min = _render_demo_controls()
+        demo_active = sim_min is not None
+
+        # ── Auto-refresh: เฉพาะ demo mode + กำลังเล่น + ยังไม่จบ ──
+        # ⚠️ ลบ meta http-equiv refresh fallback ออก — เพราะมัน full reload
+        # → ทำลาย session_state → demo toggle รีเซ็ต
+        # ใช้แค่ streamlit_autorefresh เท่านั้น (Streamlit-native rerun)
+        _demo_state = st.session_state.get('demo', {})
+        _demo_playing = _demo_state.get('playing', True)
+        _demo_done = (sim_min is not None and sim_min >= _DEMO_END_MIN)
+        if demo_active and _demo_playing and not _demo_done:
+            try:
+                from streamlit_autorefresh import st_autorefresh
+                st_autorefresh(interval=3_000, key='demo_refresh')
+            except ImportError:
+                st.warning(
+                    "⚠️ ไม่พบ package `streamlit-autorefresh` — Demo Mode "
+                    "ไม่ refresh อัตโนมัติ\n\n"
+                    "💡 ติดตั้ง: `pip install streamlit-autorefresh` แล้ว reboot"
+                )
+        elif demo_active and _demo_done:
+            st.success(
+                "✅ Demo จบแล้ว — เห็นภาพรวมเคสทั้งวัน · "
+                "กด ⏹ รีเซ็ต เพื่อเริ่มใหม่ หรือปิด Demo Mode"
+            )
+        elif not demo_active:
+            # 🖥️ ผู้บริหารดูสด — refresh ทุก ~30 วิ ให้ flow อัปเดตเองจากบอร์ดกลาง
+            try:
+                from streamlit_autorefresh import st_autorefresh
+                st_autorefresh(interval=30_000, key='admin_live_refresh')
+            except Exception:
+                pass
+
+        # (เอา banner "🏥 เคสในเวลา · Full OR Flow..." ออกเพื่อเพิ่มพื้นที่ — แท็บย่อยบอกอยู่แล้ว)
+
+        # โหลด data ก่อน (rooms + kpi)
+        # 🔗 ถ้ามีเคสสดบนหน้า "ตารางผ่าตัด" (session) → ใช้ชุดเดียวกันเลย (เชื่อมกัน realtime)
+        if demo_active:
+            rooms = _get_demo_rooms(sim_min)
+            kpi = _get_demo_kpi(sim_min)
+        else:
+            # 🖥️ หน้าภาพรวม = view → ดึง "บอร์ดกลาง" จาก DB ก่อนเสมอ ให้ sync ข้ามเครื่อง
+            #    (เดิมใช้ session ก่อน → เครื่องที่เคยเปิดบอร์ดจะค้าง ไม่อัปเดตตามเครื่องอื่น)
+            #    _load_board_snapshot อ่าน DB สดทุกครั้ง + auto-refresh 30 วิ → เห็นสถานะล่าสุด
+            _live_cases, _from_shared = [], False
+            try:
+                from main_or_pages import _load_board_snapshot
+                _shared = _load_board_snapshot()
+                if _shared:
+                    _live_cases = _shared
+                    _from_shared = True
+            except Exception:
+                pass
+            if not _live_cases:   # ไม่มีบอร์ดกลาง (offline/ยังไม่เซฟ) → ใช้ session ของเครื่องนี้
+                _live_cases = st.session_state.get('patient_cases') or []
+            if _live_cases:
+                from live_link import rooms_from_session, kpi_from_session
+                rooms = rooms_from_session(_live_cases, _now_bkk())
+                kpi = kpi_from_session(_live_cases)
+                if st.session_state.get('_or_demo'):
+                    st.caption("🧪 ข้อมูลตัวอย่าง (Demo) — ไม่ใช่เคสจริง")
+            else:
+                rooms = get_room_status(op_date)
+                kpi = get_kpi(op_date)
+
+        # 🎬 KPI section ขึ้นก่อน Room status
+        _thai_months_top = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+                            'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+        _today_dt_top = _now_bkk()
+        _thai_date_top = (f"{_today_dt_top.day} "
+                          f"{_thai_months_top[_today_dt_top.month]} "
+                          f"{_today_dt_top.year + 543}")
+        title_label_top = ('🎬 ตัวเลขสำคัญ (Demo)' if demo_active
+                           else f'📈 ตัวเลขสำคัญ — {_thai_date_top}')
+        st.markdown(f'<div class="section-title">{title_label_top}</div>',
+                    unsafe_allow_html=True)
+        _render_kpi(kpi)
+
+        if kpi.get('total', 0) > 0:
+            progress_top = kpi['done'] / kpi['total']
+            st.markdown(f"""
+            <div style="margin:12px 0 4px;">
+                <div style="display:flex;justify-content:space-between;font-size:13px;color:#333;font-weight:700;">
+                    <span>ความคืบหน้า{'จำลอง' if demo_active else 'วันนี้'}</span>
+                    <span>{kpi['done']}/{kpi['total']} เคส ({progress_top:.0%})</span>
+                </div>
+                <div style="background:#e0e0e0;border-radius:6px;height:12px;margin-top:4px;">
+                    <div style="background:linear-gradient(90deg,#43a047,#66bb6a);
+                                height:100%;width:{progress_top*100:.0f}%;border-radius:6px;
+                                transition:width 0.5s;"></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # =========================================================
+        # 🚨 โซนปัญหา (ย้ายขึ้นบนสุด): แจ้งเตือน + ผู้ป่วยรอนาน
+        # หลักออกแบบ: สิ่งที่ต้องลงมือแก้ ต้องเห็นก่อนเลื่อนจอ
+        # (demo mode ข้าม — ไม่มีข้อมูลส่วนนี้)
+        # =========================================================
+        if not demo_active:
+            st.markdown('<div class="section-title">⚠️ แจ้งเตือน</div>',
+                        unsafe_allow_html=True)
+            if _live_cases:
+                from live_link import alerts_from_session
+                alerts = alerts_from_session(_live_cases, _now_bkk())
+            else:
+                alerts = get_delay_alerts(op_date)
+            _render_alerts(alerts)
+
+            wt_today = get_wait_stats(op_date, op_date)
+            if wt_today['over_60'] > 0:
+                st.markdown(f"""
+                <div style="background:#fce4ec;border-left:4px solid #c62828;
+                            padding:10px 14px;border-radius:6px;margin-bottom:8px;">
+                    <span style="font-weight:700;color:#c62828;">
+                        ⏱️ {wt_today['over_60']} เคส</span>
+                    <span style="color:#666;font-size:13px;">
+                        รอเกิน 60 นาที — เฉลี่ยรอ {wt_today['avg_all']} นาที,
+                        นานสุด {wt_today['max_all']} นาที</span>
+                </div>""", unsafe_allow_html=True)
+            elif wt_today['total'] > 0:
+                st.caption(f"⏱️ ไม่มีเคสรอเกิน 60 นาที — เฉลี่ยรอ {wt_today['avg_all']} นาที")
+
+        # 🏥 Section: Room status cards
+        st.markdown('<div class="section-title">🛏️ สถานะห้องผ่าตัด</div>',
+                    unsafe_allow_html=True)
+        # 🔒 มาร์คห้องที่ถูกปิดในหน้าตั้งค่า → การ์ดขึ้น "ปิดให้บริการ" (ไม่โชว์ว่าว่าง)
+        if not demo_active:
+            try:
+                from main_or_db import load_room_settings as _lrs
+                _rs_closed = _lrs()
+                for _rm in rooms:
+                    _s = _rs_closed.get(_rm.get('room_no'))
+                    if _s is not None and not _s.get('enabled', True):
+                        _rm['closed'] = True
+            except Exception:
+                pass
+        _render_room_cards(rooms)
+
+        # 🤖 Section 2: AI timeline forecast (เชื่อมกับการ์ดด้านบน — ใช้ room_forecast ชุดเดียวกัน)
+        st.markdown('<div class="section-title">🤖 AI ทำนายเวลาผ่าตัด — ไทม์ไลน์รายห้อง</div>',
+                    unsafe_allow_html=True)
+        try:
+            from command_center import render_room_timeline
+            render_room_timeline(rooms, _now_bkk())
+        except Exception as _tl_err:
+            st.caption(f"ไทม์ไลน์ยังไม่พร้อม: {_tl_err}")
+
+        # ════════════════════════════════════════════════════════════════
+        # 🕐 UPCOMING QUEUE + HOURLY THROUGHPUT (รองรับ demo + real mode)
+        # ════════════════════════════════════════════════════════════════
+        if True:  # always render — เลือก data source ตาม mode
+            if demo_active:
+                _cases_today = _get_demo_cases_df(sim_min)
+            else:
+                from main_or_db import get_cases as _get_cases_today
+                _cases_today = _get_cases_today(op_date=op_date)
+
+            # ── 🕐 Upcoming queue ──
+            _waiting = _cases_today[
+                _cases_today['status'].isin(['scheduled', 'arrived'])].copy()
+            if not _waiting.empty:
+                st.markdown(
+                    '<div style="font-size:10px;font-weight:600;color:#757575;'
+                    'text-transform:uppercase;letter-spacing:0.8px;'
+                    'margin:18px 0 8px;">🕐 Upcoming queue — '
+                    'เคสที่รอเข้าห้อง</div>',
+                    unsafe_allow_html=True)
+
+                # Helper: ชื่อย่อ (เพื่อ privacy)
+                def _short_name(full):
+                    if not full or not isinstance(full, str):
+                        return '—'
+                    parts = full.strip().split()
+                    if len(parts) >= 2:
+                        return f"{parts[0][:1]}. {parts[-1][:1]}."
+                    return full[:8]
+
+                from room_config import room_label as _room_label
+                # Limit ~8 เคส
+                _waiting_show = _waiting.head(8)
+                for i, (_, row) in enumerate(_waiting_show.iterrows(), 1):
+                    _room = row.get('room_no')
+                    _room_html = (f'<span style="font-size:13px;color:#455a64;'
+                                  f'font-weight:600;">→ {_room_label(_room)}</span>'
+                                  if _room is not None and str(_room).strip() != '' else '')
+                    _status = row.get('status')
+                    if _status == 'arrived':
+                        _badge_bg = '#e8f5e9'
+                        _badge_c = '#2e7d32'
+                        _badge_t = 'รอผ่าตัด'        # คนไข้มาถึงแล้ว
+                    else:
+                        _badge_bg = '#fff8e1'
+                        _badge_c = '#bf360c'
+                        _badge_t = 'ยังไม่มา'         # ยังไม่มาถึงห้องผ่าตัด
+                    # ชื่อผู้ป่วย — mask เสมอ (นโยบาย 11 มิ.ย. 2026 · มาตรา 3.6.4)
+                    _name = str(row.get('name') or '—')
+                    if _name != '—':
+                        from main_or_db import mask_patient_name
+                        _name = mask_patient_name(_name)
+                    _name = _esc(_name)                                       # 🔒 M-01
+                    _proc = _esc(str(row.get('procedure_name') or '—')[:35])  # 🔒 M-01
+
+                    st.markdown(
+                        f'<div style="background:white;border:0.5px solid #e0e0e0;'
+                        f'border-radius:8px;padding:10px 14px;margin-bottom:6px;'
+                        f'display:flex;align-items:center;gap:14px;">'
+                        f'<div style="font-size:13px;color:#90a4ae;'
+                        f'min-width:18px;">{i}</div>'
+                        f'<div style="flex:1;min-width:0;">'
+                        f'<div style="font-size:13px;color:#263238;'
+                        f'font-weight:500;">{_name}</div>'
+                        f'<div style="font-size:12px;color:#607d8b;'
+                        f'overflow:hidden;text-overflow:ellipsis;'
+                        f'white-space:nowrap;">{_proc}</div></div>'
+                        f'<div style="text-align:right;min-width:140px;">'
+                        f'{_room_html}</div>'
+                        f'<div style="background:{_badge_bg};color:{_badge_c};'
+                        f'font-size:11px;padding:3px 12px;border-radius:12px;'
+                        f'font-weight:500;min-width:60px;text-align:center;">'
+                        f'{_badge_t}</div></div>',
+                        unsafe_allow_html=True)
+                if len(_waiting) > 8:
+                    st.caption(f"… และอีก {len(_waiting) - 8} เคส")
+            else:
+                st.markdown(
+                    '<div style="background:#fafafa;border:0.5px dashed #e0e0e0;'
+                    'border-radius:10px;padding:14px;text-align:center;'
+                    'margin:18px 0 12px;font-size:13px;color:#90a4ae;">'
+                    '🕐 ไม่มีเคสรอเข้าห้อง</div>',
+                    unsafe_allow_html=True)
+
+            # ── 📊 Hourly throughput (today) ──
+            _done_today = _cases_today[
+                _cases_today['status'].isin(
+                    ['post_op', 'discharged', 'done', 'cancelled'])].copy()
+            if not _done_today.empty:
+                # ใช้ op_end_at สำหรับ completed, in_or_at สำหรับ cancelled
+                _done_today['_ref_time'] = _done_today.apply(
+                    lambda r: (r.get('op_end_at') if r.get('status') != 'cancelled'
+                               else r.get('in_or_at')), axis=1)
+                _done_today = _done_today.dropna(subset=['_ref_time'])
+                if not _done_today.empty:
+                    _done_today['_hour'] = pd.to_datetime(
+                        _done_today['_ref_time']).dt.hour
+                    _done_today['_grp'] = _done_today['status'].apply(
+                        lambda s: 'Cancelled' if s == 'cancelled' else 'Completed')
+                    _hourly = (_done_today.groupby(['_hour', '_grp'])
+                               .size().reset_index(name='n'))
+                    # เติม hour ที่ขาดให้ครบ 8-17
+                    _all_hours = pd.DataFrame({'_hour': list(range(8, 18))})
+                    _hourly_full = []
+                    for grp in ['Completed', 'Cancelled']:
+                        _sub = _hourly[_hourly['_grp'] == grp]
+                        _merged = _all_hours.merge(_sub, on='_hour',
+                                                   how='left').fillna(
+                            {'n': 0, '_grp': grp})
+                        _hourly_full.append(_merged)
+                    _hourly_final = pd.concat(_hourly_full, ignore_index=True)
+                    _hourly_final['hour_label'] = _hourly_final['_hour'].apply(
+                        lambda h: f'{int(h):02d}:00')
+
+                    st.markdown(
+                        '<div style="font-size:10px;font-weight:600;'
+                        'color:#757575;text-transform:uppercase;'
+                        'letter-spacing:0.8px;margin:18px 0 8px;">'
+                        '📊 Hourly case throughput — today</div>',
+                        unsafe_allow_html=True)
+                    fig_hourly = px.bar(
+                        _hourly_final, x='hour_label', y='n', color='_grp',
+                        color_discrete_map={
+                            'Completed': '#1976d2', 'Cancelled': '#ef6c00'},
+                        labels={'hour_label': '', 'n': 'จำนวนเคส',
+                                '_grp': ''},
+                        barmode='group',
+                    )
+                    fig_hourly.update_layout(
+                        margin=dict(t=20, b=30, l=40, r=10), height=240,
+                        legend=dict(orientation='h', yanchor='bottom',
+                                    y=1.02, xanchor='left', x=0),
+                        plot_bgcolor='white',
+                        xaxis=dict(showgrid=False),
+                        yaxis=dict(gridcolor='#f0f0f0'),
+                    )
+                    st.plotly_chart(fig_hourly, use_container_width=True,
+                                    config={'displayModeBar': False})
+
+        # ── Demo mode: ซ่อน sections ที่อิง real DB (alerts, workload, ฯลฯ) ──
+        if demo_active:
+            st.info(
+                "🎬 **โหมด Demo** — แสดงเฉพาะ Room cards + KPI\n\n"
+                "🔇 sections อื่น (แจ้งเตือน, ภาระงาน, รับเวร, ผู้ป่วยรอ) "
+                "ถูกซ่อนชั่วคราว เพื่อ focus ที่ flow หลัก\n\n"
+                "💡 ปิด Demo Mode เพื่อกลับไปดูข้อมูลจริงครบทุก section"
+            )
+            return
+
+        st.markdown('<div class="section-title">👥 ภาระงาน</div>',
+                    unsafe_allow_html=True)
+        if _live_cases:
+            from live_link import workload_from_session
+            wl = workload_from_session(_live_cases)
+        else:
+            wl = get_workload(op_date)
+        _render_workload(wl)
+
+        # 🛏️ จำนวนเคสรายห้อง (bar chart) — เห็นห้องไหนงานหนัก/เบา (ข้ามห้องที่ปิด)
+        st.markdown('<div class="section-title">🛏️ จำนวนเคสรายห้อง</div>',
+                    unsafe_allow_html=True)
+        _room_rows = [{'ห้อง': (r.get('room_label') or f"ห้อง {r.get('room_no')}"),
+                       'จำนวนเคส': int(r.get('total', 0) or 0)}
+                      for r in rooms if not r.get('closed')]
+        _room_df = pd.DataFrame(_room_rows)
+        if len(_room_df) and _room_df['จำนวนเคส'].sum() > 0:
+            _bar = px.bar(_room_df, x='ห้อง', y='จำนวนเคส', text='จำนวนเคส',
+                          color_discrete_sequence=['#1565c0'])
+            _bar.update_traces(textposition='outside', cliponaxis=False)
+            _bar.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=260,
+                               yaxis_title='', xaxis_title='', yaxis=dict(dtick=1))
+            st.plotly_chart(_bar, use_container_width=True)
+        else:
+            st.caption("ยังไม่มีเคสในห้องวันนี้")
+
+        # (เอาออกตามคำขอ 2026-06: Nurse Progress + AI Prediction Accuracy รายวัน
+        #  — Nurse Progress ใช้ข้อมูล intraop ซึ่งโหมด live ไม่มี / AI accuracy
+        #  มีแท็บ "🤖 AI Prediction (งานวิจัย)" ฉบับเต็มอยู่แล้ว
+        #  ถ้าอยากคืน: เปิด 2 บล็อกนี้)
+        # st.markdown('<div class="section-title">🔍 Progress รายบุคคล</div>',
+        #             unsafe_allow_html=True)
+        # _render_nurse_progress(op_date)
+        #
+        # with st.expander("🤖 AI Prediction Accuracy (สำหรับวิจัย)",
+        #                  expanded=False):
+        #     _render_ai_accuracy(op_date)
+
+        # =========================================================
+        # Section: สถิติรับเวร (วันนี้)
+        # =========================================================
+        st.markdown('<div class="section-title">🔄 สถิติรับเวร (หลัง 15:30 น.)</div>',
+                    unsafe_allow_html=True)
+        ho_today = get_handover_stats(op_date, op_date)
+        if ho_today['n_handover'] > 0:
+            st.markdown(f"""
+            <div style="background:#fff3e0;border-left:4px solid #ef6c00;
+                        padding:10px 14px;border-radius:6px;margin-bottom:8px;">
+                <span style="font-weight:700;color:#e65100;">
+                    {ho_today['n_handover']} เคส</span>
+                <span style="color:#666;font-size:13px;">
+                    จากทั้งหมด {ho_today['total']} เคส
+                    ({ho_today['pct']}%) — ยังไม่ discharge ก่อน 15:30 น.</span>
+            </div>""", unsafe_allow_html=True)
+            ho_df = ho_today['handover_cases']
+            for _, r in ho_df.iterrows():
+                dc_time = ''
+                if r.get('discharged_at'):
+                    dc_time = r['discharged_at'][11:16]
+                    lbl = f"discharge {dc_time}"
+                else:
+                    lbl = f"สถานะ: {r['status']}"
+                st.markdown(f"""
+                <div style="background:var(--bg-secondary-color,#f5f5f5);
+                            border-radius:6px;padding:8px 12px;margin:4px 0;
+                            font-size:13px;border:1px solid var(--border-color,#e0e0e0);">
+                    <b>{_esc(_admin_mask_nm(r.get('name')))}</b> — {_esc(r.get('procedure_name',''))}
+                    <span style="float:right;color:#ef6c00;font-weight:600;">{_esc(lbl)}</span>
+                </div>""", unsafe_allow_html=True)
+        else:
+            st.success("ไม่มีเคสรับเวรวันนี้ — ทุกเคส discharge ก่อน 15:30 น.")
+
+        # (⏱️ ผู้ป่วยรอนาน ย้ายขึ้นไปรวมโซนปัญหาด้านบนแล้ว)
+
+        # =========================================================
+        # Section: เคสนอกเวลา
+        # =========================================================
+        st.markdown("")
+        st.markdown("")
+        st.markdown(
+            '<div style="background:#ffffff;border:1px solid #eef2f6;'
+            'border-left:4px solid #c62828;'
+            'border-radius:10px;padding:11px 16px;margin:12px 0 8px;">'
+            '<span style="font-size:17px;font-weight:600;color:#b71c1c;">'
+            '🌙 เคสนอกเวลา</span>'
+            '<span style="font-size:13px;color:#d32f2f;margin-left:8px;">'
+            'ยืนยัน / ยกเลิก เท่านั้น</span></div>',
+            unsafe_allow_html=True,
+        )
+        _render_after_hours_admin(op_date)
+
+        # =========================================================
+        # Section: สรุปรายวัน / รับเวร (ยุบมาจากแท็บแยก — หน้าเดียวจบ)
+        # =========================================================
+        st.markdown("---")
+        st.markdown('<div class="section-title">🌙 สรุปรายวัน / รับเวร</div>',
+                    unsafe_allow_html=True)
+        _render_daily_summary()
+
+    # -- TAB 2: Historical analytics --
+    if _sec == 'history':
+        today_dt = _now_bkk().date()
+
+        # --- Date range picker ---
+        # ค่าเริ่มต้น: วันที่ 1 ของเดือนปัจจุบัน → วันนี้ (ไม่ query DB = โหลดเร็วขึ้น)
+        default_from = today_dt.replace(day=1)
+        default_to = today_dt
+
+        # พอแก้วันที่/หัวข้อ → ซ่อนผลเดิมไว้ก่อน จนกว่าจะกด 'แสดงสถิติ' ใหม่
+        # (ไม่โหลดระหว่างที่ยังเลือกไม่เสร็จ)
+        def _invalidate_hist():
+            st.session_state['hist_submitted'] = None
+
+        col_from, col_to = st.columns(2)
+        with col_from:
+            sel_from = st.date_input("📅 วันที่เริ่มต้น", value=default_from,
+                                     max_value=today_dt, key="hist_from",
+                                     on_change=_invalidate_hist)
+
+        with col_to:
+            sel_to = st.date_input("📅 วันที่สิ้นสุด", value=default_to,
+                                   max_value=today_dt, key="hist_to",
+                                   on_change=_invalidate_hist)
+
+        if sel_from > sel_to:
+            st.warning("⚠️ วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด")
+            return
+
+        d_from = sel_from.strftime('%Y-%m-%d')
+        d_to = sel_to.strftime('%Y-%m-%d')
+
+        st.markdown("**เลือกหัวข้อที่อยากดู** "
+                    "<span style='font-weight:400;color:#888;'>"
+                    "(ติ๊กให้ครบก่อน แล้วค่อยกด 'แสดงสถิติ' — โหลดทีเดียว)</span>",
+                    unsafe_allow_html=True)
+        _SEC_OPTS = [
+            ('kpi',   '🎯 KPI Highlights',   True),
+            ('sum',   '📋 สรุปยอดสะสม',       True),
+            ('trend', '📈 กราฟจำนวนเคสรายเดือน',       False),
+            ('rank',  '🏆 อันดับยอดนิยม',     False),
+            ('eff',   '⏱️ ประสิทธิภาพ (เวลารอ/รับเวร)', False),
+            ('night', '🌙 เคสนอกเวลา',        False),
+        ]
+        _sec_cols = st.columns(3)
+        _sel_secs = set()
+        for _i, (_sid, _slabel, _sdef) in enumerate(_SEC_OPTS):
+            with _sec_cols[_i % 3]:
+                if st.checkbox(_slabel, value=_sdef, key=f"hist_sec_{_sid}",
+                               on_change=_invalidate_hist):
+                    _sel_secs.add(_sid)
+
+        _cur_sel = (d_from, d_to, frozenset(_sel_secs))
+        if st.button("📊 แสดงสถิติ", type="primary", use_container_width=True, key="btn_show_hist"):
+            st.session_state['hist_submitted'] = _cur_sel
+
+        _sub = st.session_state.get('hist_submitted')
+        if _sub == _cur_sel and _sel_secs:
+            # โหลดเฉพาะเมื่อ "ตัวเลือกปัจจุบัน = ตอนกดปุ่มล่าสุด" เป๊ะ
+            _render_historical_analytics(d_from, d_to, _secs=set(_sel_secs))
+        elif _sub == _cur_sel and not _sel_secs:
+            st.warning("เลือกอย่างน้อย 1 หัวข้อก่อนนะครับ")
+        else:
+            st.caption("☝️ เลือกวันที่ + หัวข้อให้ครบ แล้วกด '📊 แสดงสถิติ' เพื่อโหลด")
+
+        # =========================================================
+        # Section: เครื่องมือจัดการข้อมูล (Maintenance tools) — simplified
+        # =========================================================
+        st.markdown("---")
+        st.markdown(
+            '<div style="background:linear-gradient(135deg,#fff3e0,#ffe0b2);'
+            'border-radius:10px;padding:12px 16px;margin:16px 0 8px;'
+            'border-left:4px solid #ef6c00;">'
+            '<span style="font-size:18px;font-weight:700;color:#e65100;">'
+            '🛠️ เครื่องมือจัดการข้อมูล (Maintenance)</span>'
+            '<div style="font-size:12px;color:#bf360c;margin-top:4px;">'
+            'สำหรับ admin ดูแลระบบ'
+            '</div></div>',
+            unsafe_allow_html=True,
+        )
+
+        # =========================================================
+        # 🔐 PIN gate — Maintenance ใช้ได้เฉพาะหัวหน้า (PIN เดียวกับระบบ)
+        # =========================================================
+        if not st.session_state.get('_maint_unlocked'):
+            st.markdown(
+                '<div style="background:#fafbfc;border:1px solid #eef2f6;'
+                'border-radius:10px;padding:14px;text-align:center;'
+                'color:#64748b;font-size:13px;">🔒 เครื่องมือนี้แก้ไข'
+                'ฐานข้อมูล/โมเดลได้ — ใส่รหัส PIN เพื่อปลดล็อค</div>',
+                unsafe_allow_html=True)
+            _pin_cfg = get_admin_pin()
+            if not _pin_cfg:
+                st.caption("🔒 Maintenance ถูกล็อกไว้ — ยังไม่ได้ตั้ง `admin_pin` ใน secrets "
+                           "(App settings → Secrets เพิ่ม admin_pin = \"...\" แล้ว reboot)")
+            else:
+                _mp1, _mp2 = st.columns([3, 1])
+                _maint_pin = _mp1.text_input(
+                    "รหัส PIN", type="password", key="maint_pin",
+                    placeholder="กรอก PIN", label_visibility="collapsed")
+                if _mp2.button("🔓 ปลดล็อค", key="maint_unlock", width='stretch'):
+                    if (_maint_pin or '').strip() == _pin_cfg:
+                        st.session_state['_maint_unlocked'] = True
+                        st.rerun()
+                    else:
+                        st.error("PIN ไม่ถูกต้อง")
+        else:
+            # =========================================================
+            # ①②③ ลากไฟล์ schedule + intraop → ประมวลผล (dashboard + สอนโมเดล)
+            # =========================================================
+            try:
+                from process_panel import render_process_panel
+                render_process_panel()
+            except Exception as e:
+                import traceback
+                st.error(f"❌ โหลดส่วนประมวลผลไม่สำเร็จ: {e}")
+                st.code(traceback.format_exc())
+
+            # =========================================================
+            # 📥 Import ข้อมูลย้อนหลังปี 64–67 (สำหรับหน้าสถิติ)
+            # =========================================================
+            with st.expander("📥 Import ข้อมูลย้อนหลังปี 64–67 (7,654 เคส — หน้าสถิติ)",
+                             expanded=False):
+                st.markdown(
+                    "เพิ่มข้อมูลตึกเก่าปี 64–67 เข้า**สถิติย้อนหลัง** → ดู trend ได้ครบ 6 ปี\n\n"
+                    "- กันซ้ำอัตโนมัติ — กดซ้ำไม่เพิ่มแถว\n"
+                    "- 🔒 แท็บ AI Prediction ประเมินเฉพาะปี 68+ — ตัวเลข AI ไม่ปนชุดเทรน\n"
+                    "- ใช้เวลาประมาณ 2–5 นาที (คำนวณคำทำนายประกอบไปด้วย)")
+                if st.button("📥 เริ่ม Import ปี 64–67", key="hist6467_btn",
+                             type="primary"):
+                    from main_or_db import import_history_6467
+                    _pb67 = st.progress(0.0, text="กำลัง import…")
+                    _n_ins67, _n_skip67 = import_history_6467(
+                        progress_cb=lambda p: _pb67.progress(
+                            min(p, 1.0), text=f"กำลัง import… {p * 100:.0f}%"))
+                    _pb67.progress(1.0, text="เสร็จแล้ว")
+                    st.success(f"✅ เพิ่ม {_n_ins67:,} เคส (ข้ามซ้ำ {_n_skip67:,}) — "
+                               "เปิดสถิติย้อนหลังแล้วเลือกช่วงตั้งแต่ปี 64 ได้เลย")
+
+            # =========================================================
+            # ③ 🚨 Wipe Data (ทั้งหมด หรือ เฉพาะวันที่)
+            # =========================================================
+            with st.expander("🚨 ④ ล้างข้อมูล (Clean Wipe)", expanded=False):
+                from main_or_db import (get_db_table_counts, clear_all_data,
+                                         clear_cases_by_date_range)
+                counts = get_db_table_counts()
+                total_rows = sum(counts.values())
+
+                _wipe_mode = st.radio(
+                    "เลือกแบบลบ",
+                    options=['ลบทั้งหมด', 'เฉพาะวันที่'],
+                    horizontal=True, key='maint_wipe_mode',
+                )
+
+                if _wipe_mode == 'ลบทั้งหมด':
+                    st.error(
+                        f"⚠️ **เตือน: การลบนี้ไม่สามารถย้อนกลับได้!**\n\n"
+                        f"จะลบข้อมูล **ทั้งหมด {total_rows} แถว** จากทุก table:\n"
+                        f"- 🏥 **cases**: {counts.get('cases', 0)} เคส\n"
+                        f"- 📝 **audit_log**: {counts.get('audit_log', 0)} รายการ\n"
+                        f"- ⚙️ **room_settings**: {counts.get('room_settings', 0)} แถว"
+                    )
+                    # 🔧 M-03: type-to-confirm — ต้องพิมพ์ DELETE (กันกดพลาดด้วย checkbox เดียว)
+                    _typed = st.text_input(
+                        'พิมพ์คำว่า  DELETE  เพื่อยืนยันการลบทั้งหมด',
+                        key="clear_db_type_all", placeholder="DELETE")
+                    _ok_all = (_typed.strip().upper() == 'DELETE')
+                    if st.button(
+                            "🔴 ล้าง DB ทั้งหมด", type='primary',
+                            disabled=not _ok_all or total_rows == 0,
+                            use_container_width=True,
+                            key="btn_clear_db_all"):
+                        # 🔧 M-03: สำรองอัตโนมัติก่อนลบ (SQLite) — cloud ใช้ backup ของ Supabase
+                        try:
+                            from main_or_db import backup_db
+                            _bp = backup_db()
+                            st.info(f"💾 สำรองข้อมูลก่อนลบไว้ที่: {_bp}")
+                        except Exception as _be:
+                            st.warning(f"⚠️ สำรองอัตโนมัติไม่ได้ ({_be}) — "
+                                       f"โหมด cloud ให้ใช้ backup ของ Supabase Dashboard ก่อน")
+                        try:
+                            result = clear_all_data()
+                            _errs = result.pop('_errors', [])
+                            n_total = sum(result.values())
+                            if _errs:
+                                st.error("❌ ลบไม่สำเร็จบางส่วน:\n- " + "\n- ".join(_errs))
+                            else:
+                                st.success(
+                                    f"✅ ลบเรียบร้อย — **{n_total} แถว** ถูกลบจาก DB")
+                        except Exception as e:
+                            st.error(f"❌ Error: {e}")
+                else:
+                    # ลบเฉพาะวันที่
+                    col_dw1, col_dw2 = st.columns(2)
+                    with col_dw1:
+                        _wf = st.date_input(
+                            "ตั้งแต่วันที่",
+                            value=_now_bkk().date() - timedelta(days=7),
+                            key='maint_wipe_from',
+                        )
+                    with col_dw2:
+                        _wt = st.date_input(
+                            "ถึงวันที่",
+                            value=_now_bkk().date(),
+                            key='maint_wipe_to',
+                        )
+                    # นับเคสในช่วง (🔧 M-03: เดิม import แล้วจบ = UI ตัน — เติม count + ปุ่มลบให้ครบ)
+                    _wf_s, _wt_s = str(_wf), str(_wt)
+                    _n_range = 0
+                    try:
+                        from main_or_db import get_conn as _gc
+                        _c = _gc()
+                        try:
+                            _n_range = _c.execute(
+                                "SELECT COUNT(*) FROM cases WHERE op_date BETWEEN ? AND ?",
+                                (_wf_s, _wt_s)).fetchone()[0]
+                        finally:
+                            _c.close()
+                    except Exception as _ce:
+                        st.warning(f"นับเคสไม่สำเร็จ: {_ce}")
+                    st.info(f"พบ **{_n_range} เคส** ระหว่าง {_wf_s} ถึง {_wt_s}")
+                    _confirm_range = st.checkbox(
+                        f"ยืนยันลบ {_n_range} เคสในช่วงนี้", key="clear_db_confirm_range")
+                    if st.button("🗑️ ลบเคสในช่วงวันที่", type='primary',
+                                 disabled=not _confirm_range or _n_range == 0,
+                                 use_container_width=True, key="btn_clear_db_range"):
+                        try:
+                            _deleted = clear_cases_by_date_range(_wf_s, _wt_s)
+                            st.success(f"✅ ลบ {_deleted} เคส (ช่วง {_wf_s}–{_wt_s}) เรียบร้อย")
+                        except Exception as e:
+                            st.error(f"❌ Error: {e}")
+        

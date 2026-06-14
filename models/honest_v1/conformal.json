@@ -1,0 +1,39 @@
+{
+  "created": "2026-06-13 17:23:59",
+  "method": "split conformal prediction (absolute residual score, finite-sample quantile)",
+  "room_use": {
+    "calib_source": "validation_room_use.csv — hold-out ปี พ.ศ. 2567 ทำนายด้วยโมเดล deploy ตัวเดียวกัน (honest_v1 เทรน ≤พ.ศ.2566, XGB 800 ต้น) → split conformal แท้ (same model, out-of-sample)",
+    "n_calib": 1939,
+    "q": {
+      "0.80": 62.1,
+      "0.90": 103.2,
+      "0.95": 149.0
+    },
+    "headline": {
+      "mae": 41.7,
+      "median_ae": 24.8,
+      "within15_pct": 35.9,
+      "within30_pct": 57.5
+    },
+    "temporal_check": {
+      "design": "calibrate 60% แรก (ตามเวลา) → วัด coverage 40% หลัง",
+      "n_calib": 1163,
+      "n_test": 776,
+      "results": {
+        "0.80": {
+          "q_from_first60pct": 61.0,
+          "coverage_on_last40pct": 0.782
+        },
+        "0.90": {
+          "q_from_first60pct": 93.9,
+          "coverage_on_last40pct": 0.865
+        },
+        "0.95": {
+          "q_from_first60pct": 140.5,
+          "coverage_on_last40pct": 0.932
+        }
+      }
+    },
+    "note": "ช่วงทำนาย = ŷ ± q · coverage การันตีภายใต้ exchangeability; กับข้อมูลตามเวลาเป็นค่าประมาณ — ดู temporal_check และรายงาน empirical coverage บนข้อมูลปีถัดไปประกอบ"
+  }
+}

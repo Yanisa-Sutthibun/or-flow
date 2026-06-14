@@ -1,0 +1,64 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+# Word/Office temp & lock files (เปิดเอกสารค้าง) — ห้าม commit
+~$*
+*.tmp
+*.db
+*.db-wal
+*.db-shm
+minor_or_test.db
+backups/
+case_history.csv
+
+# 🔒 ข้อมูลผู้ป่วยจริง (PDPA) — ห้าม commit เด็ดขาด
+data/
+*.xls
+*.xlsx
+
+# 🔒 เอกสารแนบภาพหน้าจอ (ภาพบอร์ดมีชื่อแพทย์จริง) — ห้าม commit ขึ้น repo สาธารณะ
+docs/OR_Flow_realtime_2screens_filled.docx
+docs/compare.docx
+
+# ไม่ต้อง upload ไฟล์ fix/temp
+*_fix*.py
+tracking_fix*.py
+db_fix.py
+_*.py
+check_nurses.py
+
+# ไฟล์เก่าที่ไม่ใช้
+minor_or_app_complete.py
+*_bak.py
+*.py.bak
+
+# Linux ghost files (WSL fuse)
+.fuse_hidden*
+
+# Personal notes / mockups / model backups
+mockups/
+*.pkl
+เผื่อลืม.txt
+
+# 🔒 Secrets — ห้าม commit password/credentials
+.streamlit/secrets.toml
+.env
+.env.local
+.env.*.local
+
+# 📦 SQLite local exports (สำหรับ migrate ไป Supabase)
+supabase/data_export/
+
+# 🎭 Staff mapping (ห้าม leak — ใช้ decode masked codes กลับเป็นชื่อจริง)
+staff_mapping.csv
+staff_mapping*.csv
+
+# runtime logs
+logs/
+
+# ✅ ยกเว้น: artifact โมเดล honest_v1 ต้องขึ้น git (Streamlit Cloud ต้องมีโมเดลใช้)
+#    ผ่านการ mask แล้ว — key เป็นรหัส SURG_xxx ไม่มีชื่อจริง/PII (ไฟล์ ~0.9MB/ตัว)
+!models/honest_v1/resid_room_use.pkl
+!models/honest_v1/resid_surg_time.pkl

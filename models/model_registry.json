@@ -1,0 +1,15 @@
+{
+  "active_version": 1,
+  "ethics_lock": {
+    "locked_at": "2026-06-10 14:01:38",
+    "reason": "v2-v7 fine-tune ด้วยข้อมูลปี 2568-2569 ซึ่งอยู่นอกขอบเขต ethics approval (อนุมัติเฉพาะข้อมูลเทรน พ.ศ. 2564-2567) — ย้าย artifact ไปกักกันที่ data/_quarantine_models_6869/ (local เท่านั้น ไม่ขึ้น git) จนกว่าจะได้รับ amendment จากคณะกรรมการจริยธรรม",
+    "restore_hint": "ได้ amendment แล้ว: ย้าย pkl กลับ models/ + กู้ registry จาก model_registry_BEFORE_LOCK.json + ตั้ง OR_ETHICS_AMENDMENT_OK=1"
+  },
+  "versions": {
+    "1": {
+      "created": "baseline",
+      "method": "base",
+      "note": "โมเดลตั้งต้น 64-67 (ethics-approved) — freeze ไว้อ้างอิงในเล่ม"
+    }
+  }
+}
