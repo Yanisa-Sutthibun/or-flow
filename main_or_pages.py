@@ -538,7 +538,25 @@ def render_csv_upload():
 
 def render_clear_board():
     """🗑️ ล้างกระดานวันนี้ (สำหรับลบเคสทดสอบ) — ย้ายมาหน้า ⚙️ ตั้งค่า (เดิมอยู่บนบอร์ด)"""
-    with st.expander("🗑️ ล้างกระดานวันนี้ (สำหรับลบเคสทดสอบ)", expanded=False):
+    with st.expander("🗑️ ล้างกระดานวันนี้ (สำหรับลบเคสทดสอบ) 🔒", expanded=False):
+        if not st.session_state.get('_clear_unlocked'):
+            _pin_cfg = _get_admin_pin()
+            if not _pin_cfg:
+                st.caption("🔒 ปิดการล้างกระดานไว้ — ผู้ดูแลยังไม่ได้ตั้งรหัส PIN "
+                           "(เพิ่ม `admin_pin = \"...\"` ใน secrets แล้ว reboot)")
+            else:
+                st.caption("🔒 เฉพาะผู้ดูแล (Mukky) — ใส่รหัส PIN เพื่อปลดล็อกการล้างกระดาน")
+                _cp1, _cp2 = st.columns([3, 1])
+                _cpin = _cp1.text_input("PIN", type="password", key="clear_pin",
+                                        placeholder="กรอก PIN",
+                                        label_visibility="collapsed")
+                if _cp2.button("🔓 ปลดล็อก", key="clear_unlock", width='stretch'):
+                    if (_cpin or '').strip() == _pin_cfg:
+                        st.session_state['_clear_unlocked'] = True
+                        st.rerun()
+                    else:
+                        st.error("PIN ไม่ถูกต้อง")
+            return
         st.caption("ลบเคสทั้งหมดของวันนี้ออกจากบอร์ด + บอร์ดกลาง (ทุกเครื่อง) — "
                    "ใช้เคลียร์ข้อมูลทดสอบ · ไม่กระทบสถิติย้อนหลัง/ฐานข้อมูลเคสที่ import")
         _ok_clear = st.checkbox("ยืนยันต้องการล้างกระดานวันนี้", key="orb_clear_ok")
