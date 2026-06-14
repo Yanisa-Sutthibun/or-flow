@@ -41,6 +41,19 @@ TARGETS = ('room_use', 'surg_time')
 _SURG_CODE_RE = re.compile(r"^surg_\d{2,5}$", re.I)
 
 
+def _phash(s: str) -> str:
+    """รหัสแฮชของ 'ชื่อหัตถการเต็ม' (p_full) — ปกปิด free-text note ที่บางครั้งมีชื่อบุคคล
+    ปนอยู่ ก่อนนำไฟล์โมเดลขึ้น repo · ใช้แฮชเดียวกันทั้งตอนสร้าง artifact และตอน lookup
+    จึงทำนายได้ผลเท่าเดิมทุกประการ (PDPA-safe)"""
+    import hashlib
+    return "PF" + hashlib.sha1(s.encode("utf-8")).hexdigest()[:16]
+
+
+def _pfull_lookup(meta: dict, full: str) -> str:
+    """คืน key ที่ใช้ค้น p_full / full_n — แฮชเมื่อ artifact ถูกปกปิดคีย์แล้ว (proc_keys_hashed)"""
+    return _phash(full) if meta.get("proc_keys_hashed") else full
+
+
 @lru_cache(maxsize=4)
 def _load(target: str):
     """โหลด hier tables (JSON) + residual model (pkl) — cache ไว้"""
@@ -119,7 +132,8 @@ def _hier(meta: dict, full: str, kw2: str, kw1: str) -> float:
     """มัธยฐานลำดับชั้น: ชั้นเฉพาะที่สุดที่มี count >= min_count ชนะ"""
     g = meta["global_median"]; mc = meta["min_count"]; lv = meta["levels"]
     pred = g
-    for key, name in (("p_kw1", kw1), ("p_kw2", kw2), ("p_full", full)):  # กว้าง→เฉพาะ
+    for key, name in (("p_kw1", kw1), ("p_kw2", kw2),
+                      ("p_full", _pfull_lookup(meta, full))):  # กว้าง→เฉพาะ
         ent = lv[key].get(name)
         if ent and ent[1] >= mc:
             pred = ent[0]
@@ -132,7 +146,7 @@ def _hier_detail(meta, full, kw2, kw1):
     pred, level, n = g, "ค่ากลางรวม", 0
     for key, name, lname in (("p_kw1", kw1, "keyword 1 คำ"),
                              ("p_kw2", kw2, "keyword 2 คำ"),
-                             ("p_full", full, "ชื่อหัตถการเต็ม")):
+                             ("p_full", _pfull_lookup(meta, full), "ชื่อหัตถการเต็ม")):
         ent = lv[key].get(name)
         if ent and ent[1] >= mc:
             pred, level, n = ent[0], lname, ent[1]
@@ -163,7 +177,7 @@ def predict_detail(case: dict, target: str = "room_use") -> dict:
         "month": _num(case.get("month")),
         "orroom": _num(case.get("orroom", case.get("room_no"))),
         "division": _num(case.get("division", case.get("division_code"))),
-        "full_n": meta["full_n"].get(full, 0),
+        "full_n": meta["full_n"].get(_pfull_lookup(meta, full), 0),
     }
     import numpy as np
     X = np.array([[feat[f] for f in _FEATS]], dtype=float)
@@ -209,7 +223,7 @@ def predict(case: dict, target: str = "room_use") -> int:
         "month": num(case.get("month")),
         "orroom": num(case.get("orroom", case.get("room_no"))),
         "division": num(case.get("division", case.get("division_code"))),
-        "full_n": meta["full_n"].get(full, 0),
+        "full_n": meta["full_n"].get(_pfull_lookup(meta, full), 0),
     }
     import numpy as np
     X = np.array([[feat[f] for f in _FEATS]], dtype=float)

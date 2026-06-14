@@ -764,11 +764,19 @@ def _check_password():
     with _c:
         st.markdown(
             '<div style="text-align:center;margin:60px 0 24px;">'
-            '<div style="font-size:48px;">🔒</div>'
-            '<div style="font-size:22px;font-weight:600;color:#263238;'
-            'margin-top:8px;">OR Dashboard — Demo</div>'
-            '<div style="font-size:13px;color:#607d8b;margin-top:4px;">'
-            'ใส่รหัสผ่านเพื่อเข้าใช้งาน</div></div>',
+            '<div style="font-size:48px;">🔐</div>'
+            '<div style="display:inline-block;margin:12px 0 4px;background:#eef4ff;'
+            'color:#2563eb;font-size:11px;font-weight:600;padding:3px 11px;'
+            'border-radius:999px;border:1px solid #d6e4ff;">🎓 ส่วนหนึ่งของงานวิจัย</div>'
+            '<div style="font-size:24px;font-weight:700;color:#1f2937;'
+            'margin-top:4px;">OR Flow</div>'
+            '<div style="font-size:13.5px;color:#5b6b7b;margin-top:5px;'
+            'line-height:1.5;">ระบบบริหารห้องผ่าตัดและทำนายเวลาผ่าตัดด้วย '
+            'Machine Learning</div>'
+            '<div style="font-size:12px;color:#90a0ae;margin-top:7px;'
+            'line-height:1.5;">วิทยานิพนธ์ หลักสูตรพยาบาลศาสตรมหาบัณฑิต '
+            'สาขาการบริหารการพยาบาล<br>ห้องผ่าตัดศัลยกรรมทั่วไป · '
+            'โรงพยาบาลตำรวจ</div></div>',
             unsafe_allow_html=True)
 
         with st.form("login_form", clear_on_submit=False):
@@ -785,7 +793,7 @@ def _check_password():
                 else:
                     st.error("❌ รหัสผ่านไม่ถูกต้อง")
 
-        st.caption("💡 รหัสผ่านจากเจ้าของแอป — กรุณาอย่าแชร์สาธารณะ")
+        st.caption("🔑 รหัสผ่านจากเจ้าของระบบ — สำหรับการสาธิตงานวิจัยเท่านั้น")
 
     return False
 
