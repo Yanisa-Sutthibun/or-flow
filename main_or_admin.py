@@ -830,8 +830,8 @@ def _render_ai_research_tab():
                 unsafe_allow_html=True)
 
     # ── เลือกสิ่งที่ทำนาย: เวลาครองห้อง (ใช้จัดห้อง) หรือ เวลาผ่าตัดสุทธิ (ตรงชื่อวิจัย) ──
-    _TGT_LABELS = {'🛏 เวลาครองห้อง (เข้าห้อง→ออกห้อง)': 'room_use',
-                   '🔪 เวลาผ่าตัดสุทธิ (ลงมีด→เย็บเสร็จ)': 'surg_time'}
+    _TGT_LABELS = {'🛏 เวลาครองห้อง (Room duration)': 'room_use',
+                   '🔪 เวลาผ่าตัดสุทธิ (Operative time)': 'surg_time'}
     _tgt_label = st.radio('เลือกสิ่งที่ทำนาย', list(_TGT_LABELS),
                           horizontal=True, key='ai_target',
                           label_visibility='collapsed')
@@ -895,8 +895,8 @@ def _render_ai_research_tab():
     #    67 = ตอนทดสอบโมเดล · 68 = เคสจริงหลังใช้งาน · 69 = ปีนี้ (กำลังเก็บ)
     # ════════════════════════════════════════════════════════════════
     st.markdown('<div class="section-title">การทำงานของ AI</div>', unsafe_allow_html=True)
-    _tgt_word = ('ครองห้องผ่าตัด (ตั้งแต่เข้าห้องจนออกจากห้อง)' if _tgt == 'room_use'
-                 else 'ผ่าตัดสุทธิ (ตั้งแต่ลงมีดจนเย็บเสร็จ)')
+    _tgt_word = ('ครองห้องผ่าตัด / Room duration (ตั้งแต่เข้าห้องจนออกจากห้อง)' if _tgt == 'room_use'
+                 else 'ผ่าตัดสุทธิ / Operative time (ตั้งแต่ลงมีดจนเย็บเสร็จ)')
     st.caption(f"AI เรียนรู้จากเคสที่ผ่านมา แล้วทำนายว่าเคสใหม่จะใช้เวลา“{_tgt_word}” "
                "นานเท่าไร · ตัวเลขข้างล่างบอกว่าทำนายได้ใกล้เวลาจริงแค่ไหน "
                "(เฉพาะเคสนัดล่วงหน้า · ไม่มีข้อมูลส่วนตัวผู้ป่วย)")
