@@ -1327,15 +1327,15 @@ def _render_ai_research_tab():
             "· ตัดเคสนอกเวลาออก · Filter ทำงานบน scatter / histogram"
         )
 
-    # ── 🧑‍⚕️ คนแก้เวลา vs 🤖 AI (จาก override_log บนกระดาน) ──
+    # ── 🧑‍⚕️ User override vs 🤖 AI (จาก override_log บนกระดาน) ──
     try:
         from main_or_db import get_override_stats
         _ovs = get_override_stats()
     except Exception:
         _ovs = None
     if _ovs is not None:
-        st.markdown('<div class="section-title">🧑‍⚕️ คนแก้เวลา vs 🤖 AI '
-                    '(human override)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">🧑‍⚕️ User override vs 🤖 AI</div>',
+                    unsafe_allow_html=True)
         _ov_all, _ov_done = _ovs['all'], _ovs['done']
         if len(_ov_done):
             _mae_ai = float(_ov_done['ai_err'].mean())
