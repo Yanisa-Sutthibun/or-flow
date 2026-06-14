@@ -824,12 +824,12 @@ def main():
     _hdr_l, _hdr_r = st.columns([5, 1])
     with _hdr_l:
         from datetime import datetime as _dtm, timedelta as _td
-        _now_hdr = (_dtm.utcnow() + _td(hours=7)).strftime('%d/%m/%Y · ปรับล่าสุด %H:%M น.')
+        _now_hdr = (_dtm.utcnow() + _td(hours=7)).strftime('%d/%m/%Y')
         st.markdown(
             '<div class="or-chips" style="margin-top:6px;">'
-            '<span class="or-chip"><span class="dot"></span>บอร์ดกลาง ซิงก์อัตโนมัติ</span>'
+            '<span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>'
             '<span class="or-chip">🤖 AI: honest_v1</span>'
-            f'<span class="or-chip">📅 {_now_hdr}</span>'
+            f'<span class="or-chip">📅 ปรับล่าสุด {_now_hdr}</span>'
             '</div>',
             unsafe_allow_html=True,
         )
