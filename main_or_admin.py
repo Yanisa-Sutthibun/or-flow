@@ -954,12 +954,12 @@ def _render_ai_research_tab():
             unsafe_allow_html=True)
 
     _render_year_block(
-        '①', 2567, 'ผลตอนทดสอบโมเดล',
-        'เอาเคสที่โมเดล "ไม่เคยเห็น" ตอนเรียนมาทดสอบ — เป็นตัวเลขที่ใช้อ้างอิงในเล่มวิทยานิพนธ์',
+        '①', 2567, 'ชุดทดสอบ (hold-out)',
+        'ผลการทำนายกับเคสที่โมเดลไม่เคยเห็นตอนเรียน — ตัวเลขอ้างอิงในวิทยานิพนธ์',
         '#1565c0', '#f4f8fd', _stat(_calib))
     _render_year_block(
-        '②', 2568, 'เคสจริงหลังเริ่มใช้งาน',
-        'เคสจริงในห้องผ่าตัดเราเอง หลังเปิดใช้ระบบ — พิสูจน์ว่าใช้กับงานจริงได้',
+        '②', 2568, 'การใช้งานจริง (prospective)',
+        'ผลการทำนายกับเคสผ่าตัดจริง ยืนยัน clinical applicability',
         '#1b7f4b', '#eef7f1', _stat(_live68))
 
     # ปี 2569 — แถบติดตามสด (โชว์แค่จำนวนเคส เพราะข้อมูลยังน้อย ตัวเลขยังไม่นิ่ง)
@@ -969,9 +969,9 @@ def _render_ai_research_tab():
         f'<div style="background:#f7f9fb;border:1px dashed #c9d6e2;border-radius:10px;'
         f'padding:11px 14px;margin:16px 0 4px;display:flex;align-items:center;gap:12px;">'
         f'<div style="flex:1;"><div style="font-size:14px;font-weight:600;color:#222;">'
-        f'③ ปี 2569 — กำลังติดตามผลสด</div>'
-        f'<div style="font-size:12px;color:#777;margin-top:1px;">ปีปัจจุบัน ระบบกำลังเก็บเคสจริง '
-        f'และวัดความแม่นต่อเนื่อง (ข้อมูลยังน้อย จึงยังไม่สรุปเป็นตัวเลขหลัก)</div></div>'
+        f'③ ปี 2569 — การติดตามต่อเนื่อง (ongoing)</div>'
+        f'<div style="font-size:12px;color:#777;margin-top:1px;">ปีปัจจุบัน เก็บข้อมูลและ'
+        f'ประเมินความแม่นยำต่อเนื่อง (ข้อมูลยังน้อย ยังไม่สรุปเป็นตัวเลขหลัก)</div></div>'
         f'<div style="text-align:right;"><div style="font-size:22px;font-weight:700;color:#1565c0;">'
         f'{_n69:,}</div><div style="font-size:11px;color:#777;">เคสจนถึงตอนนี้</div></div></div>',
         unsafe_allow_html=True)
