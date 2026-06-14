@@ -693,6 +693,9 @@ def page_or_board():
 
     _demo_active = bool(st.session_state.get('_or_demo'))
 
+    # 💡 คำอธิบายปุ่มดินสอบนการ์ดเคส
+    st.caption("✏️ กดปุ่ม **ดินสอ (✏️)** ที่แต่ละเคส เพื่อแก้เวลาคาดการณ์ใช้ห้อง หรือ ย้ายห้อง")
+
     # ---------- ➕ เพิ่มเคส (Manual) — ทุกคนเพิ่มได้ ----------
     #    (📤 อัปโหลด CSV + 🗑️ ล้างกระดานวันนี้ ย้ายไปหน้า ⚙️ ตั้งค่า แล้ว —
     #     เรียก render_csv_upload()/render_clear_board() จาก page_room_settings)
