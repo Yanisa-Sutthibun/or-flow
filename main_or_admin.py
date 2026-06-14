@@ -3905,8 +3905,12 @@ def page_admin(section='today'):
         today_dt = _now_bkk().date()
 
         # --- Date range picker ---
-        # ค่าเริ่มต้น: วันที่ 1 ของเดือนปัจจุบัน → วันนี้ (ไม่ query DB = โหลดเร็วขึ้น)
-        default_from = today_dt.replace(day=1)
+        # ค่าเริ่มต้น: ย้อนหลัง 1 ปี → วันนี้ (เลือกช่วงอื่นเองได้ ·
+        #  ข้อมูลเก่ากว่านี้เก็บไว้เป็นชุดเทรน/ทดสอบโมเดล)
+        try:
+            default_from = today_dt.replace(year=today_dt.year - 1)
+        except ValueError:          # 29 ก.พ. ปีอธิกสุรทิน → ถอยเป็น 28 ก.พ.
+            default_from = today_dt.replace(year=today_dt.year - 1, day=28)
         default_to = today_dt
 
         # พอแก้วันที่/หัวข้อ → ซ่อนผลเดิมไว้ก่อน จนกว่าจะกด 'แสดงสถิติ' ใหม่
