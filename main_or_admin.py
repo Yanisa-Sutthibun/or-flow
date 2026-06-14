@@ -3965,7 +3965,8 @@ def page_admin(section='today'):
         _sub = st.session_state.get('hist_submitted')
         if _sub == _cur_sel and _sel_secs:
             # โหลดเฉพาะเมื่อ "ตัวเลือกปัจจุบัน = ตอนกดปุ่มล่าสุด" เป๊ะ
-            _render_historical_analytics(d_from, d_to, _secs=set(_sel_secs))
+            with st.spinner("⏳ กำลังโหลดสถิติ…"):
+                _render_historical_analytics(d_from, d_to, _secs=set(_sel_secs))
         elif _sub == _cur_sel and not _sel_secs:
             st.warning("เลือกอย่างน้อย 1 หัวข้อก่อนนะครับ")
         else:
