@@ -3944,6 +3944,8 @@ def page_admin(section='today'):
                                    min_value=hist_floor, max_value=today_dt, key="hist_to",
                                    on_change=_invalidate_hist)
 
+        st.info("ℹ️ ข้อมูลสถิติจะปรับปรุงในวันทำการถัดไป — เคสของวันศุกร์จะอัปเดตในวันจันทร์")
+
         if sel_from > sel_to:
             st.warning("⚠️ วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด")
             return
