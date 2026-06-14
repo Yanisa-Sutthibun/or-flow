@@ -829,6 +829,7 @@ def main():
             '<div class="or-chips" style="margin-top:6px;">'
             '<span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>'
             '<span class="or-chip">🤖 AI: honest_v1</span>'
+            '<span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>'
             f'<span class="or-chip">📅 ปรับล่าสุด {_now_hdr}</span>'
             '</div>',
             unsafe_allow_html=True,
