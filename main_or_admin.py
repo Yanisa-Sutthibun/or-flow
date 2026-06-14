@@ -3905,12 +3905,10 @@ def page_admin(section='today'):
         today_dt = _now_bkk().date()
 
         # --- Date range picker ---
-        # ค่าเริ่มต้น: ย้อนหลัง 1 ปี → วันนี้ (เลือกช่วงอื่นเองได้ ·
-        #  ข้อมูลเก่ากว่านี้เก็บไว้เป็นชุดเทรน/ทดสอบโมเดล)
-        try:
-            default_from = today_dt.replace(year=today_dt.year - 1)
-        except ValueError:          # 29 ก.พ. ปีอธิกสุรทิน → ถอยเป็น 28 ก.พ.
-            default_from = today_dt.replace(year=today_dt.year - 1, day=28)
+        # 🔒 จำกัดช่วงสถิติย้อนหลัง: 1 ม.ค. 2568 (2025-01-01) → วันนี้ — เพื่อความเร็วในการโหลด
+        #    (ข้อมูลก่อนหน้านี้เก็บไว้เป็นชุดเทรน/ทดสอบโมเดล · เลือกได้เฉพาะในช่วงนี้)
+        hist_floor = datetime(2025, 1, 1).date()
+        default_from = hist_floor
         default_to = today_dt
 
         # พอแก้วันที่/หัวข้อ → ซ่อนผลเดิมไว้ก่อน จนกว่าจะกด 'แสดงสถิติ' ใหม่
@@ -3921,12 +3919,12 @@ def page_admin(section='today'):
         col_from, col_to = st.columns(2)
         with col_from:
             sel_from = st.date_input("📅 วันที่เริ่มต้น", value=default_from,
-                                     max_value=today_dt, key="hist_from",
+                                     min_value=hist_floor, max_value=today_dt, key="hist_from",
                                      on_change=_invalidate_hist)
 
         with col_to:
             sel_to = st.date_input("📅 วันที่สิ้นสุด", value=default_to,
-                                   max_value=today_dt, key="hist_to",
+                                   min_value=hist_floor, max_value=today_dt, key="hist_to",
                                    on_change=_invalidate_hist)
 
         if sel_from > sel_to:
