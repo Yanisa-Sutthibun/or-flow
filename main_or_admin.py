@@ -818,7 +818,7 @@ def _render_workload(wl):
 
 
 def _render_ai_research_tab():
-    """🤖 AI Prediction (งานวิจัย) — แสดงศักยภาพของ AI ทำนายเวลาผ่าตัด
+    """🤖 AI Prediction (งานวิจัย) — แสดงศักยภาพของ AI ทำนายเวลาครองห้องผ่าตัด
 
     แสดง 4 ส่วน:
     1. Filter (หัตถการ — รวมกลุ่ม fuzzy ด้วย _normalize_procedure_name)
@@ -826,7 +826,7 @@ def _render_ai_research_tab():
     3. Scatter plot (predicted vs actual)
     4. Error distribution histogram
     """
-    st.markdown('<div class="section-title">🤖 AI ทำนายเวลาผ่าตัด — ผลการวิจัย</div>',
+    st.markdown('<div class="section-title">🤖 AI ทำนายเวลาครองห้องผ่าตัด — ผลการวิจัย</div>',
                 unsafe_allow_html=True)
 
     # แสดงผลลัพธ์ re-backfill หลัง rerun
@@ -883,7 +883,8 @@ def _render_ai_research_tab():
     #    67 = ตอนทดสอบโมเดล · 68 = เคสจริงหลังใช้งาน · 69 = ปีนี้ (กำลังเก็บ)
     # ════════════════════════════════════════════════════════════════
     st.markdown('<div class="section-title">การทำงานของ AI</div>', unsafe_allow_html=True)
-    st.caption("AI เรียนรู้จากเคสผ่าตัดที่ผ่านมา แล้วทำนายว่าเคสใหม่จะใช้เวลานานเท่าไร "
+    st.caption("AI เรียนรู้จากเคสที่ผ่านมา แล้วทำนายว่าเคสใหม่จะ“ครองห้องผ่าตัด” "
+               "นานเท่าไร (ตั้งแต่เข้าห้องจนออกจากห้อง) "
                "· ตัวเลขข้างล่างบอกว่าทำนายได้ใกล้เวลาจริงแค่ไหน "
                "(เฉพาะเคสนัดล่วงหน้า · ไม่มีข้อมูลส่วนตัวผู้ป่วย)")
 
@@ -3647,7 +3648,7 @@ def page_admin(section='today'):
         _render_room_cards(rooms)
 
         # 🤖 Section 2: AI timeline forecast (เชื่อมกับการ์ดด้านบน — ใช้ room_forecast ชุดเดียวกัน)
-        st.markdown('<div class="section-title">🤖 AI ทำนายเวลาผ่าตัด — ไทม์ไลน์รายห้อง</div>',
+        st.markdown('<div class="section-title">🤖 AI ทำนายเวลาครองห้อง — ไทม์ไลน์รายห้อง</div>',
                     unsafe_allow_html=True)
         try:
             from command_center import render_room_timeline
