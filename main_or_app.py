@@ -842,7 +842,7 @@ def main():
 
     # เมนูหลัก = แท็บแนวนอนบนสุด · เก็บค่าใน URL ให้รอด refresh (รันเฉพาะหน้าที่เลือก)
     _page_options = ["📋 ตารางผ่าตัด", "📊 ภาพรวมวันนี้", "📈 สถิติย้อนหลัง",
-                     "🛏 Utilization", "🤖 AI Prediction", "⚙️ ตั้งค่า"]
+                     "🤖 AI Prediction", "⚙️ ตั้งค่า"]
     try:
         _default_page = st.query_params.get('page', _page_options[0])
     except Exception:
@@ -874,8 +874,6 @@ def main():
         page_admin('today')
     elif page == "📈 สถิติย้อนหลัง":
         page_admin('history')
-    elif page == "🛏 Utilization":
-        page_admin('util')
     elif page == "🤖 AI Prediction":
         page_admin('ai')
     elif page == "⚙️ ตั้งค่า":
