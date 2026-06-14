@@ -649,13 +649,14 @@ def page_or_board():
     # (วันที่/เวลาปรับล่าสุด ย้ายไปเป็นชิปบนแถบหัวแล้ว — board เริ่มที่แถวควบคุมเลย)
 
     # ---------- แถวควบคุม: Demo Mode + ปุ่มรีเฟรช (มุมขวา) ----------
-    _ctl_l, _ctl_r = st.columns([4, 1])
+    _ctl_l, _ctl_warn, _ctl_r = st.columns([3, 1.5, 1], vertical_alignment="center")
     with _ctl_r:
         if st.button("🔄 รีเฟรช", key="orboard_refresh", width='stretch',
                      type='primary',
                      help="ดึงสถานะล่าสุดจากบอร์ดกลาง (เห็นที่เครื่องอื่นกด)"):
             st.session_state['_board_force_pull'] = True   # บังคับดึงจาก DB กลาง
             st.rerun()
+    with _ctl_warn:
         st.caption("⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน")
     with _ctl_l:
         _demo_on = st.toggle(
