@@ -430,9 +430,11 @@ def _render_demo_controls():
     col_t, col_info, col_rf = st.columns([1, 2.2, 0.8])
     with col_rf:
         if st.button("🔄 รีเฟรช", key="admin_refresh", width='stretch',
+                     type='primary',
                      help="ดึงข้อมูลล่าสุดมาแสดง — ใช้แทนการกด F5 (ข้อมูลไม่หาย)"):
             st.session_state['_stats_cache_ver'] = _stats_ver() + 1  # ล้าง cache สถิติ → ดึง cloud ใหม่
             st.rerun()
+        st.caption("⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน")
     with col_t:
         new_active = st.toggle(
             '🎬 Demo Mode', value=state['active'], key='demo_toggle',

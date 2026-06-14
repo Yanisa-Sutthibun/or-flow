@@ -652,9 +652,11 @@ def page_or_board():
     _ctl_l, _ctl_r = st.columns([4, 1])
     with _ctl_r:
         if st.button("🔄 รีเฟรช", key="orboard_refresh", width='stretch',
+                     type='primary',
                      help="ดึงสถานะล่าสุดจากบอร์ดกลาง (เห็นที่เครื่องอื่นกด)"):
             st.session_state['_board_force_pull'] = True   # บังคับดึงจาก DB กลาง
             st.rerun()
+        st.caption("⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน")
     with _ctl_l:
         _demo_on = st.toggle(
             "🎬 Demo Mode", key="orboard_demo_toggle",
