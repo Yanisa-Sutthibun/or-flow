@@ -2852,6 +2852,12 @@ def _hist_sec_rank(date_from, date_to, data=None):
         else:
             st.caption("ยังไม่มีข้อมูล surgeon_name")
 
+    # 🙈 ซ่อน "ดูรายละเอียดแพทย์รายคน" (จะนำไปแสดงนอก รพ. — เลี่ยงเปิดเผยข้อมูลแพทย์รายคน)
+    #    โค้ดด้านล่างเก็บไว้ครบ · ตั้ง _SHOW_SURGEON_DETAIL = True เพื่อเปิดการแสดงผลคืน
+    _SHOW_SURGEON_DETAIL = False
+    if not _SHOW_SURGEON_DETAIL:
+        return
+
     # ── 🔍 ดูรายละเอียดแพทย์รายคน (sub-section ของ Top 5 แพทย์) ──
     st.markdown('<div class="sub-title">🔍 ดูรายละเอียดแพทย์รายคน</div>',
                 unsafe_allow_html=True)
