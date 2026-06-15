@@ -1255,10 +1255,11 @@ def _render_ai_research_tab():
         st.markdown('<div class="section-title">📍 AI ทำนาย vs เวลาจริง</div>',
                     unsafe_allow_html=True)
         # สี categorize ตาม abs_error
+        # เกณฑ์ ±15 นาที = มาตรฐาน "acceptable booking" ในวรรณกรรม OR (ตรงกับการ์ด KPI)
         def _err_color(e):
-            if e <= 10: return 'แม่น (≤10 นาที)'
-            if e <= 20: return 'พอใช้ (11-20)'
-            return 'ผิดมาก (>20)'
+            if e <= 15: return 'แม่น (≤15 นาที)'
+            if e <= 30: return 'พอใช้ (16-30)'
+            return 'คลาดมาก (>30)'
         df_plot = df.copy()
         df_plot['error_cat'] = df_plot['abs_error'].apply(_err_color)
         # hover เฉพาะคอลัมน์ที่มีจริง — แหล่ง 'ชุดทดสอบปี 2567' ไม่มี surgeon_name
@@ -1271,9 +1272,9 @@ def _render_ai_research_tab():
             df_plot, x='actual_duration_min', y='ai_predicted_min',
             color='error_cat',
             color_discrete_map={
-                'แม่น (≤10 นาที)': '#43a047',
-                'พอใช้ (11-20)':  '#fb8c00',
-                'ผิดมาก (>20)':   '#e53935',
+                'แม่น (≤15 นาที)': '#43a047',
+                'พอใช้ (16-30)':  '#fb8c00',
+                'คลาดมาก (>30)':   '#e53935',
             },
             hover_data=_hover,
             labels={'actual_duration_min': 'เวลาจริง (นาที)',
