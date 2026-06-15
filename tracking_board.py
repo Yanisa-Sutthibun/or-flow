@@ -166,21 +166,34 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         st.caption("ไม่พบเคสตามเงื่อนไขที่กรอง")
 
 
+_CALL_LEAD_MIN = 30  # เวลาเตรียม/เคลื่อนย้ายผู้ป่วยก่อนห้องว่าง (นาที) สำหรับ Call next
+
+
 def _time_cell(c, disp, eff, elapsed, now):
     ai0 = c.get('ai_predicted_min') or c.get('predicted_min')
     ov = c.get('user_override_min')
+    _call = ''
+    if disp in ('in_or', 'overrun'):
+        _ent = c.get('time_entered_or')
+        if _ent is not None and hasattr(_ent, 'hour'):
+            from datetime import timedelta as _td
+            _cdt = _ent + _td(minutes=eff - _CALL_LEAD_MIN)
+            _ctxt = ('Call next now' if _cdt <= now
+                     else 'Call next ~' + _cdt.strftime('%H:%M') + ' น.')
+            _call = ('<span style="display:block;font-size:11px;color:#1b7f4b;'
+                     'font-weight:600;margin-top:2px;">⏰ ' + _ctxt + '</span>')
     if disp == 'overrun':
         over = elapsed - eff
         bar = (f'<span style="display:block;height:4px;background:#eef2f6;border-radius:2px;'
                f'overflow:hidden;margin-top:3px;"><span style="display:block;height:100%;'
                f'width:100%;background:#e24b4a;"></span></span>')
-        return f'<span style="color:#c0392b;">{elapsed} / {eff} น. · เกิน {over}</span>{bar}'
+        return f'<span style="color:#c0392b;">{elapsed} / {eff} น. · เกิน {over}</span>{bar}{_call}'
     if disp == 'in_or':
         pct = min(int(elapsed / eff * 100) if eff else 50, 100)
         bar = (f'<span style="display:block;height:4px;background:#eef2f6;border-radius:2px;'
                f'overflow:hidden;margin-top:3px;"><span style="display:block;height:100%;'
                f'width:{pct}%;background:#22a565;"></span></span>')
-        return f'<span style="color:#1b7f4b;">{elapsed} / {eff} น.</span>{bar}'
+        return f'<span style="color:#1b7f4b;">{elapsed} / {eff} น.</span>{bar}{_call}'
     if disp in ('holding_post', 'recovery'):
         ex = c.get('time_exited_or')
         return (f'เสร็จ {ex.strftime("%H:%M")}'
