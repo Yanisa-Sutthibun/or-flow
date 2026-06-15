@@ -115,6 +115,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
 
     # ห้องที่มีเคสกำลังผ่าอยู่ → ห้ามเข้าห้องซ้ำ
     busy_rooms = {rid(c) for c in cases if c['status'] == 'in_or' and rid(c)}
+    tov_map = _turnover_map()
 
     # ---------- หัวตาราง ----------
     st.markdown(
@@ -159,7 +160,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
 
         _render_row(idx, c, disp, eff, elapsed, now, rid(c), busy_rooms,
                     do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
-                    room_opts, mark_dirty)
+                    room_opts, mark_dirty, tov_map)
         shown += 1
 
     if shown == 0:
@@ -169,31 +170,50 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
 _CALL_LEAD_MIN = 30  # เวลาเตรียม/เคลื่อนย้ายผู้ป่วยก่อนห้องว่าง (นาที) สำหรับ Call next
 
 
+@st.cache_data(ttl=1800)
+def _turnover_map():
+    """median turnover รายห้องจากข้อมูลจริง (fallback _global) — cache 30 นาที"""
+    try:
+        from main_or_db import get_room_turnover_map
+        return get_room_turnover_map() or {}
+    except Exception:
+        return {}
+
+
+def _callnext_html(c, eff, tov_map):
+    """บรรทัด 'ออกห้อง ~HH:MM · Call next ~HH:MM' (คิด turnover รายห้อง + lead)"""
+    ent = c.get('time_entered_or')
+    if ent is None or not hasattr(ent, 'hour'):
+        return ''
+    from datetime import timedelta as _td
+    try:
+        rm = int(float(c.get('room')))
+    except (TypeError, ValueError):
+        rm = None
+    tov = (tov_map or {}).get(rm) or (tov_map or {}).get('_global') or 15
+    out_dt = ent + _td(minutes=int(eff))
+    call_dt = ent + _td(minutes=int(eff) + float(tov) - _CALL_LEAD_MIN)
+    return ('<div style="font-size:11px;color:#8a96a3;margin-top:2px;white-space:nowrap;">'
+            '🚪 ออกห้อง ~' + out_dt.strftime('%H:%M')
+            + ' · <span style="color:#2f7d52;font-weight:600;">⏰ Call next ~'
+            + call_dt.strftime('%H:%M') + ' น.</span></div>')
+
+
 def _time_cell(c, disp, eff, elapsed, now):
     ai0 = c.get('ai_predicted_min') or c.get('predicted_min')
     ov = c.get('user_override_min')
-    _call = ''
-    if disp in ('in_or', 'overrun'):
-        _ent = c.get('time_entered_or')
-        if _ent is not None and hasattr(_ent, 'hour'):
-            from datetime import timedelta as _td
-            _cdt = _ent + _td(minutes=eff - _CALL_LEAD_MIN)
-            _ctxt = ('Call next now' if _cdt <= now
-                     else 'Call next ~' + _cdt.strftime('%H:%M') + ' น.')
-            _call = ('<span style="display:block;font-size:11px;color:#1b7f4b;'
-                     'font-weight:600;margin-top:2px;">⏰ ' + _ctxt + '</span>')
     if disp == 'overrun':
         over = elapsed - eff
         bar = (f'<span style="display:block;height:4px;background:#eef2f6;border-radius:2px;'
                f'overflow:hidden;margin-top:3px;"><span style="display:block;height:100%;'
                f'width:100%;background:#e24b4a;"></span></span>')
-        return f'<span style="color:#c0392b;">{elapsed} / {eff} น. · เกิน {over}</span>{bar}{_call}'
+        return f'<span style="color:#c0392b;">{elapsed} / {eff} น. · เกิน {over}</span>{bar}'
     if disp == 'in_or':
         pct = min(int(elapsed / eff * 100) if eff else 50, 100)
         bar = (f'<span style="display:block;height:4px;background:#eef2f6;border-radius:2px;'
                f'overflow:hidden;margin-top:3px;"><span style="display:block;height:100%;'
                f'width:{pct}%;background:#22a565;"></span></span>')
-        return f'<span style="color:#1b7f4b;">{elapsed} / {eff} น.</span>{bar}{_call}'
+        return f'<span style="color:#1b7f4b;">{elapsed} / {eff} น.</span>{bar}'
     if disp in ('holding_post', 'recovery'):
         ex = c.get('time_exited_or')
         return (f'เสร็จ {ex.strftime("%H:%M")}'
@@ -257,7 +277,7 @@ def _holding_row_iframe(c, loc, tlabel, now):
     )
 
 
-def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now):
+def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now, callnext_html=''):
     """แถวกำลังผ่าแบบสด (ลูกผสม — บอร์ดสงบ เคสมีปัญหาเด่นเอง):
     - ปกติ: โชว์นาทีล้วน '41 / 60 น.' สีเขียว เดินเองทุกนาที
     - ใกล้ครบ (เหลือ ≤5 นาที): สลับเป็น mm:ss สีส้ม
@@ -281,7 +301,7 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now)
         f'<span style="font-size:15px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
         f'<span style="font-size:12px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
         f'<span style="font-size:13px;color:#64748b;white-space:nowrap;">'
-        f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
+        f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span>{callnext_html}</span>'
         f'<span style="min-width:80px;"><span id="ch" style="background:#e6f6ec;color:#1b7f4b;'
         f'border-radius:10px;padding:2px 10px;font-size:12.5px;font-weight:500;white-space:nowrap;">กำลังผ่า</span></span>'
         f'<span style="min-width:110px;font-size:13px;">'
@@ -312,7 +332,7 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now)
 
 def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
-                room_opts=None, mark_dirty=None):
+                room_opts=None, mark_dirty=None, tov_map=None):
     room_opts = room_opts or []
     # .get + ค่า default — กัน KeyError ถ้าเจอสถานะแปลก (เช่น snapshot จากเวอร์ชันเก่า)
     label, fg, chipbg, rowbg = _STATUS_META.get(
@@ -345,8 +365,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             # แถวกำลังผ่าแบบสด — นาฬิกาเดินหน้า + สลับเกินเวลาอัตโนมัติ
             components.html(
                 _inroom_row_iframe(c, loc, tlabel, max(int(eff), 5),
-                                   emg_html, border_css, ov_badge, now),
-                height=60)
+                                   emg_html, border_css, ov_badge, now,
+                                   _callnext_html(c, eff, tov_map)),
+                height=78)
         else:
             time_html = _time_cell(c, disp, eff, elapsed, now)
             st.markdown(
