@@ -938,17 +938,32 @@ def _render_ai_research_tab():
         _live68 = _t68 if len(_t68) else None
         _live69 = _t69 if len(_t69) else None
 
-    def _render_year_block(num, year_be, title, plain, accent, bg, stat):
+    # ปี 2568 — ทำนายย้อนหลังบนเคสจริงจาก HIS (prediction-only · ไม่ retrain โมเดล)
+    #   ข้อมูลปี 2568 (year68_69_completed) มีเฉพาะ "เวลาครองห้อง" — ไม่มีบันทึกเวลาผ่าตัดสุทธิ
+    #   → แสดงผลปี 2568 เฉพาะ target room_use เท่านั้น (สร้างโดย build_prospective_2568.py)
+    _p68 = None
+    if _tgt == 'room_use':
+        _p68f = (_P(__file__).resolve().parent / 'models' / 'honest_v1'
+                 / 'validation_room_use_2568.csv')
+        if _p68f.exists():
+            try:
+                _p68 = _prep_ai(_pd.read_csv(_p68f))
+            except Exception:
+                _p68 = None
+
+    def _render_year_block(num, year_be, title, plain, accent, bg, stat, empty_note=None):
         st.markdown(
             f'<div style="border-left:3px solid {accent};padding-left:12px;margin:16px 0 6px;">'
             f'<div style="font-size:15px;font-weight:600;color:#222;">{num} ปี {year_be} — {title}</div>'
             f'<div style="font-size:12px;color:#777;margin-top:1px;">{plain}</div></div>',
             unsafe_allow_html=True)
         if stat is None:
+            _en = empty_note or ('ยังไม่มีเคสที่ผ่าเสร็จในปีนี้ — '
+                                 'ระบบจะแสดงตัวเลขเมื่อมีข้อมูลมากพอ')
             st.markdown(
                 f'<div style="background:{bg};border-radius:10px;padding:12px 14px;'
-                f'font-size:13px;color:#888;">ยังไม่มีเคสที่ผ่าเสร็จในปีนี้ — '
-                f'ระบบจะแสดงตัวเลขเมื่อมีข้อมูลมากพอ</div>', unsafe_allow_html=True)
+                f'font-size:13px;color:#888;line-height:1.5;">{_en}</div>',
+                unsafe_allow_html=True)
             return
         c1, c2, c3 = st.columns(3)
         c1.markdown(
@@ -974,10 +989,16 @@ def _render_ai_research_tab():
         '①', 2567, 'ชุดทดสอบ (hold-out)',
         'ผลการทำนายกับเคสที่โมเดลไม่เคยเห็นตอนเรียน — ตัวเลขอ้างอิงในวิทยานิพนธ์',
         '#1565c0', '#f4f8fd', _stat(_calib))
+    # ปี 2568: room_use ใช้ผลทำนายย้อนหลังบนเคสจริงจาก HIS · surg_time ไม่มี actual ให้เทียบ
+    _stat68 = _stat(_p68) if _tgt == 'room_use' else None
+    _note68 = (None if _tgt == 'room_use' else
+               'ปี 2568 ฐานข้อมูลบันทึกเฉพาะ “เวลาครองห้อง” — ไม่มีบันทึก'
+               'เวลาผ่าตัดสุทธิ (ลงมีด→เย็บเสร็จ) จึงเทียบความแม่นของเวลาผ่าตัดสุทธิ'
+               'ปีนี้ไม่ได้ · ดูผลปี 2568 ได้ที่แท็บ “เวลาครองห้อง”')
     _render_year_block(
         '②', 2568, 'การใช้งานจริง (prospective)',
-        'ผลการทำนายกับเคสผ่าตัดจริง ยืนยัน clinical applicability',
-        '#1b7f4b', '#eef7f1', _stat(_live68))
+        'ผลการทำนายกับเคสผ่าตัดจริงปี 2568 จากฐานข้อมูล (ทำนายด้วยโมเดลเดิม · ไม่เทรนใหม่)',
+        '#1b7f4b', '#eef7f1', _stat68, empty_note=_note68)
 
     # ปี 2569 — แถบติดตามสด (โชว์แค่จำนวนเคส เพราะข้อมูลยังน้อย ตัวเลขยังไม่นิ่ง)
     _s69 = _stat(_live69)
@@ -2795,44 +2816,48 @@ def _hist_sec_rank(date_from, date_to, data=None):
                 hide_index=True, use_container_width=True)
 
     # ── 👨‍⚕️ Top 5 แพทย์ (แนวนอนเสมอ + ตัดยศ/คำนำหน้าออก) ──
-    from main_or_db import get_cases as _get_cases_for_surg
-    _df_surg = _get_cases_for_surg()
-    _df_surg = _df_surg[(_df_surg['op_date'] >= date_from) &
-                        (_df_surg['op_date'] <= date_to) &
-                        (_df_surg['status'] != 'cancelled')]
-    st.markdown('<div class="sub-title">👨‍⚕️ Top 5 แพทย์</div>',
-                unsafe_allow_html=True)
-    if not _df_surg.empty and 'surgeon_name' in _df_surg.columns:
-        _surg = _df_surg.dropna(subset=['surgeon_name']).copy()
-        _surg = _surg[_surg['surgeon_name'].astype(str).str.strip() != '']
-        # 🪒 ตัดยศ/คำนำหน้าออก (พ.ต.อ., นพ., พญ., นาย, นาง ฯลฯ)
-        _surg['surgeon_clean'] = _surg['surgeon_name'].apply(
-            _normalize_nurse_name)
-        # กรองเคสที่ชื่อหลัง normalize ยังว่าง
-        _surg = _surg[_surg['surgeon_clean'].astype(str).str.strip() != '']
-        if not _surg.empty:
-            _top_surg = (_surg['surgeon_clean'].value_counts()
-                         .head(5).reset_index())
-            _top_surg.columns = ['surgeon', 'n_cases']
-            # แนวนอนเสมอ — ไม่ตาม toggle (ชื่อยาว ต้องเห็นเต็ม)
-            fig = px.bar(_top_surg, x='n_cases', y='surgeon',
-                         orientation='h', text='n_cases',
-                         labels={'n_cases': 'จำนวนเคส', 'surgeon': 'แพทย์'},
-                         color_discrete_sequence=['#5e35b1'])
-            _x_max_s = max(int(_top_surg['n_cases'].max()) * 1.12, 5)
-            fig.update_traces(
-                textposition='outside',
-                hovertemplate='<b>%{y}</b><br>%{x} เคส<extra></extra>')
-            fig.update_layout(
-                margin=dict(t=10, b=10, l=10, r=40), height=280,
-                yaxis=dict(autorange='reversed'),
-                xaxis=dict(range=[0, _x_max_s]),
-            )
-            st.plotly_chart(fig, use_container_width=True)
+    # 🙈 ซ่อนชั่วคราว: กราฟอันดับ Top 5 แพทย์ (จะนำไปแสดงนอก รพ. — เลี่ยงเปิดเผยชื่อ/อันดับแพทย์)
+    #    โค้ดยังเก็บไว้ครบ · ตั้ง _SHOW_TOP5_SURGEONS = True เพื่อเปิดการแสดงผลคืน
+    _SHOW_TOP5_SURGEONS = False
+    if _SHOW_TOP5_SURGEONS:
+        from main_or_db import get_cases as _get_cases_for_surg
+        _df_surg = _get_cases_for_surg()
+        _df_surg = _df_surg[(_df_surg['op_date'] >= date_from) &
+                            (_df_surg['op_date'] <= date_to) &
+                            (_df_surg['status'] != 'cancelled')]
+        st.markdown('<div class="sub-title">👨‍⚕️ Top 5 แพทย์</div>',
+                    unsafe_allow_html=True)
+        if not _df_surg.empty and 'surgeon_name' in _df_surg.columns:
+            _surg = _df_surg.dropna(subset=['surgeon_name']).copy()
+            _surg = _surg[_surg['surgeon_name'].astype(str).str.strip() != '']
+            # 🪒 ตัดยศ/คำนำหน้าออก (พ.ต.อ., นพ., พญ., นาย, นาง ฯลฯ)
+            _surg['surgeon_clean'] = _surg['surgeon_name'].apply(
+                _normalize_nurse_name)
+            # กรองเคสที่ชื่อหลัง normalize ยังว่าง
+            _surg = _surg[_surg['surgeon_clean'].astype(str).str.strip() != '']
+            if not _surg.empty:
+                _top_surg = (_surg['surgeon_clean'].value_counts()
+                             .head(5).reset_index())
+                _top_surg.columns = ['surgeon', 'n_cases']
+                # แนวนอนเสมอ — ไม่ตาม toggle (ชื่อยาว ต้องเห็นเต็ม)
+                fig = px.bar(_top_surg, x='n_cases', y='surgeon',
+                             orientation='h', text='n_cases',
+                             labels={'n_cases': 'จำนวนเคส', 'surgeon': 'แพทย์'},
+                             color_discrete_sequence=['#5e35b1'])
+                _x_max_s = max(int(_top_surg['n_cases'].max()) * 1.12, 5)
+                fig.update_traces(
+                    textposition='outside',
+                    hovertemplate='<b>%{y}</b><br>%{x} เคส<extra></extra>')
+                fig.update_layout(
+                    margin=dict(t=10, b=10, l=10, r=40), height=280,
+                    yaxis=dict(autorange='reversed'),
+                    xaxis=dict(range=[0, _x_max_s]),
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.caption("ยังไม่มีข้อมูล surgeon_name")
         else:
             st.caption("ยังไม่มีข้อมูล surgeon_name")
-    else:
-        st.caption("ยังไม่มีข้อมูล surgeon_name")
 
     # ── 🔍 ดูรายละเอียดแพทย์รายคน (sub-section ของ Top 5 แพทย์) ──
     st.markdown('<div class="sub-title">🔍 ดูรายละเอียดแพทย์รายคน</div>',
