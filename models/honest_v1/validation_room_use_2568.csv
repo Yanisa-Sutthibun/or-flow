@@ -1,13 +1,13 @@
 op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-01-03,39,55,elective,I&D
-2025-01-07,166,120,elective,EL+ lysis adhesion
+2025-01-07,157,120,elective,EL+ lysis adhesion
 2025-01-08,47,50,elective,I&D +- fasciotomy left thigh
 2025-01-09,91,30,elective,cholecystogram
 2025-01-09,135,175,elective,LC
 2025-01-09,89,180,elective,open hernioplasty
 2025-01-13,146,190,elective,Open cholecystectomy
 2025-01-13,75,125,elective,remove clot
-2025-01-13,152,70,elective,Open ppendectomy
+2025-01-13,108,70,elective,Open ppendectomy
 2025-01-14,36,25,elective,EGD
 2025-01-15,77,180,elective,OC
 2025-01-17,74,110,elective,Open appendectomy under GA
@@ -15,37 +15,37 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-01-19,60,110,elective,open appendectomy
 2025-01-20,110,135,elective,Close stump
 2025-01-24,67,60,elective,Open appendectomy
-2025-01-27,75,125,elective,Open appendectomy
+2025-01-27,64,125,elective,Open appendectomy
 2025-01-28,97,55,elective,excision epidermal inclusion cyst at back
 2025-01-28,121,190,elective,Rt hernioplasty
-2025-01-30,121,205,elective,Explore laparotomy
-2025-01-30,121,205,elective,Explore laparotomy
+2025-01-30,110,205,elective,Explore laparotomy
+2025-01-30,110,205,elective,Explore laparotomy
 2025-01-30,141,130,elective,Excision breast mass
 2025-01-31,76,135,elective,Open appendectomy under GA
-2025-01-31,78,115,elective,Open appendectomy
+2025-01-31,69,115,elective,Open appendectomy
 2025-02-03,120,80,elective,EL+lysis adhesion
-2025-02-05,121,110,elective,Explore laparotomy
+2025-02-05,110,110,elective,Explore laparotomy
 2025-02-06,32,70,elective,EGD
 2025-02-08,57,25,elective,debridement
 2025-02-08,60,85,elective,Debridement
 2025-02-09,130,125,elective,EL
-2025-02-10,43,60,elective,I&D
+2025-02-10,33,60,elective,I&D
 2025-02-11,69,95,elective,DB
 2025-02-11,69,95,elective,DB
 2025-02-12,164,20,elective,open repair umbilical hernia
 2025-02-12,164,20,elective,open repair umbilical hernia
-2025-02-17,152,80,elective,Open cholecystostomy
+2025-02-17,141,80,elective,Open cholecystostomy
 2025-02-18,77,75,elective,Open appendectomy
-2025-02-19,105,105,elective,appendectomy
-2025-02-19,105,105,elective,appendectomy
+2025-02-19,95,105,elective,appendectomy
+2025-02-19,95,105,elective,appendectomy
 2025-02-23,68,135,elective,open appendectomy
-2025-02-25,89,95,elective,ERCP
-2025-02-28,76,105,elective,open appendectomy
+2025-02-25,79,95,elective,ERCP
+2025-02-28,66,105,elective,open appendectomy
 2025-03-03,134,160,elective,EL with +/- lysis adhesion +/- bowel resection
-2025-03-04,106,60,elective,Fasciotomy
+2025-03-04,58,60,elective,Fasciotomy
 2025-03-05,83,100,elective,open appendectomy
 2025-03-05,182,115,elective,Lap appendectomy
-2025-03-06,69,80,elective,suture wound
+2025-03-06,59,80,elective,suture wound
 2025-03-06,176,510,elective,Bilateral total mastectomy with SLNB
 2025-03-09,92,30,elective,remove foreign body
 2025-03-10,61,205,elective,Open appendectomy
@@ -61,15 +61,15 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-03-21,66,40,elective,gastro + colonsocope
 2025-03-21,56,135,elective,open appendectomy
 2025-03-21,56,135,elective,open appendectomy
-2025-03-22,102,35,elective,explore wound with irrigation with suture
+2025-03-22,92,35,elective,explore wound with irrigation with suture
 2025-03-22,75,120,elective,Appendectomy
 2025-03-22,61,55,elective,open appendectomy
 2025-03-22,61,55,elective,open appendectomy
-2025-03-22,103,115,elective,Explore wound with suture wound
+2025-03-22,93,115,elective,Explore wound with suture wound
 2025-03-25,68,70,elective,DB
-2025-03-26,178,245,elective,EL with small bowel resection
+2025-03-26,167,245,elective,EL with small bowel resection
 2025-03-26,72,95,elective,Open appendectomy
-2025-03-27,80,120,elective,Open appendectomy
+2025-03-27,70,120,elective,Open appendectomy
 2025-03-28,59,60,elective,open appendectomy
 2025-03-31,72,180,elective,open appendectomy
 2025-04-01,50,65,elective,EGD+colonoscopy
@@ -78,7 +78,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-04-02,98,55,elective,finger test +- excisional DB Lt lower leg
 2025-04-02,40,35,elective,I&D
 2025-04-03,73,90,elective,DB
-2025-04-04,65,105,elective,Open appendectomy
+2025-04-04,55,105,elective,Open appendectomy
 2025-04-04,100,135,elective,OC
 2025-04-04,70,30,elective,VAE of Rt. Breast
 2025-04-04,166,85,elective,Lap appendectomy
@@ -92,45 +92,45 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-04-18,60,75,elective,Debridement
 2025-04-18,136,125,elective,EL + adhesiolysis
 2025-04-20,42,35,elective,I&D
-2025-04-21,82,165,elective,open appendectomy
+2025-04-21,75,165,elective,open appendectomy
 2025-04-22,103,230,elective,BKA Rt ankle
 2025-04-24,236,135,elective,Lt. BCT + SLNB
 2025-04-24,169,320,elective,bilat mastectomy + Lt TAD + Rt SLNB
 2025-04-24,78,105,elective,Open appendectomy
-2025-04-24,71,50,elective,I&D + debridement Lt. knee
+2025-04-24,65,50,elective,I&D + debridement Lt. knee
 2025-04-25,68,30,elective,VAE  Rt breast
 2025-04-26,54,95,elective,DB
-2025-04-28,44,55,elective,wound irrigation with suture wound
+2025-04-28,35,55,elective,wound irrigation with suture wound
 2025-04-30,138,170,elective,EL + lysis adhesion +/- small bowel resection
 2025-04-30,104,120,elective,open umbilical hernia repair
 2025-04-30,59,95,elective,open appendectomy
 2025-05-01,130,90,elective,LC
 2025-05-01,44,35,elective,TCC Rt.IJV
 2025-05-02,77,85,elective,Debridement stump Rt leg
-2025-05-02,67,60,elective,open appendectomy
+2025-05-02,57,60,elective,open appendectomy
 2025-05-03,59,50,elective,DB+dressing wound
 2025-05-05,72,135,elective,open appendectomy
 2025-05-07,83,70,elective,Suture wound
 2025-05-08,33,10,elective,EGD
 2025-05-09,126,40,elective,right big toe amputation
 2025-05-09,73,50,elective,DB Rt foot
-2025-05-09,119,190,elective,open hernioplasty
-2025-05-11,62,135,elective,open appendectomy
-2025-05-11,62,135,elective,open appendectomy
+2025-05-09,92,190,elective,open hernioplasty
+2025-05-11,53,135,elective,open appendectomy
+2025-05-11,53,135,elective,open appendectomy
 2025-05-11,130,65,elective,EL
-2025-05-12,178,320,elective,EL+- thoracotomy
-2025-05-12,178,320,elective,EL+- thoracotomy
+2025-05-12,167,320,elective,EL+- thoracotomy
+2025-05-12,167,320,elective,EL+- thoracotomy
 2025-05-12,74,80,elective,open appendectomy
 2025-05-12,137,65,elective,EL+- thoracotomy
 2025-05-12,65,70,elective,DB+dressing wound
-2025-05-12,73,95,elective,open appendectomy
+2025-05-12,67,95,elective,open appendectomy
 2025-05-13,67,40,elective,DB
 2025-05-14,69,100,elective,abdominal toilet +- closure abdomen
-2025-05-18,61,85,elective,open appendectomy
-2025-05-18,61,85,elective,open appendectomy
+2025-05-18,51,85,elective,open appendectomy
+2025-05-18,51,85,elective,open appendectomy
 2025-05-19,96,65,elective,explor wound with EGD
-2025-05-20,186,220,elective,EL
-2025-05-20,186,220,elective,EL
+2025-05-20,175,220,elective,EL
+2025-05-20,175,220,elective,EL
 2025-05-20,80,90,elective,appendectomy
 2025-05-21,169,95,elective,EL + simple suture with omental patch
 2025-05-21,77,40,elective,TK insertion
@@ -140,7 +140,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-05-24,65,85,elective,Open appendectomy
 2025-05-25,78,270,elective,re explor lap
 2025-05-25,60,20,elective,suture wound
-2025-05-27,117,115,elective,appendectomy
+2025-05-27,107,115,elective,appendectomy
 2025-05-27,69,105,elective,open appendectomy
 2025-05-29,132,100,elective,LC
 2025-05-29,136,150,elective,LC
@@ -150,13 +150,13 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-05-30,72,75,elective,DB+-fasciotomy
 2025-05-31,65,90,elective,open appendectomy
 2025-05-31,59,75,elective,Open appendectomy under GA
-2025-05-31,69,100,elective,open appendectomy
+2025-05-31,58,100,elective,open appendectomy
 2025-06-01,48,20,elective,EGD under GA
 2025-06-01,69,45,elective,Change vacc + DB
 2025-06-04,68,60,elective,debridement
 2025-06-05,41,35,elective,I&D
 2025-06-05,41,35,elective,I&D
-2025-06-05,94,25,elective,EUA +/- colonoscopy
+2025-06-05,65,25,elective,EUA +/- colonoscopy
 2025-06-06,65,65,elective,excision of right breast mass
 2025-06-06,63,110,elective,open appendectomy
 2025-06-06,43,50,elective,I&D
@@ -170,8 +170,8 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-06-13,63,90,elective,Open appendectomy
 2025-06-14,63,80,elective,Suture
 2025-06-14,64,80,elective,Open appendectomy under GA
-2025-06-14,35,20,elective,I&D under GA/spinal block
-2025-06-15,172,235,elective,EL c LTC +/- subtotal colectomy
+2025-06-14,28,20,elective,I&D under GA/spinal block
+2025-06-15,162,235,elective,EL c LTC +/- subtotal colectomy
 2025-06-16,75,50,elective,microdochectomy of right breast
 2025-06-17,66,70,elective,Open appendectomy
 2025-06-17,68,105,elective,open appendectomy
@@ -187,7 +187,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-07-03,62,15,elective,EGD under LA (OPD case)
 2025-07-03,81,70,elective,TK insertion
 2025-07-04,92,30,elective,left microdochectomy
-2025-07-04,52,70,elective,colonoscope +/- loop transverse colostomy
+2025-07-04,48,70,elective,colonoscope +/- loop transverse colostomy
 2025-07-06,79,78,elective,open appendectomy
 2025-07-06,50,30,elective,I and D
 2025-07-07,42,45,elective,I&D
@@ -201,29 +201,29 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-07-11,68,110,elective,explore lap
 2025-07-12,65,165,elective,Open appendectomy
 2025-07-12,65,165,elective,Open appendectomy
-2025-07-12,126,120,elective,left hernioplasty
-2025-07-12,126,120,elective,left hernioplasty
+2025-07-12,89,120,elective,left hernioplasty
+2025-07-12,89,120,elective,left hernioplasty
 2025-07-16,59,155,elective,Open appendectomy
 2025-07-17,76,165,elective,Explor
 2025-07-19,168,165,elective,EL +- repair Lt kidney with explore wound at Rt elbow
 2025-07-19,168,165,elective,EL +- repair Lt kidney with explore wound at Rt elbow
-2025-07-20,61,45,elective,hemorrhoidectomy
-2025-07-21,76,80,elective,Open appendectomy
+2025-07-20,51,45,elective,hemorrhoidectomy
+2025-07-21,64,80,elective,Open appendectomy
 2025-07-22,68,70,elective,open appendectomy
-2025-07-22,68,135,elective,open appendectomy
+2025-07-22,67,135,elective,open appendectomy
 2025-07-23,44,40,elective,I&D
 2025-07-23,44,40,elective,I&D
 2025-07-24,74,130,elective,open appendectomy
 2025-07-25,51,200,elective,Open appendectomy
 2025-07-27,76,205,elective,Open appendectomy
-2025-07-28,120,65,elective,remove bullet + DB
-2025-07-31,69,125,elective,Open Appendectomy
-2025-07-31,182,85,elective,EL c lysis adhesion +/- bowel resection
+2025-07-28,109,65,elective,remove bullet + DB
+2025-07-31,60,125,elective,Open Appendectomy
+2025-07-31,172,85,elective,EL c lysis adhesion +/- bowel resection
 2025-08-03,59,75,elective,DB
 2025-08-03,59,75,elective,DB
 2025-08-03,100,65,elective,appendectomy
 2025-08-04,58,70,elective,EGD colonoscopy
-2025-08-05,181,60,elective,EL with drainage
+2025-08-05,171,60,elective,EL with drainage
 2025-08-05,75,65,elective,open appendectomy
 2025-08-05,42,50,elective,I&D
 2025-08-06,75,95,elective,Debridement Lt. foot
@@ -231,42 +231,42 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-08-07,93,50,elective,LN biopsy
 2025-08-07,75,65,elective,DB
 2025-08-07,70,90,elective,open appendectomy
-2025-08-08,171,150,elective,EL
-2025-08-08,68,170,elective,open appendectomy
+2025-08-08,161,150,elective,EL
+2025-08-08,63,170,elective,open appendectomy
 2025-08-10,77,65,elective,open appendectomy
 2025-08-15,101,50,elective,Explore wound with remove foreign body
 2025-08-18,120,90,elective,Bilateral breast implant
 2025-08-18,56,85,elective,open appendectomy
 2025-08-20,128,65,elective,EL
 2025-08-20,128,65,elective,EL
-2025-08-22,73,70,elective,open appendectomy
+2025-08-22,63,70,elective,open appendectomy
 2025-08-23,63,55,elective,DB right 2nd toe
 2025-08-23,104,95,elective,EVAR
 2025-08-23,104,95,elective,EVAR
 2025-08-26,80,100,elective,Appendectomy
 2025-08-27,44,35,elective,EGD + colonoscopy
 2025-08-28,66,105,elective,EGD colonoscopy
-2025-08-29,105,135,elective,Appendectomy
+2025-08-29,94,135,elective,Appendectomy
 2025-08-31,67,120,elective,open appendectomy
-2025-09-01,74,125,elective,open appendectomy
-2025-09-02,77,65,elective,Debridement under LA c MAC
+2025-09-01,63,125,elective,open appendectomy
+2025-09-02,66,65,elective,Debridement under LA c MAC
 2025-09-02,68,85,elective,Open appendectomy
 2025-09-03,82,45,elective,appendectomy
 2025-09-03,83,110,elective,Appendectomy
-2025-09-04,115,135,elective,Appendectomy
-2025-09-04,115,135,elective,Appendectomy
-2025-09-06,62,130,elective,open appendectomy
+2025-09-04,104,135,elective,Appendectomy
+2025-09-04,104,135,elective,Appendectomy
+2025-09-06,59,130,elective,open appendectomy
 2025-09-08,99,85,elective,Explor wound with clot evacuation with stop bleeding
 2025-09-08,98,200,elective,open hernioplasty
 2025-09-08,98,200,elective,open hernioplasty
 2025-09-09,57,40,elective,LIFT
 2025-09-09,95,45,elective,fistula surgery
-2025-09-09,112,115,elective,Appendectomy
+2025-09-09,102,115,elective,Appendectomy
 2025-09-10,179,130,elective,Open cholecystectomy
 2025-09-12,66,75,elective,open appendectomy
-2025-09-12,171,105,elective,EL +- lysis adhesion or small bowel resection
-2025-09-12,171,105,elective,EL +- lysis adhesion or small bowel resection
-2025-09-13,66,75,elective,open appendectomy
+2025-09-12,160,105,elective,EL +- lysis adhesion or small bowel resection
+2025-09-12,160,105,elective,EL +- lysis adhesion or small bowel resection
+2025-09-13,56,75,elective,open appendectomy
 2025-09-13,54,90,elective,EGD + remove FB
 2025-09-13,67,65,elective,Wide excision Rt buttock
 2025-09-15,69,65,elective,open appendectomy
@@ -275,7 +275,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-09-18,127,130,elective,Re wide excision
 2025-09-18,79,70,elective,rays amputation
 2025-09-18,79,70,elective,rays amputation
-2025-09-20,173,225,elective,EL
+2025-09-20,163,225,elective,EL
 2025-09-22,57,150,elective,open appendectomy
 2025-09-24,69,55,elective,DB
 2025-09-27,84,105,elective,debridement left thigh
@@ -288,7 +288,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-09-30,67,115,elective,DB
 2025-09-30,67,115,elective,DB
 2025-10-01,171,80,elective,lap appendectomy
-2025-10-02,77,75,elective,open appendectomy
+2025-10-02,66,75,elective,open appendectomy
 2025-10-02,158,150,elective,Open drainge
 2025-10-02,79,55,elective,DB
 2025-10-02,79,55,elective,DB
@@ -302,7 +302,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-10-06,54,65,elective,EGD+Colonoscopy
 2025-10-06,75,65,elective,DB
 2025-10-06,104,130,elective,Explore laparotomy +/- small bowel resection
-2025-10-07,79,200,elective,open appendectomy
+2025-10-07,68,200,elective,open appendectomy
 2025-10-07,77,95,elective,DB
 2025-10-07,68,75,elective,change vacuum dressing +/- debridement
 2025-10-09,79,70,elective,DB
@@ -322,7 +322,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-10-16,82,170,elective,appendectomy
 2025-10-17,130,285,elective,EL c abdominal toilet c feeding jejunostomy +- gastrojejunostomy
 2025-10-17,68,75,elective,DB
-2025-10-17,77,65,elective,DB
+2025-10-17,71,65,elective,DB
 2025-10-19,82,45,elective,vac dressing and debridement
 2025-10-19,120,70,elective,Vacc dressing
 2025-10-19,67,255,elective,KT
@@ -351,13 +351,13 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-11-06,105,50,elective,Ray's amputation Lt 4th toe
 2025-11-07,139,155,elective,AKA left leg
 2025-11-07,57,55,elective,debridement
-2025-11-08,108,175,elective,apendectomy
-2025-11-08,108,175,elective,apendectomy
+2025-11-08,97,175,elective,apendectomy
+2025-11-08,97,175,elective,apendectomy
 2025-11-08,69,70,elective,open appendectomy
 2025-11-15,68,105,elective,open appendectomy
 2025-11-15,68,105,elective,open appendectomy
 2025-11-16,61,90,elective,Ray amputation Rt foot
-2025-11-17,108,155,elective,appendectomy
+2025-11-17,98,155,elective,appendectomy
 2025-11-18,70,190,elective,Open appendectomy
 2025-11-19,140,255,elective,EL+/- small bowel resection
 2025-11-20,81,45,elective,change VAC dressing
@@ -367,22 +367,22 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-11-25,90,130,elective,debridement and suture wound
 2025-11-27,81,60,elective,change VAC dressing
 2025-11-27,136,80,elective,EL
-2025-11-28,175,145,elective,EL
-2025-11-28,175,145,elective,EL
+2025-11-28,165,145,elective,EL
+2025-11-28,165,145,elective,EL
 2025-11-28,74,100,elective,Debridement
 2025-11-28,143,65,elective,EL
-2025-11-29,76,105,elective,open appendectomy
+2025-11-29,66,105,elective,open appendectomy
 2025-12-01,116,95,elective,Explore laparotomy
 2025-12-02,70,90,elective,open appendectomy
 2025-12-03,148,180,elective,Rt BKA
 2025-12-03,97,160,elective,above knee amputation
-2025-12-03,79,120,elective,open appendectomy
-2025-12-04,154,140,elective,open Rt hernia repair
-2025-12-05,55,75,elective,hemorrhoidectomy
-2025-12-05,55,75,elective,hemorrhoidectomy
+2025-12-03,68,120,elective,open appendectomy
+2025-12-04,142,140,elective,open Rt hernia repair
+2025-12-05,45,75,elective,hemorrhoidectomy
+2025-12-05,45,75,elective,hemorrhoidectomy
 2025-12-05,169,85,elective,EL
 2025-12-05,104,195,elective,Open left hernioplasty
-2025-12-05,80,120,elective,open appendectomy
+2025-12-05,74,120,elective,open appendectomy
 2025-12-07,39,65,elective,I&D
 2025-12-08,82,80,elective,DB + change vac dressing
 2025-12-10,60,120,elective,Open appendectomy
@@ -395,13 +395,13 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-12-14,69,135,elective,Explore wound + evacuation clot + sututre wound
 2025-12-16,67,90,elective,open appendectomy
 2025-12-16,141,100,elective,EL
-2025-12-17,183,90,elective,EL
+2025-12-17,172,90,elective,EL
 2025-12-17,71,90,elective,Open appendectomy
 2025-12-19,65,50,elective,Debridement
-2025-12-19,30,50,elective,EGD
+2025-12-19,32,50,elective,EGD
 2025-12-20,65,105,elective,Open appendectomy
-2025-12-21,165,150,elective,Lt occipital craniectomy with remove hematoma with EVD with clipping aneurysm ท่าคว่ำ mayfield ใช้กล้อง
-2025-12-22,110,70,elective,appendectomy
+2025-12-21,155,150,elective,Lt occipital craniectomy with remove hematoma with EVD with clipping aneurysm ท่าคว่ำ mayfield ใช้กล้อง
+2025-12-22,100,70,elective,appendectomy
 2025-12-22,67,65,elective,Debridement
 2025-12-22,67,65,elective,Debridement
 2025-12-22,75,40,elective,VAE of breast
@@ -413,7 +413,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-12-25,142,140,elective,LC
 2025-12-25,129,120,elective,Right hernioplasty
 2025-12-25,73,70,elective,Debridement
-2025-12-26,111,55,elective,Explore wound
+2025-12-26,100,55,elective,Explore wound
 2025-12-27,72,45,elective,debridement
 2025-12-28,69,40,elective,Debridement
 2025-12-29,69,60,elective,Suture wound
@@ -467,18 +467,18 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-05-22,69,70,elective,Excisional debridement
 2025-05-23,232,575,elective,laparoscopic hiatal hernia reduction and repair with fundoplication
 2025-05-27,104,70,elective,limited amputation Rt big toe
-2025-06-06,185,205,elective,EL
+2025-06-06,133,205,elective,EL
 2025-06-12,36,25,elective,EGD
 2025-06-12,188,160,elective,EL
 2025-06-12,188,160,elective,EL
-2025-07-14,70,185,elective,Open appendectomy
+2025-07-14,60,185,elective,Open appendectomy
 2025-07-17,63,65,elective,DB
 2025-07-21,89,150,elective,Debridement Lt thigh
-2025-07-22,93,50,elective,Local exploration +- hernia repair +- drainage
+2025-07-22,82,50,elective,Local exploration +- hernia repair +- drainage
 2025-07-23,71,85,elective,Open appendectomy
 2025-07-25,75,60,elective,finger +/- wide excision
 2025-08-09,128,110,elective,EL +/- small bowel resection
-2025-08-09,76,60,elective,Open appendectomy
+2025-08-09,65,60,elective,Open appendectomy
 2025-08-14,62,20,elective,EGD+/-sedate try LA
 2025-08-22,94,165,elective,explore with remove sharp object
 2025-08-26,85,140,elective,Appendectomy
@@ -499,7 +499,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-12-10,68,40,elective,Excisional debridement
 2025-12-15,112,60,elective,Re- wide excision
 2025-12-27,38,30,elective,I&D
-2025-12-28,190,130,elective,EL c stop bleeding
+2025-12-28,179,130,elective,EL c stop bleeding
 2025-01-03,94,65,elective,Left breast mass
 2025-01-06,107,50,elective,Excision of left breast
 2025-01-06,207,105,elective,Rt mastectomy with SLNB
@@ -724,30 +724,30 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-02-05,56,60,elective,Tracheostomy
 2025-02-05,210,170,elective,Lt craniotomy c clot removal
 2025-02-08,116,190,elective,Rt. Decompressive craniectomy c hematoma removal c temporal lobectomy
-2025-02-08,253,250,elective,Rt. craniotomy c clipping aneurysm c EVD
+2025-02-08,209,250,elective,Rt. craniotomy c clipping aneurysm c EVD
 2025-02-22,268,120,elective,Lt.craniotomy with clot removal
 2025-02-22,236,180,elective,craniectomy + clot removal
 2025-02-24,180,125,elective,craniotomy c clot removal
 2025-02-25,188,175,elective,craniectomy
-2025-03-15,88,80,elective,EVD
+2025-03-15,78,80,elective,EVD
 2025-03-24,127,80,elective,Lt EVD
 2025-04-02,43,25,elective,TCC Rt. IJV
 2025-04-12,113,110,elective,remove prosthetic skull
 2025-04-14,159,115,elective,left craniectomy with remove clot
 2025-04-16,170,75,elective,Lt EVD + remove VP shut
-2025-04-16,165,80,elective,venticulostomy
+2025-04-16,126,80,elective,venticulostomy
 2025-04-17,144,150,elective,Lt. craniectomy c clot removal
 2025-04-18,114,230,elective,recraniotomy c blood clot removal
 2025-04-25,74,140,elective,DB
 2025-04-28,121,160,elective,Left EVD
-2025-04-30,75,50,elective,revised EVD
+2025-04-30,64,50,elective,revised EVD
 2025-04-30,67,60,elective,tracheostomy
 2025-04-30,66,60,elective,Tracheostomy
-2025-05-07,212,140,elective,craniotomy c clot removal
-2025-05-08,259,130,elective,Lt craniotomy c remove clot
+2025-05-07,203,140,elective,craniotomy c clot removal
+2025-05-08,248,130,elective,Lt craniotomy c remove clot
 2025-05-12,195,120,elective,craniotomy c clot removal
 2025-05-18,188,110,elective,craniotomy c remove clot
-2025-05-20,258,175,elective,Rt craniotomy c hematoma removal
+2025-05-20,248,175,elective,Rt craniotomy c hematoma removal
 2025-05-24,165,280,elective,craniotomy c repair dura
 2025-06-01,139,115,elective,T11-L1 PDS fixation
 2025-06-02,218,215,elective,suboccipital craniotomy with remove blood clot
@@ -756,9 +756,9 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-06-11,73,120,elective,Cranitomy with bloodclot removal
 2025-06-12,92,150,elective,re-explore +- craniotomy c remove blood clot
 2025-06-14,142,185,elective,ACDF c PEEK plate C5-6
-2025-06-16,169,80,elective,Lt EVD
+2025-06-16,159,80,elective,Lt EVD
 2025-06-20,141,160,elective,Rt cranitectomy
-2025-06-28,88,200,elective,corpectomyc5
+2025-06-28,78,200,elective,corpectomyc5
 2025-06-28,134,190,elective,laminectomy L5 c remove disc
 2025-07-16,56,65,elective,Tracheostomy
 2025-07-17,116,120,elective,Right subdural drainage with Left EVD
@@ -775,17 +775,17 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-10-21,100,150,elective,Left minicraniotomy with blood clot removal emer
 2025-11-07,102,125,elective,Left minicraniectomy with remove hematoma
 2025-11-17,122,130,elective,Left craniectomy
-2025-11-29,358,170,elective,bifrontal craniectomy with hematoma removal with frontallobectomy
+2025-11-29,348,170,elective,bifrontal craniectomy with hematoma removal with frontallobectomy
 2025-12-08,75,85,elective,นอนหมอน ring
 2025-12-08,75,85,elective,นอนหมอน ring
 2025-12-11,114,105,elective,Rearrange bone with skull fixation
 2025-12-13,208,225,elective,Rt.craniotomy c tumor removal
 2025-12-13,219,130,elective,Lt. Craniotomy with remove hematoma
 2025-12-19,231,185,elective,Lt.Craniotomy with remove tumor with clot removal
-2025-12-27,177,170,elective,Laminectomy T7-9
+2025-12-27,167,170,elective,Laminectomy T7-9
 2025-12-27,175,65,elective,Laminectomy T7-9
 2025-12-28,351,135,elective,bifrontal craniotomy with repair frontal skull base
-2025-12-29,149,80,elective,Left EVD
+2025-12-29,138,80,elective,Left EVD
 2025-12-31,157,70,elective,Lt.Frontal Venticulostomy
 2025-01-03,233,195,elective,total laminectomy T11-12 re-exploration
 2025-01-06,136,165,elective,left VP shunt
@@ -844,7 +844,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-03-18,192,285,elective,MIS TLIF L45
 2025-03-19,153,380,elective,right retrosigmoid SOC with tumor removal
 2025-03-19,107,215,elective,T10-11-12 L1-2 PDS fixation
-2025-03-21,151,105,elective,minicraniotomy c clot removal
+2025-03-21,139,105,elective,minicraniotomy c clot removal
 2025-03-24,198,200,elective,laminectomy L345 c PDS fixation
 2025-03-25,197,250,elective,laminectomy T10-L5 c discectomy L45 prodoth
 2025-03-26,152,190,elective,right programmable VP shunt
@@ -858,7 +858,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-04-01,190,160,elective,ACDF C3/4 C4/5 DIVA
 2025-04-04,87,200,elective,Birateral  Burr hole +- craniotomy
 2025-04-08,211,300,elective,L3-S1 laminectomy with PDS fixation (MIS)
-2025-04-08,187,95,elective,Rt. craniectomy c blood clot removal
+2025-04-08,142,95,elective,Rt. craniectomy c blood clot removal
 2025-04-09,151,225,elective,VP shut c tracheostomy
 2025-04-11,136,345,elective,ACDF C5/6
 2025-04-21,196,210,elective,MIS Laminectomy c PDS L3-S1
@@ -898,7 +898,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-05-28,168,200,elective,open biopsy L1 and psoas mass
 2025-05-28,86,150,elective,decompressive craniectomy
 2025-05-28,146,160,elective,Rt VP shunt + off EVD
-2025-05-31,142,55,elective,EVD
+2025-05-31,111,55,elective,EVD
 2025-06-04,151,275,elective,Transphrenoid approach tumor removal
 2025-06-06,180,320,elective,Laminectomy with tumor removal
 2025-06-09,192,145,elective,MIS TLIF L4-5
@@ -938,7 +938,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-07-16,154,165,elective,Left medium pressure VP shunt
 2025-07-17,163,160,elective,L3-5 MIS PDS c laminectomy
 2025-07-18,164,245,elective,L2-5 MIS PDS c laminectomy
-2025-07-19,158,50,elective,Lt EVD emergency
+2025-07-19,112,50,elective,Lt EVD emergency
 2025-07-21,192,210,elective,Laminectomy with PDS fixation L345 MIS
 2025-07-21,150,170,elective,ACDF C5-6-7 DIVA
 2025-07-22,189,160,elective,MIS TLIF L4/5
@@ -1001,7 +1001,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-09-24,156,655,elective,right retrosigmoid SOC + combined petrosal approach with tumor removal
 2025-09-26,113,275,elective,Lateral mass screw c laminectomy C7-T1 (loop X
 2025-09-26,113,275,elective,Lateral mass screw c laminectomy C7-T1 (loop X
-2025-09-27,100,195,elective,posterior c6 c7 t1 fixation with laminectomy c7
+2025-09-27,89,195,elective,posterior c6 c7 t1 fixation with laminectomy c7
 2025-09-29,190,150,elective,MIS TLIF L4-5
 2025-09-29,356,170,elective,Bifrontal craniectomy with hematoma removal
 2025-09-30,193,190,elective,Laminectomy with PDS fixation L4-5 Prodorth
@@ -1033,7 +1033,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-11-04,191,235,elective,MIS TLIF L4/5 L5/S1
 2025-11-05,158,275,elective,Left craniotomy c tumor removal
 2025-11-05,70,50,elective,Tracheostomy
-2025-11-05,106,110,elective,Decompressive craniectomy
+2025-11-05,95,110,elective,Decompressive craniectomy
 2025-11-07,152,235,elective,C1-2 laminectomy c tumor removal
 2025-11-07,150,215,elective,pedicular screw fixation L1-5
 2025-11-10,199,185,elective,MIS PDS c laminectomy L5/S1
@@ -1057,7 +1057,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-12-01,169,200,elective,ACDF C4567 PEEK plate
 2025-12-02,159,190,elective,Open PDS c laminectomy L3-S1
 2025-12-03,372,260,elective,bifrontal craniotomy with AVM resection
-2025-12-14,170,190,elective,Lt. Occipital craniotomy with hematoma removal
+2025-12-14,160,190,elective,Lt. Occipital craniotomy with hematoma removal
 2025-12-15,142,135,elective,ACDF C5-6 peek plate
 2025-12-15,195,180,elective,MIS laminectomy with PDS fixation L45S1
 2025-12-16,209,190,elective,Laminectomy c PDS fixation L345 MIS
@@ -1833,7 +1833,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-04-02,24,20,elective,flexible cysto
 2025-04-09,33,20,elective,cystoscopy remove DJ
 2025-04-09,23,15,elective,surveillance cysto
-2025-04-20,357,225,elective,Bifrontal craniectomy
+2025-04-20,348,225,elective,Bifrontal craniectomy
 2025-04-23,26,25,elective,Flexible cystoscopy (surveillance)
 2025-04-23,97,15,elective,surveilance cysto
 2025-04-23,97,15,elective,sureveuiilance cysto
@@ -1860,7 +1860,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-06-25,62,40,elective,TUR-BT
 2025-06-25,27,30,elective,TRUS biopsy
 2025-06-25,61,35,elective,TUR-BT
-2025-06-25,66,90,elective,TUR-BT  + Rt. flexible ureteroscopy
+2025-06-25,56,90,elective,TUR-BT  + Rt. flexible ureteroscopy
 2025-06-25,76,115,elective,TUR-P
 2025-07-02,87,15,elective,Flex. cystoscopy
 2025-07-02,24,10,elective,Surveillance cysto
@@ -1883,7 +1883,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-08-20,29,15,elective,cysto
 2025-08-20,110,225,elective,open right pyeloplasty
 2025-08-20,33,20,elective,cysto
-2025-08-25,99,50,elective,cystostomy
+2025-08-25,70,50,elective,cystostomy
 2025-08-27,38,25,elective,Cystoscopy off DJ stent
 2025-08-27,24,20,elective,Flexible cystoscopy  (surveillance)
 2025-08-27,19,15,elective,Flexible cystoscopy
@@ -1927,7 +1927,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-10-22,35,20,elective,Off Lt. stent
 2025-10-22,31,20,elective,Flexible cystoscopy (surveillance)
 2025-10-22,22,15,elective,Flexible cystoscopy
-2025-10-23,105,75,elective,Repair penile fracture
+2025-10-23,96,75,elective,Repair penile fracture
 2025-10-29,22,20,elective,Flexible cystoscopy
 2025-10-29,21,20,elective,Flexible cystoscopy
 2025-10-29,68,45,elective,TUR-BT /TUF
@@ -1964,7 +1964,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-12-24,143,55,elective,Rt. ureteroscopy +/- biopsy
 2025-12-24,49,35,elective,mri fusin trux bx
 2025-12-26,113,35,elective,bilateral DJ stent under LA
-2025-12-28,82,60,elective,semirigid URS + LASER + J stent insertion
+2025-12-28,73,60,elective,semirigid URS + LASER + J stent insertion
 2025-12-28,111,160,elective,bilateral DJ stent under TIVA
 2025-01-22,30,25,elective,flexible cystoscopy(surveillance)
 2025-01-22,43,15,elective,surveillance flexible cystoscopy
@@ -2659,15 +2659,15 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-05-27,48,35,elective,EGD + colonoscopy
 2025-05-27,39,45,elective,I&D
 2025-05-30,91,85,elective,Metastasectomy
-2025-06-01,33,50,elective,I&D
+2025-06-01,23,50,elective,I&D
 2025-06-02,156,265,elective,Open sigmoidectomy with manual colonic decompression with primary anastomosis with protective proximal transverse colostomy
 2025-06-04,54,50,elective,hemorrhoidectomy
-2025-06-08,162,175,elective,EL
+2025-06-08,152,175,elective,EL
 2025-06-10,46,40,elective,EGD + colonoscope
 2025-06-10,54,40,elective,EGD + colonoscope
 2025-06-10,38,45,elective,LIS c hemorrhoidectomy
 2025-06-10,34,25,elective,LIS
-2025-06-11,173,260,elective,EL with sigmoidectomy with hartman's procedure
+2025-06-11,163,260,elective,EL with sigmoidectomy with hartman's procedure
 2025-06-11,129,215,elective,EL with abdominal toilet with colonic lavage with repair anastomosis with loop proximal transverse colostomy
 2025-06-12,88,45,elective,evacuate clot with stop bleeding
 2025-06-12,39,45,elective,I&D
@@ -2721,7 +2721,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-08-19,39,50,elective,EGD + colonoscopy
 2025-08-19,91,75,elective,closure colostomy
 2025-08-19,90,50,elective,fistula surgery
-2025-08-21,69,110,elective,loop proximal transverse colostomy
+2025-08-21,61,110,elective,loop proximal transverse colostomy
 2025-08-29,135,140,elective,Open herniorrhaphy
 2025-08-29,137,300,elective,Open Rt. hemicolectomy
 2025-08-29,137,300,elective,Open Rt. hemicolectomy
@@ -2732,7 +2732,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-09-09,94,20,elective,nail extraction
 2025-09-09,62,60,elective,debridement
 2025-09-12,42,55,elective,EGD Colonoscopy
-2025-09-13,76,120,elective,re-EL stop bleeding
+2025-09-13,59,120,elective,re-EL stop bleeding
 2025-09-15,59,120,elective,Debridement
 2025-09-17,82,230,elective,explore lap
 2025-09-19,30,35,elective,EGD
@@ -2784,7 +2784,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-12-26,40,65,elective,Colonoscopy
 2025-01-28,265,355,elective,Lap AR
 2025-02-07,90,80,elective,irrigation wound
-2025-02-09,141,185,elective,Subtotal colectomy
+2025-02-09,131,185,elective,Subtotal colectomy
 2025-02-11,216,220,elective,Laparoscopic sigmoidectomy
 2025-02-11,88,40,elective,Irrigation
 2025-02-18,189,160,elective,open sigmoidectomy
@@ -3028,8 +3028,8 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-01-23,151,90,elective,Lt 3rd toe amputation
 2025-01-23,38,35,elective,TCC Rt IJV
 2025-01-23,67,160,elective,thromboembolectomy with intra op angiogram Rt leg
-2025-01-24,96,235,elective,KT
-2025-01-24,96,235,elective,KT
+2025-01-24,86,235,elective,KT
+2025-01-24,86,235,elective,KT
 2025-01-25,63,165,elective,Coil embolization
 2025-01-27,59,50,elective,AVF Lt. wrist under LA
 2025-01-29,74,25,elective,revised TCC at rt IJV
@@ -3123,9 +3123,9 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-04-10,91,25,elective,PICC line insertion
 2025-04-11,95,110,elective,ligate AVF RT wrist + AVF Rt cubital
 2025-04-11,46,40,elective,TCC at CFV
-2025-04-11,154,40,elective,Lt.ankle dysarthriculation
+2025-04-11,143,40,elective,Lt.ankle dysarthriculation
 2025-04-12,49,40,elective,DLC Lt IJV
-2025-04-16,111,45,elective,repair ulnar artery with repair tendon
+2025-04-16,100,45,elective,repair ulnar artery with repair tendon
 2025-04-16,96,165,elective,AKA
 2025-04-16,108,155,elective,EVAR
 2025-04-17,91,80,elective,AVBG Lt forearm
@@ -3151,12 +3151,12 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-05-01,65,45,elective,AVF Lt forearm
 2025-05-02,48,60,elective,TCC insertion
 2025-05-06,70,235,elective,DDKT
-2025-05-06,41,20,elective,I&D
+2025-05-06,40,20,elective,I&D
 2025-05-08,42,45,elective,TCC Rt IJV
 2025-05-08,64,30,elective,AVF Lt wrist
 2025-05-08,49,40,elective,revise TCC Rt IJV
 2025-05-08,41,35,elective,TCC Rt IJV
-2025-05-09,96,130,elective,angioembolization
+2025-05-09,85,130,elective,angioembolization
 2025-05-12,40,40,elective,TCC Rt IJV
 2025-05-19,105,30,elective,Balloon venoplasty
 2025-05-19,105,110,elective,Rt upper arm loop AVBG
@@ -3273,7 +3273,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-08-21,133,175,elective,EVAR
 2025-08-21,78,360,elective,DDKT
 2025-08-21,78,360,elective,DDKT
-2025-08-21,161,35,elective,set or for Proglide +- explore goin Lt
+2025-08-21,122,35,elective,set or for Proglide +- explore goin Lt
 2025-08-25,67,20,elective,change VAC dressing
 2025-08-25,49,40,elective,TCC
 2025-08-28,68,50,elective,change VAC dressing
@@ -3294,17 +3294,17 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-09-10,70,35,elective,AVF Rt wrist
 2025-09-10,90,90,elective,AVBG Lt forearm
 2025-09-10,63,60,elective,AVF Lt wrist
-2025-09-11,134,260,elective,Angiogram Rt. leg+/- Rt. distal SFA to distal popliteal  bypass with PTFE
-2025-09-11,134,260,elective,Angiogram Rt. leg+/- Rt. distal SFA to distal popliteal  bypass with PTFE
+2025-09-11,123,260,elective,Angiogram Rt. leg+/- Rt. distal SFA to distal popliteal  bypass with PTFE
+2025-09-11,123,260,elective,Angiogram Rt. leg+/- Rt. distal SFA to distal popliteal  bypass with PTFE
 2025-09-12,48,35,elective,TCC insertion at Rt IJV
-2025-09-12,125,225,elective,Right axillofemoral bypasa
+2025-09-12,115,225,elective,Right axillofemoral bypasa
 2025-09-14,39,30,elective,Perm Rt IJV
 2025-09-15,107,40,elective,Balloon venoplasty
 2025-09-18,64,50,elective,AVF Lt cubital
 2025-09-20,23,45,elective,off TK
 2025-09-23,46,95,elective,TCC Rt IJV
-2025-09-25,98,230,elective,fasciotomy +- bypass or amputation
-2025-09-25,98,230,elective,fasciotomy +- bypass or amputation
+2025-09-25,88,230,elective,fasciotomy +- bypass or amputation
+2025-09-25,88,230,elective,fasciotomy +- bypass or amputation
 2025-09-25,64,40,elective,AVF Lt cubital
 2025-09-29,112,50,elective,Lt brachiocephalic AVF
 2025-09-29,106,50,elective,Rt brachiocephalic AVF
@@ -3314,7 +3314,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-10-01,66,50,elective,AVF Lt wrist
 2025-10-01,71,50,elective,AVF Rt forarm
 2025-10-01,71,50,elective,AVF RT cubital
-2025-10-04,99,67,elective,IVC filter
+2025-10-04,88,67,elective,IVC filter
 2025-10-06,110,45,elective,Rt brachiocephalic AVF
 2025-10-06,110,35,elective,Balloon venoplasty
 2025-10-06,112,70,elective,Lt brachiocephalic AVF
@@ -3324,7 +3324,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-10-08,107,40,elective,Balloon venoplasty
 2025-10-08,65,55,elective,AVF Lt forearm
 2025-10-08,131,80,elective,aneurysmectomy
-2025-10-12,95,265,elective,Popliteal bypass SFA to PTA
+2025-10-12,84,265,elective,Popliteal bypass SFA to PTA
 2025-10-14,108,35,elective,Balloon venoplasty
 2025-10-15,117,50,elective,balloon venoplasty with stent
 2025-10-15,117,50,elective,balloon venoplasty with stent
@@ -3338,7 +3338,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-10-22,71,60,elective,AVF RT wrist
 2025-10-22,72,45,elective,AVF Rt cubital
 2025-10-23,74,40,elective,permcathrevise
-2025-10-29,101,200,elective,graft thrombectomy +/- balloon angioplasty
+2025-10-29,90,200,elective,graft thrombectomy +/- balloon angioplasty
 2025-11-03,108,25,elective,Balloon venoplasty
 2025-11-03,112,45,elective,Lt brachiocephalic AVF
 2025-11-03,108,55,elective,Balloon venoplasty with stent
@@ -3365,7 +3365,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-12-01,112,60,elective,Lt brachiocephalic AVF
 2025-12-08,108,35,elective,Balloon venoplasty
 2025-12-08,109,55,elective,Rt radiocephalic AVF
-2025-12-11,103,270,elective,KT
+2025-12-11,92,270,elective,KT
 2025-12-11,134,120,elective,aneurysmectomy c AVF ligation left arm
 2025-12-13,66,120,elective,angioplasty with covered stent with debridementLt groin +/- bypass under GAET
 2025-12-13,66,120,elective,angioplasty with covered stent with debridementLt groin +/- bypass under GAET
@@ -3418,14 +3418,14 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-04-17,157,75,elective,Lt brachiocephalic AVF
 2025-04-17,153,70,elective,Rt HL with VS
 2025-04-17,167,200,elective,Bilateral HL with VS with muliple phlebectomy
-2025-04-22,104,260,elective,DDKT
-2025-04-22,104,260,elective,DDKT
-2025-04-23,102,220,elective,KT
-2025-04-23,102,220,elective,KT
-2025-04-23,102,220,elective,KT
-2025-04-25,104,315,elective,DDKT
-2025-04-25,104,315,elective,DDKT
-2025-04-25,104,315,elective,DDKT
+2025-04-22,94,260,elective,DDKT
+2025-04-22,94,260,elective,DDKT
+2025-04-23,92,220,elective,KT
+2025-04-23,92,220,elective,KT
+2025-04-23,92,220,elective,KT
+2025-04-25,94,315,elective,DDKT
+2025-04-25,94,315,elective,DDKT
+2025-04-25,94,315,elective,DDKT
 2025-05-01,105,105,elective,HL venous stripping Lt
 2025-05-01,145,35,elective,Balloon venoplasty
 2025-05-01,168,145,elective,Bilateral HL with VS with Rt phlebectomy
@@ -3726,7 +3726,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-02-11,72,30,elective,Fistulogram +- PTA
 2025-02-13,147,135,elective,EVAR
 2025-02-13,50,35,elective,Revise TCC Rt IJV
-2025-02-14,158,135,elective,TEVAR with Chimney Lt Subclavien artery
+2025-02-14,113,135,elective,TEVAR with Chimney Lt Subclavien artery
 2025-02-17,160,70,elective,Lt radiocephalic AVF
 2025-02-17,104,50,elective,fistulogram +- PTA
 2025-02-17,103,55,elective,fistulogram+/-PTA under LA
@@ -4172,7 +4172,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-11-13,74,60,elective,Revised TCC + balloon venoplasty
 2025-11-13,102,70,elective,Venaseal both legs
 2025-11-13,170,110,elective,Bilateral venaseal with phlebecotmy
-2025-11-14,146,50,elective,balloon venoplasty
+2025-11-14,135,50,elective,balloon venoplasty
 2025-11-17,186,55,elective,PTA
 2025-11-17,99,45,elective,fistulogram+-- PTA
 2025-11-17,104,60,elective,Fistulogram PTA
@@ -4256,7 +4256,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-01-31,110,90,elective,THORACOSCOPIC EXCISION OF LESION OR TISSUE OF LUNG
 2025-06-20,65,100,elective,open appendectomy
 2025-06-26,204,160,elective,VATs remove blood clot and stop bleed
-2025-07-30,175,155,elective,VATS Rt.lung
+2025-07-30,133,155,elective,VATS Rt.lung
 2025-12-05,154,70,elective,change vacumn dressing
 2025-12-25,84,135,elective,Ecmo
 2025-12-28,38,95,elective,off ECMO
@@ -4302,7 +4302,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-09-10,180,160,elective,TEVAR
 2025-01-01,99,60,elective,ERCP
 2025-01-06,112,85,elective,ERCP
-2025-01-25,102,60,elective,ERCP
+2025-01-25,91,60,elective,ERCP
 2025-02-02,98,45,elective,ERCP
 2025-02-18,121,90,elective,ERCP with BD stent
 2025-02-21,101,130,elective,ERCP
@@ -4452,7 +4452,7 @@ op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
 2025-06-13,149,100,elective,PDA ligation
 2025-08-08,205,240,elective,VATs decortication Lt. chest
 2025-12-09,202,405,elective,VATs LUL Lobectomy
-2025-01-25,56,160,elective,open appendectomy
+2025-01-25,47,160,elective,open appendectomy
 2025-07-23,141,35,elective,Excision biopy
 2025-12-07,65,95,elective,open appendectomy
 2025-12-24,62,60,elective,Open appendectomy

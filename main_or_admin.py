@@ -938,18 +938,17 @@ def _render_ai_research_tab():
         _live68 = _t68 if len(_t68) else None
         _live69 = _t69 if len(_t69) else None
 
-    # ปี 2568 — ทำนายย้อนหลังบนเคสจริงจาก HIS (prediction-only · ไม่ retrain โมเดล)
-    #   ข้อมูลปี 2568 (year68_69_completed) มีเฉพาะ "เวลาครองห้อง" — ไม่มีบันทึกเวลาผ่าตัดสุทธิ
-    #   → แสดงผลปี 2568 เฉพาะ target room_use เท่านั้น (สร้างโดย build_prospective_2568.py)
+    # ปี 2568 — ทำนายย้อนหลังบนเคสจริงจาก HIS (prediction-only · ไม่ retrain โมเดล) ทั้ง 2 target
+    #   เวลาครองห้อง: completed CSV · เวลาผ่าตัดสุทธิ: + opendtime จาก intraop ปี 68
+    #   (สร้างโดย build_prospective_2568.py → validation_{target}_2568.csv)
     _p68 = None
-    if _tgt == 'room_use':
-        _p68f = (_P(__file__).resolve().parent / 'models' / 'honest_v1'
-                 / 'validation_room_use_2568.csv')
-        if _p68f.exists():
-            try:
-                _p68 = _prep_ai(_pd.read_csv(_p68f))
-            except Exception:
-                _p68 = None
+    _p68f = (_P(__file__).resolve().parent / 'models' / 'honest_v1'
+             / f'validation_{_tgt}_2568.csv')
+    if _p68f.exists():
+        try:
+            _p68 = _prep_ai(_pd.read_csv(_p68f))
+        except Exception:
+            _p68 = None
 
     def _render_year_block(num, year_be, title, plain, accent, bg, stat, empty_note=None):
         st.markdown(
@@ -989,16 +988,10 @@ def _render_ai_research_tab():
         '①', 2567, 'ชุดทดสอบ (hold-out)',
         'ผลการทำนายกับเคสที่โมเดลไม่เคยเห็นตอนเรียน — ตัวเลขอ้างอิงในวิทยานิพนธ์',
         '#1565c0', '#f4f8fd', _stat(_calib))
-    # ปี 2568: room_use ใช้ผลทำนายย้อนหลังบนเคสจริงจาก HIS · surg_time ไม่มี actual ให้เทียบ
-    _stat68 = _stat(_p68) if _tgt == 'room_use' else None
-    _note68 = (None if _tgt == 'room_use' else
-               'ปี 2568 ฐานข้อมูลบันทึกเฉพาะ “เวลาครองห้อง” — ไม่มีบันทึก'
-               'เวลาผ่าตัดสุทธิ (ลงมีด→เย็บเสร็จ) จึงเทียบความแม่นของเวลาผ่าตัดสุทธิ'
-               'ปีนี้ไม่ได้ · ดูผลปี 2568 ได้ที่แท็บ “เวลาครองห้อง”')
     _render_year_block(
         '②', 2568, 'การใช้งานจริง (prospective)',
         'ผลการทำนายกับเคสผ่าตัดจริงปี 2568 จากฐานข้อมูล (ทำนายด้วยโมเดลเดิม · ไม่เทรนใหม่)',
-        '#1b7f4b', '#eef7f1', _stat68, empty_note=_note68)
+        '#1b7f4b', '#eef7f1', _stat(_p68))
 
     # ปี 2569 — แถบติดตามสด (โชว์แค่จำนวนเคส เพราะข้อมูลยังน้อย ตัวเลขยังไม่นิ่ง)
     _s69 = _stat(_live69)
