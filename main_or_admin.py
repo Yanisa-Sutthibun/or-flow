@@ -435,7 +435,7 @@ def _render_demo_controls():
             st.session_state['_stats_cache_ver'] = _stats_ver() + 1  # ล้าง cache สถิติ → ดึง cloud ใหม่
             st.rerun()
     with col_warn:
-        st.caption("⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน")
+        st.markdown("<div style=\x27text-align:right;color:#808495;font-size:13px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
     with col_t:
         new_active = st.toggle(
             '🎬 Demo Mode', value=state['active'], key='demo_toggle',

@@ -675,7 +675,7 @@ def page_or_board():
             st.session_state['_board_force_pull'] = True   # บังคับดึงจาก DB กลาง
             st.rerun()
     with _ctl_warn:
-        st.caption("⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน")
+        st.markdown("<div style=\x27text-align:right;color:#808495;font-size:13px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
     with _ctl_l:
         _demo_on = st.toggle(
             "🎬 Demo Mode", key="orboard_demo_toggle",
