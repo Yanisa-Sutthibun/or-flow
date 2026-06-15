@@ -1,0 +1,1638 @@
+op_date,ai_predicted_min,actual_duration_min,op_type,procedure_name
+2026-05-21,99,110,elective,LC
+2026-05-21,18,10,elective,EGD
+2026-05-21,94,40,elective,LC
+2026-05-21,47,5,elective,fcystoscopy+remove stent
+2026-05-21,17,20,elective,"TCC Rt IJV , centros"
+2026-05-21,81,97,elective,AVBG Lt forearm
+2026-05-21,85,60,elective,AVBG Rt forearm
+2026-05-21,133,120,elective,Aneurysmectomy
+2026-05-21,104,30,elective,Rt Venaseal
+2026-05-21,119,127,elective,Bilateral HL with VS with Rt phlebectomy
+2026-05-21,189,120,elective,lap wedge stomach
+2026-05-21,189,120,elective,lap wedge stomach
+2026-05-20,96,30,elective,Railroad guidewire VAV ECMO
+2026-05-20,61,70,elective,open appendectomy
+2026-05-20,52,80,elective,HOLEP
+2026-05-20,70,35,elective,excision under GA
+2026-05-20,29,45,elective,tracheostomy
+2026-05-20,68,40,elective,AP + RF nose (GA)
+2026-05-20,26,5,elective,RF palate
+2026-05-20,91,10,elective,Incisional Bx.
+2026-05-20,56,25,elective,excision lesion of skull
+2026-05-20,20,20,elective,MRI-TRUS fusion biopsy
+2026-05-20,12,5,elective,Flexible cystoscopy (surveillance)
+2026-05-20,8,10,elective,TRUS biopsy
+2026-05-20,5,5,elective,Flexible cystoscopy
+2026-05-20,5,5,elective,Flexible cystoscopy
+2026-05-20,12,5,elective,Flexible cystoscopy (surveillance)
+2026-05-20,52,5,elective,Flex. cystoscopy
+2026-05-20,58,5,elective,flex cysto
+2026-05-20,54,120,elective,HoLEP
+2026-05-20,54,25,elective,AVF Rt wrist
+2026-05-20,49,25,elective,AVF Lt cubital
+2026-05-20,55,30,elective,Port A cath
+2026-05-20,53,55,elective,AVF Lt wrist ( snuffbox )
+2026-05-19,57,60,elective,TK insertion
+2026-05-19,19,12,elective,rigid cystoscopy ubder iv sedation
+2026-05-19,112,172,elective,Open PDS c laminectomy L3-S1 prodoth
+2026-05-19,91,40,elective,Left MMA
+2026-05-19,42,10,elective,EC
+2026-05-19,5,105,elective,cystoscope
+2026-05-19,26,45,elective,TUR-BT + - TUR-P
+2026-05-19,180,160,elective,Lap ERHC
+2026-05-19,54,30,elective,revise AVBG + balloon venoplasty
+2026-05-19,54,40,elective,AVF Lt forearm
+2026-05-19,52,40,elective,Revise AVBG+balloon venoplasty
+2026-05-19,119,50,elective,Bilateral venaseal
+2026-05-19,122,45,elective,Bilateral venaseal
+2026-05-19,117,110,elective,Bilateral venaseal with phlebectomy
+2026-05-19,115,55,elective,Bilateral venaseal
+2026-05-19,111,70,elective,open thoracotomy + remove clot + stop bleed
+2026-05-18,47,45,elective,open appendectomy
+2026-05-18,99,95,elective,LC
+2026-05-18,99,95,elective,LC
+2026-05-18,70,40,elective,Excision under GA
+2026-05-18,76,58,elective,wide excision L9 breast mass
+2026-05-18,131,185,elective,ACDF c plate and screw fixation
+2026-05-18,136,130,elective,MIS TLIF L4/5
+2026-05-18,184,115,elective,Lt craniotomy with tumor removal
+2026-05-18,184,115,elective,Lt craniotomy with tumor removal
+2026-05-18,30,25,elective,tracheostomy
+2026-05-18,37,20,elective,Trachesotomy
+2026-05-18,78,85,elective,Wide excision with nasolabial flap
+2026-05-18,78,20,elective,Balloon venoplasty
+2026-05-18,76,20,elective,Balloon venoplasty
+2026-05-18,75,20,elective,Balloon venoplasty
+2026-05-18,79,20,elective,balloon Lt
+2026-05-18,77,35,elective,Rt brachiocephalic AVF
+2026-05-18,23,15,elective,TCC insertion at Rt IJV
+2026-05-18,103,50,elective,LC
+2026-05-18,118,165,elective,LC then ERCP
+2026-05-16,60,260,elective,KT
+2026-05-16,60,260,elective,KT
+2026-05-16,60,260,elective,KT
+2026-05-16,12,15,elective,TCC at Rt IJV
+2026-05-15,60,40,elective,PortA insertion
+2026-05-15,81,210,elective,microdiscectomy L4-5 LT
+2026-05-15,54,75,elective,Rt frontal medium pressure VP shunt
+2026-05-15,154,160,elective,ACDF C4-7 peek plate
+2026-05-15,72,25,elective,RT VP SHUNT
+2026-05-15,30,45,elective,Tracheostomy
+2026-05-15,63,45,elective,Coorection Upper eyelid
+2026-05-15,70,75,elective,upper lower  eyelid correction
+2026-05-15,7,10,elective,Fistulotomy
+2026-05-15,54,35,elective,Karydakis flap
+2026-05-15,176,255,elective,Lap RHC
+2026-05-15,18,15,elective,"TCC RT IJV , centros"
+2026-05-15,22,20,elective,TCC Rt. IJV
+2026-05-15,24,10,elective,EGD
+2026-05-14,34,10,elective,colonoscopy
+2026-05-14,183,60,elective,Lap readjust TK
+2026-05-14,58,60,elective,excisional biopsy
+2026-05-14,73,115,elective,Endotire Endoscopic Browlift + Levator Advancement
+2026-05-14,52,15,elective,Vasectomy and ligation of vas deferens
+2026-05-14,43,5,elective,fcystoscopy+off JJ stent
+2026-05-14,48,5,elective,fcystoscopy
+2026-05-14,19,20,elective,MRI fusion TRUS-Bx
+2026-05-14,21,15,elective,MRI fusion TRUS
+2026-05-14,44,10,elective,rigib cystoscopy under LA
+2026-05-14,13,10,elective,cystoscope+electrocauterization
+2026-05-14,52,10,elective,Revise Perm cath
+2026-05-14,68,30,elective,balloon venoplasty
+2026-05-14,29,20,elective,"revise TCC Rt IJV , centros"
+2026-05-14,66,25,elective,ligate AVF Lt arm
+2026-05-14,133,195,elective,aneurysmectomy
+2026-05-14,113,100,elective,Lt.VATS decorticated
+2026-05-14,104,50,elective,LC
+2026-05-14,104,50,elective,LC
+2026-05-14,102,130,elective,LC
+2026-05-14,27,5,elective,EGD
+2026-05-13,21,15,elective,I&D
+2026-05-12,143,95,elective,lap. diagnosis+-explore laparotomy
+2026-05-12,114,149,elective,Open PDS c laminectomy L2-S1
+2026-05-12,98,75,elective,ORIF c plate and screw + IMF
+2026-05-12,119,110,elective,"Laparoscopic cholecystectomy, lc"
+2026-05-12,119,110,elective,"Laparoscopic cholecystectomy, lc"
+2026-05-12,44,5,elective,suveillance cystoscopy
+2026-05-12,8,10,elective,cystoscopy with clotted blood removal
+2026-05-12,171,160,elective,Lap RHC
+2026-05-12,104,55,elective,Rt HL with VS with phlebectomy
+2026-05-12,49,30,elective,remove TCC Rt IJV + DLC FV
+2026-05-12,52,70,elective,Excisional biopsy
+2026-05-12,109,35,elective,Lt EVLA with phlebectomy
+2026-05-12,118,75,elective,Bilateral EVLA with Lt phlebectomy
+2026-05-12,50,80,elective,Downhill angioplasty of Rt leg
+2026-05-12,44,15,elective,EGD+colonoscopy
+2026-05-11,150,257,elective,EL
+2026-05-11,66,25,elective,evaculate blood clot
+2026-05-11,75,30,elective,Local excision of lesion of breast
+2026-05-11,66,25,elective,Re-wide excision
+2026-05-11,97,80,elective,LC
+2026-05-11,98,80,elective,LC
+2026-05-11,141,246,elective,MIS PDS c laminectomy L4-S1
+2026-05-11,46,15,elective,Change tube +/- Revision of tracheostomy
+2026-05-11,78,15,elective,Excision of deep cervical lymph node
+2026-05-11,27,10,elective,Laryngoscopy and other tracheoscopy
+2026-05-11,106,135,elective,Complete thyroidectomy
+2026-05-11,13,15,elective,Flexible cystoscopy +/- dilate urethra + retain Foley cath.
+2026-05-11,19,40,elective,hemorrhoidectomy
+2026-05-11,19,40,elective,hemorrhoidectomy
+2026-05-11,52,40,elective,AVF Lt forearm
+2026-05-11,53,30,elective,revise AVBG + balloon venoplasty
+2026-05-11,53,40,elective,AVF RT cubital
+2026-05-11,53,30,elective,revise AVBG + balloon venoplasty
+2026-05-11,52,30,elective,proximalized AVF Lt wrist
+2026-05-11,20,50,elective,TCC Rt IJV + ligate AVF Lt arm
+2026-05-11,138,45,elective,PTA Lt. Arm
+2026-05-11,66,20,elective,fistulogram + PTA
+2026-05-11,64,20,elective,Fistulogram +/- PTA
+2026-05-11,29,30,elective,Revise TCC Rt IJV
+2026-05-11,83,25,elective,Lt brachiocephalic AVF
+2026-05-11,84,60,elective,Rt upper arm loop AVBG
+2026-05-11,81,30,elective,Rt radiocephalic AVF
+2026-05-11,88,30,elective,Lt radiocephalic AVF or Lt brachiocephalic AVF
+2026-05-11,116,75,elective,Lt. open thoracotomy c decorticate with stop bleed
+2026-05-11,105,225,elective,open right posterior sectionectomy
+2026-05-11,104,58,elective,LC
+2026-05-11,105,65,elective,LC
+2026-05-10,12,13,elective,I and D
+2026-05-10,71,18,elective,close reduction
+2026-05-09,59,135,elective,open left hernioplasty
+2026-05-08,75,95,elective,appendectomy
+2026-05-08,75,120,elective,appendectomy
+2026-05-08,153,196,elective,ACDF C4-7 peek plate
+2026-05-08,65,60,elective,lower eyelid correction
+2026-05-08,69,55,elective,Correction Upper Eyelid Eyelid
+2026-05-08,55,5,elective,Fistulectomy
+2026-05-08,22,75,elective,colonoscopy
+2026-05-08,16,5,elective,LIFT
+2026-05-08,37,20,elective,Revise TCC right IJV
+2026-05-07,33,25,elective,amputation 4-5th of lt.foot finger
+2026-05-07,70,80,elective,sternotomy with EL with supradiaphragm IVC -  abdominal IVC cannulation with systemic Hep+Pringle+IVC clamping > IVC repair
+2026-05-07,70,80,elective,sternotomy with EL with supradiaphragm IVC -  abdominal IVC cannulation with systemic Hep+Pringle+IVC clamping > IVC repair
+2026-05-07,140,210,elective,ACDF C 56 PEEK PLATE THEN LAMINECTOMY W LATERAL MASS SCREW  FIXATION
+2026-05-07,59,45,elective,Excision
+2026-05-07,63,50,elective,Excision  Bx.
+2026-05-07,59,230,elective,facelife+endotine
+2026-05-07,17,10,elective,cysto remove stone
+2026-05-07,14,15,elective,rezum
+2026-05-07,16,10,elective,Cystoscopy + lt.RP + DJ stent
+2026-05-07,151,55,elective,craniotomy c clot removal
+2026-05-07,62,136,elective,AVBG Rt.upper arm
+2026-05-07,57,40,elective,AVF Rt wrist
+2026-05-07,56,40,elective,AVF Rt cubital
+2026-05-07,54,40,elective,AVF Rt wrist
+2026-05-07,55,40,elective,AVF Lt forearm
+2026-05-07,46,30,elective,AVF Rt.wrist
+2026-05-07,100,15,elective,PTA Lt.
+2026-05-07,17,20,elective,"TCC Rt IJV , centros"
+2026-05-07,67,10,elective,ligate AVF Rt wrist
+2026-05-07,82,90,elective,AVBG Lt upperarm
+2026-05-07,89,110,elective,AVBG Rt forearm
+2026-05-07,121,55,elective,Bilateral venaseal with phlebectomy
+2026-05-07,105,67,elective,Rt Venaseal with phlebectomy
+2026-05-07,68,95,elective,Superficialization
+2026-05-07,99,55,elective,Balloon venoplasty with Revised TCC Rt IJV
+2026-05-07,109,70,elective,Sternotomy with pericardial drainage
+2026-05-07,54,95,elective,EGD+ feeding jejunostomy
+2026-05-07,186,85,elective,lap diagnosis with peritoneal biopsy
+2026-05-07,186,85,elective,lap diagnosis with peritoneal biopsy
+2026-05-07,70,15,elective,EGD with biopsy
+2026-05-07,74,25,elective,ERCP
+2026-05-06,164,261,elective,L3-4-5 Laminectomy with PDS fixation
+2026-05-06,31,20,elective,tracheostomy
+2026-05-06,46,15,elective,Excision
+2026-05-06,11,5,elective,Flexible cystoscopy (surveillnace)
+2026-05-06,11,5,elective,Flexible cystoscopy+/- dilate urethra
+2026-05-06,5,5,elective,Flexible cystoscopy
+2026-05-06,11,5,elective,Flexible cystoscopy (surveillance)
+2026-05-06,47,10,elective,change Lt. DJ stent
+2026-05-06,10,5,elective,TRUS biopsy
+2026-05-06,101,55,elective,Lt. hydrocelectomy
+2026-05-06,58,5,elective,Flex. cystoscopy
+2026-05-06,9,10,elective,off rt dj
+2026-05-06,50,5,elective,excision
+2026-05-06,43,55,elective,explore with repair penis
+2026-05-06,84,35,elective,Lt brachiocephalic AVF
+2026-05-06,77,40,elective,Balloon venoplasty
+2026-05-06,85,40,elective,Lt radiocephalic AVF
+2026-05-06,76,40,elective,Balloon venoplasty
+2026-05-06,24,15,elective,TCC insertion at Lt IJV
+2026-05-06,41,15,elective,remove IVC filter
+2026-05-06,26,20,elective,"TCC Lt IJV , centros"
+2026-05-06,26,25,elective,"TCC Lt IJV , centros"
+2026-05-06,58,55,elective,drainage pseudoaneurysm
+2026-05-06,68,65,elective,AVBG RT forearm
+2026-05-06,54,15,elective,fistulogram + balloo venoplasty
+2026-05-06,48,50,elective,AVF Lt cubital
+2026-05-06,51,60,elective,AVF Lt forearm
+2026-05-05,14,10,elective,EGD
+2026-05-05,120,265,elective,Rt ventriculostomy c suboccipital craniectomy c cerebellectomy
+2026-05-05,92,85,elective,Microdecompression Rt L4/5 L5/S1
+2026-05-05,133,114,elective,MIS TLIF L4/5
+2026-05-05,185,85,elective,orif with kwire + repair tendon
+2026-05-05,10,10,elective,flexible cysto
+2026-05-05,13,20,elective,cystoscope irrigate bladder
+2026-05-05,21,20,elective,MRI - fusion TRUs _ bx
+2026-05-05,21,20,elective,MRI -fusion TRUS- Bx
+2026-05-05,21,12,elective,MRI fusion - TRUS - Bx
+2026-05-05,60,30,elective,FIPS
+2026-05-05,11,5,elective,LIS
+2026-05-05,24,20,elective,LIFT
+2026-05-05,23,20,elective,hemorrhoidectomy
+2026-05-05,26,20,elective,hemorrhoidectomy
+2026-05-05,26,20,elective,hemorrhoidectomy
+2026-05-05,34,40,elective,EGD+colonoscopy
+2026-05-05,121,235,elective,Bilateral crossover angioplasty
+2026-05-05,93,30,elective,Balloon venoplasty
+2026-05-04,51,30,elective,change packing
+2026-05-04,98,159,elective,left BKA
+2026-05-04,70,22,elective,3rd Toe amputation Lt. foot
+2026-05-04,47,115,elective,Open appendectomy
+2026-05-03,148,105,elective,balloon angioplasty +/-stent right leg
+2026-05-02,141,190,elective,EL c gastrotomy c duodenotomy
+2026-05-02,141,190,elective,EL c gastrotomy c duodenotomy
+2026-05-01,149,145,elective,ACDF C3-6 peek and plate
+2026-05-01,165,80,elective,Rt craniotomy with hematoma removal
+2026-05-01,102,100,elective,endoscopic septoplasty with endoscopic DCR
+2026-05-01,52,70,elective,ptosis correction
+2026-05-01,69,40,elective,Corrction Upper Eyelid
+2026-05-01,68,25,elective,EC
+2026-05-01,71,15,elective,excition
+2026-05-01,48,55,elective,remove both silicone
+2026-05-01,57,60,elective,LB
+2026-05-01,50,25,elective,excision
+2026-05-01,28,25,elective,EGD  + Colonoscopy
+2026-05-01,36,25,elective,"Laser hemorrhoidoplasty, Hemorrhoidectomy"
+2026-05-01,36,15,elective,Laser hemorrhoidoplasty
+2026-05-01,173,265,elective,Lap RHC
+2026-05-01,19,30,elective,Fistulotomy + hemorrhoidectomy
+2026-05-01,62,25,elective,Angiogram with cover stent Rt. popliteal artery +- open draainage
+2026-05-01,62,25,elective,Angiogram with cover stent Rt. popliteal artery +- open draainage
+2026-05-01,139,255,elective,vats rll lobectomy
+2026-04-30,57,40,elective,Graft thrombectomy c balloon venoplasty
+2026-04-30,139,35,elective,open repair IVC +/- IVC fillter + balloon occlusion
+2026-04-30,49,20,elective,EGD + biopsy +/- NG
+2026-04-30,50,20,elective,debridement
+2026-04-30,11,5,elective,cysto
+2026-04-30,47,10,elective,trux bx
+2026-04-30,5,10,elective,trus bx
+2026-04-30,70,40,elective,left varicocelectomy
+2026-04-30,68,20,elective,left urs + left RP +- DJ stent ใช้ flu
+2026-04-30,29,20,elective,"revise TCC RT IJV , centros"
+2026-04-30,31,15,elective,"revise TCC RT IJV , centros"
+2026-04-30,25,20,elective,TCC Rt
+2026-04-30,20,15,elective,"TCC Rt IJV , centros"
+2026-04-30,104,115,elective,Rt TCC IJV
+2026-04-30,104,115,elective,Rt TCC IJV
+2026-04-30,51,30,elective,AVF Lt cubital
+2026-04-30,51,35,elective,AVF Lt cubital
+2026-04-30,51,30,elective,AVF Lt cubital
+2026-04-30,101,35,elective,LC
+2026-04-30,106,48,elective,LC
+2026-04-30,98,35,elective,LC
+2026-04-30,104,70,elective,LC
+2026-04-29,157,200,elective,"craniotomy with tumor removal (microscope, CUSA)"
+2026-04-29,141,169,elective,L4-5 laminectomy with PDS fixation
+2026-04-29,92,134,elective,right retrosigmoid suboccipital craniotomy with microvascular decompression (MVD)
+2026-04-29,64,105,elective,T&A by Coblator + Nasal endoscope
+2026-04-29,27,5,elective,RF palate (LA)
+2026-04-29,68,5,elective,2nd RF palate (LA)
+2026-04-29,23,10,elective,RF nose + RF palate (LA)
+2026-04-29,24,20,elective,RF nose + RF palate (LA)
+2026-04-29,58,5,elective,Flex. cystoscopy
+2026-04-29,58,5,elective,Flex. cystoscopy
+2026-04-29,57,195,elective,excision parafin with first stage repair
+2026-04-29,125,110,elective,Lap left pyeloplasty
+2026-04-29,125,160,elective,aneurysmectomy + repaired brachial artery
+2026-04-29,24,15,elective,TCC insertion at Rt IJV
+2026-04-29,24,10,elective,TCC insertion at Rt IJV
+2026-04-29,67,40,elective,AVBG Rt forearm
+2026-04-29,53,30,elective,AVF Lt forearm+- TCC at Rt IJV
+2026-04-29,17,25,elective,TCC rt IJV
+2026-04-29,26,15,elective,TCC Lt IJV
+2026-04-28,58,115,elective,open appendectomy
+2026-04-28,49,20,elective,Excision left preauricular mass
+2026-04-28,52,40,elective,Tonsillectomy
+2026-04-28,67,80,elective,Left thyroid lobectomy
+2026-04-28,11,5,elective,Lt. DJ stemt removal
+2026-04-28,53,5,elective,flex. cysto
+2026-04-28,46,55,elective,Laser cystolithotripsy with saturated REZUM
+2026-04-28,45,110,elective,tur-p + cystolithotripsy
+2026-04-28,37,10,elective,left DJ stent insertion
+2026-04-28,31,40,elective,EGD + Colonoscopy
+2026-04-28,24,37,elective,Colonoscopy
+2026-04-28,24,35,elective,hemorrhoidectomy
+2026-04-28,70,45,elective,Closure ileostomy
+2026-04-28,22,25,elective,Colonoscopy
+2026-04-28,24,35,elective,LIFT
+2026-04-28,25,10,elective,LIFT
+2026-04-28,25,10,elective,LIFT
+2026-04-28,47,30,elective,AVF Lt. Wrist
+2026-04-28,105,55,elective,pericardial window
+2026-04-28,134,165,elective,vats wedge resection of rul nodule c ln incisional bx
+2026-04-27,54,30,elective,Left BCT + SLNB
+2026-04-27,50,10,elective,VAE of left breast
+2026-04-27,16,10,elective,I and D
+2026-04-27,26,15,elective,I/D and debridement
+2026-04-27,17,10,elective,EGD
+2026-04-27,64,17,elective,EGD+colono
+2026-04-27,129,215,elective,Bilateral subcutaneous mastectomy
+2026-04-27,68,60,elective,second looked procedure
+2026-04-27,53,25,elective,Wide excision
+2026-04-27,76,25,elective,VAE of left breast
+2026-04-27,149,217,elective,L2-5 PDS c laminectomy under loopX
+2026-04-27,82,35,elective,\
+2026-04-27,26,45,elective,tracheostomy
+2026-04-27,61,43,elective,Permanent tracheostomy
+2026-04-27,72,140,elective,exploration of scalp flap with irrigation & drainage
+2026-04-27,72,140,elective,exploration of scalp flap with irrigation & drainage
+2026-04-27,122,155,elective,bilateral high ligation with venous stripping with right phlebectomy
+2026-04-27,27,20,elective,TCC left IJV
+2026-04-27,64,20,elective,fistulogram +/- PTA
+2026-04-27,38,20,elective,suture wound
+2026-04-27,60,30,elective,IVC filter insertion with bipolar hemiarthroplasty left hip
+2026-04-27,123,105,elective,LC +- EGD remove stent
+2026-04-26,148,45,elective,EL c temporary closure
+2026-04-26,36,35,elective,DB
+2026-04-25,52,25,elective,debridement c finger test
+2026-04-25,96,100,elective,left craniotomy with clot removal
+2026-04-24,56,90,elective,open appendectomy
+2026-04-24,45,65,elective,Debridement +/- suture
+2026-04-24,41,85,elective,Open appendectomy
+2026-04-24,81,227,elective,Right temporal lobectomy
+2026-04-24,158,259,elective,L2-4 PDS c laminectomy under loop X
+2026-04-24,30,40,elective,Tracheostomy
+2026-04-24,60,70,elective,Simple suture with short arm slab
+2026-04-24,60,70,elective,Simple suture with short arm slab
+2026-04-24,40,40,elective,Excisional bx.
+2026-04-24,65,95,elective,correction upper and lower eyelid under LA
+2026-04-24,40,75,elective,TUR-P นอกเวลา
+2026-04-24,36,80,elective,EGD+colonoscopy
+2026-04-24,33,30,elective,Laser hemorrhoidoplasty
+2026-04-24,9,15,elective,Fistulotomy
+2026-04-24,21,25,elective,LIFT
+2026-04-24,18,10,elective,LIFT
+2026-04-24,35,30,elective,EGD+colonoscopy
+2026-04-24,21,35,elective,hemorrhoidectomy
+2026-04-24,26,35,elective,colonoscopy
+2026-04-24,59,185,elective,Laparoascopic LAR
+2026-04-22,48,165,elective,open appendectomy
+2026-04-23,105,68,elective,craniecotmy c clot removal
+2026-04-23,115,275,elective,Lt FESS + navigator+ drill
+2026-04-23,100,60,elective,Endoscopic tumor removal +/- septoplasty c navigator protocal /GA
+2026-04-23,35,25,elective,circumcision
+2026-04-23,70,165,elective,left RIRS+laser
+2026-04-23,35,15,elective,"revise TCC Lt IJV , centros"
+2026-04-23,87,85,elective,AVBG Rt upperarm
+2026-04-23,96,45,elective,balloon venoplasty
+2026-04-23,14,15,elective,off TCC RT IJV
+2026-04-23,58,40,elective,TB1 Rt arm
+2026-04-23,50,40,elective,AVF Lt cubital
+2026-04-23,56,35,elective,revise AVF RT wrist
+2026-04-23,103,70,elective,LC
+2026-04-22,59,30,elective,amputate Lt 4th foot+DB
+2026-04-22,5,5,elective,cystoscopy
+2026-04-22,68,55,elective,Excision R10*2 L10*1 breast mass under GA
+2026-04-22,65,68,elective,Programable VP shunt
+2026-04-22,127,130,elective,Lt parietal craniotomy with tumor removal under navigation
+2026-04-22,100,107,elective,right cranioplasty
+2026-04-22,88,25,elective,left burr hole c irrigation and drainage
+2026-04-22,34,30,elective,T&A with coblator
+2026-04-22,43,20,elective,Tonsillectomy  + Adenoidectomy
+2026-04-22,34,30,elective,T&A with coblator
+2026-04-22,68,130,elective,1. Excision Breast Mass   2. Nasal Bone Osteotomy
+2026-04-22,68,130,elective,1. Excision Breast Mass   2. Nasal Bone Osteotomy
+2026-04-22,68,130,elective,1. Excision Breast Mass   2. Nasal Bone Osteotomy
+2026-04-22,5,5,elective,Flexible cystoscopy
+2026-04-22,12,5,elective,Flexible cystoscopy+-Dilate urethra
+2026-04-22,12,5,elective,Flexible cystoscopy (surveillance)
+2026-04-22,13,5,elective,Off Rt. DJ stent
+2026-04-22,5,10,elective,flexible cystoscopy
+2026-04-22,7,10,elective,TRUS Bx
+2026-04-22,135,160,elective,lap rt radical nephrectomy +- open
+2026-04-22,48,5,elective,Flex. cystoscopy
+2026-04-22,51,40,elective,suprapubic cystostomy + cysto irrigation
+2026-04-22,57,5,elective,Flex. cystoscopy
+2026-04-22,59,5,elective,Flex. cystoscopy with remove DJ stent
+2026-04-22,34,33,elective,Circumcision
+2026-04-22,76,105,elective,Left varicocelectomy
+2026-04-22,38,15,elective,Lt. URSL + DJ stent
+2026-04-22,32,30,elective,Bilateral orchiectomy
+2026-04-22,46,5,elective,วัด RU + cysto
+2026-04-22,70,65,elective,AVBG Rt forearm
+2026-04-22,51,55,elective,AVF Lt wrist
+2026-04-22,54,35,elective,AVF Rt cubital
+2026-04-22,18,15,elective,TCC Rt IJV
+2026-04-21,93,165,elective,PDS c laminectomy T10-L5
+2026-04-21,45,15,elective,Anterior palatoplasty
+2026-04-21,13,50,elective,off packing + sinuscope + stop bleeding +/- SPA ligation
+2026-04-21,13,50,elective,off packing + sinuscope + stop bleeding +/- SPA ligation
+2026-04-21,9,5,elective,flexible cysto
+2026-04-21,44,10,elective,urethral dilation
+2026-04-21,5,5,elective,flexible cystoscopy
+2026-04-21,122,230,elective,Lt. PCNL
+2026-04-21,41,90,elective,TUR-P นอกเวลา
+2026-04-21,265,320,elective,Lap LAR + Handsewn CAA + DLC
+2026-04-21,31,45,elective,revise TCC Lt IJV with balloon venoplasty
+2026-04-21,132,65,elective,aneurysmectomy
+2026-04-21,18,18,elective,"TCC Rt IJV , centros"
+2026-04-20,90,35,elective,Lt NLWE c SLNB
+2026-04-20,51,28,elective,DB left foot
+2026-04-20,78,30,elective,NLE L9 breast mass
+2026-04-20,150,125,elective,Left mastectomy with SLNB
+2026-04-20,150,125,elective,Left mastectomy with SLNB
+2026-04-20,170,65,elective,Lt BCT(NLWE) with TAD
+2026-04-20,170,65,elective,Lt BCT(NLWE) with TAD
+2026-04-20,113,25,elective,Rt NLE
+2026-04-20,144,189,elective,MIS PDS c laminectomy L4-S1
+2026-04-20,38,35,elective,tracheostomy
+2026-04-20,108,160,elective,Complete thyroidectomy
+2026-04-20,24,10,elective,I&D/GA
+2026-04-20,48,20,elective,excision
+2026-04-20,72,35,elective,open hemorrhoidectomy
+2026-04-20,90,55,elective,balloon venoplasty
+2026-04-20,129,30,elective,PTA
+2026-04-20,61,30,elective,Fistulogram +/- PTA
+2026-04-20,131,50,elective,PTA Lt. RC-AVF
+2026-04-20,25,10,elective,EGD
+2026-04-20,115,65,elective,LC +/- EGD remove stent รอดู intraop
+2026-04-20,110,55,elective,LC
+2026-04-19,181,108,elective,Lt.craniotomy c clot removal
+2026-04-19,46,20,elective,u cath
+2026-04-18,42,30,elective,DB left foot
+2026-04-18,53,25,elective,revised TCC right IJV
+2026-04-17,144,100,elective,EL
+2026-04-17,47,40,elective,open appendectomy
+2026-04-17,115,85,elective,EL +/- small bowel resection
+2026-04-17,93,355,elective,Endoscopic transnasal with Transcranial approach
+2026-04-17,139,237,elective,MIS PDS c laminectomy L2-5
+2026-04-17,128,140,elective,MIS TLIF L4/5
+2026-04-17,106,50,elective,endoscopic septoplastoplasty
+2026-04-17,61,25,elective,ostectomy
+2026-04-17,54,15,elective,excision
+2026-04-17,52,60,elective,floor reconstruction
+2026-04-17,49,30,elective,LB
+2026-04-17,12,10,elective,flexible cystoscope
+2026-04-17,60,80,elective,AVBG Lt.forearm
+2026-04-17,44,20,elective,Proximalization Lt AVF
+2026-04-17,46,10,elective,fistulogram+-Balloon angioplasty
+2026-04-17,53,60,elective,Revise AVBG
+2026-04-17,26,10,elective,EGD
+2026-04-16,27,10,elective,EGD
+2026-04-16,119,15,elective,bilateral myringotomy with PE tube
+2026-04-16,106,135,elective,Rt thyroid lobectomy
+2026-04-16,108,65,elective,endoscopic debridement c biopsy /GA
+2026-04-16,69,45,elective,SPA ligation RT
+2026-04-16,7,15,elective,cystoscopy
+2026-04-16,16,5,elective,cysto off left dj stent
+2026-04-16,6,5,elective,trus bx
+2026-04-16,22,15,elective,mri trux bx
+2026-04-16,24,15,elective,mri fusion bx
+2026-04-16,76,165,elective,open pyeloplasty
+2026-04-16,20,35,elective,Hemorrhoidectomy
+2026-04-16,31,25,elective,Chemoport insertion
+2026-04-16,26,15,elective,"TCC Lt IJV , centros"
+2026-04-16,19,15,elective,TCC Rt IJV
+2026-04-16,56,25,elective,AVF Lt forearm
+2026-04-16,57,25,elective,AVF Lt wrist
+2026-04-16,55,10,elective,EGD+Bx
+2026-04-16,190,335,elective,lap IOUS +ablation2lesion+ wedge1lesion + drop colostomy
+2026-04-16,112,105,elective,LC
+2026-04-15,66,115,elective,Open Rt hernioplasty
+2026-04-15,43,10,elective,cystospopy under local (rigid)
+2026-04-15,48,90,elective,DB +/- AKA Lt
+2026-04-14,79,20,elective,Rt. vetriculostomy
+2026-04-13,39,85,elective,colonoscope + loop proximal transverse colostomy
+2026-04-12,137,70,elective,EL with small resection +/- gastrectomy
+2026-04-12,52,85,elective,OC
+2026-04-12,5,10,elective,cystoscope
+2026-04-10,87,50,elective,appendectomy
+2026-04-10,112,210,elective,Rt BKA
+2026-04-10,49,50,elective,open appendectomy
+2026-04-10,93,120,elective,Foraminotomy L5/S1 Lt and Rt
+2026-04-10,90,105,elective,Microdecompression L4/5 Lt
+2026-04-10,67,90,elective,Correction of Eyelid
+2026-04-10,46,40,elective,wide excision
+2026-04-10,71,70,elective,k-wire fixation under local
+2026-04-10,31,62,elective,EGD + Colonoscopy
+2026-04-10,28,45,elective,EGD + colonoscopy
+2026-04-10,27,20,elective,TCC insertion at Lt IJV
+2026-04-10,26,20,elective,TCC insertion at Rt IJV
+2026-04-10,134,295,elective,VATS RLL basal segmentectomy+/- RLL lobectomy
+2026-04-09,58,70,elective,Implant removal both side
+2026-04-09,102,115,elective,LC then EGD colonscopy +/- remove stent
+2026-04-09,102,115,elective,LC then EGD colonscopy +/- remove stent
+2026-04-09,66,10,elective,permcath Rt IJV
+2026-04-09,45,55,elective,Rt. MMA
+2026-04-09,108,540,elective,open rhinoplasty
+2026-04-09,18,10,elective,Cystoscope+ retain foley
+2026-04-09,47,5,elective,fcystoscopy
+2026-04-09,47,5,elective,fcystoscopy
+2026-04-09,48,5,elective,fcystoscopy + off JJ Stent
+2026-04-09,29,25,elective,Bilateral orchiectomy
+2026-04-09,23,30,elective,TUR-BT
+2026-04-09,51,35,elective,TURP
+2026-04-09,15,10,elective,I&D
+2026-04-09,17,20,elective,"TCC RT IJV , centros"
+2026-04-09,113,85,elective,Lt AVBG upper arm
+2026-04-09,50,60,elective,Loop AVBG Lt upper arm
+2026-04-09,95,35,elective,Balloon venoplasty
+2026-04-09,64,45,elective,Bilateral RFA with Lt phelbectomy
+2026-04-09,119,170,elective,Bilateral venaseal with phlebecotmy
+2026-04-09,189,160,elective,lap ablation S8  14.00น
+2026-04-08,88,75,elective,Lt open herniorrhaphy
+2026-04-08,74,40,elective,excision under GA
+2026-04-08,89,145,elective,right TM with SLNB ( dual tracer)
+2026-04-08,56,70,elective,Open appendectomy
+2026-04-08,120,220,elective,"Bilateral inguinal hernia repair with graft or prosthesis, not otherwise specified, LC + bilat hernioplasty"
+2026-04-08,25,15,elective,TCC Rt IJV under local
+2026-04-08,87,136,elective,T11-L1 PDS fixation with T12 laminectomy
+2026-04-08,29,32,elective,tracheostomy
+2026-04-08,43,15,elective,tonsillectomy  with coblator
+2026-04-08,19,10,elective,RF palate
+2026-04-08,63,10,elective,excision granulation
+2026-04-08,54,25,elective,LB
+2026-04-08,62,55,elective,STSG + VAC dressing
+2026-04-08,5,5,elective,Flexible cystoscopy
+2026-04-08,12,5,elective,Flexible cystoscopy (surveillance)
+2026-04-08,10,5,elective,TRUS biopsy
+2026-04-08,63,5,elective,Penile biopsy
+2026-04-08,27,30,elective,TUR-BT
+2026-04-08,47,45,elective,TUR-P
+2026-04-08,10,5,elective,flexible cystoscopy under local
+2026-04-08,13,30,elective,Cystoscopy with dilate urethra
+2026-04-08,74,55,elective,rt orchiopexy
+2026-04-08,14,30,elective,REZUM
+2026-04-08,78,20,elective,Balloon venoplasty
+2026-04-08,90,40,elective,Lt radiocephalic AVF
+2026-04-08,75,25,elective,Balloon venoplasty
+2026-04-08,84,40,elective,Lt brachiocephalic AVF
+2026-04-08,53,20,elective,Graft thormbectomy + Balloon venoplasty
+2026-04-08,77,30,elective,Balloon venopalsty
+2026-04-08,70,55,elective,AVBG Lt forearm
+2026-04-08,53,55,elective,AVF Rt wrist
+2026-04-08,52,50,elective,AVF Rt forearm
+2026-04-08,53,45,elective,revise AVBG with balloon venoplasty Rt upperarm
+2026-04-08,17,20,elective,"TCC RT IJV , centros"
+2026-04-08,18,8,elective,"TCC Rt IJV , centros"
+2026-04-07,41,5,elective,EGD try LA +/- IV sedate
+2026-04-07,141,141,elective,MIS TLIF L4-S1
+2026-04-07,91,25,elective,Tracheostomy c C-line
+2026-04-07,54,5,elective,flex. cysto
+2026-04-07,11,5,elective,flexible cysto
+2026-04-07,43,10,elective,S- curve under IV sedation
+2026-04-07,16,19,elective,TUF
+2026-04-07,42,44,elective,TURP + cystolitholapaxy +- hydrocelectomy under SB
+2026-04-07,32,60,elective,EGD+colonoscopy
+2026-04-07,53,155,elective,Revised colostomy + removal of DJ stent
+2026-04-07,53,155,elective,Revised colostomy + removal of DJ stent
+2026-04-07,56,30,elective,Excision of pseudoaneurysm (vein)
+2026-04-07,80,45,elective,Balloon venoplasty + ligate tributary
+2026-04-07,92,15,elective,Balloon venoplasty
+2026-04-07,113,60,elective,Lt forearm loop AVBG
+2026-04-07,65,35,elective,cover stent Rt CIA with embolization Rt IIA
+2026-04-07,12,15,elective,off Perm cath
+2026-04-07,102,61,elective,Rt HL with VS with phlebectomy
+2026-04-07,51,20,elective,Revised TCC Rt IJV
+2026-04-06,18,60,elective,TUF under GA
+2026-04-05,61,45,elective,Vac dressing
+2026-04-05,16,10,elective,rigid cystoscopy + irrigation
+2026-04-03,58,100,elective,Extended Craniectomy
+2026-04-03,122,170,elective,bilat ESS c Navigator
+2026-04-03,42,35,elective,Rt MMA
+2026-04-03,52,5,elective,excision
+2026-04-03,53,5,elective,excision
+2026-04-03,52,5,elective,excision
+2026-04-03,57,15,elective,revision scar
+2026-04-03,51,5,elective,excision
+2026-04-03,138,270,elective,Lap. left hemicolectomy
+2026-04-03,31,30,elective,EGD + Colonoscopy
+2026-04-03,122,235,elective,Open subtotal colectomy
+2026-04-03,31,45,elective,EGD  + colonoscopy
+2026-04-02,49,125,elective,open appendectomy
+2026-04-02,121,25,elective,Bilateral myringotomy with PE tube
+2026-04-02,112,145,elective,Lt endoscopic tympanoplasty + canaloplasty with +-  cartilage graft
+2026-04-02,51,35,elective,Wide  Excision
+2026-04-02,62,50,elective,Revision
+2026-04-02,30,35,elective,"revise TCC Rt IJV , centros"
+2026-04-02,29,35,elective,revise TCC Rt IJV
+2026-04-02,112,80,elective,Lt upper arm loop AVBG
+2026-04-02,50,40,elective,Change Vac dressing
+2026-04-02,55,30,elective,AVF Lt forearm ต่อสูง
+2026-04-02,57,35,elective,AVF Rt wrist
+2026-04-02,57,30,elective,AVF Lt wrist
+2026-04-02,55,45,elective,AVF Lt forearm
+2026-04-02,44,35,elective,AVF Lt cubital
+2026-04-02,105,40,elective,LC
+2026-04-02,103,220,elective,open right posterior sectionectomy
+2026-04-02,103,55,elective,LC
+2026-04-02,102,65,elective,LC
+2026-04-01,19,20,elective,TCC Rt IJV
+2026-04-01,27,20,elective,I&D Lt lower leg
+2026-04-01,86,205,elective,"mayfield , microscope . navigate"
+2026-04-01,87,107,elective,T10-11 laminectomy with tumor removal
+2026-04-01,85,310,elective,"C4-6 laminectomy + ACDF C4-5, C5-6 with plate-screw fixation"
+2026-04-01,64,80,elective,T&A by coblator 5000
+2026-04-01,66,10,elective,2nd RF BOT (LA)
+2026-04-01,48,35,elective,suture wound
+2026-04-01,52,5,elective,Flex. cystoscopy
+2026-04-01,7,5,elective,cystoscope
+2026-04-01,58,5,elective,Flex. cystoscopy
+2026-04-01,54,30,elective,proximalization AVF Lt wrist
+2026-04-01,55,30,elective,PORT A cath
+2026-04-01,54,30,elective,AVF RT wrist
+2026-04-01,49,30,elective,AVF Lt cubital
+2026-03-31,58,30,elective,EGD+colono
+2026-03-31,110,200,elective,Open PDS c laminectomy L3-5
+2026-03-31,61,40,elective,Tonsillectomy
+2026-03-31,6,5,elective,Remove DJ stent
+2026-03-31,11,5,elective,flexible cysto
+2026-03-31,11,5,elective,flexible cysto
+2026-03-31,13,5,elective,REZUM
+2026-03-31,9,5,elective,cystoscope + ureteric dilatation
+2026-03-31,34,35,elective,circumcision under ga (special needs patient)
+2026-03-31,42,60,elective,TUR-P
+2026-03-31,65,77,elective,Transbrachial subclavian angioplasty with stent
+2026-03-31,64,35,elective,1st - 3 rd toe amputation
+2026-03-31,65,80,elective,Downhill angioplasty left leg
+2026-03-31,65,80,elective,Downhill angioplasty left leg
+2026-03-30,77,30,elective,gastro+ colonoscope
+2026-03-30,77,30,elective,gastro+ colonoscope
+2026-03-30,73,165,elective,open left hernioplasty
+2026-03-30,71,100,elective,Left Total mastectomy c SLNB dual technique + remove clip at Lt ALN
+2026-03-30,86,45,elective,Left BCT (NLWE) c SLNB
+2026-03-30,54,50,elective,Right BCT + SLNB
+2026-03-30,36,35,elective,RFA/ venous stripping
+2026-03-30,70,70,elective,Re-wide excision right breast
+2026-03-30,65,40,elective,excisional biopsy Lt breast mass
+2026-03-30,80,60,elective,Wide excision ofleft  breast
+2026-03-30,140,151,elective,MIS PDS c laminectomy L3-5
+2026-03-30,34,120,elective,Other excision of salivary gland lesion
+2026-03-30,28,25,elective,INCISION AND DRAINAGE OF ABSCESS
+2026-03-30,76,25,elective,Balloon venoplasty
+2026-03-30,87,40,elective,Lt radiocephalic AVF
+2026-03-30,72,30,elective,Balloon venoplasty
+2026-03-28,42,225,elective,Open appendectomy
+2026-03-28,89,75,elective,LC
+2026-03-27,51,15,elective,Ptosis correction
+2026-03-27,52,65,elective,Lower eyelid
+2026-03-27,60,40,elective,exiciosion with STSG (donor from thign)
+2026-03-27,59,10,elective,excision ec
+2026-03-27,53,10,elective,excision
+2026-03-27,134,325,elective,Total Cystectomy
+2026-03-27,20,35,elective,Colonoscopy
+2026-03-27,19,25,elective,LIFT
+2026-03-27,54,80,elective,revised colostomy
+2026-03-27,8,35,elective,transanal excision
+2026-03-27,35,25,elective,Laser hemorrhoid
+2026-03-27,150,95,elective,EL + tumor removal + bilateral oophorectomy
+2026-03-27,60,45,elective,Graft thrombectomy with balloon venoplasty
+2026-03-26,22,5,elective,DL +- Bx
+2026-03-26,27,30,elective,tracheostomy
+2026-03-26,61,20,elective,Excision
+2026-03-26,60,20,elective,excision
+2026-03-26,60,55,elective,Excision
+2026-03-26,49,135,elective,RIRS+laser
+2026-03-26,13,15,elective,REZUM
+2026-03-26,5,5,elective,TRUS - Bx
+2026-03-26,22,15,elective,TUR-BT
+2026-03-26,38,55,elective,laser vc with turp
+2026-03-26,120,215,elective,Bilateral venous stripping with stab avulsion
+2026-03-26,20,10,elective,TCC right IJV
+2026-03-26,58,30,elective,revised stump
+2026-03-26,71,75,elective,AVBG Rt upperarm
+2026-03-26,54,35,elective,revise AVF Lt wrist
+2026-03-26,57,25,elective,AVF Rt forearm
+2026-03-25,80,390,elective,Right suboccipital craniotomy with tumor removal
+2026-03-25,102,10,elective,Rt. myringotomy tube + PE /LA
+2026-03-25,31,20,elective,Tracheostomy
+2026-03-25,30,25,elective,Tracheostomy
+2026-03-25,77,25,elective,Excision
+2026-03-25,63,10,elective,biopsy penile mass
+2026-03-25,17,15,elective,lt dj stent under tiva +- flexible ursl
+2026-03-25,57,150,elective,turp
+2026-03-25,5,5,elective,off dj stent
+2026-03-25,52,5,elective,Flex. cystoscopy
+2026-03-25,23,60,elective,TUR-BT
+2026-03-25,13,10,elective,Cystoscopy with lt. DJ stent
+2026-03-25,53,120,elective,cystolitholapaxy under spinal block
+2026-03-25,132,255,elective,Lap. nephrectomy
+2026-03-25,132,255,elective,Lap. nephrectomy
+2026-03-25,31,30,elective,circumcision
+2026-03-25,30,30,elective,colonoscope
+2026-03-25,161,25,elective,Balloon angioplasty with stent
+2026-03-25,161,25,elective,Balloon angioplasty with stent
+2026-03-25,52,30,elective,AVF Rt wrist
+2026-03-25,87,30,elective,Lt radiocephalic AVF
+2026-03-25,84,30,elective,Lt brachiocephalic AVF
+2026-03-24,111,219,elective,Open PDS c laminectomy L3-S1
+2026-03-24,61,50,elective,Tonsillectomy
+2026-03-24,36,5,elective,remove foreign body
+2026-03-24,30,35,elective,EGD + colonoscopy
+2026-03-24,12,25,elective,LIS + Excision
+2026-03-24,25,15,elective,Hemorrhoidectomy
+2026-03-24,10,5,elective,LIS
+2026-03-24,60,20,elective,IAS with STES
+2026-03-24,62,100,elective,STSG Lt leg
+2026-03-23,77,37,elective,gastro+colonoscope
+2026-03-23,99,120,elective,Left MRM
+2026-03-23,48,150,elective,open appendectomy
+2026-03-23,75,40,elective,NLE breast mass
+2026-03-23,114,35,elective,Rt breast mass excision
+2026-03-23,69,40,elective,excision Lipoma Rt frank
+2026-03-23,70,105,elective,Excision Rt axillary tail mass with implant removal both breasts
+2026-03-23,115,219,elective,Open PDS c laminectomy L3-S1
+2026-03-23,27,40,elective,Temporary tracheostomy
+2026-03-23,27,10,elective,Laryngoscopy and other tracheoscopy
+2026-03-23,27,5,elective,Laryngoscopy and other tracheoscopy
+2026-03-23,52,15,elective,revised TCC right IJV
+2026-03-23,76,20,elective,Balloon venoplasty
+2026-03-23,76,20,elective,Balloon venoplasty
+2026-03-23,24,12,elective,TCC Rt. EJV+-CFV 9/4/69
+2026-03-23,51,15,elective,Revised TCC Rt IJV
+2026-03-23,59,75,elective,Fistulogram +/- PTA Lt. arm
+2026-03-23,65,30,elective,Fistologram +/- PTA
+2026-03-23,62,40,elective,Fistulogram +- venoplasty
+2026-03-23,61,20,elective,ligated AVF left brachiocephalic
+2026-03-22,65,60,elective,clot evacuation with suture wound
+2026-03-21,34,30,elective,Intersphicteric drainage
+2026-03-21,44,150,elective,lower blephaloplasty
+2026-03-20,43,25,elective,gastro+ colonsocope
+2026-03-20,27,45,elective,tracheostomy
+2026-03-20,138,230,elective,laminectomy with PDS fixation L2-S1
+2026-03-20,72,88,elective,Revise screw L 4-5- S1
+2026-03-20,101,85,elective,"endoscopic tumor removal with navigator ,microdebrider"
+2026-03-20,65,280,elective,Face lifting
+2026-03-20,56,20,elective,"Excision, Ec"
+2026-03-20,60,30,elective,ptosis correction
+2026-03-20,168,315,elective,Lap. extended RHC
+2026-03-20,30,40,elective,EGD + Colonoscopy
+2026-03-20,25,10,elective,Hemorrhoidectomy
+2026-03-20,31,40,elective,Chemoport insertion
+2026-03-20,22,10,elective,LIFT
+2026-03-20,106,10,elective,Lt.Graft thrombectomy + balloon venoplasty
+2026-03-20,19,10,elective,"TCC RT IJV , centros"
+2026-03-20,24,15,elective,"TCC Lt IJV , centros"
+2026-03-19,70,76,elective,OC
+2026-03-19,116,85,elective,Lt MMA/GA
+2026-03-19,104,60,elective,Lt endoscopic tympanoplasty
+2026-03-19,52,75,elective,excision
+2026-03-19,22,10,elective,mri fusion triux bx
+2026-03-19,47,25,elective,vasectomy
+2026-03-19,5,10,elective,trus bx
+2026-03-19,41,35,elective,rt ursl
+2026-03-19,120,75,elective,Bilateral venaseal with Lt phlebectomy
+2026-03-19,96,25,elective,Balloon venoplasty
+2026-03-19,96,20,elective,Balloon venoplasty
+2026-03-19,32,30,elective,Revise TCC Rt IJV
+2026-03-19,36,25,elective,"revise TCC Lt IJV , palindrome"
+2026-03-19,114,75,elective,Lt upper arm loop AVBG
+2026-03-19,54,25,elective,AVF Lt wrist
+2026-03-19,80,15,elective,balloon venoplasty
+2026-03-19,56,30,elective,AVF Lt wrist
+2026-03-19,52,20,elective,EGD + colonscopy
+2026-03-19,102,110,elective,LC
+2026-03-19,116,75,elective,LC +- convert OC
+2026-03-19,71,25,elective,ERCP
+2026-03-18,97,25,elective,LC
+2026-03-18,175,70,elective,lap. appendectomy
+2026-03-18,140,166,elective,L4-5 laminectomy with PDS fixation
+2026-03-18,64,75,elective,T&A by Coblator + nasal endoscope 0 เล็ก
+2026-03-18,22,5,elective,RF palate (2nd time) LA
+2026-03-18,24,20,elective,RF nose + RF palate (LA)
+2026-03-18,51,40,elective,LB
+2026-03-18,11,5,elective,Flexible cystoscopy (surveillance)
+2026-03-18,45,15,elective,"Change Rt. DJ stent (OPD, LA)"
+2026-03-18,63,8,elective,Dilate urethra
+2026-03-18,36,65,elective,Circumcision
+2026-03-18,55,175,elective,rt pcnl
+2026-03-18,57,5,elective,Flex. cystoscopy
+2026-03-18,53,80,elective,HoLEP
+2026-03-18,19,5,elective,dj stent under tiva
+2026-03-18,51,95,elective,holep
+2026-03-18,24,15,elective,MRI fusion c Bx
+2026-03-18,22,25,elective,mri fusion trux bx
+2026-03-18,26,15,elective,TCC insertion at Rt IJV
+2026-03-18,159,115,elective,Balloon angioplasty with aortic stent
+2026-03-17,34,20,elective,EGD colonoscopy
+2026-03-17,96,45,elective,LC
+2026-03-17,45,50,elective,Debridement
+2026-03-17,140,125,elective,MIS TLIF L 45
+2026-03-17,146,159,elective,LAMINECTOMY W PDS FIXATION T 1-11
+2026-03-17,32,60,elective,DL c flexible laryngoscopy c biopsy c telescope30
+2026-03-17,5,5,elective,off dj stent
+2026-03-17,11,5,elective,flexible cysto
+2026-03-17,11,5,elective,flexible cysto
+2026-03-17,9,5,elective,flexible cystoscope
+2026-03-17,33,40,elective,circumcision
+2026-03-17,7,5,elective,TRUS-Bx
+2026-03-17,43,75,elective,TUR-P
+2026-03-17,272,238,elective,Lap. LAR with handsewn CAA with diverting colostomy
+2026-03-17,51,200,elective,DDKT
+2026-03-17,51,200,elective,DDKT
+2026-03-17,51,200,elective,DDKT
+2026-03-17,76,60,elective,Excision biopsy Rt cervical LN
+2026-03-16,64,25,elective,open hemorrhoidectomy
+2026-03-16,78,20,elective,NLexcision breast mass*2 at L2
+2026-03-16,112,95,elective,Right Mastectomy with SLNB
+2026-03-16,128,155,elective,Open total parathyroidectomy with ATX right forearm
+2026-03-16,128,155,elective,Open total parathyroidectomy with ATX right forearm
+2026-03-16,92,180,elective,1. MIS TLIF L 45  2. ACDF C 56
+2026-03-16,72,155,elective,superficial +/- total parotidectomy C Facial nerve monitoring/GA
+2026-03-16,86,30,elective,Lt brachiocephalic AVF
+2026-03-16,88,30,elective,Lt radiocephalic AVF
+2026-03-16,85,75,elective,AVBG Rt upperarm
+2026-03-16,35,15,elective,Revise TCC Lt. IJV
+2026-03-16,25,15,elective,TCC insertion at IJV
+2026-03-16,78,35,elective,Balloon venoplasty
+2026-03-15,130,60,elective,lap appendectomy
+2026-03-15,110,95,elective,craniotomy with hematoma removal
+2026-03-14,143,208,elective,LAMINECTOMY W PDS FIXATION L 45S1 MIS
+2026-03-14,6,25,elective,off JJ Stent+repair circumcision wound
+2026-03-13,138,122,elective,MIS TLIF L 5S1
+2026-03-13,137,119,elective,MIS TLIF L5-S1
+2026-03-13,50,20,elective,excision
+2026-03-13,134,60,elective,bilat FESS navigator microdebrider
+2026-03-13,69,135,elective,Burn scar Correction with STSG
+2026-03-13,59,35,elective,Ptosis correction
+2026-03-13,57,15,elective,ptosis correction
+2026-03-13,59,10,elective,EC
+2026-03-13,29,20,elective,chemoport insertion
+2026-03-13,17,10,elective,Hemorrhoidectomy
+2026-03-13,18,20,elective,Hemorrhoidectomy
+2026-03-13,34,65,elective,EGD + Colonoscopy
+2026-03-13,31,50,elective,Chemoport insertion under LA
+2026-03-13,14,15,elective,fistulotomy
+2026-03-13,33,30,elective,laser hemorrhoidoplasty
+2026-03-13,18,15,elective,"TCC RT IJV , centros"
+2026-03-13,135,80,elective,VATs wedge resection of LUL (non intubated)
+2026-03-12,39,23,elective,open appendectomy
+2026-03-12,57,20,elective,Port A cath
+2026-03-12,86,27,elective,excision skin lesion Rt breast
+2026-03-12,70,70,elective,excision
+2026-03-12,123,106,elective,Rt BCT with SLNB
+2026-03-12,73,247,elective,TTD/GA
+2026-03-12,104,565,elective,Open rhinoplasty
+2026-03-12,12,5,elective,Flexible cystoscopy (surveillance)
+2026-03-12,11,10,elective,Flexible cystoscopy + dilate urethra
+2026-03-12,63,30,elective,cystolithrotripsy under TIVA
+2026-03-12,27,20,elective,TUR-BT
+2026-03-12,62,14,elective,fcystoscopy under tiva
+2026-03-12,11,15,elective,TRUS biopsy
+2026-03-12,52,15,elective,Revised TCC Rt. IJV
+2026-03-12,55,50,elective,Revise perm Rt IJV
+2026-03-12,79,75,elective,AVBG Lt upperarm
+2026-03-12,50,15,elective,fistulogram + PTA
+2026-03-12,51,30,elective,AVF Lt cubital
+2026-03-12,56,60,elective,AVF RT forearm
+2026-03-12,56,40,elective,port A cath insertion
+2026-03-12,110,115,elective,LC
+2026-03-12,123,115,elective,LC + lap ablation
+2026-03-12,107,78,elective,LC
+2026-03-12,70,45,elective,ERCP
+2026-03-11,86,255,elective,microscope  ผ่าซ้าย
+2026-03-11,136,80,elective,cranioplasty
+2026-03-11,72,30,elective,Anterior palatoplasty (GA)
+2026-03-11,64,55,elective,Tonsillectomy by Bizact
+2026-03-11,95,10,elective,Rt. Myringotomy with PE tube
+2026-03-11,51,15,elective,closed redection
+2026-03-11,74,40,elective,skull drilling under GAIV
+2026-03-11,6,10,elective,Remove DJ stent
+2026-03-11,21,12,elective,MRI fusion trus bx
+2026-03-11,24,18,elective,MRI fusion c Bx
+2026-03-11,23,18,elective,MRI fusion c Bx
+2026-03-11,130,205,elective,lap rt nephrectomy
+2026-03-11,130,205,elective,lap rt nephrectomy
+2026-03-11,54,95,elective,Crossover angioplasty of Lt leg
+2026-03-11,54,45,elective,Graft thrombectomy + Balloon venoplasty
+2026-03-10,36,15,elective,DB+I&D
+2026-03-10,151,77,elective,LAMINECTOMY W PDS FIXATION L 45 MIS
+2026-03-10,91,65,elective,RT VP SHUNT PROGRAMMABLE
+2026-03-10,103,80,elective,ACDF C 56 DIVA
+2026-03-10,70,60,elective,Tonsillectomy + RF nose
+2026-03-10,31,25,elective,Tracheostomy
+2026-03-10,71,105,elective,Rt lobectomy
+2026-03-10,73,25,elective,bilat dj stent
+2026-03-10,10,5,elective,cysto
+2026-03-10,43,5,elective,fcystoscopy
+2026-03-10,6,10,elective,Lt. DJ stent exchanging
+2026-03-10,42,30,elective,TUR-P
+2026-03-10,90,40,elective,bilat orchidectomy
+2026-03-10,172,200,elective,lap RHC
+2026-03-10,172,200,elective,lap RHC
+2026-03-10,10,5,elective,Transanal excision
+2026-03-10,34,110,elective,Colonoscopy with LTC
+2026-03-10,114,170,elective,LC
+2026-03-09,72,73,elective,appendectomy
+2026-03-09,76,140,elective,Bialteral mastectomy with left SLNB
+2026-03-09,73,95,elective,excison of skin redundant
+2026-03-09,152,157,elective,LAMINECTOMY W PDS FIXATION L2-S1
+2026-03-09,35,140,elective,Other excision of salivary gland lesion
+2026-03-09,128,140,elective,Rt. superficial parotidectomy c NIM
+2026-03-09,76,50,elective,Rt radiocephalic AVF +/- Brachiocephalic
+2026-03-09,48,20,elective,AVF Lt  wrist
+2026-03-09,25,15,elective,TCC insertion at Rt +/- Lt IJV
+2026-03-09,33,20,elective,revise TCC Lt IJV
+2026-03-09,35,20,elective,"revise TCC Rt IJV , palindrome or centros"
+2026-03-09,85,85,elective,AVBG left upper arm
+2026-03-09,87,80,elective,Left upepr arm AVBG
+2026-03-09,77,20,elective,Balloon venoplasty
+2026-03-09,86,50,elective,Lt brachiocephalic AVF
+2026-03-09,74,30,elective,Balloon venoplasty
+2026-03-09,73,30,elective,Balloon venoplasty
+2026-03-09,33,20,elective,Revise TCC Rt IJV +- balloon
+2026-03-09,53,10,elective,Excision of other parts of mouth
+2026-03-09,53,60,elective,Excision of hydrocele (of tunica vaginalis)
+2026-03-09,54,55,elective,Orchiopexy
+2026-03-08,148,140,elective,EL +/- SB resection
+2026-03-08,110,105,elective,Rt craniectomy c hematoma removal
+2026-03-06,33,30,elective,open appendectomy
+2026-03-06,49,115,elective,upper blephaloplasty with  direct brow lift
+2026-03-06,118,5,elective,Lt myringotomy with PE tube
+2026-03-06,113,15,elective,Lt myringotomy with PE tube
+2026-03-06,65,100,elective,Upper eyelid Correction
+2026-03-06,67,45,elective,Temporal lift
+2026-03-06,63,10,elective,EC
+2026-03-06,56,45,elective,revision scar
+2026-03-06,54,15,elective,excision
+2026-03-06,44,15,elective,remove chemoport
+2026-03-06,52,60,elective,closure colostomy
+2026-03-06,24,32,elective,EGD + Colonoscopy
+2026-03-06,7,10,elective,LIS
+2026-03-06,163,340,elective,laparoscopic APR
+2026-03-06,19,10,elective,"TCC RT IJV , centros"
+2026-03-06,26,10,elective,"TCC Lt IJV , centros"
+2026-03-05,88,95,elective,transmetatarsal amputation
+2026-03-05,120,231,elective,ACDF with PDS fixation anterior approach C6-7 and posterior approach C5-T1
+2026-03-05,11,5,elective,cysto
+2026-03-05,113,160,elective,Rt Radical mastoidectomy + NIMS 2 ch
+2026-03-05,61,50,elective,Excision
+2026-03-05,61,50,elective,Excision
+2026-03-05,61,20,elective,excision
+2026-03-05,71,145,elective,lower blepharoplasty
+2026-03-05,34,25,elective,bilat orchiectomy
+2026-03-05,92,20,elective,bilat orchidectomy
+2026-03-05,68,21,elective,left URS biospy with RP
+2026-03-05,119,145,elective,open distal pancreatectomy with splenectomy
+2026-03-05,104,63,elective,LC
+2026-03-04,151,55,elective,EL
+2026-03-04,55,105,elective,open appendectomy
+2026-03-04,129,70,elective,laparoscopic appendectomy
+2026-03-04,122,80,elective,EL with lysis adhesion +/- SB resection
+2026-03-04,122,80,elective,EL with lysis adhesion +/- SB resection
+2026-03-04,91,80,elective,left BKA
+2026-03-04,164,174,elective,L3-5 laminectomy with PDS fixation open
+2026-03-04,92,218,elective,PDS fixation T2-6 under loop X
+2026-03-04,18,15,elective,RF nose
+2026-03-04,16,30,elective,RF nose +Modified CPASO
+2026-03-04,54,35,elective,suken eyelid correction
+2026-03-04,72,380,elective,Resection of mass at Rt. Axillary
+2026-03-04,37,60,elective,parafinoma
+2026-03-04,12,5,elective,cysto
+2026-03-04,46,105,elective,PCNL
+2026-03-04,19,10,elective,cystoscope c irrigation c clot removal under iv sedate
+2026-03-04,51,5,elective,Flex. cystoscopy
+2026-03-04,57,5,elective,Flex. cystoscopy
+2026-03-04,54,123,elective,HoLEP
+2026-03-04,47,22,elective,Re-TUR-BT
+2026-03-04,120,254,elective,open postr RAMPS
+2026-03-03,83,45,elective,explore c db c bullet removal
+2026-03-02,58,65,elective,Right BCT + SLNB
+2026-03-02,60,30,elective,vac removal c abdominal toilet c suture wound
+2026-03-02,93,100,elective,microdiscetomy L5-S1
+2026-03-02,143,90,elective,ACDF C3-C4
+2026-03-02,152,104,elective,craniotomy w tumor removal
+2026-03-02,106,105,elective,Complete thyroidectomy
+2026-03-02,42,60,elective,debridement and resuture wound
+2026-03-02,47,35,elective,Excision+patho
+2026-03-02,78,40,elective,Rt radiocephalic AVF
+2026-03-02,85,40,elective,Lt radiocephalic AVF
+2026-03-02,71,30,elective,Balloon venoplasty
+2026-03-02,64,140,elective,segmental graft removal + interposition +/- DlC
+2026-03-02,159,30,elective,Balloon angioplasty + ligate basilic vein
+2026-03-02,110,35,elective,Lt upperarm AVG
+2026-03-01,11,10,elective,I&D
+2026-03-01,86,109,elective,ACDF C5/6
+2026-03-01,45,10,elective,U-catheter insertion under LA
+2026-03-01,54,180,elective,DDKT
+2026-03-01,54,180,elective,DDKT
+2026-03-01,54,180,elective,DDKT
+2026-02-28,20,25,elective,hemorrhoidectomy
+2026-02-27,72,65,elective,appendectomy
+2026-02-27,28,30,elective,tracheostomy
+2026-02-27,62,45,elective,Lower Eyelid Correction
+2026-02-27,64,35,elective,Upper and Lower correction eyelid
+2026-02-27,51,80,elective,Excision
+2026-02-27,66,105,elective,explore to repair tendon
+2026-02-27,11,15,elective,I&D
+2026-02-27,30,25,elective,Chemoport insertion
+2026-02-27,62,25,elective,Fistulogram +/- PTA
+2026-02-27,162,95,elective,Venous stripping + Multiple phlebectomies at Rt.leg
+2026-02-26,27,10,elective,EGD
+2026-02-26,64,15,elective,cholangiogram
+2026-02-26,59,60,elective,excisional bx
+2026-02-26,126,35,elective,Lt breast mass excision
+2026-02-26,95,115,elective,NLE Lt breast c SLNB
+2026-02-26,69,130,elective,second look EL with abdominal toilet
+2026-02-26,121,50,elective,LT CRANIECTOMY
+2026-02-26,30,95,elective,DL c biopsy /GA
+2026-02-26,60,20,elective,Excision
+2026-02-26,67,90,elective,Wide Excision + Local Fap
+2026-02-26,5,5,elective,TRUS-Bx
+2026-02-26,67,70,elective,repair buried penis
+2026-02-26,39,60,elective,Rt URSL
+2026-02-26,62,10,elective,right DJ stent
+2026-02-26,30,35,elective,loop proximal transverse colostomy
+2026-02-26,21,15,elective,TCC Lt. IJV
+2026-02-26,26,15,elective,TCC insertion at Lt IJV
+2026-02-26,28,45,elective,DLC to TCC Lt. IJV
+2026-02-26,80,65,elective,AVBG Lt upperarm
+2026-02-26,116,80,elective,Bilateral HL with VS with phlebectomy
+2026-02-26,112,85,elective,LC
+2026-02-26,76,45,elective,closure colostomy
+2026-02-25,72,134,elective,jejunojejunostomy
+2026-02-25,102,347,elective,left craniotomy with tumor removal
+2026-02-25,17,45,elective,RF nose + Palate + Uvulectomy
+2026-02-25,17,20,elective,RF nose + palate
+2026-02-25,15,35,elective,RF Nose
+2026-02-25,58,35,elective,Vasectomy under local
+2026-02-25,113,60,elective,bilateral hydrocelectomy under SA
+2026-02-25,39,40,elective,Rt. URSL + DJ stent
+2026-02-25,19,10,elective,cysto + irrigate bladder under local
+2026-02-25,57,5,elective,flex. cystoscopy
+2026-02-25,57,5,elective,flex cystoscopy under LA
+2026-02-25,34,25,elective,Circumcision
+2026-02-25,127,115,elective,Lt. PCNL
+2026-02-25,51,45,elective,Graft thrombectomy
+2026-02-25,64,60,elective,EVAR
+2026-02-25,64,60,elective,EVAR
+2026-02-25,98,160,elective,Bilateral crossover angioplasty
+2026-02-24,47,83,elective,Abdominal toilet+-Abdominal closure
+2026-02-24,38,40,elective,DB + remove FB +- suture wound
+2026-02-24,36,30,elective,colonoscopy
+2026-02-24,71,45,elective,Open gastrostomy
+2026-02-24,110,391,elective,open laminectomy with PDS fixation L3-L5 + ACDFC3-5 peek place
+2026-02-24,66,125,elective,Right thyroid lobectomy
+2026-02-24,89,145,elective,Total thyroidectomy
+2026-02-24,45,10,elective,Debridement /GA
+2026-02-24,101,35,elective,ORIF
+2026-02-24,16,5,elective,surveillance cystoscopy
+2026-02-24,38,40,elective,Lt. URSL +/- DJ stent
+2026-02-24,266,255,elective,Lap LAR +- DLI
+2026-02-24,47,25,elective,colonoscope
+2026-02-23,49,60,elective,excision accessory breast both side
+2026-02-23,47,125,elective,1.Laparoscopic cholecystectomy 2. Gastro+colonoscope
+2026-02-23,55,38,elective,suture stump skin
+2026-02-23,121,167,elective,Lt Total mastectomy c SLNB
+2026-02-23,75,25,elective,VAE
+2026-02-23,122,130,elective,Right mastectomy + SLNB (DUal tracer)
+2026-02-23,145,409,elective,ACDF C3-4 peek plate and laminectomy with pds fixation C2-3-4 and laminectomy with pds fixation L1-5
+2026-02-23,78,135,elective,Wide  Excision with Local Flap at Head
+2026-02-23,47,30,elective,right URSL (semi rigid)
+2026-02-23,88,25,elective,Lt radiocephalic AVF
+2026-02-23,88,25,elective,Lt radiocephalic AVF
+2026-02-23,88,30,elective,Lt radiocephalic AVF
+2026-02-23,48,55,elective,AVF Lt.wrist
+2026-02-23,73,295,elective,downhill angioplasty
+2026-02-23,76,40,elective,Balloon venoplasty
+2026-02-22,39,120,elective,Open appendectomy
+2026-02-21,39,135,elective,open appendectomy
+2026-02-21,167,181,elective,suboccipital craniotomy with tumor remove
+2026-02-20,144,89,elective,LAMINECTOMY W PDS FIXATION L 45 MIS
+2026-02-20,98,220,elective,left craniotomy with tumor removal
+2026-02-20,127,180,elective,bilat MMA with endoscopic septoplasty with inferior tubinoplasty
+2026-02-20,58,45,elective,Ptosis correction
+2026-02-20,21,10,elective,hemorrhoidectomy
+2026-02-20,37,50,elective,colonoscope with EMR
+2026-02-20,53,20,elective,EC
+2026-02-20,21,20,elective,hemorrhoidectomy
+2026-02-20,23,20,elective,Hemorrhoidectomy
+2026-02-20,22,25,elective,hemorrhoidectomy
+2026-02-20,58,275,elective,tumor removal
+2026-02-20,12,15,elective,LIS + excision akin tag
+2026-02-20,109,70,elective,Rt.Rib resection
+2026-02-20,70,265,elective,Lobectomy of lung
+2026-02-19,17,10,elective,EGD
+2026-02-19,17,10,elective,EGD
+2026-02-19,112,215,elective,Endoscopic Explore Lt middle ear +- postauricular approach mastoidectomy
+2026-02-19,11,5,elective,cysto
+2026-02-19,11,5,elective,cysto
+2026-02-19,11,5,elective,cysto
+2026-02-19,44,10,elective,re turbt
+2026-02-19,26,15,elective,debridement
+2026-02-19,11,15,elective,Off chemoport
+2026-02-19,65,80,elective,Bilateral RFA with Lt phlebectomy
+2026-02-19,112,25,elective,Lt RFA with phlebectomy
+2026-02-19,150,285,elective,Total graft removal with left brachial A repair with TCC right IJV
+2026-02-19,121,125,elective,Bilateral HL with VS with phlebectomy
+2026-02-19,102,50,elective,Rt brachiocephalic AVF
+2026-02-19,81,5,elective,cholnagiogram +/- remove PTBD
+2026-02-19,115,295,elective,open wedeg S8 near IVC RHV
+2026-02-19,115,295,elective,open wedeg S8 near IVC RHV
+2026-02-19,115,295,elective,open wedeg S8 near IVC RHV
+2026-02-18,101,175,elective,rt.bka
+2026-02-18,59,75,elective,open appendectomy
+2026-02-18,115,195,elective,endoscopic transphenoid approach with tumor removal and lumbar drainage
+2026-02-18,166,87,elective,suboccipital craniotomy with tumor removal
+2026-02-18,95,131,elective,MIS TLIF L4/5
+2026-02-18,29,40,elective,RF nose 2nd + AP + PU (GA)
+2026-02-18,100,15,elective,Rt. myringotomy + PE tube /LA
+2026-02-18,6,5,elective,Flexible cystoscopy
+2026-02-18,12,5,elective,Flexible cystoscopy (surveillance)
+2026-02-18,6,5,elective,flexible cystoscopy under LA
+2026-02-18,12,10,elective,Flexible cystoscopy +/- dilate urethra
+2026-02-18,39,55,elective,circumcision under TIVA
+2026-02-18,34,45,elective,Circumcision
+2026-02-18,5,5,elective,flexible cystoscopy under LA
+2026-02-18,58,5,elective,Flex. cystoscopy
+2026-02-18,57,5,elective,flex cystoscopy with remove DJ stent under LA
+2026-02-18,14,5,elective,cystogram under local
+2026-02-18,53,33,elective,Meatoplasty
+2026-02-18,39,75,elective,Circumcision + excision parafin
+2026-02-18,15,35,elective,cystoscope + irrigate bladder
+2026-02-18,33,20,elective,revise TCC right IJV
+2026-02-18,57,65,elective,AVF Rt. cubital
+2026-02-17,136,181,elective,MIS PDS c laminectomy L2-5
+2026-02-17,46,5,elective,fcystoscopy
+2026-02-17,272,275,elective,lap LAR with CAA with DLI
+2026-02-17,47,15,elective,Loop transverse colostomy
+2026-02-17,44,30,elective,AVF Lt. wrist
+2026-02-17,121,45,elective,LC (difficult)
+2026-02-16,74,80,elective,BCT + TAD
+2026-02-16,96,95,elective,LC
+2026-02-16,76,37,elective,Excision of deep cervical lymph node
+2026-02-16,36,80,elective,Other excision of salivary gland lesion
+2026-02-16,24,100,elective,Excisional debridement of wound
+2026-02-16,24,100,elective,Excisional debridement of wound
+2026-02-16,74,100,elective,Mass  Removal
+2026-02-16,51,10,elective,excisional biopsy
+2026-02-16,44,50,elective,Excision under LA
+2026-02-16,82,40,elective,Lt brachiocephalic AVF
+2026-02-16,68,20,elective,Balloon venoplasty
+2026-02-16,81,40,elective,Lt brachiocephalic AVF
+2026-02-16,61,25,elective,Revised TCC Rt. IJV
+2026-02-16,100,103,elective,Lt. AKA
+2026-02-16,135,15,elective,PTA
+2026-02-16,114,65,elective,Lt RC-AVF
+2026-02-16,101,100,elective,Rt BC-AVF
+2026-02-16,58,65,elective,Revised Lt BKA stump
+2026-02-16,58,65,elective,Revised Lt BKA stump
+2026-02-16,43,40,elective,AVF Lt.cubital
+2026-02-09,34,107,elective,bladder repair
+2026-02-06,56,71,elective,open appendectomy
+2026-02-06,30,40,elective,tracheostomy
+2026-02-06,134,127,elective,MIS TLIF L 45
+2026-02-06,26,30,elective,tracheostomy
+2026-02-06,38,132,elective,Other incision with drainage of skin and subcutaneous tissue
+2026-02-06,132,148,elective,"bilat FESS ,endosepto,inferiorturbinoplasty with microdebrider with navigator"
+2026-02-06,46,85,elective,Excision c local flap
+2026-02-06,67,40,elective,rhinoplasty
+2026-02-06,69,120,elective,Mini Lifting
+2026-02-06,54,15,elective,"excision, EC"
+2026-02-06,50,92,elective,closure colostomy
+2026-02-06,50,92,elective,closure colostomy
+2026-02-06,166,232,elective,lap RHC
+2026-02-06,21,30,elective,Hemorrhoidectomy
+2026-02-06,57,20,elective,hemorrhoidecotmy
+2026-02-06,193,165,elective,lap AR
+2026-02-05,96,80,elective,LC
+2026-02-05,104,120,elective,Endoscopic explore Rt middle ear
+2026-02-05,61,35,elective,Excision
+2026-02-05,69,100,elective,Upper lip revision
+2026-02-05,5,5,elective,off dj stent
+2026-02-05,17,20,elective,Cystoscopy + suture wound
+2026-02-05,54,25,elective,TURP
+2026-02-05,54,15,elective,cystolithotripsy
+2026-02-05,49,15,elective,re TUR-BT
+2026-02-05,119,375,elective,Open wedge liver resection with intraop colonoscopy with drop colostomy
+2026-02-05,119,375,elective,Open wedge liver resection with intraop colonoscopy with drop colostomy
+2026-02-04,50,160,elective,Open appendectomy
+2026-02-04,12,25,elective,I/D
+2026-02-04,142,136,elective,L4-5 laminectomy with discectomy + PDS fixation
+2026-02-04,110,100,elective,endoscopic transsphenoid approach with tumor removal
+2026-02-04,86,185,elective,microscope navigate
+2026-02-04,72,590,elective,Resection of Rt.parotid mass
+2026-02-04,11,5,elective,Flexible cystoscopy (surveillance)
+2026-02-04,16,5,elective,surveillance cysto
+2026-02-04,104,70,elective,lt flexible ursl
+2026-02-04,51,5,elective,flex. cystoscopy
+2026-02-04,18,18,elective,MRI fusion
+2026-02-04,5,5,elective,TRUS c Bx
+2026-02-04,10,20,elective,flexible cystoscopy RP + URS +/- DJ stent under TIVA
+2026-02-04,16,80,elective,cystoscopy rt rp under sedation
+2026-02-04,11,5,elective,Flexible cystoscopy + dilate urethra
+2026-02-04,14,5,elective,cystoscope + dialte + retain foley
+2026-02-04,6,10,elective,Cystoscope
+2026-02-04,55,70,elective,AVBG Rt.forearm
+2026-02-04,40,37,elective,Chemoport Rt IJV
+2026-02-04,135,20,elective,PTA left cephalic arch
+2026-02-04,110,65,elective,Lt RC-AVF
+2026-02-03,50,100,elective,open appendectomy
+2026-02-03,50,100,elective,open appendectomy
+2026-02-03,97,166,elective,left craniotomy with tumor removal
+2026-02-03,144,170,elective,LAMINECTOMY W PDS FIXATION L 345 MIS
+2026-02-03,72,35,elective,deep biopsy /LA
+2026-02-03,26,30,elective,hemorrhoidectomy
+2026-02-03,60,10,elective,Hemorhoidectomy
+2026-02-03,25,10,elective,hemorrhoidectomy
+2026-02-03,25,40,elective,LIFT
+2026-02-03,25,10,elective,lift
+2026-02-03,15,5,elective,LIS + FIPs
+2026-02-03,82,62,elective,EVAR
+2026-02-03,90,90,elective,EVAR with Rt IIA embolization
+2026-02-03,50,60,elective,DB + limit amputation right big toe
+2026-02-02,148,156,elective,Left mastectomy with SLNB
+2026-02-02,148,156,elective,Left mastectomy with SLNB
+2026-02-02,83,55,elective,Wide excision of left breast mass
+2026-02-02,74,155,elective,Right BCT + TAD
+2026-02-02,76,70,elective,Left BCT + SLNB
+2026-02-02,146,133,elective,LAMINECTOMY W PDS FIXATION L 345 MIS
+2026-02-02,136,173,elective,ACDF C 3456 PEEK PLATE AND LAMIENECTOMY C 3456
+2026-02-02,40,15,elective,Laser interstitial thermal therapy [LITT] of lesion or tissue of head and neck under guidance
+2026-02-02,61,55,elective,removal at breast implant
+2026-02-02,74,15,elective,Balloon venoplasty
+2026-02-02,84,40,elective,Lt radiocephalic AVF
+2026-02-02,72,65,elective,Balloon venoplasty
+2026-02-02,85,45,elective,Lt radiocephalic AVF
+2026-02-02,116,90,elective,bilateral ELVA with phlebectomy
+2026-02-02,63,105,elective,fistulogram + PTA at Lt innominate +/- TCC at at Rt IJV under GA
+2026-02-01,49,80,elective,Open appendectomy
+2026-02-01,54,116,elective,AKA left leg
+2026-01-30,147,101,elective,LAMINECTOMY W PDS FIXATION L45S1 MIS
+2026-01-30,138,270,elective,laminectomy w pds fixation L 2345
+2026-01-30,65,90,elective,programable VP shunt
+2026-01-30,134,235,elective,bilat FESS microdebrider navigator
+2026-01-30,64,25,elective,ectropion correction
+2026-01-30,53,25,elective,excision
+2026-01-30,53,10,elective,excision
+2026-01-30,62,65,elective,Endotide
+2026-01-30,24,30,elective,TUR-BT
+2026-01-30,23,50,elective,tuf
+2026-01-30,27,65,elective,colonoscopy with loop proximal transcrese colostomy
+2026-01-30,41,55,elective,EGD+colonoscopy
+2026-01-30,31,77,elective,EGD + Colonoscopy
+2026-01-30,31,77,elective,EGD + Colonoscopy
+2026-01-30,20,10,elective,Hemorrhoidectomy
+2026-01-30,10,5,elective,fistulotomy
+2026-01-30,9,5,elective,fistulotomy
+2026-01-30,20,15,elective,LIFT
+2026-01-30,162,175,elective,laparoscopic repair incisioal hernia
+2026-01-30,134,168,elective,VATs left lung
+2026-01-29,115,90,elective,Rt endoscopic tympanoplasty
+2026-01-29,53,35,elective,tonsillectomy
+2026-01-29,33,35,elective,Temporary tracheostomy
+2026-01-29,13,5,elective,cysto
+2026-01-29,24,9,elective,mri turs bx
+2026-01-29,20,10,elective,mri fusion trus bx
+2026-01-29,7,10,elective,TRUS Bx
+2026-01-29,31,90,elective,left ursl + flu + dj
+2026-01-29,58,44,elective,TAH+ BSO + sigmoidectomy
+2026-01-29,51,100,elective,AKA left leg
+2026-01-29,29,15,elective,TCC left IJV
+2026-01-29,64,60,elective,Revised TCC Rt IJV
+2026-01-29,25,15,elective,TCC Rt IJV
+2026-01-29,26,15,elective,TCC Rt IJV
+2026-01-29,71,40,elective,Fistulogram +/- PTA
+2026-01-29,101,65,elective,Rt RC-AVF
+2026-01-29,113,108,elective,LC
+2026-01-29,113,108,elective,LC
+2026-01-29,130,200,elective,Open wedge S8
+2026-01-29,130,200,elective,Open wedge S8
+2026-01-28,89,50,elective,appendectomy
+2026-01-28,35,18,elective,tracheostomy
+2026-01-28,109,116,elective,programmable vp shunt
+2026-01-28,51,60,elective,Septoplasty + modified CAPSO
+2026-01-28,57,50,elective,remove Rt. PE tube + bilateral myringotomy with PE tube
+2026-01-28,76,15,elective,EXcision
+2026-01-28,77,35,elective,Excision
+2026-01-28,81,125,elective,ORIF c PAS c MMF
+2026-01-28,53,70,elective,Lower eyelid correction
+2026-01-28,13,5,elective,Flexible cystoscopy (Surveillance) + Remove Rt. DJ stent
+2026-01-28,12,5,elective,Flexible cystoscopy (surveillance)
+2026-01-28,15,55,elective,Flexible cystoscopy +/- dilate urethra +/- cystolithotripsy
+2026-01-28,14,5,elective,Cystoscopy +/- TUF
+2026-01-28,23,75,elective,TUF
+2026-01-28,18,5,elective,TRUS Biopsy under TIVA
+2026-01-28,12,20,elective,Cystoscopy with change bilateral DJ stent
+2026-01-28,22,35,elective,turbt
+2026-01-28,19,12,elective,cystoscope+irrigation E
+2026-01-28,155,230,elective,lap. bladder diverticulotomy
+2026-01-27,17,7,elective,EGD
+2026-01-27,35,10,elective,egd colonoscopy
+2026-01-27,40,15,elective,DB
+2026-01-27,269,272,elective,Lap LAR+CAA+DLI
+2026-01-27,144,60,elective,craniotomy c clot removal
+2026-01-27,139,58,elective,craniotomy c clot removal
+2026-01-27,140,155,elective,MIS PDS c laminectomy L2-5
+2026-01-27,146,167,elective,acdf c3-6 peek plate
+2026-01-27,52,50,elective,Tonsillectomy
+2026-01-27,49,45,elective,Tonsillectomy
+2026-01-27,14,5,elective,flexible cysto
+2026-01-27,17,15,elective,DJ Stent exchage
+2026-01-27,55,10,elective,cystoscopt + clot irrigation
+2026-01-27,15,30,elective,cysto + irrigate bladder
+2026-01-26,76,60,elective,excision of breast mass under GA
+2026-01-26,99,149,elective,Left Total mastectomy c SLNB
+2026-01-26,99,149,elective,Left Total mastectomy c SLNB
+2026-01-26,124,125,elective,Bilateral mastectomy +  Right SLNB
+2026-01-26,83,115,elective,Left BCT c SLNB
+2026-01-26,175,161,elective,craniotomy c tumor removal
+2026-01-26,67,425,elective,WE + Rt segmental mandibulectomy + Rt total parotidectomy + PMM flap + tracheostomy
+2026-01-26,68,30,elective,Reduction at nasal  bone
+2026-01-26,23,15,elective,TCC Rt IJV
+2026-01-26,28,15,elective,TCC
+2026-01-26,72,10,elective,Fistulogram +/- PTA
+2026-01-26,67,15,elective,Fistulogram +/- PTA
+2026-01-26,33,25,elective,DLC to TCC Lt. IJV
+2026-01-26,29,45,elective,TCC left IJV + PTA
+2026-01-25,21,22,elective,TUF
+2026-01-25,88,5,elective,Bilateral U-cath
+2026-01-25,17,45,elective,Cystoscopy for irrigation under MAC
+2026-01-24,62,70,elective,appendectomy
+2026-01-23,138,249,elective,Laminectomy with PDS fixation L45S1 MIS + ACDF C456 peek plate
+2026-01-23,68,116,elective,excision occipital mass
+2026-01-23,51,35,elective,incisional  bx
+2026-01-23,135,125,elective,bilat FESS microdebrider navigator
+2026-01-23,100,105,elective,Lt endoscopic tympanoplasty
+2026-01-23,47,45,elective,explore stop bleeding
+2026-01-23,48,20,elective,ptosis correction
+2026-01-23,69,40,elective,Rhinoplasty
+2026-01-23,59,25,elective,excision and EC
+2026-01-23,63,60,elective,Ptosis correction
+2026-01-23,18,15,elective,Colonoscopy
+2026-01-23,16,15,elective,Hemorrhoidectomy
+2026-01-23,32,15,elective,Laser hemorrhoidoplasty
+2026-01-23,54,45,elective,karydakis
+2026-01-23,61,65,elective,Delorme's operation
+2026-01-23,58,165,elective,intestinal bypass
+2026-01-23,61,45,elective,Graft thrombectomy with balloon venoplasty
+2026-01-23,56,15,elective,Revised TCC Rt IJV
+2026-01-22,70,40,elective,debirdement and wet dressing
+2026-01-22,54,158,elective,open appendectomy
+2026-01-22,63,57,elective,EGD with biopsy with retain NG
+2026-01-22,59,60,elective,change Vac dressing
+2026-01-22,73,45,elective,rhinoscopy c biopsy /GA
+2026-01-22,95,35,elective,left MMA
+2026-01-22,59,15,elective,Excision
+2026-01-22,60,40,elective,Excision
+2026-01-22,59,20,elective,Excision
+2026-01-22,61,15,elective,Excision
+2026-01-22,21,15,elective,cystoscopy under tiva
+2026-01-22,41,63,elective,Circumcision/Excision paraffinoma
+2026-01-22,16,20,elective,REZUM under SB
+2026-01-22,53,5,elective,electrocauterization of genital wart under LA
+2026-01-22,83,36,elective,rt hydrocelectomy and lt varicocelectomy under SB
+2026-01-22,24,35,elective,TUR-BT
+2026-01-22,25,20,elective,TUR-BT
+2026-01-22,64,65,elective,Ligate SFA branch with Repair Femoral vein
+2026-01-22,26,20,elective,DLC to TCC right IJV
+2026-01-22,67,60,elective,Transfemoral Rt carotid stenting
+2026-01-22,67,60,elective,Transfemoral Rt carotid stenting
+2026-01-22,56,45,elective,AVF Lt forearm
+2026-01-22,21,20,elective,TCC Rt.IJV
+2026-01-22,123,267,elective,open secmentectomy S6 and S4a +- RFA
+2026-01-22,123,267,elective,open secmentectomy S6 and S4a +- RFA
+2026-01-21,24,30,elective,hemorrhoidectomy
+2026-01-21,49,37,elective,debridement let leg
+2026-01-21,28,10,elective,RF nose (LA)
+2026-01-21,58,30,elective,Tonsillectomy (GA)
+2026-01-21,71,165,elective,Ensoscopic FB removal In Rt Max + navigate+ Flu
+2026-01-21,55,50,elective,ptosis correction
+2026-01-21,85,15,elective,Excision Bx.
+2026-01-21,89,335,elective,Brow Lift
+2026-01-21,6,5,elective,Flexible cystoscopy
+2026-01-21,15,5,elective,Flexible cystoscopy (surveillance)
+2026-01-21,100,28,elective,Rt. Flexible ureteroscopy + change Rt. DJ stent + cystoscopy
+2026-01-21,21,95,elective,Flexible URSL + DJ stent Rt.
+2026-01-21,61,5,elective,Flex. cystoscopy
+2026-01-21,61,5,elective,Flex. cystoscopy
+2026-01-21,60,5,elective,Flex. cystoscopy
+2026-01-21,37,29,elective,circumcision
+2026-01-21,37,29,elective,circumcision
+2026-01-21,161,197,elective,Lap. adrenalectomt Rt.
+2026-01-21,54,120,elective,removed catheter and repair carotid artery
+2026-01-21,26,10,elective,TCC Rt IJV
+2026-01-21,30,15,elective,TCC right IJVV
+2026-01-21,26,10,elective,TCC Rt IJV
+2026-01-21,27,10,elective,TCC Rt IJV
+2026-01-21,146,90,elective,Aneurysmectomy + bypass PTFE Rt forearm
+2026-01-21,89,60,elective,left radiocephalic AVF
+2026-01-21,54,155,elective,Remove graft left upperarm with DLC left IJV
+2026-01-21,102,257,elective,open right hepatectomy
+2026-01-20,19,65,elective,hemorrhoidectomy
+2026-01-20,144,92,elective,ACDF C 56
+2026-01-20,147,86,elective,LAMINECTOMY W PD SFIXATION L 1-5
+2026-01-20,84,35,elective,explore wound and remove hematoma
+2026-01-20,30,85,elective,tracheostomy
+2026-01-20,48,165,elective,debridement + rotational flap +- skin graft
+2026-01-20,58,50,elective,closure colostomy
+2026-01-20,58,45,elective,closure colostomy
+2026-01-20,23,10,elective,Hemorrhoidectomy
+2026-01-20,14,5,elective,LIS+- hemorrhoidectomy
+2026-01-19,81,15,elective,VAE left breast mass under LA
+2026-01-19,80,30,elective,VAE R9 braest mass
+2026-01-19,80,53,elective,Microdochectomy of right breast
+2026-01-19,131,380,elective,"Bilateral Reducing NSM+ DTI, Right SLNB"
+2026-01-19,117,165,elective,Right mastectomy with SLNB
+2026-01-19,58,20,elective,change Vac dressing
+2026-01-19,101,108,elective,ACDF C5-6-7 peek&plate
+2026-01-19,113,187,elective,open pds c laminectomy L3-S1
+2026-01-19,18,20,elective,Cystoscopy + remove urethral catheter +/- cystotomy
+2026-01-19,44,65,elective,Explore lap with re-implant
+2026-01-19,16,10,elective,cystoscopy under iv sedation
+2026-01-19,42,40,elective,AVF Lt cubital
+2026-01-19,21,25,elective,TCC right IJV
+2026-01-19,65,185,elective,Transbrachial balloon angioplasty both legs
+2026-01-19,98,30,elective,Balloon venoplasty under LA
+2026-01-18,84,40,elective,fastiotomy
+2026-01-16,63,32,elective,EVD
+2026-01-16,103,107,elective,Rt craniectomy c tumor removal c PMMA cranioplasty
+2026-01-16,52,25,elective,RT MMA with microdebrider
+2026-01-16,106,120,elective,Endoscopic Rt MMA c FB removal c navigators
+2026-01-16,68,110,elective,Correction Upper + Lower  eyelid
+2026-01-16,53,10,elective,excision
+2026-01-16,28,15,elective,Colonoscope
+2026-01-16,11,15,elective,EGD
+2026-01-16,26,32,elective,EGD + Colonoscopy
+2026-01-16,32,66,elective,EGD + colonosocpy
+2026-01-16,25,23,elective,EGD + Colonoscopy
+2026-01-16,25,50,elective,chemoport insertion
+2026-01-16,21,35,elective,hemorrhoidectomy
+2026-01-16,21,35,elective,hemorrhoidectomy
+2026-01-16,83,165,elective,left hemicolectomy
+2026-01-16,189,155,elective,lap sigmoidectomy
+2026-01-16,65,85,elective,EVAR
+2026-01-16,65,85,elective,EVAR
+2026-01-16,26,15,elective,TCC right IJV
+2026-01-15,47,8,elective,EGD พ่นยาชา
+2026-01-15,47,8,elective,EGD พ่นยาชา
+2026-01-15,60,20,elective,change Vac dressing
+2026-01-15,104,80,elective,Lt endoscopic tympanoplasty
+2026-01-15,102,102,elective,endoscopic septoplasty with inferior turbinoplasty
+2026-01-15,104,30,elective,Rt. myringotomy with PE /LA
+2026-01-15,62,45,elective,debridement with STSG
+2026-01-15,12,15,elective,cysto
+2026-01-15,12,5,elective,cysto
+2026-01-15,12,5,elective,cysto
+2026-01-15,13,5,elective,cysto
+2026-01-15,48,25,elective,vasectomy
+2026-01-15,23,75,elective,TUR-BT
+2026-01-15,114,61,elective,LC
+2026-01-15,119,250,elective,open wedge 7 lesions + remove stent s/p ERCP
+2026-01-15,119,250,elective,open wedge 7 lesions + remove stent s/p ERCP
+2026-01-14,36,45,elective,excisional debridement
+2026-01-14,36,45,elective,excisional debridement
+2026-01-14,77,235,elective,explore lap +- small bowel resection
+2026-01-14,113,126,elective,rt.craniectomy c clipping aneurysm c removal hematoma
+2026-01-14,43,20,elective,Trachoestomy
+2026-01-14,96,90,elective,Direct Brow Lift
+2026-01-14,92,25,elective,Eacision
+2026-01-14,73,55,elective,Excision
+2026-01-14,92,25,elective,Excional Bx.
+2026-01-14,70,30,elective,Excision
+2026-01-14,12,5,elective,Off Rt. DJ stent
+2026-01-14,7,5,elective,Flexible cystoscopy
+2026-01-14,6,5,elective,Flexible cystoscopy
+2026-01-14,12,8,elective,TRUS biopsy
+2026-01-14,8,5,elective,Cystoscopy
+2026-01-14,28,20,elective,MRI-US fusion biopsy
+2026-01-14,28,15,elective,MRI-US fusion prostate biopsy
+2026-01-14,29,30,elective,MRI-TRUS biopsy
+2026-01-14,28,15,elective,MRI-US fusion Bx
+2026-01-14,60,5,elective,Flex. cystoscopy
+2026-01-14,59,5,elective,Flex. cystoscopy
+2026-01-14,97,75,elective,Lt. RIRS
+2026-01-14,38,17,elective,explore wound with stop bleeding
+2026-01-14,175,200,elective,lap RHC + LC
+2026-01-13,104,73,elective,Open gastrojejunostomy
+2026-01-13,138,169,elective,MIS PDS c laminectomy L3-S1
+2026-01-13,67,45,elective,Right ESS
+2026-01-13,90,30,elective,Right endoscopic fat plug myringoplasty
+2026-01-13,78,120,elective,Open drainage
+2026-01-13,12,5,elective,flexible cysto +- TUR-BT
+2026-01-13,211,143,elective,lap AR +- closure colostomy
+2026-01-13,121,115,elective,Rt.surgical pleurectomy
+2026-01-13,103,45,elective,Mediastinal debridement and change vacuum dressing
+2026-01-12,54,30,elective,Debridement and vacuum dressing left leg under TIVA
+2026-01-12,54,30,elective,Debridement and vacuum dressing left leg under TIVA
+2026-01-12,80,40,elective,gastro+colonospce
+2026-01-12,80,40,elective,gastro+colonospce
+2026-01-12,50,40,elective,Port A
+2026-01-12,152,128,elective,ACDF C3-5 peek plate
+2026-01-12,139,96,elective,MIS TLIF L 45
+2026-01-12,67,97,elective,recraniectomy c cripping aneurysm
+2026-01-12,107,87,elective,Complete thyroidectomy
+2026-01-12,16,20,elective,hemorrhoidectomy
+2026-01-12,16,20,elective,hemorrhoidectomy
+2026-01-12,76,20,elective,Balloon venoplasty
+2026-01-12,85,70,elective,Lt forearm loop AVBG
+2026-01-12,85,30,elective,Lt brachiocephalic AVF
+2026-01-12,83,40,elective,Lt radiocephalic AVF
+2026-01-12,23,25,elective,TCC Rt IJV
+2026-01-12,66,15,elective,fistulogram+PTA
+2026-01-12,65,15,elective,fistulogram +- PTA
+2026-01-12,104,60,elective,Rt. RC AVF
+2026-01-12,75,75,elective,Repair of indirect inguinal hernia
+2026-01-12,71,40,elective,Unilateral repair of inguinal hernia
+2026-01-10,57,65,elective,debridement right foot
+2026-01-10,62,183,elective,DDKT
+2026-01-10,76,45,elective,Change vacuum dressing with stop bleed
+2026-01-09,47,20,elective,DB +- Vac dressing
+2026-01-09,113,276,elective,Open PDS c laminectomy L2-S1 (loopX)
+2026-01-09,118,131,elective,craniotomy c clipping aneurysm
+2026-01-09,68,55,elective,Correction Upper Eyelid
+2026-01-09,70,85,elective,Correction Upper+lower Eyelid
+2026-01-09,69,40,elective,Correction of eyelid
+2026-01-09,21,50,elective,colonoscopy
+2026-01-09,36,30,elective,egd+colonoscopy
+2026-01-09,36,68,elective,EGD + colonoscopy
+2026-01-09,36,68,elective,EGD + colonoscopy
+2026-01-09,19,10,elective,Hemorrhoidectomy
+2026-01-09,63,25,elective,hemorhoidectomy
+2026-01-09,79,35,elective,repair hernia
+2026-01-09,143,277,elective,Total peritoniectomy
+2026-01-09,25,15,elective,TCC insertion at Rt IJV
+2026-01-09,63,30,elective,Graft thrombectomy + Balloon venoplasty
+2026-01-09,18,15,elective,TCC Rt IJV
+2026-01-09,64,65,elective,Debridement and change vac dressing
+2026-01-08,27,15,elective,EGD
+2026-01-08,49,75,elective,open appendectomy
+2026-01-08,62,55,elective,ray ampuation 2 nd  - 5 th toe
+2026-01-08,44,20,elective,Debridement
+2026-01-08,44,20,elective,Debridement
+2026-01-08,28,65,elective,tracheostomy under ga
+2026-01-08,105,625,elective,Open Rhinoplaty
+2026-01-08,7,5,elective,Flexible cystoscopy (surveillance)
+2026-01-08,5,5,elective,Flexible cystoscopy
+2026-01-08,22,20,elective,MRI fusion TRUS-Bx
+2026-01-08,36,25,elective,Bilat. orchiectomy
+2026-01-08,24,15,elective,TUR-BT
+2026-01-08,46,13,elective,Debridement right foot
+2026-01-08,123,50,elective,Bilateral venaseal with Lt phlebectomy
+2026-01-08,112,28,elective,Lt venaseal
+2026-01-08,59,19,elective,Revised TCC at Rt IJV
+2026-01-08,99,45,elective,Balloon venopalsty
+2026-01-08,103,60,elective,LC
+2026-01-07,51,15,elective,debridement under IV sedate
+2026-01-07,114,200,elective,endoscopic endonasal transsphenoid approach with tumor removal
+2026-01-07,49,70,elective,adenoidectomy with  coblator + sinuscope
+2026-01-07,103,15,elective,Rt. myringotomy + PE /LA
+2026-01-07,38,25,elective,tracheostomy
+2026-01-07,8,5,elective,Flexible cystoscopy
+2026-01-07,13,5,elective,flexible cystoscopy (surveillance)
+2026-01-07,12,15,elective,TRUS biopsy
+2026-01-07,18,90,elective,Cystoscopy + TUR-BT
+2026-01-07,56,5,elective,Flex. cystoscopy
+2026-01-07,8,5,elective,cystoscope
+2026-01-07,59,40,elective,Revised TCC right IJV
+2026-01-07,23,15,elective,TCC Rt IJV
+2026-01-07,114,122,elective,Lt forearm AVG
+2026-01-07,110,75,elective,Lt RC-AVF
+2026-01-07,99,50,elective,Rt. brachiocephalic AVF under LA
+2026-01-07,106,56,elective,LC
+2026-01-06,52,25,elective,DB + dressing wound
+2026-01-06,52,25,elective,DB + dressing wound
+2026-01-06,96,68,elective,lt.frontal vp shunt(medium pressure)
+2026-01-06,121,155,elective,ACDF C3456 DIVA
+2026-01-06,31,20,elective,tracheostomy
+2026-01-06,44,10,elective,closed reduction with nasal packing
+2026-01-06,23,37,elective,hemorrhoidectomy
+2026-01-06,22,20,elective,LIFT
+2026-01-06,23,30,elective,LIFT
+2026-01-06,24,10,elective,LIFT
+2026-01-06,20,25,elective,hemorrhoidectomy
+2026-01-06,28,40,elective,Hemorrhoidectomy
+2026-01-06,53,25,elective,Revise perm Lt. IJV under LA
+2026-01-06,67,80,elective,Transcarotid artery revascularization Rt carotid with carotid stenting
+2026-01-06,67,80,elective,Transcarotid artery revascularization Rt carotid with carotid stenting
+2026-01-06,100,145,elective,Balloon venoplasty c TCC Rt. IJV
+2026-01-05,117,125,elective,Right mastectomy with SLNB
+2026-01-05,54,26,elective,DB + dressing wound
+2026-01-05,79,15,elective,VAE at L6
+2026-01-05,81,50,elective,Left BCT + SLNB
+2026-01-05,77,140,elective,"NSM of left breast, SLNB with DTI"
+2026-01-05,159,105,elective,craniectomy
+2026-01-05,95,120,elective,TLIF L4-5
+2026-01-05,104,55,elective,endoscopic RT SPA ligation
+2026-01-05,157,175,elective,"Total parotidectomy Rt,"
+2026-01-05,22,15,elective,TCC insertion at Rt IJV
+2026-01-05,84,70,elective,Lt radiocephalic AVF
+2026-01-05,72,15,elective,Balloon venoplasty
+2026-01-05,55,25,elective,Revised TCC Rt. IJV
+2026-01-05,26,10,elective,TCC insertion at Rt IJV
+2026-01-05,104,373,elective,"Open endarterectomy both CFA with patch angioplasty + PTA both CIA + PTA rtigh SFA, PA,, PTA, ATA"
+2026-01-05,104,373,elective,"Open endarterectomy both CFA with patch angioplasty + PTA both CIA + PTA rtigh SFA, PA,, PTA, ATA"
+2026-01-04,45,20,elective,debridement under IV sedate
+2026-01-04,45,20,elective,debridement under IV sedate
+2026-01-03,45,15,elective,debridement under GA
+2026-01-02,51,10,elective,DB + dressing wound
+2026-01-02,67,170,elective,left radical nephrectomy
+2026-01-02,50,35,elective,graft thrombectomy with balloon venoplasty
+2026-01-02,83,60,elective,Change VAC dressing at sternal wound
+2026-01-01,50,20,elective,debridement under GA
+2026-01-01,56,55,elective,ERCP
+2026-01-01,58,60,elective,open appendectomy
+2026-01-01,99,93,elective,bilat craniectomy + decompression
+2026-01-01,50,20,elective,closed reduction c septal suture

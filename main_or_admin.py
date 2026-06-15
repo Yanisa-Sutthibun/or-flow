@@ -938,17 +938,20 @@ def _render_ai_research_tab():
         _live68 = _t68 if len(_t68) else None
         _live69 = _t69 if len(_t69) else None
 
-    # ปี 2568 — ทำนายย้อนหลังบนเคสจริงจาก HIS (prediction-only · ไม่ retrain โมเดล) ทั้ง 2 target
-    #   เวลาครองห้อง: completed CSV · เวลาผ่าตัดสุทธิ: + opendtime จาก intraop ปี 68
-    #   (สร้างโดย build_prospective_2568.py → validation_{target}_2568.csv)
-    _p68 = None
-    _p68f = (_P(__file__).resolve().parent / 'models' / 'honest_v1'
-             / f'validation_{_tgt}_2568.csv')
-    if _p68f.exists():
-        try:
-            _p68 = _prep_ai(_pd.read_csv(_p68f))
-        except Exception:
-            _p68 = None
+    # ปี 2568/2569 — ทำนายย้อนหลังบนเคสจริงจาก HIS (prediction-only · ไม่ retrain โมเดล) ทั้ง 2 target
+    #   เวลาครองห้อง: completed CSV · เวลาผ่าตัดสุทธิ: + opendtime จาก intraop รายปี
+    #   (สร้างโดย build_prospective_2568.py → validation_{target}_{ปี พ.ศ.}.csv)
+    def _load_prosp(be_year):
+        _f = (_P(__file__).resolve().parent / 'models' / 'honest_v1'
+              / f'validation_{_tgt}_{be_year}.csv')
+        if _f.exists():
+            try:
+                return _prep_ai(_pd.read_csv(_f))
+            except Exception:
+                return None
+        return None
+    _p68 = _load_prosp(2568)
+    _p69 = _load_prosp(2569)
 
     def _render_year_block(num, year_be, title, plain, accent, bg, stat, empty_note=None):
         st.markdown(
@@ -993,19 +996,12 @@ def _render_ai_research_tab():
         'ผลการทำนายกับเคสผ่าตัดจริงปี 2568 จากฐานข้อมูล (ทำนายด้วยโมเดลเดิม · ไม่เทรนใหม่)',
         '#1b7f4b', '#eef7f1', _stat(_p68))
 
-    # ปี 2569 — แถบติดตามสด (โชว์แค่จำนวนเคส เพราะข้อมูลยังน้อย ตัวเลขยังไม่นิ่ง)
-    _s69 = _stat(_live69)
-    _n69 = _s69['n'] if _s69 else 0
-    st.markdown(
-        f'<div style="background:#f7f9fb;border:1px dashed #c9d6e2;border-radius:10px;'
-        f'padding:11px 14px;margin:16px 0 4px;display:flex;align-items:center;gap:12px;">'
-        f'<div style="flex:1;"><div style="font-size:14px;font-weight:600;color:#222;">'
-        f'③ ปี 2569 — การติดตามต่อเนื่อง (ongoing)</div>'
-        f'<div style="font-size:12px;color:#777;margin-top:1px;">ปีปัจจุบัน เก็บข้อมูลและ'
-        f'ประเมินความแม่นยำต่อเนื่อง (ข้อมูลยังน้อย ยังไม่สรุปเป็นตัวเลขหลัก)</div></div>'
-        f'<div style="text-align:right;"><div style="font-size:22px;font-weight:700;color:#1565c0;">'
-        f'{_n69:,}</div><div style="font-size:11px;color:#777;">เคสจนถึงตอนนี้</div></div></div>',
-        unsafe_allow_html=True)
+    # ปี 2569 — การติดตามต่อเนื่อง (prospective ปีปัจจุบัน · ข้อมูลถึงกลางปี ยังไม่เต็มปี)
+    _render_year_block(
+        '③', 2569, 'การติดตามต่อเนื่อง (ongoing)',
+        'ผลการทำนายกับเคสผ่าตัดจริงปี 2569 จากฐานข้อมูล (ทำนายด้วยโมเดลเดิม · ไม่เทรนใหม่) '
+        '— ข้อมูลปีปัจจุบันยังไม่ครบทั้งปี',
+        '#1565c0', '#f4f8fd', _stat(_p69))
 
     # ค่าที่ส่วนเทคนิคด้านล่างต้องใช้ (คำนวณบนชุดหลัก = 2567 ถ้ามี) — คงไว้
     _pmae = float(ai_df['abs_error'].mean())
