@@ -1293,6 +1293,10 @@ def _render_ai_research_tab():
             legend=dict(orientation='h', y=-0.15),
         )
         st.plotly_chart(fig, use_container_width=True)
+        st.caption(
+            f"MAE {df['abs_error'].mean():.0f} นาที · แม่น ±15 นาที "
+            f"{(df['abs_error'] <= 15).mean() * 100:.0f}% · {len(df):,} เคส "
+            f"· เกณฑ์ ±15 นาที = acceptable booking ตามวรรณกรรม OR")
 
     with col_h:
         st.markdown('<div class="section-title">📊 การกระจายของ Error</div>',
