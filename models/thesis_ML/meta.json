@@ -1,0 +1,20 @@
+{
+  "room_use": {
+    "n_train": 5401,
+    "global_median": 100.0,
+    "test_2567": {
+      "n_test": 1939,
+      "mae": 41.7,
+      "median_ae": 24.8
+    }
+  },
+  "surg_time": {
+    "n_train": 5336,
+    "global_median": 64.0,
+    "test_2567": {
+      "n_test": 1927,
+      "mae": 37.4,
+      "median_ae": 21.1
+    }
+  }
+}

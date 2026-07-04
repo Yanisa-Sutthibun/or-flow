@@ -91,15 +91,15 @@ try:
 except Exception as e:
     st.warning(f"⚠️ secrets.toml: {e}")
 
-# Test 5: โมเดลที่ deploy จริง (or_time_model / honest_v1) — smoke test
-st.subheader("Test 5: โมเดลที่ deploy (honest_v1)")
+# Test 5: โมเดลที่ deploy จริง (or_time_model / thesis_ML) — smoke test
+st.subheader("Test 5: โมเดลที่ deploy (thesis_ML)")
 try:
     import or_time_model
     d = or_time_model.predict_detail({
         'procedure_name': 'Appendectomy', 'surgeon_name': '',
         'division': '75', 'orroom': 11, 'age': 40, 'planned_hour': 9,
     }, 'room_use')
-    st.write(f"✅ honest_v1 ทำนาย {d['predicted_min']} นาที · "
+    st.write(f"✅ thesis_ML ทำนาย {d['predicted_min']} นาที · "
              f"ช่วง 90%={d['interval90']} · conformal={d['conformal']}")
 except Exception as e:
     st.error(f"❌ or_time_model error: {e}")

@@ -1,0 +1,1928 @@
+op_date,ai_predicted_min,actual_duration_min,procedure_name
+2024-01-12,44.8,5.0,change tracheostomy tube 
+2024-02-07,71.9,45.0,excision wound right thigh
+2024-03-04,60.3,85.0,STSG under GA
+2024-01-24,16.0,20.0,tcc rt ijv 
+2024-01-15,80.9,53.0,resternotomy with wound irrigation and debridement
+2024-01-11,7.0,5.0,Cystoscope 
+2024-01-05,27.0,22.0,tracheostomy
+2024-01-17,29.3,40.0,DB
+2024-01-05,51.7,15.0,trachoestomy
+2024-01-03,152.8,140.0,VATs Rt pleural drainage
+2024-01-24,28.9,35.0,Tracheostomy (GA)
+2024-01-03,132.9,85.0,VATs Rt pleural drainage
+2024-01-03,105.3,70.0,PP window
+2024-01-08,37.0,40.0,Tracheostomy
+2024-01-03,28.0,42.0,tracheostomy 
+2024-02-19,55.3,70.0,debridement right hand +- flap coverage +- STSG 
+2024-02-27,54.8,55.0,DB +- vac dressing
+2024-03-11,65.0,185.0,STSG/FTSG + vac dressing right hand
+2024-01-12,29.6,40.0,tracheostomy 
+2024-01-17,38.0,40.0,tracheostomy
+2024-01-09,30.0,25.0,tracheostomy
+2024-01-02,130.0,115.0,L4 laminectomy c L3-5 PDS fixation
+2024-01-05,34.2,28.0,EGD c Colonoscopy
+2024-01-02,171.5,166.0,lap RHC
+2024-01-02,41.3,56.0,TURP c right hydrocelectomy
+2024-01-02,19.2,9.0,turbt
+2024-01-02,154.8,152.0,Laminectomy c PDS fixation L4L5S1 MIS
+2024-01-11,34.4,13.0,suture wound 
+2024-01-05,23.5,45.0,hemorrhoidectomy 
+2024-01-02,40.6,75.0,turp นอกเวลา
+2024-01-03,128.7,232.0,L4-S1 laminectomy with dissectomy + PDS fixation +- TLIF 
+2024-01-03,93.7,205.0,Release scar contracture Lt. hand +/-K-wire fixation+/- FTSG from groin
+2024-01-15,44.6,20.0,debridement +- fasciotomy
+2024-01-10,87.6,130.0,T12-L1 laminectomy c PDS fixation
+2024-01-04,27.3,5.0,MRI fusion Bx
+2024-01-04,24.4,40.0,MRI Fusion TRU BX
+2024-01-04,106.3,95.0,endoscopic turbinoplasty
+2024-01-11,68.3,85.0,Repair urethra 
+2024-01-25,38.0,30.0,Suture 
+2024-02-06,68.4,30.0,Burr  hole c irrigation 
+2024-01-04,127.4,121.0,MIS TLIF L4-5 
+2024-01-11,18.6,25.0,TCC Rt.IJV
+2024-01-04,115.5,117.0,Rt TAD
+2024-01-05,26.3,20.0,RFA hemorrhoidoplasty
+2024-01-05,34.7,40.0,EGD + Colonoscopy
+2024-01-09,72.3,20.0,FOL +- off tube +- tracheostomy
+2024-01-05,23.1,9.0,DL c Bx
+2024-01-05,82.7,195.0,Bilateral extended simple mastectomy
+2024-01-05,34.6,17.0,Laser hemorrhoidoplasty
+2024-01-05,15.8,15.0,Hemorrhoidectomy
+2024-01-05,48.1,20.0,closed reduction rt. zygoma arch(Gille manuver)
+2024-01-08,155.3,180.0,EL with tumor removal 
+2024-01-26,64.3,20.0,fistulogram +- PTA
+2024-03-04,53.0,57.0,DB c irrigation C5-6 c plate removal
+2024-01-06,95.5,185.0,bilateral craniectomy
+2024-01-08,83.4,132.0,Open TTD
+2024-01-08,134.6,199.0,Rt craniotomy c tumor removal 
+2024-01-08,44.8,40.0,Tonsillectomy without adenoidectomy
+2024-01-08,66.3,40.0,Relining stent Lt limb to Lt EIA with Lt IIA embolization
+2024-01-08,84.2,130.0,"Left BCT (wire localization by radiologist) + TAD, gastro+colonoscope "
+2024-01-08,115.7,105.0,Open total thyroidectomy 
+2024-01-08,63.2,60.0,TK insertion
+2024-01-11,171.8,112.0,suboccipital craniectomy c tumor removal 
+2024-01-08,86.9,109.0,left craniectomy c tumor removal
+2024-01-15,115.3,123.0,rt craniotomy c tumor removal 
+2024-01-30,22.7,25.0,tracheostomy 
+2024-01-12,42.6,15.0,Suture wound
+2024-01-23,5.0,5.0,Off DJ stent 
+2024-01-08,25.1,25.0,I&D (transcervical)
+2024-01-09,18.3,15.0,rigid cystoscopy
+2024-01-09,143.3,262.0,VATs wedge resection RLL nodule
+2024-01-09,24.1,20.0,hemorrhoidectomy
+2024-01-09,54.9,50.0,TURP
+2024-01-09,95.3,137.0,soc retrosigmoid appraoch left
+2024-01-09,23.1,35.0,LIFT
+2024-01-09,23.9,32.0,hemorrhoidectomy
+2024-01-09,9.9,40.0,Transanal excision 
+2024-01-10,89.9,165.0,Transphenoid approach c tumor removal 
+2024-01-09,28.0,30.0,hemorrhoidectomy with excision skin tag
+2024-01-08,32.4,65.0,Debridement
+2024-01-22,60.7,35.0,loop sigmoid colostomy
+2024-01-26,119.9,250.0,open thoracotomy with pleural drainage +/- decorticate
+2024-01-25,11.7,5.0,cystoscope + irrigate clot 
+2024-01-09,200.2,30.0,Lt craniotomy c clipping aneurysm
+2024-01-10,65.9,35.0,wide excision with STSG
+2024-01-10,35.2,60.0,Circumcision
+2024-01-26,26.0,10.0,Tracheostomy
+2024-01-11,102.3,144.0,Rt HL with VS with phlebectomy
+2024-01-11,114.5,35.0,LC 
+2024-01-12,110.5,179.0,Lt HL with VS with Phlebectomy
+2024-02-02,139.3,113.0,VATS repair airleak Rt. chest
+2024-01-11,126.3,65.0,Lt FESS
+2024-01-11,88.5,105.0,Septoturbinoplasty 
+2024-01-11,116.4,197.0,Rt TM c SLNB
+2024-01-11,181.1,90.0,Lt BCT C SLNB 
+2024-01-11,73.8,72.0,Rt vp shunt
+2024-01-12,75.4,35.0,Open total thyroidectomy with bilateral CND
+2024-02-06,57.8,30.0,Ligation AVF Rt cubital + DLC to TCC Rt FV 
+2024-01-12,62.1,35.0,Open total thyroidectomy
+2024-01-12,81.5,40.0,total thyroidectomy c parathyroidectomy
+2024-01-31,96.0,167.0,corpectomy C5-6 with titanium mesh cage with anterior plate screw fixation
+2024-01-23,146.0,180.0,VATs biopsy
+2024-02-14,104.1,65.0,LP shunt 
+2024-01-16,138.0,176.0,"laminectomy T5,L2 with tumor removal "
+2024-01-15,53.4,33.0,R4-5 sympathectomy
+2024-01-15,131.1,187.0,bilateral superficial parotidectomy
+2024-01-15,83.6,115.0,Open TTD
+2024-01-16,164.8,195.0,Laparoscopic Rt hemicolectomy 
+2024-01-15,54.6,50.0,R4-5 sympathectomy
+2024-01-15,158.9,155.0,laminectomy c PDS fixation L1-5-S1 
+2024-01-15,73.5,50.0,Re-mastectomy of left breast 
+2024-01-16,158.0,98.0,laminectomy c PDS L3-4 L4-5 prodot 
+2024-01-16,11.7,20.0,REZUM
+2024-01-16,43.5,97.0,RIRs with laser ablasion with DJ stent insertion
+2024-01-18,177.2,125.0,Lt craniotomy c tumor removal
+2024-02-13,45.3,40.0,chemo port insertion 
+2024-01-25,5.5,5.0,Cystoscope
+2024-01-15,76.5,50.0,Lt.TB2 
+2024-01-17,154.0,132.0,laminectomy c PDS fixation L345 MIS 
+2024-01-17,148.9,66.0,ACDF C4-5 peek plate 
+2024-01-17,65.2,62.0,T&A (ใช้ coblator) + post-op PICU อจองให้เรียบร้อยค่ะ  
+2024-01-17,84.4,90.0,EVAR
+2024-01-17,75.1,80.0,Rt TB2
+2024-01-17,70.7,57.0,BSP + partial uvulectomy + RF BOT(ใช้ Steiner อุปกรณ์ suspension demo จาก STORZ มี จนท บริษัทเข้าด้วย)
+2024-01-19,210.4,261.0,TPS T4-5/ T8-9 laminectomy T6 + tumor removal under navigation 
+2024-01-31,8.3,5.0,Cystoscope 
+2024-02-14,27.5,20.0,tracheostomy
+2024-01-18,98.1,190.0,Rt HL with VS with multiple phlebectomy
+2024-01-19,221.3,251.0,laparoscopic LAR
+2024-01-18,98.0,138.0,LC
+2024-01-18,140.8,172.0,Bilat ESS+Navigator 
+2024-01-18,56.2,17.0,Water vapor therapy (REZUM)
+2024-01-18,66.4,70.0,Tenckhoff insertion
+2024-01-18,103.0,154.0,LC
+2024-02-09,167.0,215.0,craniotomy c tumor removal
+2024-01-19,87.5,173.0,TPL L3-5
+2024-01-19,97.0,115.0,LC
+2024-01-19,12.1,8.0,Fistulotomy
+2024-01-19,89.5,30.0,burr hole with irrigation 
+2024-01-19,121.5,140.0,Partial glossectomy
+2024-01-31,51.7,60.0,Change vac dressing
+2024-02-05,49.3,80.0,Change vac dressing
+2024-02-13,50.6,120.0,change vac dressing
+2024-02-15,53.6,95.0,change vac dressing
+2024-02-21,49.9,77.0,change vac dressing
+2024-02-28,46.8,50.0,Abdominal toilet
+2024-02-29,66.2,55.0,closure abdominal wall 
+2024-01-24,13.4,5.0,Off Lt. DJ stent
+2024-01-19,22.8,25.0,LIFT
+2024-01-19,8.2,25.0,LIS
+2024-01-19,20.3,50.0,Hemorrhoidectomy 
+2024-02-07,40.6,60.0,tracheostomy 
+2024-01-30,114.5,214.0,bilat craniotomy c clot remmoval 
+2024-01-22,64.0,50.0,Fistulogram +- PTA
+2024-01-22,97.3,59.0,Open right upper and lower parathyroidectomy
+2024-01-22,61.8,70.0,Myringoplasty
+2024-01-22,78.5,28.0,Excision of deep cervical lymph node
+2024-01-22,151.1,158.0,laminectomy c PDS fixation L345 MIS 
+2024-01-22,107.1,110.0,Rt thyroid lobectomy
+2024-01-22,62.0,12.0,debridement and suture 
+2024-01-22,190.4,160.0,"Balloon angioplasty at Rt SFA, PA, PTA"
+2024-01-22,72.8,65.0,Excision of right axillary breast
+2024-01-23,272.3,250.0,lap LAR with high ligation 
+2024-01-23,150.4,133.0,laminectomy c PDS fixation L2345 
+2024-01-29,85.3,175.0,explore wound (ICD) with VATs clot removal
+2024-01-24,58.3,321.0,Other craniotomy
+2024-02-07,85.0,30.0,VP shunt c tracheostomy 
+2024-01-24,147.1,186.0,laminectomy L345 c PDS fixation
+2024-02-02,86.3,175.0,Revision screw L3-5 with laminectomy L3
+2024-02-20,28.0,30.0,tracheostomy
+2024-01-26,48.4,10.0,anal biopsy 
+2024-01-25,132.6,184.0,Lt TM c Lt SLNB
+2024-01-25,63.2,207.0,Open TTD with bilat. CND with right MRND
+2024-01-25,121.9,204.0,"Rt BCT with Rt SLNB, Lt breast mass excision"
+2024-01-25,66.9,40.0,Excision
+2024-01-26,56.3,385.0,rt frontal craniotomy c tumor removal 
+2024-01-26,23.4,62.0,EGD + Colonoscopy
+2024-01-26,50.9,48.0,Open right thyroidectomy with bilateral parathyroidectomy
+2024-01-25,42.1,40.0,TUR-P นอกเวลา
+2024-01-26,54.8,55.0,excision
+2024-01-26,23.1,30.0,DL-tele Bx
+2024-01-26,91.0,60.0,MMF
+2024-02-07,5.0,5.0,off DJ stent
+2024-01-26,19.3,25.0,RFA Hemorrhoidoplasty
+2024-01-29,115.7,117.0,LC
+2024-02-14,27.6,25.0,tracheostomy
+2024-01-29,149.7,220.0,ACDF C3-4 DIVA C 567 peek plate
+2024-01-29,62.8,35.0,SSV ligation+ Sclerotherapy under spinal block
+2024-01-29,56.1,35.0,excision mass 
+2024-01-29,142.8,117.0,"partial,or subtotal thyroidectomy,Isthmectomy,Other"
+2024-01-29,154.3,97.0,Total parathyroidectomy with ATX
+2024-01-29,98.0,125.0,Open right thyroid lobectomy with right upper and lower parathyroidectomy
+2024-01-31,17.6,15.0,TCC Rt IJV
+2024-01-31,201.8,375.0,Lt craniotomy with tumor removal 
+2024-01-29,106.3,45.0,Right microdochectomy
+2024-01-29,57.8,18.0,Remove implant of left breast 
+2024-01-30,22.1,12.0,mri fusion trux bs
+2024-01-30,13.8,14.0,REZUM
+2024-01-30,8.8,15.0,trus bx with cysto
+2024-01-30,12.7,10.0,REZUM
+2024-01-30,95.1,116.0,Posterior fixation lateral mass screw C6-T1 + laminectomy C6-7
+2024-01-30,14.4,20.0,transanal biopsy 
+2024-01-30,118.5,165.0,Lt Radical mastoidectomy + facial NIMS
+2024-01-30,53.5,54.0,TURP
+2024-01-30,58.0,24.0,FIPS + LIS 
+2024-01-30,22.1,5.0,mri fusion trux bx
+2024-01-30,24.9,40.0,LIFT
+2024-02-13,27.3,41.0,tracheostomy 
+2024-01-31,19.0,15.0,TUF
+2024-01-31,14.2,35.0,TRUS Bx c URSL
+2024-01-31,23.4,26.0,TUR-BT
+2024-01-31,26.5,25.0,TUR-BT
+2024-01-31,73.6,90.0,DISE (แจ้งทางวิสัญญีใช้เครื่องBIS + เบิก BIS electrode) +  BSP + RF BOT (GA)
+2024-02-01,100.7,290.0,open aneurysmorhapphy using bifurcated graft/tube graft 
+2024-01-31,25.3,14.0,MRI fusion Bx
+2024-02-02,164.9,210.0,lap ERHC
+2024-02-05,45.1,160.0,Downhill with retrograde angioplasty Lt leg
+2024-02-01,122.3,264.0,open RH 
+2024-02-01,116.0,55.0,Endoscopic Lt tumor removal 
+2024-02-01,79.3,60.0,Septoplasty +Dolye
+2024-02-15,46.4,65.0,suture wound with change vac dressing
+2024-02-02,93.5,35.0,LC
+2024-02-02,225.1,345.0,TPS c laminectomy L4-5 
+2024-02-02,44.1,60.0,Open TTD
+2024-02-07,114.8,110.0,ACDF C456 peek plate 
+2024-02-02,96.5,139.0,complete thyroidectomy
+2024-02-02,25.1,16.0,Hemorrhoidectomy
+2024-02-02,27.1,25.0,LIFT
+2024-02-02,31.7,117.0,EGD + Colonoscopy
+2024-02-14,18.2,5.0,cystoscope with remove DJ stent
+2024-03-01,23.8,40.0,tracheostomy
+2024-02-21,40.6,25.0,tracheostomy 
+2024-03-05,85.9,56.0,VP shunt
+2024-03-15,25.1,55.0,tracheostomy
+2024-03-20,28.5,20.0,tracheostomy
+2024-02-02,33.2,15.0,Laser hemorrhoidoplasty
+2024-02-02,32.7,15.0,laser hemorrhoidoplasty 
+2024-02-05,129.5,143.0,Lt. mastectomy with SLNB(dual technique)
+2024-02-05,119.1,412.0,Partial glossectomy
+2024-02-12,23.7,62.0,"Excisional debridement of wound, infection, or burn"
+2024-02-16,25.1,310.0,"Excisional debridement of wound, infection, or burn"
+2024-02-19,39.1,30.0,Other incision with drainage of skin and subcutaneous tissue
+2024-02-27,40.5,115.0,Other incision with drainage of skin and subcutaneous tissue
+2024-03-26,24.8,45.0,"Excisional debridement of wound, infection, or burn"
+2024-02-05,119.2,134.0,ACDF C568 peek plate 
+2024-02-05,64.5,195.0,axillo-bifem bypass
+2024-02-05,115.8,103.0,ACDF C456 peek plate 
+2024-02-05,75.9,45.0,Microdochectomy
+2024-02-06,5.0,7.0,TRUS - Bx
+2024-02-06,135.2,197.0,MIS TLIF L45S1
+2024-02-06,40.1,78.0,TUR-P
+2024-02-07,109.8,105.0,ORIF c Plate and screw c closed reduction of nasal bone +- MMF
+2024-02-06,8.7,18.0,LIS 
+2024-02-07,31.7,40.0,URS
+2024-03-26,28.8,25.0,tracheostomy
+2024-02-07,31.2,103.0,Bilateral orchiectomy
+2024-02-21,18.8,5.0,cystoscope with remove DJ stent
+2024-02-08,99.1,180.0,Rt. HL with multiple phlebectomy
+2024-02-08,99.0,107.0,LC
+2024-02-09,28.3,22.0,EGD colonoscopy
+2024-02-15,32.2,46.0,debridement
+2024-02-07,57.9,60.0,AVBG
+2024-02-09,31.1,37.0,EGD  + Colonoscopy
+2024-02-09,19.0,25.0,TCC Rt IJV 
+2024-02-20,42.3,40.0,Tracheostomy
+2024-02-28,84.7,100.0,VP shunt 
+2024-02-14,172.0,130.0,craniotomy c tumor removal 
+2024-03-08,168.7,215.0,craniotomy c tumor removal
+2024-02-12,134.3,162.0,laminectomy with PDS fixation L3-S1 
+2024-02-12,85.4,170.0,BCS with LICAP Lt.
+2024-02-12,60.7,150.0,revision bilat FESS with microdebrider and navigator
+2024-02-12,94.0,90.0,open Lt hernioplasty
+2024-02-12,140.2,90.0,"partial,or subtotal thyroidectomy,Isthmectomy,Other"
+2024-02-12,75.9,10.0,Unilateral thyroid lobectomy
+2024-02-13,174.2,185.0,lap RHC c wedge liver S6
+2024-02-28,31.2,50.0,tracheostomy 
+2024-02-12,61.9,80.0,excisional biopsy
+2024-02-12,182.2,120.0,Lt. BCT with SLNB with LICAP
+2024-02-13,26.2,65.0,TUR- BT under GA
+2024-02-13,68.5,177.0,Revision Lt tympanomastoidectomy
+2024-02-16,57.9,20.0,ANAL STRICTUROPLASTY
+2024-02-13,38.4,20.0,rt ursl ใช้ flu
+2024-02-14,214.9,130.0,Lap. radical nephrectomy Rt. 
+2024-02-13,110.3,259.0,Rt SOC c tumor removal 
+2024-02-14,110.4,145.0,ACDF C345 
+2024-02-13,5.0,9.0,TRUS- Bx
+2024-02-14,23.2,15.0,cystoscope c DJ stent
+2024-02-16,60.8,145.0,En bloc resection
+2024-03-08,51.6,15.0,resuture
+2024-02-14,67.3,150.0,Debridement  with PTSG from Lt.Groin  with  K+Wire  fixation 
+2024-02-13,77.0,40.0,Rt RFA with phlebectomy
+2024-02-14,83.6,19.0,Rt. high orchiectomy
+2024-02-14,118.4,114.0,Lap left nephrectomy
+2024-02-15,24.7,65.0,TUR-BT
+2024-02-16,164.9,201.0,Laparoscopic sigmoidectomy
+2024-02-15,263.4,327.0,Wedge liver resection 
+2024-02-15,52.7,25.0,excision rt paratesticular cyst
+2024-02-15,53.8,96.0,TURP
+2024-02-16,32.2,32.0,EGD + colonoscopy
+2024-02-15,41.6,5.0,Rt URSL
+2024-02-15,126.2,115.0,Lt FESS
+2024-02-15,53.3,20.0,TUI-BN under SB
+2024-02-15,115.1,95.0,Rt FESS
+2024-02-16,36.3,35.0,Open left upper and lower parathyroidectomy
+2024-02-16,106.7,205.0,endoscopic transphenoid 
+2024-02-16,25.6,13.0,EGD + Colonoscopy
+2024-02-16,70.6,45.0,Open total thyroidectomy with bilateral central neck dissection
+2024-02-16,27.7,30.0,Laryngoscopy and other tracheoscopy
+2024-02-29,72.8,66.0,Open gastrostomy
+2024-02-16,42.5,40.0,DB reduction + Kwire fixation +- tendon repair
+2024-02-17,112.4,95.0,Rt FESS+Septoplasty 
+2024-02-20,13.4,17.0,REZUM
+2024-02-19,104.2,65.0,Lt. thyroid lobectomy
+2024-02-20,179.6,205.0,Lap sigmoidectomy +/- closure colostomy 
+2024-02-19,89.0,124.0,total thyroidectomy
+2024-02-19,26.6,25.0,Laryngoscopy and other tracheoscopy
+2024-02-19,135.0,134.0,MIS laminectomy c PDS fixation L5S1 
+2024-02-19,30.5,15.0,DL+Excision 
+2024-02-19,80.8,35.0,Wide excision of right breast 
+2024-02-19,77.8,57.0,1.Left BCT + SLNB (wire localization wide excision) 2.Gastro-colonoscope 
+2024-02-19,81.2,186.0,Left BCT + TAD
+2024-02-20,134.7,143.0,MIS TLIF L345
+2024-02-21,144.9,288.0,VATs wedge RUL
+2024-02-28,46.5,72.0,AVF Lt cubital
+2024-02-21,105.6,110.0,sublabial transphenoid Tumor removal
+2024-02-21,35.9,20.0,T&A (GA) + post-op PICU 
+2024-02-22,120.5,157.0,Lt. TM + SLNB
+2024-02-23,176.0,60.0,lap subtotal colectomy +/-  convert to open + protective loop ileostomy
+2024-02-22,112.2,195.0,LC
+2024-02-22,59.2,25.0,Toe amputation
+2024-02-22,46.5,40.0,second stage repair
+2024-02-22,61.7,100.0,OC 
+2024-02-23,73.9,20.0,Nasal tele+off packing +- cautery
+2024-02-22,66.9,45.0,umbilical reconstruction
+2024-02-22,145.1,210.0,Bilat FESS+Navigator 
+2024-02-23,90.1,130.0,LC
+2024-02-23,47.0,27.0,tonsillectomy
+2024-02-25,15.5,40.0,I&D
+2024-02-23,15.9,10.0,hemorrhoidectomy
+2024-02-23,18.0,10.0,hemorrhoidectomy
+2024-02-23,18.6,18.0,LIFT
+2024-02-27,228.3,185.0,Lap LHC
+2024-02-27,133.0,184.0,laminectomy L4-5 c PDS fixation
+2024-02-27,29.4,40.0,TUR-BT 
+2024-02-28,94.7,95.0,LC
+2024-02-27,129.6,160.0,laminectomy L1 c PDS fixation T11-L3
+2024-02-28,39.7,60.0,Lt URSL + remove DJ stent
+2024-02-28,74.2,42.0,Central quandrantectomy 
+2024-02-27,30.9,20.0,RFA of Rt leg
+2024-02-28,58.4,75.0,Septoplasty + RF nose + partial uvulectomy (GA)
+2024-03-26,25.1,15.0,tracheostomy
+2024-03-06,5.1,8.0,TRUS bx
+2024-03-13,22.6,40.0,tracheostomy
+2024-02-29,101.3,105.0,Rt HL with VS with multiple phlebectomy
+2024-02-29,110.9,40.0,Lt RFA
+2024-03-04,49.8,230.0,Downhill angioplasty of Lt leg
+2024-02-29,47.5,35.0,"excision, debridement"
+2024-03-01,21.8,10.0,hemorrhoidectomy 
+2024-03-04,48.9,47.0,microDL c excision
+2024-02-29,63.3,40.0,AVBG Lt upper arm 
+2024-03-01,46.1,27.0,karydakis operation
+2024-03-01,14.0,26.0,Fistulotomy
+2024-03-01,23.1,11.0,hemorrhoidectomy
+2024-03-05,70.2,37.0,open drainage +/- orchidectomy
+2024-03-19,39.2,20.0,skin closure under IV sedation
+2024-04-09,5.0,5.0,off DJ stent 
+2024-03-01,26.8,35.0,EGD + colonoscopy
+2024-03-29,50.0,40.0,resuture
+2024-03-01,32.8,22.0,laser hemorrhoidoplasty
+2024-03-01,34.7,17.0,Laser hemoroidoplasty
+2024-03-01,54.8,5.0,fistulectomy
+2024-03-01,71.2,85.0,Mammoplasty
+2024-03-11,61.9,155.0,crossover angioplasty rt leg 
+2024-03-14,5.0,5.0,off DJ stent 
+2024-03-04,39.8,30.0,STSG
+2024-03-04,77.5,102.0,Unilateral thyroid lobectomy
+2024-03-04,125.7,124.0,MIS TLIF L3/4 L4/5
+2024-03-04,58.1,48.0,Excision
+2024-03-04,73.5,25.0,VAE 
+2024-03-05,13.5,10.0,REZUM
+2024-03-05,11.1,5.0,cysto +- TUR-BT under IV sedation
+2024-03-05,9.6,10.0,cystoscopy under + REZUM IV sedation
+2024-03-06,146.7,150.0,ACDF C4-6 peek plate
+2024-03-06,90.2,30.0,CR with K-wire Fixation under Flu Rt. little finger
+2024-03-06,40.0,32.0,Rt URSL
+2024-03-06,60.5,15.0,Closed reduction with k-wire fixation
+2024-03-13,16.5,15.0,"TCC RT IJV , centros"
+2024-03-07,109.1,75.0,LC 
+2024-03-06,73.9,20.0,Removal of arch bar
+2024-03-07,20.5,63.0,TURBT
+2024-03-07,99.0,38.0,LC
+2024-03-07,6.9,7.0,trus bx
+2024-03-07,125.4,155.0,Lt FESS+ Bilat turbinoplasty+ Navigator 
+2024-03-07,99.5,62.0,LC
+2024-03-07,116.1,65.0,LC+/- convert OC
+2024-03-22,24.6,25.0,tracheostomy
+2024-03-08,18.0,10.0,I&D 
+2024-03-08,17.5,25.0,hemorrhoidectomy
+2024-03-11,105.4,175.0,Complete thyroidectomy
+2024-03-12,64.6,320.0,Crossover angioplasty of Rt leg +/- Retrograde
+2024-03-11,77.0,85.0,Unilateral thyroid lobectomy
+2024-03-11,73.8,75.0,Unilateral thyroid lobectomy
+2024-03-11,155.3,132.0,Lt. mastectomy with SLNB
+2024-03-11,146.0,155.0,ACDF C4-7 peek plate
+2024-03-11,52.7,52.0,R4-5 sympathectomy
+2024-03-12,41.3,25.0,TUR-P
+2024-03-12,12.9,10.0,REZUM
+2024-03-12,148.2,187.0,lap right pyeloplasty with flexible cysto with laser RC
+2024-03-18,45.3,30.0,DB with  vaccumum dressing
+2024-03-12,14.4,10.0,REZUM
+2024-03-12,22.8,35.0,hemorrhoidectomy
+2024-03-12,148.8,123.0,laminectomy c PDS fixation L4-5 (+/-MIS)
+2024-03-12,25.7,35.0,hemorrhoidectomy
+2024-03-15,105.8,190.0,VATS c blebectomy Rt chest
+2024-04-01,51.5,29.0,Revised TCC Rt IJV
+2024-03-12,59.5,100.0,rt flexble RIRS นอกเวลา
+2024-04-18,5.0,5.0,off DJ stent 
+2024-03-13,22.3,15.0,MRI fusion Bx
+2024-03-13,18.2,15.0,TURBT
+2024-03-14,101.5,180.0,Open abdominal aortic aneurysmorrhaphy 
+2024-03-15,194.6,185.0,Lap sigmoidectomy
+2024-03-14,55.0,90.0,turp
+2024-03-14,50.8,61.0,Ray amputation Lt 3rd toe
+2024-03-13,66.2,65.0,AVBG Lt forearm
+2024-03-14,55.2,40.0,excision under GA
+2024-03-18,106.3,100.0,VATS c Drainage
+2024-03-14,127.3,145.0,Lt EMMM 
+2024-03-14,68.8,75.0,IMF
+2024-03-14,67.8,90.0,AVBG Lt upperarm
+2024-03-15,103.7,130.0,endoscopic septoplasty and inferior turbinoplasty
+2024-03-15,80.2,90.0,Repair false aneurysm at AVF 
+2024-04-04,64.7,300.0,crossover angioplasty 
+2024-04-11,44.4,30.0,Debridement
+2024-03-18,55.5,50.0,DB at rt foot
+2024-03-25,42.8,40.0,debridement 
+2024-03-22,24.2,38.0,egd+colonoscopy
+2024-03-18,43.2,46.0,Tonsillectomy without adenoidectomy
+2024-03-18,146.5,139.0,ACDF C4-7 DIVA
+2024-03-18,117.1,140.0,Rt BCT + TAD
+2024-03-18,141.4,131.0,ACDF C3-4 (+/-C4-5)
+2024-03-18,27.2,18.0,Laryngoscopy and other tracheoscopy
+2024-03-19,14.4,15.0,REZUM
+2024-03-18,69.1,18.0,Endotracheal tube intubation +/- tracheostomy
+2024-03-18,110.7,105.0,aneurysmectomy
+2024-03-19,149.7,123.0,laminectomy c PDS fixation L3-4
+2024-03-19,113.2,102.0,VATS c Rt lower lobectomy
+2024-03-19,117.0,82.0,Lt ribs resection
+2024-03-18,77.4,70.0,Right BCT + SLNB (DUal tracer) 
+2024-03-19,147.8,105.0,laminectomy c PDS fixation L2-5
+2024-03-20,82.8,125.0,re-transsphenoid approach c tumor removal
+2024-03-19,197.9,257.0,Lap AR
+2024-04-10,28.9,50.0,Tracheostomy (GA)
+2024-03-27,125.6,130.0,ORIF wtih PAS with MMF
+2024-03-20,153.3,89.0,LAP Right adrenalectomy
+2024-03-20,74.7,33.0,Repair of indirect inguinal hernia
+2024-03-19,46.0,65.0,Bilateral RFA 
+2024-03-20,158.5,88.0,Lap. nephrectomy
+2024-03-20,41.8,95.0,wide excision 
+2024-03-20,137.0,225.0,cranioplasty
+2024-03-21,100.7,55.0,LC
+2024-03-21,115.3,130.0,LC + lap larvage for cytology + lap dx peritoneal nodule/ omental biopsy 
+2024-03-27,117.6,112.0,VATS c Pleuropericardial window
+2024-03-21,118.2,170.0,bilateral HL with VS with multiple phlebectomy 
+2024-03-20,56.5,45.0,Orchiopexy
+2024-03-21,50.5,45.0,tonsillectomy
+2024-03-25,102.8,77.0,PDS fixation L1-3 cross link
+2024-03-22,43.5,30.0,Open right substernal thyroidectomy
+2024-03-22,88.5,225.0,LC
+2024-03-22,33.9,55.0,Open TTD +/- CND
+2024-03-22,108.6,286.0,VATS c wedge resection RLL nodule + open wedge iver segment 4.6.8
+2024-03-22,65.4,35.0,Open total thyroidectomy
+2024-03-21,48.3,120.0,AVF Lt cubital
+2024-04-10,5.0,5.0,off dj stent 
+2024-05-02,7.6,7.0,off DJ stent 
+2024-03-22,56.5,35.0,"ERCP c sphincterotomy c balloon stone extraction c +/- BD, PD stent"
+2024-03-22,28.9,13.0,Laser hemorrhoidoplasty 
+2024-03-23,41.7,75.0,Mini craniectomy 
+2024-03-25,41.8,115.0,Other bronchoscopy
+2024-03-25,26.6,230.0,Laryngoscopy and other tracheoscopy
+2024-04-03,146.3,121.0,VATS decortication
+2024-03-25,55.6,23.0,Right BCT + SLNB 
+2024-03-26,23.7,32.0,LIFT
+2024-03-26,88.8,99.0,T10-L2 PDS fixation
+2024-03-25,66.0,50.0,excision
+2024-03-26,16.1,15.0,transanal excision with hemorrhoidectomy
+2024-03-26,33.6,30.0,Closed hemorrhoidectomy 
+2024-03-26,143.2,179.0,ACDF C3-7 DIVA
+2024-03-26,7.1,12.0,TRUS - Bx
+2024-03-26,15.5,16.0,REZUM
+2024-03-28,50.5,28.0,Debridement at Rt hip
+2024-03-26,16.0,22.0,Transanal excision +- closed hemorrhoidectomy 
+2024-03-26,38.9,60.0,TUR-P  +- bilateral DJ stemt insertion นอกเวลา
+2024-03-27,148.6,179.0,laminectomy c PDS fixation L3-S1
+2024-04-10,28.1,30.0,tracheostomy
+2024-04-23,5.0,7.0,off DJ stent 
+2024-03-28,162.1,185.0,Rt mastectomy with Rt SLNB
+2024-03-28,80.5,118.0,En-bloc resection
+2024-03-28,56.5,55.0,redo palatoplasty
+2024-03-28,124.9,105.0,Lt FESS
+2024-03-28,98.4,70.0,needle localized excision Rt breast
+2024-03-28,95.4,85.0,Tonsillectomy+RF nose 
+2024-03-29,25.1,10.0,colonoscope
+2024-03-29,23.1,25.0,EGD + Colonoscopy
+2024-03-29,106.6,227.0,VATS c RML Lobectomy
+2024-03-29,99.2,70.0,endoscopic tumor removal navigatoe microdebrider coblator
+2024-03-29,24.8,25.0,EGD + Colonoscopy
+2024-03-29,53.2,25.0,hemorrhiodectomy 
+2024-03-29,31.3,35.0,EGD +Colonoscopy
+2024-03-28,28.4,20.0,URSL +- DJ stent 
+2024-03-29,83.3,137.0,two Burr hole
+2024-04-04,42.1,45.0,Debridement
+2024-04-03,62.1,77.0,graft removal with repair brachial artery 
+2024-04-05,31.6,65.0,EGD+colonoscopy
+2024-04-01,113.3,65.0,Lt.submandibulectomy
+2024-04-01,105.8,126.0,Complete thyroidectomy
+2024-04-10,100.8,97.0,bliateral craniotomy
+2024-05-01,87.9,35.0,Trachesotomy
+2024-04-01,55.1,95.0,Remove breast implant 
+2024-04-01,100.2,47.0,Left VAE + SLNB 
+2024-04-05,100.7,165.0,Laparoscopic cholecystectomy 
+2024-04-02,64.3,7.0,Segmental graft removal with interposition graft
+2024-04-02,39.5,10.0,insert DJ stent 
+2024-04-02,55.1,7.0,closure colostomy 
+2024-04-02,23.8,5.0,TUR- BT
+2024-07-02,5.0,5.0,flexible cystoscopy 
+2024-04-02,56.1,60.0,TURP
+2024-04-02,140.2,193.0,VATS LUL Lobectomy c LN dissection
+2024-04-02,131.9,113.0,MIS TLIF L4-5
+2024-04-02,24.8,57.0,LIFT+LIS
+2024-04-24,50.0,45.0,TK insertion
+2024-04-02,61.4,105.0,Segmental graft removal with interposition graft Lt forearm
+2024-04-03,87.5,258.0,"microscope, mayfield, doro"
+2024-04-03,64.2,75.0,T&A (GA)
+2024-04-03,53.5,46.0,Tonsillectomy (GA)
+2024-04-03,84.0,86.0,excision cyst c lysis adhesion
+2024-04-04,70.8,45.0,Rt VP shunt
+2024-04-04,94.0,348.0,IOUS+Caudate resection +S2 anatomical resection 
+2024-04-17,7.4,10.0,Off DJ stent 
+2024-04-04,45.8,30.0,Debridement +- amputation Rt 1st Toe 
+2024-04-03,47.9,35.0,Bilateral RFA
+2024-04-04,104.0,187.0,LC
+2024-04-04,35.6,25.0,Tonsillectomy 
+2024-04-04,40.9,20.0,remove polydactyly
+2024-04-22,41.0,25.0,debridement and amputation
+2024-05-07,66.0,152.0,Crossover angioplasty
+2024-04-05,14.3,15.0,fistulotomy 
+2024-04-05,61.3,25.0,intraanal fistulotomy with closure IO with tube drain
+2024-04-05,94.9,112.0,endoscopic adenoidectomy
+2024-04-04,107.4,110.0,aneurysmectomy
+2024-04-05,93.2,207.0,Revision screw L3-5 with laminectomy L3
+2024-04-09,37.0,70.0,TUR-P นอกเวลา
+2024-04-05,28.3,75.0,EGD+Colonoscopy + laser hemorrhoidoplasty
+2024-04-05,85.4,115.0,Bilateral extended simple mastectomy with implant removal 
+2024-04-11,58.2,25.0,thacheostomy
+2024-04-17,121.8,260.0,RT lung decortication 
+2024-04-09,102.6,109.0,Rt carotid endarterectomy
+2024-04-09,117.2,156.0,VATS c LLL lobectomy
+2024-04-09,13.7,12.0,REZUM
+2024-04-09,13.7,10.0,REZUM
+2024-04-09,147.5,164.0,L2-5 laminectomy with PDS fixation
+2024-04-10,22.8,17.0,MRI fusion Bx (tranperineum)
+2024-04-10,92.5,80.0,T+BSP+RF nose (GA)
+2024-04-10,118.3,151.0,ACDF C3456 allograft plate and screw
+2024-04-10,74.9,235.0,mass removal at Lt. shoulder
+2024-04-17,163.2,235.0,Suboccipital craniotomy with tumor removal
+2024-04-10,74.7,17.0,revise Rt VP shunt
+2024-04-17,71.2,75.0,DB and drainage
+2024-04-11,148.7,115.0,Aneurysmectomy Lt AVF
+2024-04-10,49.3,40.0,Bilateral RFA with multiple phlebectomy 
+2024-04-11,97.0,96.0,LC
+2024-04-11,134.5,65.0,Open cholecystectomy
+2024-04-11,108.1,63.0,LC
+2024-05-08,50.7,15.0,PCN
+2024-04-11,151.8,105.0,Aneurysmectomy Rt 
+2024-04-24,25.4,25.0,Tracheostomy(GA)
+2024-04-30,10.6,10.0,cystoscopy +- TURF 
+2024-05-20,52.7,95.0,STSG
+2024-04-18,91.6,115.0,Pedicular screw fixation T12-L4
+2024-04-17,49.2,15.0,debridement
+2024-04-17,36.1,20.0,T& A with coblator
+2024-04-17,36.6,18.0,T&A 
+2024-04-18,170.8,348.0,laparoscopic esophagectomy with colonic intertransposition 
+2024-05-07,29.7,20.0,Tracheostomy
+2024-04-17,102.0,217.0,UNKNOWN
+2024-04-18,92.0,218.0,left axillo-unifemoral bypass + endarterectomy 
+2024-04-18,89.2,113.0,open Rt. hernioplasty
+2024-04-18,18.5,15.0,MRI fusion TRUS bx 
+2024-04-18,33.0,20.0,bilat orchiectomy 
+2024-04-18,128.7,70.0,Lt FESS
+2024-04-18,39.7,25.0,closed redction with MMF
+2024-04-17,63.9,65.0,AVBG RT forearm
+2024-04-19,35.5,13.0,D/L with excision 
+2024-04-19,23.2,42.0,hemorrhoidectomy
+2024-04-19,23.7,25.0,hemorrhoidectomy
+2024-04-19,11.1,25.0,transanal excision 
+2024-05-15,32.0,25.0,tracheostomy
+2024-05-15,31.4,35.0,tracheostomy
+2024-06-07,82.8,75.0,left frontal programable VP shunt
+2024-04-25,24.8,25.0,TCC Rt EJV or DLC to TCC Rt CFV
+2024-04-22,105.1,163.0,Complete thyroidectomy
+2024-04-22,134.4,140.0,Laminectomy with lateral mass screw C34567
+2024-04-22,122.6,157.0,MIS TLIF L4-L5
+2024-04-23,31.9,35.0,Colonoscopy with biopsy +/- colonic stenting
+2024-04-22,107.5,36.0,left microdochectomy
+2024-04-22,159.1,172.0,Rt mastectomy+ SLNB
+2024-04-23,17.1,30.0,MRI fusion biopsy
+2024-04-23,8.3,10.0,TRUS - Bx
+2024-04-23,59.3,15.0,intraanal fistulotomy
+2024-04-23,23.1,15.0,hemorrhoidectomy
+2024-04-23,86.7,65.0,ACDF C5/6 peek plate
+2024-04-23,135.0,169.0,MIS TLIF L5-S1
+2024-04-23,27.0,22.0,LIFT+LIS
+2024-04-23,14.3,10.0,REZUM
+2024-04-23,16.5,12.0,rigid cysto with urethral dilation under IV sedation
+2024-04-23,26.7,20.0,LT URS 
+2024-04-23,64.7,63.0,excisional biopsy
+2024-04-23,33.3,30.0,Closed hemorrhoidectomy 
+2024-05-15,84.4,178.0,Transpedicular skrew T6-7-9-10 with tumor removal under navigation
+2024-05-23,129.6,10.0,PTA or TCC RT IJV
+2024-04-24,19.1,13.0,MRI fusion TRUS bx 
+2024-04-24,53.5,46.0,Tonsillectomy (GA)
+2024-05-01,49.1,45.0,explor. scrotum with excision
+2024-04-24,118.0,141.0,Rt lap. pyelolithotomy 
+2024-04-24,132.1,165.0,MIS TLIF L4-5
+2024-05-07,25.5,20.0,Colonoscopy
+2024-04-24,14.9,10.0,RF nose (GA)
+2024-04-29,134.6,90.0,PTA balloon angioplasty
+2024-04-24,17.0,16.0,MRI fusion TRUS biopsy 
+2024-04-25,60.1,95.0,Basilic vein transposition
+2024-04-25,108.4,151.0,Lt venous stripping + multiple phlebectomy
+2024-04-25,111.2,195.0,Lt CIA stent with Lt IIA embolization
+2024-04-24,33.2,25.0,Circumcision
+2024-07-15,66.1,110.0,Bronchoscopy through artificial stoma
+2024-04-26,165.8,185.0,Laparoscopic sigmoidectomy
+2024-04-25,63.6,160.0,Palatoplasty + bilateral myringotomy +- PT tube 
+2024-04-25,111.3,150.0,Endoscopic tumor removal 
+2024-05-01,16.2,15.0,"TCC RT IJV , centros"
+2024-05-01,107.0,210.0,Pedicular screw fixation C6-T1 with laminectomy C7
+2024-04-26,157.0,165.0,Laparoscopic Rt hemicolectomy/subtotal coloectomy
+2024-04-26,118.3,375.0,Partial glossectomy
+2024-04-26,60.3,150.0,Transphenoid endoscopic tumor removal under NAV
+2024-04-26,32.9,18.0,Laser hemorrhoid
+2024-04-26,8.0,10.0,Fistulotomy 
+2024-04-26,48.3,45.0,STSG
+2024-04-26,7.9,35.0,Fistulotomy 
+2024-05-08,5.7,5.0,Off DJ stent
+2024-05-02,17.3,15.0,TCC Rt IJV
+2024-04-27,48.9,187.0,Kidney transplantation
+2024-05-15,5.2,5.0,off DJ stent
+2024-04-29,102.3,30.0,endoscopic polypectomy
+2024-04-29,57.9,102.0,remove accesory breast Lt +/- Rt 
+2024-04-29,121.9,158.0,ACDF C3456 DIVA
+2024-04-29,73.0,95.0,Reconstructionm of right breast 
+2024-04-29,148.8,53.0,aneurysmectomy at rt upper arm 
+2024-04-30,132.3,175.0,MIS TLIF L4-5
+2024-04-30,6.2,5.0,TRUS bx 
+2024-04-30,14.9,13.0,REZUM
+2024-04-30,39.5,31.0,vasectomy under IV sedation
+2024-05-01,64.9,140.0,Downhill angioplasty
+2024-04-30,13.2,10.0,REZUM
+2024-04-30,191.0,150.0,Lap sigmoidectomy
+2024-05-03,27.1,40.0,EGD + colonoscopy
+2024-05-01,160.3,59.0,Lap nephrectomy Rt 
+2024-05-01,36.2,50.0,Circumcision
+2024-05-01,139.2,170.0,MIS TLIF L45S1
+2024-05-20,23.6,15.0,tracheostomy
+2024-05-08,180.8,395.0,Lt craniotomy with tumor removal
+2024-05-01,65.6,50.0,AVBG Lt upperarm
+2024-05-02,111.5,41.0,Lt forefoot amputation
+2024-05-03,33.9,135.0,EGD + Colonsocopy then roght hernioplasty
+2024-05-01,103.1,85.0,aneurysmectomy
+2024-05-08,52.9,70.0,Rt frontal programable VP shunt
+2024-05-08,111.3,160.0,Lap. left Adrenalectomy
+2024-05-03,36.5,100.0,EGD+colonoscopy+hemorrhoidectomy 
+2024-05-02,103.4,55.0,Needle localized excision RILQ abnormal calcification
+2024-05-03,161.6,302.0,Laparoscopic sigmoidectomy
+2024-05-03,93.2,156.0,LC
+2024-05-03,23.1,40.0,EGD + Colonoscopy
+2024-05-21,29.1,35.0,tracheostomy
+2024-05-17,28.0,10.0,Temporary tracheostomy
+2024-05-03,14.2,26.0,fistulotomy
+2024-05-03,18.5,15.0,Hemorrhoidectomy 
+2024-05-07,43.3,22.0,TUR-P
+2024-05-07,132.3,125.0,Laminectomy with PDS fixation L345 MIS
+2024-05-07,64.4,110.0,Crossover angioplasty Rt leg
+2024-05-07,11.5,11.0,Cysto  +- TUR- BT under IV sedation 
+2024-05-07,34.2,25.0,EGD+colonoscopy
+2024-05-07,14.8,100.0,Cysto + Lt.URS-L + ureteric dilation +- Flexible URS + urethral diverticulaectomy ( transvaginal)
+2024-05-07,33.4,28.0,EGD+colonoscopy
+2024-05-07,33.4,23.0,EGD+colonoscopy
+2024-05-08,28.5,20.0,chemoport insertion 
+2024-05-07,99.0,63.0,ACDF C5/6 DIVA
+2024-05-14,90.6,213.0,Left craniotomy with tumor removal
+2024-05-15,28.5,20.0,chemoport insertion 
+2024-05-07,23.2,15.0,hemorrhoidectomy
+2024-05-16,77.9,105.0,wide excision rt thigh +- STSG
+2024-05-08,10.6,10.0,TRUS biopsy 
+2024-05-08,48.4,47.0,Tonsillectomy+ BSP + RF nose 
+2024-05-08,145.7,77.0,ACDF C4-5
+2024-05-08,92.3,80.0,endoscopic adenoidectomy
+2024-05-15,15.3,61.0,cystoscopy litholapxy
+2024-05-16,11.2,13.0,cystoscopy with irrigate blood clot
+2024-05-09,60.7,55.0,Venaseal of both legs
+2024-05-09,5.0,20.0,off DJ stent under TIVA
+2024-06-06,37.5,30.0,tracheostomy
+2024-05-09,91.0,50.0,RFA both legs
+2024-05-08,68.5,60.0,AVBG Lt upperarm( double loop )
+2024-05-30,38.1,40.0,tracheostomy
+2024-05-09,120.3,140.0,aneurysmectomy + AVF Rt cubital
+2024-05-29,129.6,192.0,Rt retrosigmoid craniotomy with CSF leakage repair
+2024-05-13,79.7,97.0,ACDF C5-6 peek plate
+2024-05-13,77.5,93.0,Unilateral thyroid lobectomy
+2024-05-14,72.9,174.0,BCT+SLNB (MCE-LICAP)
+2024-05-13,124.9,98.0,Total thyroidectomy +- median sternotomy
+2024-05-13,131.6,116.0,MIS TLIF L4-5
+2024-05-13,41.8,35.0,RT MMA
+2024-05-12,39.6,35.0,Rt frontal EVD c Lt craniotony nc blood clot removal 
+2024-05-29,28.9,45.0,Tracheostomy
+2024-06-12,27.1,25.0,Tracheostomy (GA)
+2024-05-13,53.0,26.0,Rt frontal EVD
+2024-05-13,52.7,37.0,R4-5 sympathectomy
+2024-05-13,96.7,101.0,Left mastecotmy with SLNB 
+2024-05-14,8.1,5.0,TRUS- Bx
+2024-05-14,10.1,20.0,Lt. DJ stent remoival with RP +- RIRs
+2024-05-14,40.8,23.0,TUR-P
+2024-05-17,60.4,25.0,colonic stent 
+2024-05-14,11.6,10.0,REZUM
+2024-05-14,169.1,240.0,lap RHC + LC
+2024-05-15,166.6,225.0,Craniotomy with tumor removal
+2024-05-15,5.0,7.0,TRUS c Bx
+2024-05-15,44.4,22.0,TUR-P
+2024-05-15,92.4,150.0,Rt. RIRS
+2024-05-15,89.5,20.0,Lt. hydrocelectomy
+2024-05-15,55.7,75.0,Cystolithotripsy/TUL
+2024-05-15,23.9,18.0,TUR-BT
+2024-05-15,85.3,82.0,EVAR
+2024-05-28,5.9,5.0,cystoscope 
+2024-05-16,107.8,185.0,Bilateral HL with VS with Lt phlebectomy
+2024-05-16,49.0,102.0,egd+colonoscopy
+2024-05-16,103.2,92.0,LC 
+2024-05-16,110.4,190.0,Lt MRM  
+2024-05-15,67.8,80.0,AVBG Lt upperarm
+2024-05-16,141.7,195.0,Bilat revision FESS+navigator 
+2024-05-16,62.6,25.0,Excisional biopsy 
+2024-05-17,29.9,15.0,EGD + colonoscopy
+2024-05-21,17.2,30.0,TCC Rt IJV
+2024-05-17,144.2,303.0,EL with closure Hartmann with repair hernia +/-transverse colostomy 17/5/2567
+2024-05-17,78.7,50.0,Excision of deep cervical lymph node
+2024-05-17,60.5,49.0,Karidakis
+2024-05-17,94.3,110.0,ACDF C6-7
+2024-07-05,34.7,50.0,tracheostomy
+2024-05-29,53.3,71.0,Ochiectomy 
+2024-05-20,60.0,176.0,Excision 
+2024-05-20,97.0,40.0,RT. TONSILLECTOMY
+2024-06-05,34.2,35.0,tracheostomy
+2024-05-20,46.3,65.0,remove bilat breast implant
+2024-05-20,91.2,145.0,Redo Lt MVD
+2024-05-28,89.4,120.0,Redo MVD 
+2024-06-14,90.5,71.0,MVD
+2024-05-20,103.0,235.0,Open aneurysmorrhaphy with tube graft
+2024-05-29,202.1,276.0,Rt craniotomy Tumor removal
+2024-05-20,90.7,68.0,Right mastecotmy with SLNB 
+2024-05-21,34.6,56.0,TRU-P
+2024-05-21,151.8,136.0,L3-4-5 laminectomy with PDS fixation (MIS screw)
+2024-05-21,13.2,15.0,REZUM
+2024-05-23,38.7,38.0,closed stump
+2024-05-23,102.6,80.0,Rt RFA with phlebectomy 
+2024-05-23,68.4,100.0,AVBG Lt forearm
+2024-05-23,47.2,25.0,second stage repair
+2024-05-23,79.6,23.0,Rt hydrocelectomy
+2024-05-23,52.6,105.0,Cheiloplasty
+2024-05-23,79.9,190.0,Revision FESS+Navigator 
+2024-05-31,136.0,258.0,VATs wedge resection RML nodule
+2024-05-23,68.2,70.0,AVBG RT forearm
+2024-05-24,57.6,143.0,programable LP shunt
+2024-05-31,33.3,51.0,EGD+colonoscopy
+2024-05-27,75.3,100.0,angiogram+PTA left arm
+2024-05-28,91.8,15.0,left 5 th finger amputation 
+2024-05-24,60.8,65.0,left MRM
+2024-06-07,119.5,77.0,lt minicraniotomy c clot removal
+2024-05-30,52.3,25.0,change vac dressing
+2024-05-28,48.1,45.0,Change Abdominal VAC +- closure
+2024-05-30,58.3,50.0,Change VAC +- abdominal closure 
+2024-06-13,11.2,5.0,cystoscopy + remove DJ stent
+2024-05-27,106.5,97.0,Complete thyroidectomy
+2024-05-27,147.1,182.0,"ACDF C4/5, C5/6"
+2024-05-27,135.1,145.0,Laminectomy with tumor removal
+2024-05-27,123.8,65.0,Rt. superficial parotidectomy
+2024-05-27,29.5,20.0,DL c micro excision 
+2024-05-28,19.1,15.0,EGD
+2024-05-27,70.9,176.0,"Impalnt reconstruction of left breast , RIght breast lift "
+2024-05-27,94.8,142.0,Right mastecotmy with SLNB 
+2024-05-29,54.2,110.0,TUR-P + TUL
+2024-05-28,13.8,10.0,REZUM
+2024-05-28,22.7,27.0,Colonoscopy
+2024-05-28,10.9,15.0,REZUM 
+2024-05-28,40.6,10.0,TURF
+2024-05-28,42.1,43.0,TUR-P
+2024-05-28,53.0,55.0,TAE
+2024-05-28,54.9,5.0,TAE
+2024-05-29,35.4,68.0,Lt. URSL
+2024-05-29,40.7,53.0,Rt URSL
+2024-05-29,59.8,50.0,T&A (GA) + Coblator 
+2024-05-29,62.1,45.0,T&A (GA) + Post-op PICU
+2024-05-31,63.4,67.0,Downhill angioplasty left leg
+2024-05-30,106.3,75.0,Open Lt. hernioplasty 
+2024-05-30,123.3,65.0,Lt FESS
+2024-05-30,118.8,70.0,Endoscopic septoturbinoplasty 
+2024-05-30,62.4,180.0,Sybcuteneous mastectomy
+2024-05-31,90.0,129.0,TLIF L4-5 MIS
+2024-05-30,116.7,172.0,Rt. SLNB + rewide excision superior margin
+2024-05-31,58.3,10.0,E&C
+2024-05-31,128.3,135.0,bilat FESS with navigator
+2024-05-31,44.0,30.0,tonsillectomy
+2024-05-31,49.0,25.0,microDL c excision
+2024-07-19,104.2,108.0,Lt. two burr hole drainage
+2024-06-06,97.4,110.0,ORIF c PAF Rt zygoma
+2024-06-04,143.8,80.0,VATs wedge resection of RUL nodule
+2024-06-04,6.8,10.0,TRUS- Bx
+2024-06-04,39.0,22.0,vasectomy under IV sedation
+2024-06-04,267.0,305.0,Lap LAR with DLI
+2024-06-04,6.0,8.0,TRUS - BX
+2024-06-04,131.6,187.0,MIS TLIF L4-5
+2024-06-12,27.9,35.0,Chemoport insertion
+2024-06-05,86.5,35.0,EVAR
+2024-06-04,77.6,25.0,Rt Venaseal with Lt USGFS
+2024-06-05,50.8,24.0,Tonsillectomy with Coblator
+2024-06-05,93.1,105.0,T+BSP+RF nose (GA)
+2024-06-05,66.5,40.0,Kissing stent 
+2024-06-05,71.0,35.0,BSP+RF nose (GA)
+2024-06-04,70.3,45.0,RFA both GSV
+2024-06-05,64.8,135.0,Forefoot amputation
+2024-06-13,58.3,25.0,Revised stump
+2024-09-02,43.1,35.0,STSG
+2024-09-19,39.7,30.0,debridement+/- skin graft
+2024-06-05,159.4,184.0,lap. bilateral nephrectomy
+2024-06-05,75.5,170.0,Rt hernioplasty + Lt hydrocelectomy
+2024-06-05,53.2,80.0,TUIBN
+2024-06-12,106.0,218.0,posterior fossa craniotomy c tumor removal
+2024-06-05,18.5,25.0,OFF arch bar
+2024-06-07,158.0,155.0,Lap RHC 
+2024-06-07,42.7,35.0,loop proximal colostomy 
+2024-06-06,175.7,450.0,Lap distal pancreatectomy
+2024-06-06,118.3,130.0,Rt lobectomy 
+2024-06-07,24.0,77.0,colonoscopy 
+2024-06-07,56.3,82.0,Closure colostomy 
+2024-06-07,85.1,235.0,left craniotomy c tumor removal
+2024-06-07,103.8,135.0,endoscopic septoplasty with bilat FESS with microdebrider
+2024-06-12,164.8,275.0,laminectomy c biopsy c screw T1-3 c navigation
+2024-06-07,12.7,35.0,Fistulotomy +- seton 
+2024-06-07,19.3,22.0,LIFT
+2024-06-21,117.7,25.0,left ventriculostomy
+2024-07-03,60.0,75.0,VP shunt
+2024-06-26,83.8,125.0,VP shunt c tracheostomy
+2024-06-10,36.0,125.0,"Circumcision, Orchiopexy"
+2024-06-10,99.8,103.0,"ACDF C5/6,C6/7"
+2024-06-10,71.8,179.0,revision screw T12-L5
+2024-06-10,36.0,140.0,Other excision of salivary gland lesion
+2024-06-10,34.9,25.0,RFA Rt leg
+2024-06-10,62.5,96.0,Aneurymectomy
+2024-06-11,155.0,190.0,laminectomy c PDS fixation L45 S1 MIS
+2024-06-11,6.1,9.0,TRUS Bx
+2024-06-11,15.0,18.0,REZUM
+2024-06-11,27.7,100.0,RT- URS - L with residual DJ stent removal
+2024-06-11,55.8,50.0,Closure iliostomy 
+2024-06-10,112.2,72.0,right mastectomy with SLNB 
+2024-06-11,14.5,10.0,REZUM
+2024-06-14,27.9,20.0,Colonoscope
+2024-06-11,74.2,215.0,modified radical mastoidectomy Lt.
+2024-06-10,58.8,40.0,AVBG Lt forearm
+2024-06-17,21.1,15.0,TCC Rt IJV
+2024-06-11,54.8,10.0,FIPS
+2024-06-12,40.2,48.0,Lt. URSL + remove DJ stent
+2024-06-12,42.3,45.0,TUR-P
+2024-06-12,51.6,62.0,Excision Paraffinoma
+2024-06-12,8.6,15.0,TRUS biopsy
+2024-06-12,85.8,115.0,"microscope , tisseel glue, doro retractor , taflon felt "
+2024-06-12,92.2,85.0,T+BSP+RF nose (GA)
+2024-06-14,132.4,105.0,VATS pleurodesis
+2024-06-12,103.9,60.0,Endoscopic SPA ligation
+2024-06-13,85.7,75.0,EVAR using bifurcated graft
+2024-06-13,65.8,50.0,HL with VS with Multiple phlebectomy Lt leg
+2024-06-13,49.8,10.0,Sigmoidoscope under local [bedside]
+2024-06-13,51.5,55.0,excision mass
+2024-06-18,10.7,10.0,Cystoscopy irrigate +- TUF/TURBT
+2024-06-14,36.3,25.0,Closed reduction with K wire fixation
+2024-06-14,125.1,135.0,Lt thoracotomy with decortication 
+2024-06-14,125.0,167.0,Aneurysmectomy
+2024-06-21,36.4,72.0,tracheostomy
+2024-07-18,34.7,20.0,tracheostomy
+2024-06-17,36.6,147.0,Other excision of salivary gland lesion
+2024-06-17,126.7,130.0,L4/5 decompression
+2024-06-17,60.9,130.0,Biopsy of skin and subcutaneous tissue
+2024-06-17,58.7,65.0,Excision 
+2024-06-17,129.3,118.0,MIS TLIF L4-5
+2024-07-03,26.2,45.0,Tracheostomy
+2024-06-20,9.7,10.0,Cystoscopy with Left DJ stent placement
+2024-06-18,99.3,96.0,ACDF C5-7 DIVA
+2024-06-18,35.7,62.0,EGD+Colonoscopy
+2024-06-18,145.3,315.0,VATs wedge resection LLL nodule with frozen section +- LLL lobectomy
+2024-06-18,116.6,55.0,total reconstruction of penile
+2024-06-18,14.8,50.0,cysto +- TUR-P with BT
+2024-06-18,26.0,25.0,Hemorrhoidectomy
+2024-06-18,25.0,20.0,LIFT
+2024-06-18,109.5,220.0,Lt endoscopic atticotomy
+2024-06-18,141.9,187.0,ACDF C3-6 PEEK plate
+2024-06-18,13.4,5.0,LIS + fistulectomy 
+2024-06-18,28.1,25.0,hemorrhoidectomy
+2024-06-18,137.6,175.0,VATS total thymectomy with wedge resection RUL
+2024-07-09,10.6,5.0,cystoscopy remove DJ stent
+2024-06-18,56.8,25.0,fistulectomy
+2024-06-19,96.8,322.0,right retrsigmoid SOC with tumor removal
+2024-06-18,42.6,40.0,R4-5 sympathectomy
+2024-06-21,34.5,25.0,debridement 
+2024-06-25,41.2,13.0,DB+dressing
+2024-06-20,66.7,120.0,revision bilat FESS with navigator
+2024-06-20,97.9,92.0,BCS with SLNB/total mastectomy 
+2024-06-20,52.3,70.0,excision paraffinoma
+2024-06-20,67.0,227.0,CERAB + endarterctomy Rt CFA
+2024-06-19,64.2,65.0,AVBG Rt forearm
+2024-06-21,62.2,150.0,Laparascopic RHC
+2024-06-21,181.3,155.0,Lap sigmoidectomy
+2024-06-21,78.7,108.0,"endoscope , spine classic , C arm , drill 3 mm "
+2024-06-21,77.2,107.0,Unilateral thyroid lobectomy
+2024-06-21,25.2,225.0,Colonoscopy 
+2024-06-25,35.5,55.0,Suprapubic cystostomy
+2024-07-03,15.0,10.0,cystoscopy remove DJ stent
+2024-06-24,92.4,115.0,ACDF C5-6
+2024-07-10,15.0,5.0,cystoscopy remove DJ stent
+2024-07-31,98.5,15.0,shunt ligation
+2024-06-24,75.8,200.0,Angiogram +/- PTA Rt leg
+2024-06-24,107.5,85.0,Complete thyroidectomy Rt.
+2024-06-24,38.9,65.0,EGD + colonoscopy
+2024-06-24,119.3,309.0,ACDF C34567 plate screw
+2024-06-24,34.0,45.0,Other excision of salivary gland lesion
+2024-06-24,120.5,170.0,"Right mastectomy with DTI, Left breast augmentation "
+2024-06-25,91.0,97.0,Pedicular screws fixation L2-5
+2024-06-25,40.7,15.0,vasectomy under iv sedation
+2024-07-01,151.7,109.0,laminectomy c PDS fixation l 1-3 c disectomy L2-3 prodorth
+2024-06-25,88.9,33.0,bilateral orchiectyomy
+2024-06-25,131.3,129.0,L4/5 PDS +MIS laminectomy
+2024-06-25,43.5,35.0,Rt MMA
+2024-06-25,33.9,51.0,Lt URSL
+2024-06-27,19.6,10.0,TCC Rt IJV
+2024-06-26,35.9,30.0,Rt. MMA
+2024-06-26,90.7,75.0,Right VP shunt
+2024-06-26,17.8,10.0,RF nose (GA)
+2024-06-26,84.8,207.0,microscope 
+2024-06-26,73.2,135.0,endoscopic septoplasty with inferior turbinoplasty with microdebrider
+2024-08-02,25.0,20.0,tracheostomy
+2024-06-26,160.1,100.0,Lap. nephrectomy Lt.
+2024-06-26,50.5,50.0,URSL bilat +- DJ
+2024-06-27,181.7,293.0,laparoscopic BDR + Roux en Y hepaticojejunostomy +- open
+2024-06-27,132.2,165.0,bilat FESS with navigator with microdebrider
+2024-06-28,163.5,224.0,Laparoscopic sigmoidectomy
+2024-07-01,140.9,88.0,craniotomy c clot removal
+2024-06-26,65.8,70.0,AVBG Lt upperarm
+2024-06-27,132.3,90.0,Aneurysmectomy
+2024-06-28,25.1,45.0,EGD+Colonoscopy
+2024-06-28,30.1,15.0,EGD + Colonoscopy
+2024-06-28,154.0,120.0,laminectomy L4-5 c removal disc L4-5
+2024-06-28,100.1,110.0,endoscopic septoplasty with inferior turbinoplasty 
+2024-06-28,21.8,15.0,Hemorrhoidectomy 
+2024-06-28,22.4,35.0,Hemorrhoidectomy 
+2024-06-28,22.3,10.0,LIFT 
+2024-07-01,87.4,180.0,EVAR
+2024-07-23,33.0,30.0,Tracheostomy
+2024-07-17,31.1,30.0,Tracheostomy
+2024-07-01,102.7,89.0,Rt. lobectomy +/- subtotal thyroidectomy
+2024-07-01,71.1,30.0,right BCT and SLNB 
+2024-07-01,93.7,125.0,right MVD
+2024-07-01,64.4,186.0,HL+venous stripping+stab avulsion both legs
+2024-07-01,63.5,48.0,Excision breast mass Lt
+2024-07-01,159.5,101.0,Rt mastectomy c SLNB 
+2024-07-02,40.8,37.0,Hydrocelectomy
+2024-07-02,188.2,165.0,lap sigmoidectomy 
+2024-07-02,14.7,10.0,REZUM
+2024-07-02,14.3,5.0,cysto +- TUR-BT
+2024-07-05,252.3,303.0,Lap LAR 
+2024-07-02,131.8,145.0,MIS TLIF L4-5 
+2024-07-03,23.8,25.0,MRI fusion Bx
+2024-07-03,36.1,22.0,Lt. URSL
+2024-07-03,96.7,133.0,LC 
+2024-07-02,39.4,30.0,TUR-P นอกเวลา
+2024-07-03,14.3,15.0,flexible ureteroscope
+2024-07-03,114.9,120.0,Lt thyroid lobectomy
+2024-07-03,104.1,165.0,left microvascular decompression(MVD)
+2024-07-03,92.9,25.0,close reduction nasal bone
+2024-07-04,135.0,310.0,Bilateral total mastectomy with Rt ALND
+2024-07-04,5.0,5.0,TRUS Bx
+2024-07-04,102.7,143.0,LC 
+2024-07-05,151.1,402.0,total pelvic ecenteration with ileal conduit 
+2024-07-04,6.5,5.0,TRUS biopsy
+2024-07-04,137.3,100.0,"bilat FESS with navigate, microdebrider"
+2024-07-03,64.5,75.0,AVBG Rt forearm ( stenosis cephalic vein )
+2024-07-05,95.8,100.0,Lt lobectomy
+2024-07-05,76.5,140.0,Right parietal craniotomy with tumor removal under navigator
+2024-07-05,16.5,20.0,DL c Bx
+2024-07-08,34.9,45.0,tracheostomy Awake c incisional biopsy Rt. neck mass
+2024-07-05,27.4,28.0,EGD + Colonoscopy
+2024-07-30,80.7,50.0,Lt brachiocephalic AVF
+2024-07-05,20.1,5.0,Hemorrhoidectomy 
+2024-07-05,51.9,10.0,Hemorrhoidecotmy 
+2024-07-23,38.6,40.0,Tracheostomy
+2024-07-17,8.4,10.0,cystoscope
+2024-07-08,165.8,145.0,Rt mastectomy with SLNB
+2024-07-08,141.3,77.0,ACDF C3-5 DIVA
+2024-07-08,135.1,115.0,Laminectomy with PDS fixation L345S1
+2024-07-08,52.1,43.0,Excision of hydrocele (of tunica vaginalis)
+2024-07-08,96.9,91.0,LC
+2024-07-08,85.4,90.0,EVAR
+2024-07-15,108.3,120.0,ORIF c plate and screw Rt. zygoma
+2024-07-08,119.7,132.0,Laparoscopic cholecystectomy
+2024-07-09,133.8,159.0,laminectomy with PDS fixation L3-L5 MIS
+2024-07-09,37.9,25.0,EGD c Colonoscopy
+2024-07-09,8.1,8.0,Lt. DJ stent exchanging under IV sedation 
+2024-07-09,194.3,149.0,lap sigmoidectomy 
+2024-07-09,5.7,5.0,TRUS -Bx
+2024-07-09,126.7,125.0,Lt EMMM+dental extraction 
+2024-08-01,8.7,5.0,off DJ stent under LA
+2024-07-10,99.9,170.0,Left microvascular decompression
+2024-07-10,26.2,17.0,TUR-BT
+2024-07-10,27.7,23.0,TUR-BT
+2024-07-10,36.0,30.0,Lt. URSL
+2024-07-10,27.8,25.0,TUR-BT
+2024-08-09,96.9,145.0,Oepn subtotal gastrectomy with D2 lymphadenectomy with peritoneal lavage
+2024-07-11,48.6,15.0,DB with STSG
+2024-07-11,124.4,317.0,open segmentectomy S4b 5 
+2024-07-11,114.6,205.0,Bilateral HL c Venous stripping c multiple phlebectomy
+2024-07-12,63.5,265.0,Tumor removal under GA
+2024-07-11,83.8,90.0,repair frontal nerve
+2024-07-11,75.6,5.0,excison mass at Lt. tonsil
+2024-07-11,104.4,60.0,Rt carotid stenting
+2024-07-10,66.4,80.0,AVBG Rt forearm
+2024-07-23,80.5,50.0,Lt brachiocephalic AVF 
+2024-07-15,65.2,145.0,Kissing stent both CIA c Rt EIA and Rt SFA PTA+balloon angioplasty+/-stent
+2024-07-15,88.5,129.0,Unilateral simple mastectomy
+2024-07-15,128.3,203.0,bilateral mastectomy + TAD
+2024-07-15,28.7,18.0,Temporary tracheostomy
+2024-07-15,153.9,205.0,Laminectomy c PDS L3-S1
+2024-07-15,121.4,191.0,Bilateral NSM with Implant reconstruction 
+2024-07-19,29.4,38.0,I&D
+2024-07-16,154.7,305.0,Laminectomy c PDS fixation L4-5 MIS c ACDF C456
+2024-07-16,8.1,5.0,TRUS biopsy
+2024-07-15,81.3,27.0,Wide excision of right chest wall 
+2024-07-16,37.3,30.0,EGD+colonoscopy 
+2024-07-16,171.7,145.0,Lap RHC
+2024-07-17,95.3,98.0,Rt. (flexible) URSL + DJ stent
+2024-07-16,138.2,145.0,Bilat MMA+septoturbinoplasty 
+2024-07-18,32.6,52.0,DL c tele c biopsy c tracheostomy
+2024-07-25,67.1,47.0,opened gastrostomy 
+2024-07-24,19.8,30.0,Incision and drainage 
+2024-07-17,109.5,155.0,lateral mass screw fixation 
+2024-07-17,18.6,25.0,Cystoscopy + Flexible ureteroscopy + change Rt. DJ stent
+2024-08-08,31.4,21.0,Tracheostomy 
+2024-07-17,36.5,35.0,Lt. URSL
+2024-07-17,24.3,5.0,MRI fusion Bx
+2024-07-17,22.8,5.0,MRI fusion Bx
+2024-07-17,19.2,60.0,RF nose+ Tonsillectomy+ BSP
+2024-07-17,23.0,11.0,MRI fusion c Bx
+2024-07-17,95.3,221.0,right craniotomy c tumor removal
+2024-07-17,34.4,12.0,Tonsillectomy
+2024-07-16,50.5,10.0,retained U cath
+2024-07-19,159.9,200.0,Laparoscopic STC
+2024-07-18,150.8,114.0,Left mastectomy with SLNB 
+2024-07-19,57.4,5.0,Anal fistula
+2024-07-17,105.8,80.0,aneurysmectomy
+2024-08-07,6.2,5.0,cystoscope
+2024-07-18,87.7,156.0,excision both axillas
+2024-07-19,75.8,226.0,"microscope , spine classic retractor , drill "
+2024-07-19,102.5,120.0,"RT marsupialization, left frontal sinusotosmy"
+2024-07-19,60.6,85.0,"revision bilat FESS with navigator , microdebrider "
+2024-07-18,55.2,20.0,Left BCT + SLNB 
+2024-07-19,22.5,25.0,Hemorrhoidectomy
+2024-07-19,15.5,15.0,Fistulotomy
+2024-07-19,25.4,28.0,LIFT
+2024-07-18,89.7,135.0,Bilateral NSM with Right SLNB 
+2024-07-19,12.0,15.0,EGD 
+2024-07-19,46.7,33.0,EGD+COLONO
+2024-07-19,59.0,25.0,VY flap on thumb
+2024-07-25,75.0,147.0,OC 
+2024-08-01,101.8,30.0,Rt fistulogram +- PTA
+2024-08-14,165.7,100.0,Craniotomy with Tumor removal
+2024-08-02,103.8,244.0,laparoscopic Lt nephrectomy
+2024-07-23,24.3,17.0,colonoscopy 
+2024-07-23,41.0,15.0,TUI-BN under IV sedation
+2024-07-23,260.7,400.0,Lap LAR +/- ostomy
+2024-07-23,56.9,45.0,Tonsillectomy without adenoidectomy
+2024-07-30,137.2,135.0,EL 
+2024-07-24,26.8,35.0,TUR-BT
+2024-07-30,125.9,169.0,MIS TLIF L4-5
+2024-07-24,87.0,360.0,Wide excision+- flap coverage
+2024-08-08,142.8,200.0,VATS and decorticate
+2024-07-24,60.9,80.0,Programable VP shunt Rt. parietal
+2024-07-24,60.8,35.0,port A insertion
+2024-07-24,97.4,65.0,T+BSP+partial uvulectomy (GA)
+2024-08-13,37.0,30.0,Tracheostomy
+2024-07-25,41.1,30.0,TUR-P นอกเวลา
+2024-07-26,30.5,62.0,EGD + Colonoscopy
+2024-07-25,106.0,105.0,Lt HL with VS with phlebectomy
+2024-07-25,62.4,130.0,Wide Excision + Scalp Flap
+2024-07-25,63.8,185.0,LRKT
+2024-08-07,14.9,5.0,flexible cystoscope c DJ stent removal
+2024-07-25,120.5,145.0,Lt lap nephrectomy
+2024-07-25,57.5,40.0,Tonsillectomy
+2024-07-25,72.0,67.0,OC
+2024-07-25,78.7,45.0,Revision Sx+Navigator+Frozen section 
+2024-07-26,58.4,335.0,APR
+2024-07-26,50.0,45.0,microDL c excision 
+2024-08-20,17.5,15.0,TCC Rt. IJV
+2024-07-31,17.7,20.0,TCC Rt IJV
+2024-07-26,33.0,15.0,Laser hemorrhoidoplasty
+2024-07-26,32.0,13.0,Laser hemorrhoidoplasty
+2024-07-26,81.4,125.0,Bilateral extended simple mastectomy
+2024-09-05,18.9,30.0,TCC Rt IJV
+2024-07-27,54.4,165.0,kidney transplant
+2024-08-15,10.9,5.0,cystoscopy c DJ stent removal
+2024-08-01,29.8,25.0,tracheostomy
+2024-08-01,66.0,205.0,PMEG 4Fen EVAR
+2024-07-30,31.4,175.0,EGD + colonoscopy 
+2024-07-30,25.6,75.0,LIFT 
+2024-07-30,42.1,35.0,TUR-P
+2024-07-30,100.6,140.0,open total thyroidectomy 
+2024-07-30,153.9,178.0,Laminectomy c PDS L4/5 L5/S1
+2024-07-30,11.5,10.0,REZUM นอกเวลา
+2024-07-30,15.1,10.0,REZUM + on Foley ต่อ  3 เดือน
+2024-07-30,55.3,40.0,Tonsillectomy (GA)
+2024-07-30,5.0,5.0,TRUS- Bx
+2024-07-30,15.4,5.0,DJ stent removal under IV sedation
+2024-07-30,60.7,10.0,FIPS
+2024-07-30,52.9,12.0,FIPS
+2024-07-30,61.2,15.0,TAE
+2024-07-31,20.4,63.0,TURBT 
+2024-07-31,11.9,10.0,TRUS biopsy
+2024-07-31,17.9,10.0,MRI fusion biopsy
+2024-07-31,113.4,338.0,open right hepatectomy
+2024-07-31,18.0,15.0,MRI fusion biopsy
+2024-07-31,51.8,40.0,Tonsillectomy (GA)
+2024-07-31,15.5,10.0,RF nose (GA)
+2024-08-01,132.1,145.0,MIS TLIF L4-5
+2024-08-02,161.6,149.0,Laparoscopic sigmoidectomy
+2024-08-01,191.7,75.0,ORIF with plate and screw
+2024-08-02,85.8,230.0,Open Rt hemicolectomy 
+2024-08-06,6.3,10.0,cystoscopy
+2024-08-26,26.3,15.0,Temporary tracheostomy
+2024-08-02,59.5,90.0,closure loop ileostomy 
+2024-08-02,48.4,31.0,septoplasty
+2024-08-02,132.2,135.0,bilat FESS with navigator with microdebrider
+2024-08-02,266.1,338.0,lap LAR + CAA + DAI
+2024-08-01,66.8,75.0,repair artery
+2024-08-02,62.6,210.0,Lipectomy
+2024-09-16,141.8,264.0,EL
+2024-09-18,75.2,45.0,Second look c change vacc +- gastrojejunostomy
+2024-09-20,48.5,205.0,Abdominal toilet with GJ +/- temporary closure 
+2024-09-27,49.4,40.0,Abdominal toilet + change vac + retention suture 
+2024-09-30,50.0,45.0,change vac + abdominal toilet with retention suture 
+2024-10-03,55.0,30.0,change vac dressing+abdominal toilet+/-tracheostomy
+2024-10-07,55.9,20.0,Change vac dressing
+2024-10-10,45.7,55.0,change vacuum dressing
+2024-10-17,32.9,23.0,tracheostomy
+2024-10-18,57.8,48.0,change vacuum dressing c abdominal toilet
+2024-10-21,56.9,30.0,change vacuum dressing c abdominal toilet
+2024-10-29,56.8,30.0,change vacuum dressing c abdominal toilet
+2024-11-07,63.5,25.0,vacuum dressing + abdominal toilet
+2024-11-14,72.3,20.0,Vaccuum dressing c abdominal toilet
+2024-11-21,61.2,22.0,vacuum dressing c abdominal toilet
+2024-08-06,36.5,35.0,EGD+colonoscopy
+2024-08-20,8.6,5.0,cystoscopy c DJ stent removal
+2024-08-22,29.3,20.0,tracheostomy
+2024-08-05,130.3,113.0,MIS TLIF L5/S1
+2024-08-05,145.5,160.0,Laminectomy w PDS L2-3 MIS
+2024-08-06,54.4,20.0,Scar revision c umbilicoplasty
+2024-08-06,132.2,182.0,Laminectomy with PDS fixation
+2024-08-07,81.2,175.0,excision mass Lt. hand under microscope
+2024-08-06,119.0,116.0,ACDF C567 Plate allograft
+2024-08-06,15.0,35.0,DJ stent exchanging
+2024-08-06,25.3,35.0,Hemorrhoidectomy
+2024-08-06,36.3,33.0,EGD+colonoscope 
+2024-08-06,42.6,85.0,TUR-P
+2024-08-06,141.2,200.0,Bilat FESS with navigator 
+2024-08-05,66.2,120.0,AVBG Lt thigh  
+2024-08-06,30.7,30.0,EGD + Colonoscopy
+2024-08-06,118.4,85.0,Bilateral SSV ligation with distal sclerotherapy
+2024-08-23,26.1,25.0,tracheostomy 
+2024-08-07,23.3,60.0,TURBT
+2024-08-07,159.3,166.0,Cranioplasty under GA
+2024-08-07,56.0,28.0,Excision parafin
+2024-08-07,82.4,220.0,Supraorbital Craniotomy   
+2024-08-07,97.6,97.0,T+BSP+AP+RF nose (GA)
+2024-08-07,60.1,137.0,Wide excision + SPC
+2024-08-07,57.2,28.0,fasciotomy
+2024-09-02,66.6,185.0,Downhill balloon angioplasty Rt. leg
+2024-09-06,25.3,27.0,tracheostomy
+2024-08-09,155.5,193.0,Laparoscopic sigmoidectomy
+2024-08-08,116.3,115.0,LC
+2024-08-07,92.7,300.0,Bilat downhill angioplasty both leg
+2024-08-08,63.7,75.0,Wide Excision + Scalp Flap
+2024-08-10,48.0,27.0,explore wound and remove foreign body
+2024-08-09,33.7,30.0,EGD + colonoscopy
+2024-08-08,119.2,255.0,"open segmentectomy 5,6 + OC"
+2024-08-07,66.2,80.0,AVBG Lt forearm 
+2024-08-22,23.1,20.0,TCC insertion at Lt IJV
+2024-08-08,64.5,220.0,Subcutaneous mastectomy
+2024-08-22,161.5,20.0,ORIF with plate and screw fixation with arch bar MMF 
+2024-08-28,199.7,210.0,ORIF with P&S with Arch bar MMF
+2024-09-10,13.8,24.0,Off IVC filter
+2024-08-12,171.3,295.0,Lap APR c LC 
+2024-08-10,76.0,155.0,decompression laminectomy T spine with excisional biopsy
+2024-08-14,85.0,200.0,OP : Rt. occipital craniotomy with tumor removal
+2024-08-14,16.7,20.0,cystoscopy c foley insertion
+2024-08-21,97.8,115.0,Retrosigmoid tumor biopsy 
+2024-08-13,88.9,233.0,PDS c laminectomy L2-L5 under Navigator Brain Lab  
+2024-08-13,23.9,15.0,LIFT
+2024-08-13,65.8,60.0,Tonsillectomy with RFIT under GA
+2024-08-13,30.8,25.0,EGD + colonoscopy 
+2024-08-13,33.0,35.0,EGD+colonoscopy
+2024-08-13,40.2,15.0,urethral dilation
+2024-08-16,56.1,265.0,Rt frontal craniotomy with Tumor removal
+2024-08-13,153.0,181.0,Laminectomy c PDS fixation 
+2024-08-13,22.6,25.0,LIFT 
+2024-08-15,61.7,85.0,Angioplasty Rt  leg ( crossover ) 
+2024-08-14,18.8,60.0,RF Nose+T+UPPP
+2024-08-14,74.7,42.0,Left vericocelectomy
+2024-08-14,71.5,20.0,"limit amputation Lt 4th,5th toe"
+2024-08-20,33.7,12.0,debridement
+2024-09-02,61.1,190.0,Downhill balloon angioplasty Lt. leg
+2024-08-14,81.3,108.0,microscope mayfield doro
+2024-08-15,67.9,60.0,nasal endoscope + Remove packing + stop bleeding +- Rt SPA ligation
+2024-08-15,32.5,25.0,debridement
+2024-08-26,49.5,20.0,STSG Rt foot
+2024-09-02,30.8,5.0,Dressing STSG and Change VAC dressing
+2024-08-16,133.1,370.0,EL with AR with wedge bladder
+2024-08-15,51.1,55.0,tonsillectomy 
+2024-08-15,52.7,35.0,tonsillectomy
+2024-08-15,66.6,185.0,Angioplasty Rt leg
+2024-08-15,61.4,50.0,Bilateral RFA with multiple Rt phlebectomy
+2024-08-15,73.7,29.0,prophylactic tracheostomy
+2024-08-16,83.6,151.0,Corpectomy C5 with C4-C6 fusion
+2024-08-15,130.7,352.0,"open RAMPS (pancreatectomy, splenectomy, tissue resection, LND > antr RAMPs)"
+2024-08-16,13.6,11.0,fistulotomy 
+2024-08-16,15.1,13.0,fistulotomy 
+2024-08-16,24.7,35.0,hemorrhoidectomy
+2024-08-16,28.3,37.0,EGD + colonoscopy 
+2024-08-16,111.5,50.0, lt. sphenoidectomy + microdebrider+ navigator
+2024-08-16,101.3,135.0,endoscopic inferior turbinoplasty
+2024-08-16,90.3,90.0,ACDF C5/6 
+2024-08-15,67.7,110.0,AVBG Lt.upper arm
+2024-08-16,57.0,18.0,Explore wound with open drainage 
+2024-08-16,18.7,15.0,LIFT
+2024-08-16,21.4,33.0,LIFT
+2024-08-16,21.7,20.0,LIFT
+2024-08-20,63.0,33.0,Transfemoral brachial stenting
+2024-08-20,90.1,135.0,Total thyroidectomy
+2024-10-01,38.3,15.0,Tracheostomy
+2024-08-19,34.5,180.0,Other excision of salivary gland lesion
+2024-08-19,120.0,64.0,ACDF
+2024-08-19,33.0,175.0,Other excision of salivary gland lesion
+2024-08-19,151.8,121.0,Laminectomy c PDS fixation L345-S1
+2024-08-19,46.8,35.0,remove silicone both breast
+2024-08-19,110.2,85.0,Rt total mastectomy with SLNB with prophylaxis Lt mastectomy
+2024-08-19,74.5,65.0,wire localization wide excision 
+2024-08-19,108.3,141.0,Lt.BB transpostion
+2024-08-19,108.6,100.0,ORIF c plate & screw fixation
+2024-08-19,77.3,38.0,central quandrantectomy of right breast 
+2024-08-19,119.5,165.0,Bilateral simple mastectomy
+2024-08-20,88.8,88.0,Redo Rt MVD 
+2024-08-20,38.8,10.0,TUR-P --> เปลี่ยนเป็น REZUM
+2024-08-20,245.2,310.0,Lap LAR
+2024-08-20,15.3,88.0,DJ stent exchanging
+2024-08-20,132.9,176.0,Laminectomy with PDS T10-T11
+2024-08-30,59.6,105.0,colonic stent 
+2024-08-19,56.3,85.0,AVBG Rt forearm
+2024-08-21,227.7,197.0,TPS T7-T9 under Navigate
+2024-08-21,53.2,45.0,Buccal graft urethroplasty
+2024-08-21,120.1,225.0,Rt. nasal alar reconstruction
+2024-08-21,51.4,60.0,Tonsillectomy (GA)
+2024-08-21,65.5,75.0,DISE + BSP + RF nose (GA) + แจ้งดมยาใช้เครื่อง monitor BIS 
+2024-08-28,101.0,99.0,Left craniotomy with Remove Clot
+2024-09-12,36.1,40.0,Tracheostomy
+2024-08-21,19.7,25.0,Colonoscopy c stent insertion
+2024-08-22,91.7,270.0,"Right NSM with SLNB , Left prophylaxis NSM "
+2024-08-22,60.6,65.0,TEVAR
+2024-08-22,96.9,68.0,LC
+2024-08-22,119.8,204.0,"open DP, warshaw technique"
+2024-09-13,62.2,40.0,stump closure
+2024-08-22,78.7,43.0,Left BCT + SLNB 
+2024-08-23,48.2,20.0,microDL c excision
+2024-09-17,34.9,40.0,Tracheostomy
+2024-09-04,30.0,18.0,Tracheostomy 
+2024-08-27,176.8,190.0,Lap sigmoidectomy + LC
+2024-08-26,146.3,104.0,ACDF C4/5 C5/6
+2024-08-26,117.7,138.0,ACDF C3456 with Peek Plate
+2024-08-26,76.6,36.0,Left BCT + SLNB 
+2024-08-26,55.5,38.0,Right BCT + SLNB 
+2024-08-26,81.2,55.0,Left BCT + TAD 
+2024-08-27,115.7,250.0,ACDF C34567 DIVA
+2024-08-28,57.1,55.0,PCNL Rt.
+2024-08-27,13.2,20.0,REZUM
+2024-08-26,72.2,130.0,Prophylaxis bilateral  mastectomy 
+2024-08-27,144.5,78.0,ACDF C3-4 Peek Plate
+2024-08-27,14.1,24.0,Cysto +- TUR- BT
+2024-09-23,102.8,5.0,t tube cholangiogram +/- remove t tube
+2024-08-28,17.8,65.0,RF nose+ tonsillectomy+ BSP
+2024-08-28,22.8,32.0,TUR-BT
+2024-08-28,112.8,88.0,Rt Craniectomy with Tumor removal
+2024-09-09,66.0,210.0,Downhill Balloon angioplasty Rt leg 
+2024-08-30,18.4,5.0,I&D
+2024-12-16,52.8,15.0,Revice TCC right IJV
+2024-08-29,99.7,173.0,Rt HL with VS wtih multiple phlebectomy
+2024-10-25,39.5,30.0,Suture wound 
+2024-08-29,103.8,180.0,LC
+2024-08-29,101.7,155.0,Left Occipital Craniotomy with AVM excision
+2024-08-29,73.6,236.0,OC 
+2024-08-30,146.1,379.0,Lap Rt. Hemicolectomy
+2024-09-03,54.0,55.0,revise AVBG Lt forearm ( thrombectomy+PTA )
+2024-08-28,50.9,105.0,TB2 Rt arm
+2024-08-29,18.1,15.0,"TCC RT IJV , centros"
+2024-08-30,90.5,55.0,LC
+2024-08-30,128.1,80.0,bilat FESS with microdebrider with navigator
+2024-08-30,128.7,120.0,bilat FESS with microdebrider with navigator
+2024-08-30,35.0,20.0,Laser hemorrhoidectomy 
+2024-08-30,34.2,45.0,Laser haemorrhoidoplasty 
+2024-09-02,58.4,24.0,revised TCC 
+2024-08-30,35.7,10.0,Laser hemorrhoidoplasty
+2024-08-30,36.1,20.0,Laser  hemoprrhoidopalsty
+2024-09-02,67.5,40.0,ERCP
+2024-09-01,110.6,145.0,laparoscopic ureterolithotomy
+2024-09-02,113.8,70.0,LC
+2024-09-02,64.6,75.0,Fiber-optic bronchoscopy
+2024-09-02,135.2,139.0,Laminectomy with PDS fixation L345 MIS 
+2024-09-02,105.4,97.0,LC
+2024-09-02,130.6,127.0,MIS TLIF L4/5
+2024-09-02,65.9,46.0,Tracheoscopy through artificial stoma
+2024-09-02,78.1,73.0,Left BCT + SLNB 
+2024-09-03,26.9,30.0,Lt. URS-L with DJ stent
+2024-09-03,59.9,345.0,Pelvic Excenteration (+/- APR)
+2024-09-04,33.5,25.0,suture wound
+2024-09-03,41.7,47.0,hydrocelectomy
+2024-09-03,110.0,80.0,Lt RFA with multiple phlebectomy
+2024-09-02,71.2,66.0,Local excision of lesion of breast
+2024-09-03,121.5,45.0,Bilateral Venaseal 
+2024-09-03,5.0,8.0,TRUS =- Bx
+2024-09-03,139.4,220.0,Bilat FESS+Navigator 
+2024-09-03,95.5,265.0,Left retrosigmoid SOC with tumor removal
+2024-09-03,106.6,150.0,ACDF C4-5-6-7 PEEK and Plate  
+2024-09-05,18.5,15.0,TCC Rt IJV 
+2024-09-18,68.9,40.0,TK insertion '
+2024-09-04,226.8,250.0,TPS L4-5 with Laminectomy L4-5 under navigation
+2024-09-04,19.3,180.0,Flexible URSL + DJ stent 
+2024-09-04,10.0,5.0,TRUS Bx
+2024-09-04,54.3,40.0,Tonsillectomy (GA)
+2024-09-04,90.7,120.0,tumor removal rt. hand under microscope
+2024-09-04,194.9,108.0,lap radical Lt nephrectomy
+2024-09-04,161.8,133.0,Lap. enucleation Rt. AML
+2024-09-04,93.2,25.0,Bilat PCN
+2024-09-06,228.7,335.0,Lap LHC + LC
+2024-09-27,29.9,40.0,debridement
+2024-10-04,38.7,30.0,loop proximal transverse colostomy 
+2024-09-05,259.2,153.0,"Wedge CRLM S5,6,7 + IOUS c Mirena insertion "
+2024-09-05,60.7,70.0,Bilateral RFA with multiple phlebectomy
+2024-09-06,57.1,120.0,closure colosotmy
+2024-09-09,23.6,35.0,Incision and drain 
+2024-09-06,55.6,23.0,Removed FB and debridement
+2024-09-05,109.2,140.0,Lt HL with VS with Phlebectomy
+2024-09-05,13.0,10.0,rezum นอกเวลา
+2024-09-04,52.5,110.0,basillic vein tranposition Rt forearm
+2024-09-05,110.9,205.0,Rt modified radical mastoidectomy
+2024-09-05,45.4,60.0,open appendectomy
+2024-09-06,163.7,167.0,laparoscopic peritoneal window
+2024-10-01,64.1,75.0,Venogram +/- Balloon venoplasty
+2024-09-06,56.9,14.0,Semi-closed hemorrhoidectomy 
+2024-09-06,31.4,45.0,EGD+colonoscopy with hemorrhoidectomy 
+2024-09-10,42.0,50.0,Debridement left foot +/- Vac dressing
+2024-09-19,75.7,55.0,OC 
+2024-09-16,75.8,58.0,PP window 
+2024-09-09,90.7,105.0,microdiscectomy L5-S1
+2024-09-09,70.7,30.0,Repair of indirect inguinal hernia
+2024-09-09,34.8,40.0,Circumcision
+2024-09-09,68.4,45.0,ERCP 
+2024-09-09,144.9,88.0,"ACDF C4-5,5-6"
+2024-09-09,138.9,100.0,"partial,or subtotal thyroidectomy,Isthmectomy,Other"
+2024-09-18,13.2,5.0,cystoscopy remove DJ stent
+2024-09-09,120.3,249.0,Bilateral skin reducing mastectomy with implant reconsturction (DTI) 
+2024-09-10,164.0,248.0,Laparoscopic extended Rt. hemicolectomy 
+2024-09-10,115.4,150.0,"bilateral HL + VS, no stab"
+2024-09-10,117.6,125.0,L4-S1 laminectomy with PDS fixation
+2024-09-09,168.9,70.0,laparoscopic bilateral oophorectomy 
+2024-09-09,54.6,83.0,Right BCT + SLNB 
+2024-09-10,16.0,47.0,rigid cyto +- TUR +- urethral dilation under IV sedation
+2024-09-10,15.3,15.0,Cystoscope with rt DJ stent insertion
+2024-09-10,102.2,30.0,endoscopic polypectomy with microdebrider
+2024-09-10,26.1,25.0,TUR-BT
+2024-09-09,61.9,180.0,"Right mastecotmy with SLNB, Left prophylaxis mastectomy "
+2024-09-11,12.5,6.0,(Flexible ) Cystoscopy +/- TU-F
+2024-09-24,38.8,15.0,Tracheostomy
+2024-09-09,67.3,20.0,Rt. frontal EVD
+2024-09-18,101.9,84.0,Left VP shunt with off EVD
+2024-10-18,34.0,36.0,tracheostomy
+2024-09-11,46.4,55.0,TUR-P
+2024-09-11,158.7,195.0,Lap. enuecleation RK
+2024-09-11,76.6,60.0,Rt lobectomy
+2024-09-30,48.2,40.0,TK insertion 
+2024-09-12,111.3,95.0,LC
+2024-09-12,12.8,128.0,Flexible URSL+laser
+2024-09-11,51.2,105.0,TB2 Lt arm 
+2024-09-12,33.2,40.0,revise TCC Lt IJV
+2024-09-13,141.3,303.0,VATs wedge resection of RUL nodule with frozen section +- RUL lobectomy
+2024-09-13,33.5,85.0,egd+colonoscopy
+2024-09-17,10.1,5.0,cystoscopy +- open cystostomy
+2024-09-16,18.5,15.0,TCC Rt IJV
+2024-09-13,13.8,20.0,LIS+excision sentinel pile
+2024-09-23,16.1,12.0,TCC Rt IJV 
+2024-09-16,27.2,10.0,Laryngoscopy and other tracheoscopy
+2024-09-16,130.7,140.0,MIS TLIF L4-5
+2024-09-16,59.6,70.0,Excision mass at Lt thigh and Rt ear
+2024-09-16,33.1,58.0,Other excision of salivary gland lesion
+2024-09-16,93.4,92.0,RFA both legs with stab avulsion Rt. leg 
+2024-09-16,114.8,125.0,L4-S1 laminectomy with PDS fixation
+2024-09-16,38.6,35.0,D/L c micro CO2 laser 
+2024-09-20,80.6,120.0,Right parietal craniotomy with tumor removal under NAV 
+2024-09-16,72.5,64.0,Delayed implant reconstruction pf left breast 
+2024-09-16,27.3,35.0,EGD + colonoscope 
+2024-09-17,183.6,225.0,Lap sigmoidectomy c LN dissection
+2024-09-17,144.6,178.0,"ACDF C3-4,4-5,5-6 with plate-screw fixation"
+2024-09-18,57.7,190.0,RIRS Rt. (Redo)
+2024-09-17,102.1,140.0,LC
+2024-09-17,130.1,164.0,"MIS L3-4,L4-5 laminectomy with PDS fixation"
+2024-09-17,117.4,30.0,Lt Endoscopic marsupialization 
+2024-09-17,42.7,79.0,TUR-P
+2024-09-20,33.7,25.0,Colonoscopy with Biopsy
+2024-09-18,40.6,35.0,Rt. URSL
+2024-09-18,228.1,210.0,TPS L3-5 with Laminectomy L3-5
+2024-10-09,30.4,25.0,tracheostomy
+2024-09-18,155.7,384.0,lap Rt nephrectomy c S7 segmentectomy
+2024-09-18,95.3,65.0,T+BSP+partial uvulectomy+RF nose (GA)
+2024-09-23,19.2,25.0,I&D
+2024-09-19,20.9,25.0,Excisional Debridement Lt hand
+2024-09-26,66.4,405.0,1. Tracheostomy 2. ORIF with PAS with MMF
+2024-09-18,77.2,85.0,mass removal
+2024-09-20,166.9,205.0,lap subtotal colectomy 
+2024-09-19,96.7,80.0,LC
+2024-09-19,99.0,172.0,LC
+2024-09-19,113.4,270.0,Lt endoscopic atticotomy
+2024-09-18,64.6,100.0,AVBG Rt upperarm 
+2024-10-07,38.2,50.0,tracheostomy
+2024-10-01,104.0,80.0,rt carotid artery cover stent
+2024-09-20,61.6,150.0,Altemeier's operation
+2024-09-20,84.8,140.0,LC
+2024-09-20,11.1,11.0,LIS
+2024-09-20,32.7,20.0,Laser hemorrhoidopathy +excision skin tag
+2024-09-23,72.5,165.0,1. Closed reduction nasal bone 2. ORIF with K-wire fixation
+2024-09-20,18.4,45.0,LIFT
+2024-09-20,10.2,30.0,Fistulotomy
+2024-09-20,59.6,15.0,Stricturoplasty
+2024-09-20,46.9,30.0,Wire localization wide excision 
+2024-09-21,129.3,176.0,L4-5 laminectomy with discectomy + PDS fixation + TLIF
+2024-10-15,23.4,43.0,Tracheostomy 
+2024-09-23,106.1,69.0,Laparoscopic cholecystectomy
+2024-09-23,132.5,121.0,laminectomy with PDS fixation L2/3
+2024-09-23,130.7,103.0,MIS TLIF L4/5
+2024-09-23,77.5,95.0,Unilateral thyroid lobectomy
+2024-09-23,54.5,38.0,Right BCT + SLNB 
+2024-09-24,165.4,190.0,laparoscopic sigmoidectomy
+2024-09-24,19.2,25.0,MRI - fusion TRUs Bx
+2024-09-24,146.8,363.0,"ACDF C4-5 , C1-2 posterior fixation + laminectomy C4-5"
+2024-09-24,114.9,160.0,Bilateral HL with VS with multiple phlebectomy
+2024-09-23,75.1,120.0,Right mastectomy with SLNB 
+2024-09-25,53.8,85.0,Wide excision
+2024-09-26,109.5,90.0,LC 
+2024-09-25,55.5,17.0,Water vapor therapy (REZUM) 
+2024-09-25,107.7,84.0,Lt. varicocelectomy
+2024-09-25,53.8,120.0,TUR-P (3 hr.) 
+2024-09-25,17.0,35.0,Cystoscopy + Rt. RP +/- DJ stent
+2024-09-25,91.3,280.0, liposuction+/--excision both breast
+2024-09-25,42.8,40.0,TUR-P
+2024-09-27,43.3,8.0,EGD + remove 
+2024-09-25,65.2,47.0,Tonsillectomy + RF nose 
+2024-09-26,71.6,265.0,Remove Bilateral implants+Axillary LN excision with Re-implantation
+2024-09-26,133.7,126.0,right mastectomy + SLNB 
+2024-09-26,111.4,135.0,LC
+2024-09-26,123.2,45.0,Lt FESS
+2024-09-25,69.1,80.0,AVBG Lt forearm
+2024-09-26,57.2,72.0,ERCP
+2024-10-20,21.7,53.0,"Excisional debridement of wound, infection, or burn"
+2024-10-25,36.7,55.0,Debridement
+2024-09-26,81.2,81.0,AVBG Lt upperarm
+2024-09-27,90.2,115.0,Open Rt hernioplasty
+2024-09-27,45.7,95.0,tonsillectomy
+2024-09-27,89.2,108.0,Open Rt.hernioplasty 
+2024-10-10,5.0,25.0,off DJ stent
+2024-10-02,84.0,250.0,T2-4 laminectomy with tumor removal
+2024-10-02,129.0,57.0,bilateral burr hole with irrigation
+2024-11-25,90.9,91.0,Open Rt. hernioplasty
+2024-09-30,115.5,152.0,LC 
+2024-10-17,35.8,60.0,Revise TCC Lt IJV +/- balloon venoplasty 
+2024-09-30,60.2,45.0,TEVAR
+2024-09-30,133.2,222.0,MIS L4-S1 laminectomy with PDS fixation
+2024-09-30,38.6,30.0,Other excision of mouth
+2024-09-30,77.3,80.0,OC
+2024-09-30,104.5,120.0,Complete thyroidectomy
+2024-09-30,147.6,124.0,ACDF C4-5-6
+2024-10-01,157.2,117.0,VATs LUL lobectomy with lymphnode dissection 
+2024-10-02,34.7,30.0,Rt. URS + biopsy 
+2024-10-01,76.0,165.0,Revision Bilat FESS+Navigator 
+2024-10-01,100.4,233.0,left retrosigmoid SOC with tumor removal
+2024-10-01,37.4,20.0,Vasectomy under TIVA 
+2024-10-02,29.4,15.0,TUR-BT
+2024-10-02,97.1,93.0,T+BSP+partieal uvulectomy+RF nose (GA)
+2024-10-01,92.5,90.0,Bilateral high ligation with venous stripping with multiple phlebectomy
+2024-10-02,61.8,73.0,T&A (Coblator)
+2024-10-02,103.4,38.0,UNKNOWN
+2024-10-10,39.4,63.0,tracheostomy
+2024-10-03,8.5,15.0,cystoscope
+2024-10-04,181.1,120.0,Open LAR 
+2024-10-03,81.5,234.0,OC + repair SB + cholangiogram + frozen section cystic duct margin +/- pyloric exclusion GJA +/- whipple???
+2024-10-15,46.5,15.0,Port A insertion
+2024-10-02,86.2,140.0,Lt forearm basillic vein tranposition 
+2024-10-03,41.8,30.0,TUR-P นอกเวลา
+2024-10-03,99.9,55.0,"endoscopic adenoidectomy with coblator, RF IT"
+2024-10-03,106.6,110.0,LC
+2024-11-14,26.3,45.0,tracheostomy 
+2024-10-04,58.1,25.0,stricturoplasty 
+2024-10-04,118.2,110.0,Cranioplasty
+2024-10-04,39.2,35.0,Loop proximal transverse colostomy
+2024-10-04,33.4,20.0,Laser hemorrhoidoplasty + hemorrhoidectomy
+2024-10-30,28.9,20.0,tracheostomy
+2024-10-04,7.3,12.0,LIS
+2024-10-04,18.7,25.0,Hemorrhoidectomy
+2024-10-04,6.8,7.0,LIS
+2024-10-04,29.9,20.0,RFA hemorrhioidopexy
+2024-10-04,18.3,43.0,LIFT 
+2024-10-19,5.0,5.0,off DJ stent
+2024-10-07,94.8,100.0,open right thyroid lobectomy
+2024-10-07,81.5,26.0,excision neck mass
+2024-10-07,115.1,252.0,Lt.total parotidectomy c Lt. MRND 
+2024-10-07,109.3,77.0,LC
+2024-10-07,146.6,187.0,LAMINECTOMY W PDS FIXATION L 3-5
+2024-10-07,112.3,66.0,LC
+2024-10-31,52.3,20.0,revised TCC Rt IJV
+2024-11-12,29.1,45.0,tracheostomy
+2024-10-11,168.1,160.0,VAT LLL lobectomy and LN dissection and frozen section
+2024-10-25,129.8,358.0,VAts with LLLobectomy and LN dissection
+2024-10-09,87.9,75.0,Lt. VP shunt
+2024-10-08,36.1,45.0,egd+colonocopy
+2024-10-08,25.6,54.0,Lt. URS-L 
+2024-10-09,167.2,295.0,craniotomy with tumor removal
+2024-10-08,137.3,159.0,laminectomy with PDS fixation L2-L4
+2024-10-08,150.7,141.0,L2-S1 laminectomy with PDS fixation
+2024-10-08,6.3,8.0,Cystoscope 
+2024-10-08,33.3,21.0,EGD + Colonoscopy 
+2024-11-01,26.9,20.0,tracheostomy
+2024-10-09,57.2,40.0,TURP
+2024-10-09,6.1,8.0,TRUS c Bx
+2024-10-09,61.8,55.0,T&A (Coblator) + Post-op PICU
+2024-10-09,20.6,22.0,MRI-TRUS fusion biopsy 
+2024-10-09,21.5,15.0,RF nose (GA)
+2024-10-11,56.4,38.0,E+C
+2024-10-10,67.7,60.0,coil embolization Lt IIA+cover stent Lt CIA
+2024-10-10,171.0,110.0,Rt mastectomy with TAD
+2024-10-11,54.8,40.0,EGD+colono
+2024-10-09,68.1,90.0,AVBG RT upperarm
+2024-10-29,37.3,35.0,Tracheostomy
+2024-10-10,133.6,120.0,aneurysmectomy
+2024-10-11,14.0,5.0,Fistulotomy
+2024-10-11,21.2,15.0,Hemorrhoidectomy
+2024-10-11,14.8,10.0,Fistulotomy
+2024-10-11,100.1,65.0,endoscopic tumor removal with navigator
+2024-10-17,67.1,195.0,Crossover angioplasty of Lt leg
+2024-10-11,67.1,50.0,sphenoidotomy with navigator
+2024-10-11,20.4,12.0,Hemorrhoidectomy
+2024-10-22,107.4,142.0,"minicraniotomy with clot removal, tracheostomy"
+2024-10-15,40.4,75.0,RFA Rt. leg + stab avulsion
+2024-10-15,136.8,112.0,MIS PDS c laminectomy L4-5
+2024-10-15,132.5,195.0,MIS TLIF L4-5
+2024-10-15,112.3,60.0,Lt MMA 
+2024-10-15,42.0,56.0,cystolithotripsy with Rt URSL
+2024-10-15,65.9,77.0,excisional biopsy
+2024-10-16,41.9,73.0,TUR-P
+2024-10-16,11.6,10.0,TRUS bx
+2024-10-16,44.5,40.0,Lt. URSL + remove Rt. DJ stent 
+2024-10-16,34.1,20.0,T&A with coblator 
+2024-10-16,13.4,15.0,TRUS biopsy
+2024-10-16,27.2,13.0,Lt. URS + DJ stent
+2024-10-18,86.8,34.0,Bilat DJ stent insertion
+2024-10-18,123.9,215.0,Open subtotal colectomy 
+2024-10-17,82.9,100.0,high ligatioin with venous stripping Rt.leg + phlebectomy
+2024-10-17,74.7,85.0,wide excision and skin graft
+2024-10-29,90.9,85.0,T10-11 + L1-2 PDS c laminectomy T11
+2024-10-18,88.5,75.0,LC
+2024-10-18,157.9,415.0,VATs RLL lobectomy 
+2024-11-05,56.1,18.0,Tracheostomy
+2024-12-19,19.3,15.0,TCC Right IJV
+2024-10-24,141.7,125.0,MIS TLIF L 4-5
+2024-10-18,19.3,5.0,Hemorrhoidectomy 
+2024-10-18,17.3,22.0,hemorrhoidectomy 
+2024-10-21,33.6,45.0,RFA Rt leg c stab avulsion
+2024-10-21,152.3,200.0,L2-S1 laminectomy with PDS fixation
+2024-10-21,97.0,169.0,LC
+2024-10-21,92.8,70.0,RFA both leg
+2024-10-21,119.1,55.0,LC
+2024-10-21,63.8,231.0,Downhill angioplasty Lt leg
+2024-11-04,48.6,15.0,suture wound
+2024-10-22,6.4,11.0,TRUS - Bx
+2024-10-22,148.6,268.0,ACDF C4-5 (PEEK-plate) and C7-T1 (DIVA) + laminectomy C4-5 and C7-T1 with lateral mass screw fixation
+2024-10-22,126.9,125.0,laminectomy with PDS fixation L4-S1 (extend rod from L3)
+2024-11-11,91.6,110.0,Right programmable VP shunt
+2024-10-24,83.3,45.0,EVAR
+2024-10-24,69.4,80.0,ESS
+2024-10-24,97.1,55.0,LC
+2024-10-24,80.8,290.0,open left hepatectomy 
+2024-10-25,79.2,110.0,endoscope navigate glue duraเทียม
+2024-10-24,56.7,170.0,open appendectomy
+2024-10-25,63.4,182.0,laminotomy L5 c tumor removal
+2024-10-26,47.3,50.0,remove breast implant
+2024-10-28,76.7,98.0,Unilateral thyroid lobectomy
+2024-10-28,65.8,55.0,Iand D and Excision 
+2024-10-28,72.6,46.0,Interval lap appendectomy
+2024-10-28,106.3,79.0,Complete thyroidectomy
+2024-10-28,106.1,124.0,open L3/4 L4/5 PDS c laminectomy
+2024-11-19,24.3,20.0,TCC insertion at Lt.IJV 
+2024-11-21,36.8,10.0,revise TCC 
+2024-11-21,32.4,15.0,Temporary tracheostomy
+2024-10-28,76.6,65.0,BCT + SLNB
+2024-10-28,73.4,33.0,Wire localization wide excision 
+2024-10-28,75.2,79.0,"1. Microdochectomy left breast, 2. microdochectomy of right breast 3.excision of right breast "
+2024-10-29,38.6,26.0,D/L c biopsy c esophagoscopy 
+2024-10-29,41.6,27.0,Rt. MMA
+2024-10-29,44.0,51.0,TUR-P
+2024-10-29,14.6,15.0,REZUM
+2024-10-29,153.2,138.0,L3-5 MIS PDS c laminectomy
+2024-10-29,78.1,235.0,Revision Bilat Fullhouse FESS+Navigator+septoplasty 
+2024-10-28,49.3,60.0,Palliative Mastectomy
+2024-10-30,103.5,285.0,left retrosigmoid SOC with tumor removal
+2024-10-30,18.5,10.0,MRI fusion biopsy
+2024-10-30,62.7,105.0,2nd stage repair 
+2024-10-31,58.0,60.0,TURP
+2024-10-30,93.2,115.0,Wide Excision with Flap Coverage
+2024-10-30,21.8,13.0,TURBT
+2024-10-31,19.5,30.0,TURBT
+2024-10-30,24.4,15.0,MRI fusion Bx
+2024-11-07,57.0,210.0,downhill angioplasty with PTA 
+2024-10-30,135.6,55.0,Lt craniectomy c clot removal
+2024-10-30,15.7,15.0,I&D
+2024-11-01,227.0,190.0,lap LHC
+2024-10-31,80.5,283.0,Extended Whipple operation+ intra op frozen section+ IOUS
+2024-10-31,110.2,55.0,Lt HL with VS 
+2024-11-05,16.4,5.0,EGD
+2024-11-01,179.9,117.0,lap sigmoidectomy 
+2024-11-01,163.7,155.0,Laparoscopic RHC
+2024-11-07,48.3,30.0,Excisional bx.
+2024-10-31,96.3,200.0,UNKNOWN
+2024-11-08,119.8,200.0,Posterior C1-2 fixation
+2024-11-01,32.9,22.0,EGD+ colonoscope + exam under anesthesia
+2024-11-01,18.9,5.0,LIFT
+2024-11-01,32.3,135.0,EGD + colonoscopy
+2024-11-01,58.7,32.0,Mesh removal
+2024-11-01,54.6,125.0,Altemiere with levatoplasty
+2024-11-01,20.9,10.0,LIFT
+2024-11-01,17.2,11.0,LIFT
+2024-11-12,37.6,50.0,Tracheostomy
+2024-11-04,139.1,70.0,laminectomy L3 with L2-4 PDS fixation
+2024-11-06,123.3,90.0,bilateral minicraniotomy
+2024-11-29,41.3,20.0,tracheostomy
+2024-11-04,46.1,20.0,Excision
+2024-11-04,138.3,289.0,Open repair
+2024-11-06,59.8,50.0,Surgical decompression 
+2024-11-12,43.3,29.0,abdominal closure 
+2024-11-04,95.0,65.0,endoscopic tumor removal
+2024-11-11,99.6,205.0,"endoscopic tumor removal  with microdebrider, coblator"
+2024-11-04,77.0,80.0,Unilateral thyroid lobectomy
+2024-11-04,102.1,95.0,LC
+2024-11-04,96.8,126.0,LC
+2024-11-04,153.3,187.0,L2-S1 laminectomy with PDS fixation
+2024-11-04,179.9,145.0,Lt.BCT+TAD
+2024-11-05,14.4,18.0,REZUM 
+2024-11-05,25.9,35.0,LIFT
+2024-11-06,286.5,300.0,Radical cystectomy with ileal conduit
+2024-11-05,132.6,115.0,MIS TLIF L4-5
+2024-11-06,153.7,194.0,transsphenoid approach with tumor removal
+2024-11-04,118.9,220.0,Bilateral mammoreduction 
+2024-11-05,37.3,65.0,EGD + Colonoscopy + Anal stricturoplasty 
+2024-11-05,14.1,16.0,REZUM
+2024-11-05,109.8,130.0,Bilat FESS 
+2024-11-05,107.1,105.0,Lt HL with VS with Phlebectomy
+2024-11-05,43.8,63.0,TUR-P
+2024-11-06,30.3,13.0,DL c tele c biopsy +/- tracheostomy
+2024-11-06,116.6,145.0,Lateral mass screw fixation C5-7 with laminectomy C5-7
+2024-11-04,86.7,87.0,Lt. hernioplasty
+2024-11-05,159.7,45.0,VATs Right lung biopsy
+2024-11-04,47.9,95.0,Superficialization Lt.
+2024-11-05,130.4,60.0,Bilat MMA 
+2024-11-05,18.4,15.0,TCC at Rt IJV
+2024-11-05,55.3,10.0,FIPS + LIS
+2024-11-05,11.7,5.0,LIS
+2024-11-06,68.2,15.0,Excision (GA)
+2024-11-06,78.0,65.0,Wide excision+/-STSG with intra op Frozen section
+2024-11-07,103.2,95.0,LC 
+2024-11-07,120.4,90.0,Bilateral venaseal with Rt multiple phlebectomy
+2024-11-08,178.3,249.0,Lap subtotal colectomy
+2024-11-07,61.8,55.0,Bilateral RFA 
+2024-11-08,26.5,25.0,colonoscopy + EGD
+2024-11-07,19.8,10.0,EGD
+2024-11-08,57.2,52.0,closure loop colostomy
+2024-11-08,150.4,200.0,VATS LUL lobectomy + LN dissection
+2024-11-08,52.3,220.0,open radical nephrectomy นอกเวลา
+2024-11-08,13.9,6.0,Fistulotomy
+2024-11-08,40.1,30.0,RT MMA 
+2024-11-08,11.7,8.0,LIS
+2024-11-08,36.4,15.0,Laser Hemorrhoidectomy
+2024-11-11,116.9,313.0,open wedge liver S7
+2024-11-11,124.3,247.0,Bilateral mastectomy with SLNB
+2024-11-11,106.3,100.0,LC 
+2024-11-11,67.5,200.0,crossover balloon angioplasty
+2024-11-19,13.3,12.0,cystoscope +- TUF
+2024-11-11,102.4,72.0,Bilateral repair of inguinal hernia
+2024-11-11,75.8,23.0,subcutaneous mastecomy 
+2024-11-12,24.8,17.0,hemorrhoidectomy
+2024-11-12,82.1,55.0,Lt. RIRs with laser endopyelotomy
+2024-11-12,98.1,147.0,left craniotomy with tumor removal
+2024-11-19,158.8,128.0,VATs wedge resection Rt lung
+2024-12-03,6.4,5.0,off DJ stent
+2024-11-12,11.4,10.0,LIS
+2024-11-12,12.0,7.0,transanal excision
+2024-11-13,97.0,260.0,right retrosigmoid suboccipital craniotomy (SOC) with tumor removal
+2024-11-12,17.8,30.0,Fistulotomy/LIFT
+2024-11-15,140.7,381.0,Rt Pterional craniotomy with tumor removal
+2024-11-13,45.4,50.0,Tonsillectomy+ BSP+ RF nose 
+2024-11-13,36.1,20.0,Sinuscope with Coblator adenoid 
+2024-11-13,161.6,114.0,Lap Lt nephrectomy
+2024-11-13,92.7,265.0,"VASOR liposuction abdomen,love handle, and both thighs"
+2024-11-13,23.3,10.0,TUR-BT
+2024-12-13,159.8,108.0,Laminectomy T7-8 with remove epidural abscess
+2024-11-13,76.2,70.0,wide excision c frozen section c nasolabial flap coverage
+2024-11-14,115.9,221.0,"open wedge s5,6 +/- OC"
+2024-11-15,133.1,120.0,bilat FESS with navigator with microdebrider
+2024-11-15,127.5,150.0,bilat FESS with microdebrider with navigator
+2024-11-15,99.9,125.0,open LHC
+2024-11-15,18.6,17.0,Hemorrhoidectomy
+2024-11-15,34.8,15.0,Laser hemorrhoidoplasty
+2024-11-22,91.8,119.0,corpectomy C7-T2 c anterior P&S fixation c sternotomy
+2024-11-20,200.2,175.0,Rt. craniotomy c biopsy
+2024-11-15,60.6,183.0,"Right NSM,SLNB , Left Prophylaxis mastectomy, Immediate implant reconstruction "
+2024-11-18,130.0,150.0,L4/5 S5/S1 PDS c laminectomy open prodot
+2024-11-18,60.7,80.0,Excision or destruction of lesion or tissue of tongue
+2024-11-18,111.9,67.0,LC 
+2024-11-18,130.5,392.0,Lt lateral sectionectomy 
+2024-11-19,33.5,55.0,EGD + colonoscopy
+2024-11-18,140.4,204.0,MIS TLIF L5-S1 (+- L4-5)
+2024-11-18,66.1,15.0,l
+2024-11-20,128.1,85.0,ORIF on mandible
+2024-11-18,55.1,30.0,Open Appendectomy
+2024-11-19,70.3,100.0,EVAR
+2024-11-19,111.5,117.0,Open Novaspine L4/5 PDS c laminectomy
+2024-11-19,35.0,35.0,egd+colonoscopy
+2024-11-19,73.2,180.0,HL c venous stripping c stab avulsion Lt leg  
+2024-11-18,111.3,80.0,aneurysmectomy Lt
+2024-11-19,53.8,10.0,Excision + LIS 
+2024-11-18,78.2,35.0,Rt venaseal
+2024-11-19,147.7,164.0,ACDF C4-5-6
+2024-11-21,141.3,202.0,"laminectomy C3-4, C4-5 c lateral mass screw"
+2024-11-19,103.1,55.0,Rt HL with VS with Phlebectomy
+2024-11-19,94.5,90.0,Right submandibular mass excision
+2024-11-20,111.8,145.0,elevate depress skull fracture c ORIF P&S fixation
+2024-11-20,95.7,85.0,right programmable VP shunt (Sophysa)
+2024-11-20,14.9,25.0,TRUS-MRI fusion biopsy
+2024-11-20,48.8,147.0,TUR-P
+2024-11-20,14.9,20.0,TRUS-MRI fusion biopsy 
+2024-11-20,63.1,95.0,Rt. PCNL
+2024-11-20,26.2,13.0,RF nose + palate (GA)
+2024-11-21,116.6,85.0,Bilateral Venaseal
+2024-11-21,131.4,163.0,Aneurysmectomy
+2024-11-21,61.0,55.0,Debulging flap
+2024-11-21,111.0,105.0,LC
+2024-11-22,192.8,229.0,Lap sigmoidectomy
+2024-11-21,86.4,317.0,S6 segmentectomy
+2024-12-19,29.7,20.0,tracheostomy 
+2024-12-06,29.4,40.0, tracheostomy
+2024-11-22,155.2,275.0,VATs RUL wedge + FS +- lobectomy
+2024-12-04,31.2,50.0,Tracheostomy
+2024-11-28,72.9,45.0,Tracheostomy c DL Bx c esophagoscope
+2024-12-13,19.3,18.0,Colonoscopy
+2024-11-25,152.8,175.0,L3-S1 laminectomy c PDS fixation
+2024-11-25,65.8,200.0,downhill balloon angioplasty
+2024-11-25,109.5,176.0,LC
+2024-11-25,103.7,140.0,LC 
+2024-11-25,27.2,75.0,Laryngoscopy and other tracheoscopy
+2024-11-25,148.8,235.0,Laminectomy c PDS fixation L3-4-5-S1 MIS
+2024-11-26,106.4,20.0,Lt 2nd toe amputation
+2024-11-25,102.1,60.0,ACDF c5-6 DIVA
+2024-11-25,79.5,115.0,wide excision c frozen section
+2024-11-26,62.0,411.0,LAR + Divert ostomy + Open wedge S6/7
+2024-11-26,155.8,140.0,laminectomy c PDS
+2024-11-27,115.0,195.0,endoscopic endonasal transsphenoid approach with tumor removal
+2024-11-26,138.8,124.0,MIS TLIF L5-S1
+2024-11-26,64.8,35.0,Venaseal Lt leg with phlebectomy
+2024-11-26,58.9,66.0,Venaseal both legs
+2024-11-26,27.7,36.0,Rt. URS with laser cystolithotripsy with DJ stent exchanging
+2024-11-26,128.3,25.0,Lt FESS+- Septoplasty 
+2024-11-26,118.5,89.0,Bilateral Venaseal with Rt phlebectomy
+2024-11-26,123.1,85.0,Lt FESS
+2024-11-26,96.2,55.0,Bilateral venaseal with Lt phlebectomy 
+2024-11-27,141.1,145.0,Radical orchidectomy Rt.
+2024-11-27,43.0,22.0,Tonsillectomy 
+2024-12-06,21.4,35.0,Colonoscopy 
+2024-11-29,62.4,85.0,Re-Explored laparotomy +/- closure abdomen
+2024-11-27,76.3,50.0,wide excision c frozen section c nasolabial flap cover
+2024-11-28,203.6,322.0,Lap radical Lt nephrectomy
+2024-11-28,57.7,40.0,Tonsillectomy
+2024-11-28,55.6,25.0,"palate exam, +- redu palatoplasty"
+2024-11-28,135.6,150.0,Lt mastectomy c SLNB
+2024-11-28,166.1,92.0,Rt Mastectomy c SLNB
+2024-11-28,70.9,315.0,Breast reduction
+2024-11-29,50.7,28.0,microDL c excision
+2024-11-29,132.3,130.0,bilat FESS navigator microdebrider
+2024-11-29,21.5,34.0,Colonoscopy
+2024-12-02,136.4,253.0,Lt parietal craniotomy with remove tumor
+2024-11-29,44.2,10.0,Closed reduction with nasal packing
+2024-11-30,58.6,30.0,Water Vapor therapy (REZUM)
+2024-11-30,46.2,10.0,Water vapor therapy
+2024-11-30,58.3,24.0,Water vapor therapy (REZUM)
+2024-12-02,93.3,65.0,pedicular screw fixation T12-L2
+2024-12-02,149.4,119.0,LAMINECTOMY W PDS FIXATIONL 3-4 MIS
+2024-12-12,5.1,5.0,Off DJ stent
+2024-12-02,114.9,75.0,"Lt, VAE with SLNB"
+2024-12-02,72.2,31.0,Wire  localization wide excision of right breast 
+2024-12-03,110.9,119.0,open PDS fixation T9-L1
+2024-12-02,138.7,63.0,Venous stripping with stab avulsion at both legs 
+2024-12-03,194.9,150.0,lap sigmoidectomy
+2024-12-03,158.4,133.0,laminectomy c PDS fixation L2-5 Prodorth
+2024-12-03,60.8,20.0,Tonsillectomy
+2024-12-04,140.5,135.0,Endoscopic discectomy L5-S1
+2024-12-08,36.5,45.0,Double DJ stent
+2024-12-04,16.5,50.0,RF nose  with tonsillectomy
+2024-12-04,22.7,24.0,RF nose + RF palate + RF BOT (GA)
+2024-12-25,157.3,75.0,VATs Talc pleurodesis c biopsy
+2024-12-20,156.2,102.0,laminectomy L4-5 with decompression
+2024-12-04,185.5,40.0,Lt BCT + SLNB
+2024-12-04,79.3,190.0,wide excision c frozen section c nasolabial flap coverage
+2024-12-06,150.0,215.0,ACDF C3/4 C4/5 C5/6 PEEK and Plate
+2024-12-06,31.8,52.0,EGD + colonoscopy
+2024-12-06,35.9,112.0,EGD + colonosccpy 
+2024-12-17,103.4,85.0,"left frontal craniotomy, transcortical-transventricular approach with tumor removal"
+2024-12-06,20.5,20.0,hemorrhoidectomy 
+2024-12-13,30.0,60.0,Colonoscopy+EGD
+2024-12-09,84.8,95.0,EVAR
+2024-12-09,66.3,55.0,Realigning stent at both CIAs 
+2024-12-09,34.8,50.0,Circumcision
+2024-12-11,127.8,175.0,Endoscopic decompression T11
+2024-12-10,61.1,40.0,Tonsillectomy
+2024-12-11,139.7,227.0,lt.parietal craniotomy with tumor removal
+2024-12-11,197.5,92.0,Lap. radical nephrectomy
+2024-12-11,101.3,103.0,left cranioplasty
+2024-12-11,35.3,40.0,Lt URSL 
+2024-12-11,52.6,195.0,urethroscopy lithotripsy
+2024-12-12,96.9,95.0,NLE Lt breast 
+2024-12-11,26.4,20.0,TUR-BT
+2024-12-12,100.0,115.0,LC
+2024-12-12,113.7,180.0,Lt thyroid lobectomy
+2024-12-11,53.2,95.0,Breast augmentation
+2024-12-12,95.7,80.0,AKA of right leg 
+2024-12-16,43.1,10.0,Closed reduction
+2024-12-12,85.1,60.0,appendectomy
+2024-12-13,11.1,10.0,Fistulotomy
+2024-12-13,194.4,250.0,lap sigmoidectomy
+2024-12-13,127.2,145.0,bilat FESS with microdebrider with navigator
+2024-12-13,77.4,131.0,Revision
+2024-12-20,47.5,30.0,debridement c Bx
+2024-12-23,99.8,42.0,left VP shunt + off EVD
+2024-12-16,159.3,153.0,Rt mastectomy with SLNB
+2024-12-16,135.5,102.0,MIS TLIF L4/5
+2024-12-16,126.6,171.0,Lt mastec + SLNB
+2024-12-17,165.2,345.0,open AR with wedge liver resection S7  
+2024-12-16,101.3,130.0,ACDF C5/6 C6/7 peel plate
+2024-12-16,82.8,100.0,EVAR
+2024-12-17,12.7,12.0,Cystoscope +- Fulguration
+2024-12-16,146.4,162.0,"ACDF C4-5,5-6 with plate-screw fixation"
+2024-12-16,195.0,80.0,ORIF with P&S + closed reduction of nasal bone
+2024-12-16,148.2,177.0,aneurysmectomy+/- repair lt brachial a. 
+2024-12-17,83.5,30.0,remove chemo port
+2024-12-16,81.4,60.0,Rt HL with VS with Phlebectomy
+2024-12-17,7.2,13.0,cystoscopy with S- curve dilation
+2024-12-17,43.4,61.0,TUR-P
+2024-12-16,20.0,18.0,I&D 
+2024-12-17,133.9,230.0,Bilat Fullhouse FESS+septoplasty 
+2024-12-26,34.2,30.0,Circumcision
+2024-12-25,14.2,15.0,Cystoscopy c RP +- DJ stent
+2024-12-26,49.5,10.0,Double DJ stent
+2024-12-18,25.7,20.0,RF nose + RF palate + Partial uvulectomy (GA)
+2024-12-18,23.3,19.0,MRI fusion Bx
+2024-12-18,22.4,8.0,MRI fusion Bx.
+2024-12-19,50.7,40.0,1st stage repair +/- scrotal flap
+2024-12-17,48.2,10.0,U-catheter
+2024-12-19,82.1,25.0,Repair Extensor tendon
+2024-12-19,116.9,75.0,LC + EGD remove stent 
+2024-12-19,103.6,55.0,Rt High ligation with venous stripping with phlebectomy 
+2024-12-20,95.7,124.0,Open RHC
+2024-12-20,188.8,285.0,open LAR +/-APR
+2024-12-25,35.0,20.0,revise TCC at Rt FV
+2024-12-20,94.3,72.0,T11-L3 pedicular screw fixation with rod reduction
+2024-12-19,67.3,55.0,Segmental graft removal with anastomosis
+2024-12-19,71.1,155.0,Liposuction
+2024-12-20,123.7,125.0,Bilateral FESS under GA 
+2024-12-20,31.2,20.0,Laser hemorrhoidoplasty
+2024-12-23,98.3,70.0,Open Lt hernioplasty
+2024-12-23,40.2,61.0,D/L c suspension c telescopy c CO2 laser lysis adhesion c KA injection
+2024-12-23,128.3,75.0,open total parathyroidectomy with ATX to Rt forearm
+2024-12-23,63.7,190.0,Downhill angioplasty of Lt leg
+2024-12-23,78.1,40.0,wide excision recurrent tumor *2 SITES
+2024-12-24,60.5,40.0,ligasure hemorrhoidectomy 
+2024-12-24,58.3,42.0,Closure colostomy 
+2024-12-24,42.4,165.0,TUR-P
+2024-12-23,49.2,60.0,Wire localization wide excision 
+2024-12-24,16.3,25.0,Fistulotomy 
+2024-12-23,139.4,67.0,Lap appendectomy
+2024-12-25,5.3,15.0,flexible cystoscopy
+2024-12-25,23.2,20.0,MRI fusion Bx
+2024-12-25,203.5,120.0,Lap radical nephrectomy Lt.
+2024-12-25,14.3,10.0,Cystoscopy c RP
+2024-12-25,93.2,75.0,left craniotomy with hematoma removall
+2024-12-27,30.9,25.0,Chemoport insertion
+2024-12-25,118.6,121.0,Lt craniectomy c remove hematoma
+2024-12-27,34.3,102.0,EGD+Colonoscopy
+2024-12-26,101.3,180.0,LC
+2024-12-26,52.8,25.0,RT MMA with microdebrider
+2024-12-26,40.3,10.0,Closed reduction nasl bone
+2024-12-27,11.3,5.0,LIS
+2024-12-28,65.6,85.0,Aggressive debridement under GA 

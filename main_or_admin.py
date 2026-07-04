@@ -421,13 +421,15 @@ def _get_demo_kpi(current_sim_min):
 
 
 def _render_demo_controls():
-    """แสดง toggle + controls ของ Demo Mode. Return current sim_min หรือ None."""
+    """🎬 Demo Mode แบบ "เหมือนโหมดจริง" (นำเสนอผู้บริหารได้ — แก้ 3 ก.ค. 2026):
+    ตัวควบคุมทั้งหมดพับอยู่ใน expander · บนหน้าจอหลักเหลือแค่ชิปเวลาจำลองจาง ๆ
+    ไม่มีแถบส้ม/แถวปุ่มโผล่กลางหน้าอีก. Return current sim_min หรือ None."""
     state = st.session_state.setdefault('demo', {
         'active': False, 'playing': True, 'speed': 1,
         'real_started': time.time(), 'paused_at_sim': 0.0,
     })
 
-    col_t, col_info, col_warn, col_rf = st.columns([1, 1.6, 1.0, 0.8], vertical_alignment="center")
+    col_info, col_warn, col_rf = st.columns([2.6, 1.0, 0.8], vertical_alignment="center")
     with col_rf:
         if st.button("🔄 รีเฟรช", key="admin_refresh", width='stretch',
                      type='primary',
@@ -436,88 +438,81 @@ def _render_demo_controls():
             st.rerun()
     with col_warn:
         st.markdown("<div style=\x27text-align:right;color:#808495;font-size:13px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
-    with col_t:
-        new_active = st.toggle(
-            '🎬 Demo Mode', value=state['active'], key='demo_toggle',
-            help='จำลองการทำงาน 1 วัน ภายใน 5 นาที — ไม่บันทึก DB จริง')
-    if new_active != state['active']:
-        state['active'] = new_active
-        if new_active:
-            state['real_started'] = time.time()
-            state['paused_at_sim'] = 0.0
-            state['playing'] = True
-        st.rerun()
 
-    if not state['active']:
-        return None
-
-    # Compute current sim_min
-    if state['playing']:
-        real_elapsed = time.time() - state['real_started']
-        # 5 นาทีจริง = 600 นาทีจำลอง → 1 วินาทีจริง = 2 นาทีจำลอง
-        sim_min = state['paused_at_sim'] + (real_elapsed * 2.0 * state['speed'])
-    else:
-        sim_min = state['paused_at_sim']
-
-    # Cap at end of day
-    sim_min = min(sim_min, _DEMO_END_MIN)
-    if sim_min >= _DEMO_END_MIN and state['playing']:
-        state['playing'] = False
-        state['paused_at_sim'] = _DEMO_END_MIN
-
-    # Display info
-    sim_hour = 8 + sim_min / 60
-    sim_time_str = f'{int(sim_hour):02d}:{int((sim_hour % 1) * 60):02d}'
-    pct = sim_min / _DEMO_END_MIN * 100
+    # ---- คำนวณ sim_min (5 นาทีจริง = 600 นาทีจำลอง → 1 วิจริง = 2 นาทีจำลอง) ----
+    sim_min = None
+    if state['active']:
+        if state['playing']:
+            real_elapsed = time.time() - state['real_started']
+            sim_min = state['paused_at_sim'] + (real_elapsed * 2.0 * state['speed'])
+        else:
+            sim_min = state['paused_at_sim']
+        sim_min = min(sim_min, _DEMO_END_MIN)
+        if sim_min >= _DEMO_END_MIN and state['playing']:
+            state['playing'] = False
+            state['paused_at_sim'] = _DEMO_END_MIN
 
     with col_info:
-        st.markdown(f"""
-        <div style="background:#fff3e0;border-radius:8px;padding:8px 12px;
-                    border-left:4px solid #ef6c00;margin-top:6px;">
-          <span style="font-size:13px;color:#e65100;font-weight:700;">
-            🕐 เวลาจำลอง: <b>{sim_time_str}</b></span>
-          <span style="font-size:11px;color:#bf360c;margin-left:12px;">
-            ({sim_min:.0f}/{_DEMO_END_MIN} นาที · {pct:.0f}%)
-            · 🔇 ไม่บันทึก DB จริง</span>
-        </div>
-        """, unsafe_allow_html=True)
+        if sim_min is not None:
+            # ชิปจาง ๆ ชิ้นเดียว — กลมกลืนกับ UI ปกติ (มุคกี้เห็น ผู้บริหารไม่สะดุด)
+            sim_hour = 8 + sim_min / 60
+            sim_time_str = f'{int(sim_hour):02d}:{int((sim_hour % 1) * 60):02d}'
+            st.markdown(
+                f'<div style="margin-top:6px;"><span style="font-size:11.5px;'
+                f'color:#b6c2cf;border:1px solid #eef2f6;border-radius:999px;'
+                f'padding:2px 10px;">🕐 {sim_time_str} · สาธิต</span></div>',
+                unsafe_allow_html=True)
 
-    # Controls row
-    c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
-    with c1:
-        play_label = '⏸ หยุด' if state['playing'] else '▶ เล่น'
-        if st.button(play_label, use_container_width=True, key='demo_play'):
-            if state['playing']:
-                # Pause: save current sim_min
-                real_elapsed = time.time() - state['real_started']
-                state['paused_at_sim'] += (real_elapsed * 2.0 * state['speed'])
-                state['playing'] = False
-            else:
+    # ---- ตัวควบคุมทั้งหมดพับใน expander — หน้าจอหลักสะอาดเหมือนโหมดจริง ----
+    with st.expander("🎬 โหมดสาธิต (สำหรับนำเสนอ)", expanded=False):
+        new_active = st.toggle(
+            'เปิดโหมดสาธิต', value=state['active'], key='demo_toggle',
+            help='จำลองการทำงาน 1 วัน ภายใน 5 นาที — ไม่บันทึก DB จริง')
+        if new_active != state['active']:
+            state['active'] = new_active
+            if new_active:
                 state['real_started'] = time.time()
+                state['paused_at_sim'] = 0.0
                 state['playing'] = True
             st.rerun()
-    with c2:
-        if st.button('⏹ รีเซ็ต', use_container_width=True, key='demo_reset'):
-            state['real_started'] = time.time()
-            state['paused_at_sim'] = 0.0
-            state['playing'] = True
-            st.rerun()
-    with c3:
-        new_speed = st.selectbox(
-            'ความเร็ว', [1, 2, 5],
-            index=[1, 2, 5].index(state['speed']),
-            key='demo_speed_select', label_visibility='collapsed')
-        if new_speed != state['speed']:
-            real_elapsed = time.time() - state['real_started']
-            state['paused_at_sim'] += (real_elapsed * 2.0 * state['speed'])
-            state['real_started'] = time.time()
-            state['speed'] = new_speed
-            st.rerun()
-    with c4:
-        st.caption(
-            "💡 เคสจะค่อย ๆ ผ่าน flow: รอ → เข้าห้อง → กำลังผ่า → เสร็จ "
-            "(7 เคส รวม 1 cancel + 1 นอกเวลา)"
-        )
+        if state['active'] and sim_min is not None:
+            pct = sim_min / _DEMO_END_MIN * 100
+            st.caption(
+                f"เวลาจำลอง {sim_min:.0f}/{_DEMO_END_MIN} นาที ({pct:.0f}%) · "
+                "ไม่บันทึก DB จริง · เคสไหลตาม flow: รอ → เข้าห้อง → กำลังผ่า → เสร็จ "
+                "(7 เคส รวม 1 cancel + 1 นอกเวลา)")
+            if sim_min >= _DEMO_END_MIN:
+                st.success("✅ จบวันจำลองแล้ว — กด ⏹ เริ่มใหม่ หรือปิดโหมดสาธิต")
+            c1, c2, c3 = st.columns([1, 1, 1])
+            with c1:
+                play_label = '⏸ หยุด' if state['playing'] else '▶ เล่น'
+                if st.button(play_label, use_container_width=True, key='demo_play'):
+                    if state['playing']:
+                        # Pause: save current sim_min
+                        real_elapsed = time.time() - state['real_started']
+                        state['paused_at_sim'] += (real_elapsed * 2.0 * state['speed'])
+                        state['playing'] = False
+                    else:
+                        state['real_started'] = time.time()
+                        state['playing'] = True
+                    st.rerun()
+            with c2:
+                if st.button('⏹ เริ่มใหม่', use_container_width=True, key='demo_reset'):
+                    state['real_started'] = time.time()
+                    state['paused_at_sim'] = 0.0
+                    state['playing'] = True
+                    st.rerun()
+            with c3:
+                new_speed = st.selectbox(
+                    'ความเร็ว', [1, 2, 5],
+                    index=[1, 2, 5].index(state['speed']),
+                    key='demo_speed_select', label_visibility='collapsed')
+                if new_speed != state['speed']:
+                    real_elapsed = time.time() - state['real_started']
+                    state['paused_at_sim'] += (real_elapsed * 2.0 * state['speed'])
+                    state['real_started'] = time.time()
+                    state['speed'] = new_speed
+                    st.rerun()
 
     return sim_min
 
@@ -846,7 +841,7 @@ def _render_ai_research_tab():
     #    2) ข้อมูลสดจากระบบ ปี 2568+ = เคสที่ผ่าเสร็จจริงหลังเริ่มใช้งาน (prospective)
     import pandas as _pd
     from pathlib import Path as _P
-    _vf = _P(__file__).resolve().parent / 'models' / 'honest_v1' / f'validation_{_tgt}.csv'
+    _vf = _P(__file__).resolve().parent / 'models' / 'thesis_ML' / f'validation_{_tgt}.csv'
 
     # โหลด 2 แหล่งแยกกัน:
     #   _calib_raw = ชุดทดสอบปี 2567 (hold-out ของโมเดลในเล่ม — โมเดลไม่เคยเห็นตอนเรียน)
@@ -942,7 +937,7 @@ def _render_ai_research_tab():
     #   เวลาครองห้อง: completed CSV · เวลาผ่าตัดสุทธิ: + opendtime จาก intraop รายปี
     #   (สร้างโดย build_prospective_2568.py → validation_{target}_{ปี พ.ศ.}.csv)
     def _load_prosp(be_year):
-        _f = (_P(__file__).resolve().parent / 'models' / 'honest_v1'
+        _f = (_P(__file__).resolve().parent / 'models' / 'thesis_ML'
               / f'validation_{_tgt}_{be_year}.csv')
         if _f.exists():
             try:
@@ -3567,10 +3562,7 @@ def page_admin(section='today'):
                     "💡 ติดตั้ง: `pip install streamlit-autorefresh` แล้ว reboot"
                 )
         elif demo_active and _demo_done:
-            st.success(
-                "✅ Demo จบแล้ว — เห็นภาพรวมเคสทั้งวัน · "
-                "กด ⏹ รีเซ็ต เพื่อเริ่มใหม่ หรือปิด Demo Mode"
-            )
+            pass  # ข้อความจบวันจำลอง ย้ายไปอยู่ใน expander 🎬 โหมดสาธิต แล้ว (UI เหมือนจริง)
         elif not demo_active:
             # 🖥️ ผู้บริหารดูสด — refresh ทุก ~30 วิ ให้ flow อัปเดตเองจากบอร์ดกลาง
             try:
@@ -3606,7 +3598,13 @@ def page_admin(section='today'):
                 rooms = rooms_from_session(_live_cases, _now_bkk())
                 kpi = kpi_from_session(_live_cases)
                 if st.session_state.get('_or_demo'):
-                    st.caption("🧪 ข้อมูลตัวอย่าง (Demo) — ไม่ใช่เคสจริง")
+                    # 🎬 UI เหมือนโหมดจริง — เหลือชิปจางกันสับสนเท่านั้น
+                    st.markdown(
+                        '<div style="text-align:right;margin:-4px 0 2px;">'
+                        '<span style="font-size:11px;color:#b6c2cf;'
+                        'border:1px solid #eef2f6;border-radius:999px;'
+                        'padding:1px 9px;">สาธิต · ไม่บันทึกจริง</span></div>',
+                        unsafe_allow_html=True)
             else:
                 rooms = get_room_status(op_date)
                 kpi = get_kpi(op_date)
@@ -3835,39 +3833,41 @@ def page_admin(section='today'):
 
         # ── Demo mode: ซ่อน sections ที่อิง real DB (alerts, workload, ฯลฯ) ──
         if demo_active:
-            st.info(
-                "🎬 **โหมด Demo** — แสดงเฉพาะ Room cards + KPI\n\n"
-                "🔇 sections อื่น (แจ้งเตือน, ภาระงาน, รับเวร, ผู้ป่วยรอ) "
-                "ถูกซ่อนชั่วคราว เพื่อ focus ที่ flow หลัก\n\n"
-                "💡 ปิด Demo Mode เพื่อกลับไปดูข้อมูลจริงครบทุก section"
-            )
+            # 🎬 สาธิตแสดงเฉพาะ KPI + การ์ดห้อง (sections ล่างอิงข้อมูลจริงใน DB)
+            #    — UI เหมือนโหมดจริง: ป้ายจาง ๆ พอ ไม่มีกล่องฟ้าใหญ่กลางหน้า
+            st.markdown(
+                '<div style="text-align:right;margin:4px 0 2px;">'
+                '<span style="font-size:11px;color:#b6c2cf;border:1px solid #eef2f6;'
+                'border-radius:999px;padding:1px 9px;">สาธิต · ส่วนแจ้งเตือน/ภาระงาน'
+                'แสดงเมื่อใช้ข้อมูลจริง</span></div>',
+                unsafe_allow_html=True)
             return
 
-        st.markdown('<div class="section-title">👥 ภาระงาน</div>',
-                    unsafe_allow_html=True)
-        if _live_cases:
-            from live_link import workload_from_session
-            wl = workload_from_session(_live_cases)
-        else:
-            wl = get_workload(op_date)
-        _render_workload(wl)
+        # 📁 sections รอง → พับใน expander (progressive disclosure · UX audit 3 ก.ค. 2026)
+        #    เปิดหน้ามาเห็นของสำคัญใน 1-2 จอ: KPI + แจ้งเตือน + การ์ดห้อง + ไทม์ไลน์
+        with st.expander("👥 ภาระงาน", expanded=False):
+            if _live_cases:
+                from live_link import workload_from_session
+                wl = workload_from_session(_live_cases)
+            else:
+                wl = get_workload(op_date)
+            _render_workload(wl)
 
         # 🛏️ จำนวนเคสรายห้อง (bar chart) — เห็นห้องไหนงานหนัก/เบา (ข้ามห้องที่ปิด)
-        st.markdown('<div class="section-title">🛏️ จำนวนเคสรายห้อง</div>',
-                    unsafe_allow_html=True)
-        _room_rows = [{'ห้อง': (r.get('room_label') or f"ห้อง {r.get('room_no')}"),
-                       'จำนวนเคส': int(r.get('total', 0) or 0)}
-                      for r in rooms if not r.get('closed')]
-        _room_df = pd.DataFrame(_room_rows)
-        if len(_room_df) and _room_df['จำนวนเคส'].sum() > 0:
-            _bar = px.bar(_room_df, x='ห้อง', y='จำนวนเคส', text='จำนวนเคส',
-                          color_discrete_sequence=['#1565c0'])
-            _bar.update_traces(textposition='outside', cliponaxis=False)
-            _bar.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=260,
-                               yaxis_title='', xaxis_title='', yaxis=dict(dtick=1))
-            st.plotly_chart(_bar, use_container_width=True)
-        else:
-            st.caption("ยังไม่มีเคสในห้องวันนี้")
+        with st.expander("🛏️ จำนวนเคสรายห้อง", expanded=False):
+            _room_rows = [{'ห้อง': (r.get('room_label') or f"ห้อง {r.get('room_no')}"),
+                           'จำนวนเคส': int(r.get('total', 0) or 0)}
+                          for r in rooms if not r.get('closed')]
+            _room_df = pd.DataFrame(_room_rows)
+            if len(_room_df) and _room_df['จำนวนเคส'].sum() > 0:
+                _bar = px.bar(_room_df, x='ห้อง', y='จำนวนเคส', text='จำนวนเคส',
+                              color_discrete_sequence=['#1565c0'])
+                _bar.update_traces(textposition='outside', cliponaxis=False)
+                _bar.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=260,
+                                   yaxis_title='', xaxis_title='', yaxis=dict(dtick=1))
+                st.plotly_chart(_bar, use_container_width=True)
+            else:
+                st.caption("ยังไม่มีเคสในห้องวันนี้")
 
         # (เอาออกตามคำขอ 2026-06: Nurse Progress + AI Prediction Accuracy รายวัน
         #  — Nurse Progress ใช้ข้อมูล intraop ซึ่งโหมด live ไม่มี / AI accuracy
@@ -3884,36 +3884,35 @@ def page_admin(section='today'):
         # =========================================================
         # Section: สถิติรับเวร (วันนี้)
         # =========================================================
-        st.markdown('<div class="section-title">🔄 สถิติรับเวร (หลัง 15:30 น.)</div>',
-                    unsafe_allow_html=True)
-        ho_today = get_handover_stats(op_date, op_date)
-        if ho_today['n_handover'] > 0:
-            st.markdown(f"""
-            <div style="background:#fff3e0;border-left:4px solid #ef6c00;
-                        padding:10px 14px;border-radius:6px;margin-bottom:8px;">
-                <span style="font-weight:700;color:#e65100;">
-                    {ho_today['n_handover']} เคส</span>
-                <span style="color:#666;font-size:13px;">
-                    จากทั้งหมด {ho_today['total']} เคส
-                    ({ho_today['pct']}%) — ยังไม่ discharge ก่อน 15:30 น.</span>
-            </div>""", unsafe_allow_html=True)
-            ho_df = ho_today['handover_cases']
-            for _, r in ho_df.iterrows():
-                dc_time = ''
-                if r.get('discharged_at'):
-                    dc_time = r['discharged_at'][11:16]
-                    lbl = f"discharge {dc_time}"
-                else:
-                    lbl = f"สถานะ: {r['status']}"
+        with st.expander("🔄 สถิติรับเวร (หลัง 15:30 น.)", expanded=False):
+            ho_today = get_handover_stats(op_date, op_date)
+            if ho_today['n_handover'] > 0:
                 st.markdown(f"""
-                <div style="background:var(--bg-secondary-color,#f5f5f5);
-                            border-radius:6px;padding:8px 12px;margin:4px 0;
-                            font-size:13px;border:1px solid var(--border-color,#e0e0e0);">
-                    <b>{_esc(_admin_mask_nm(r.get('name')))}</b> — {_esc(r.get('procedure_name',''))}
-                    <span style="float:right;color:#ef6c00;font-weight:600;">{_esc(lbl)}</span>
+                <div style="background:#fff3e0;border-left:4px solid #ef6c00;
+                            padding:10px 14px;border-radius:6px;margin-bottom:8px;">
+                    <span style="font-weight:700;color:#e65100;">
+                        {ho_today['n_handover']} เคส</span>
+                    <span style="color:#666;font-size:13px;">
+                        จากทั้งหมด {ho_today['total']} เคส
+                        ({ho_today['pct']}%) — ยังไม่ discharge ก่อน 15:30 น.</span>
                 </div>""", unsafe_allow_html=True)
-        else:
-            st.success("ไม่มีเคสรับเวรวันนี้ — ทุกเคส discharge ก่อน 15:30 น.")
+                ho_df = ho_today['handover_cases']
+                for _, r in ho_df.iterrows():
+                    dc_time = ''
+                    if r.get('discharged_at'):
+                        dc_time = r['discharged_at'][11:16]
+                        lbl = f"discharge {dc_time}"
+                    else:
+                        lbl = f"สถานะ: {r['status']}"
+                    st.markdown(f"""
+                    <div style="background:var(--bg-secondary-color,#f5f5f5);
+                                border-radius:6px;padding:8px 12px;margin:4px 0;
+                                font-size:13px;border:1px solid var(--border-color,#e0e0e0);">
+                        <b>{_esc(_admin_mask_nm(r.get('name')))}</b> — {_esc(r.get('procedure_name',''))}
+                        <span style="float:right;color:#ef6c00;font-weight:600;">{_esc(lbl)}</span>
+                    </div>""", unsafe_allow_html=True)
+            else:
+                st.success("ไม่มีเคสรับเวรวันนี้ — ทุกเคส discharge ก่อน 15:30 น.")
 
         # (⏱️ ผู้ป่วยรอนาน ย้ายขึ้นไปรวมโซนปัญหาด้านบนแล้ว)
 
@@ -3937,10 +3936,8 @@ def page_admin(section='today'):
         # =========================================================
         # Section: สรุปรายวัน / รับเวร (ยุบมาจากแท็บแยก — หน้าเดียวจบ)
         # =========================================================
-        st.markdown("---")
-        st.markdown('<div class="section-title">🌙 สรุปรายวัน / รับเวร</div>',
-                    unsafe_allow_html=True)
-        _render_daily_summary()
+        with st.expander("🌙 สรุปรายวัน / รับเวร", expanded=False):
+            _render_daily_summary()
 
     # -- TAB 2: Historical analytics --
     if _sec == 'history':
@@ -3953,62 +3950,60 @@ def page_admin(section='today'):
         default_from = hist_floor
         default_to = today_dt
 
-        # พอแก้วันที่/หัวข้อ → ซ่อนผลเดิมไว้ก่อน จนกว่าจะกด 'แสดงสถิติ' ใหม่
-        # (ไม่โหลดระหว่างที่ยังเลือกไม่เสร็จ)
-        def _invalidate_hist():
-            st.session_state['hist_submitted'] = None
-
-        col_from, col_to = st.columns(2)
-        with col_from:
-            sel_from = st.date_input("📅 วันที่เริ่มต้น", value=default_from,
-                                     min_value=hist_floor, max_value=today_dt, key="hist_from",
-                                     on_change=_invalidate_hist)
-
-        with col_to:
-            sel_to = st.date_input("📅 วันที่สิ้นสุด", value=default_to,
-                                   min_value=hist_floor, max_value=today_dt, key="hist_to",
-                                   on_change=_invalidate_hist)
-
         st.info("ℹ️ ข้อมูลสถิติจะปรับปรุงในวันทำการถัดไป — เคสของวันศุกร์จะอัปเดตในวันจันทร์")
 
-        if sel_from > sel_to:
-            st.warning("⚠️ วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด")
-            return
+        # ⚡ st.form (UX fix 3 ก.ค. 2026): เลือกวันที่/ติ๊กหัวข้อกี่ครั้งก็ได้
+        #    "ไม่เกิด rerun แม้แต่ครั้งเดียว" จนกดปุ่ม 📊 แสดงสถิติ — โหลดทีเดียวจบ
+        #    (เดิม: ทุกคลิก = rerun ทั้งแอป + ผลที่โหลดไว้วูบหาย)
+        with st.form("hist_form"):
+            col_from, col_to = st.columns(2)
+            with col_from:
+                sel_from = st.date_input("📅 วันที่เริ่มต้น", value=default_from,
+                                         min_value=hist_floor, max_value=today_dt,
+                                         key="hist_from")
+            with col_to:
+                sel_to = st.date_input("📅 วันที่สิ้นสุด", value=default_to,
+                                       min_value=hist_floor, max_value=today_dt,
+                                       key="hist_to")
 
-        d_from = sel_from.strftime('%Y-%m-%d')
-        d_to = sel_to.strftime('%Y-%m-%d')
+            st.markdown("**เลือกหัวข้อที่อยากดู** "
+                        "<span style='font-weight:400;color:#888;'>"
+                        "(เลือกครบแล้วกดปุ่มเดียว — ระหว่างเลือกไม่โหลดอะไรทั้งนั้น)</span>",
+                        unsafe_allow_html=True)
+            _SEC_OPTS = [
+                ('kpi',   '🎯 KPI Highlights',   True),
+                ('sum',   '📋 สรุปยอดสะสม',       True),
+                ('trend', '📈 กราฟจำนวนเคสรายเดือน',       False),
+                ('rank',  '🏆 อันดับยอดนิยม',     False),
+                ('eff',   '⏱️ ประสิทธิภาพ (เวลารอ/รับเวร)', False),
+                ('night', '🌙 เคสนอกเวลา',        False),
+            ]
+            _sec_cols = st.columns(3)
+            _sel_secs = set()
+            for _i, (_sid, _slabel, _sdef) in enumerate(_SEC_OPTS):
+                with _sec_cols[_i % 3]:
+                    if st.checkbox(_slabel, value=_sdef, key=f"hist_sec_{_sid}"):
+                        _sel_secs.add(_sid)
+            _submitted = st.form_submit_button("📊 แสดงสถิติ", type="primary",
+                                               use_container_width=True)
 
-        st.markdown("**เลือกหัวข้อที่อยากดู** "
-                    "<span style='font-weight:400;color:#888;'>"
-                    "(ติ๊กให้ครบก่อน แล้วค่อยกด 'แสดงสถิติ' — โหลดทีเดียว)</span>",
-                    unsafe_allow_html=True)
-        _SEC_OPTS = [
-            ('kpi',   '🎯 KPI Highlights',   True),
-            ('sum',   '📋 สรุปยอดสะสม',       True),
-            ('trend', '📈 กราฟจำนวนเคสรายเดือน',       False),
-            ('rank',  '🏆 อันดับยอดนิยม',     False),
-            ('eff',   '⏱️ ประสิทธิภาพ (เวลารอ/รับเวร)', False),
-            ('night', '🌙 เคสนอกเวลา',        False),
-        ]
-        _sec_cols = st.columns(3)
-        _sel_secs = set()
-        for _i, (_sid, _slabel, _sdef) in enumerate(_SEC_OPTS):
-            with _sec_cols[_i % 3]:
-                if st.checkbox(_slabel, value=_sdef, key=f"hist_sec_{_sid}",
-                               on_change=_invalidate_hist):
-                    _sel_secs.add(_sid)
-
-        _cur_sel = (d_from, d_to, frozenset(_sel_secs))
-        if st.button("📊 แสดงสถิติ", type="primary", use_container_width=True, key="btn_show_hist"):
-            st.session_state['hist_submitted'] = _cur_sel
+        if _submitted:
+            if sel_from > sel_to:
+                st.warning("⚠️ วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด")
+            elif not _sel_secs:
+                st.warning("เลือกอย่างน้อย 1 หัวข้อก่อนนะครับ")
+            else:
+                st.session_state['hist_submitted'] = (
+                    sel_from.strftime('%Y-%m-%d'), sel_to.strftime('%Y-%m-%d'),
+                    frozenset(_sel_secs))
 
         _sub = st.session_state.get('hist_submitted')
-        if _sub == _cur_sel and _sel_secs:
-            # โหลดเฉพาะเมื่อ "ตัวเลือกปัจจุบัน = ตอนกดปุ่มล่าสุด" เป๊ะ
+        if _sub:
+            d_from, d_to, _secs = _sub
+            st.caption(f"กำลังแสดง: {d_from} ถึง {d_to} · "
+                       f"{len(_secs)} หัวข้อ (เปลี่ยนตัวเลือกแล้วกด 📊 อีกครั้งเพื่ออัปเดต)")
             with st.spinner("⏳ กำลังโหลดสถิติ…"):
-                _render_historical_analytics(d_from, d_to, _secs=set(_sel_secs))
-        elif _sub == _cur_sel and not _sel_secs:
-            st.warning("เลือกอย่างน้อย 1 หัวข้อก่อนนะครับ")
+                _render_historical_analytics(d_from, d_to, _secs=set(_secs))
         else:
             st.caption("☝️ เลือกวันที่ + หัวข้อให้ครบ แล้วกด '📊 แสดงสถิติ' เพื่อโหลด")
 

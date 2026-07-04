@@ -1,13 +1,13 @@
 """
 train_honest_model.py — เทรน + เซฟโมเดล honest (hier median + XGBoost residual)
 ═══════════════════════════════════════════════════════════════════════
-สร้าง artifacts ใน models/honest_v1/ ทั้ง 2 target (room_use, surg_time)
+สร้าง artifacts ใน models/thesis_ML/ ทั้ง 2 target (room_use, surg_time)
 🔒 CR-3: เทรน "เฉพาะ พ.ศ. 2564–2566 (ค.ศ. ≤2023)" — กันปี 2567 leak
    ปี 2567 (ค.ศ. 2024) ถูกกันไว้เป็น hold-out → ทดสอบ + คาลิเบรต conformal
    ด้วย "โมเดลตัวนี้เอง" → โมเดลที่ deploy = ที่ประเมิน = ที่คาลิเบรตช่วง ±นาที
 
 ผล + ช่วง conformal มาจากการทำนาย hold-out 2567 ด้วยโมเดลนี้:
-  → models/honest_v1/validation_room_use.csv → build_conformal.py
+  → models/thesis_ML/validation_room_use.csv → build_conformal.py
   ดู docs/CR3_HONEST_MODEL_FIX_2026-06-11.md
 
 ใช้:  python train_honest_model.py
@@ -25,7 +25,7 @@ from xgboost import XGBRegressor
 from main_or_predictor import normalize_proc, normalize_surgeon
 
 ROOT = Path(__file__).resolve().parent
-OUT = ROOT / "models" / "honest_v1"
+OUT = ROOT / "models" / "thesis_ML"
 DATA = ROOT / "data" / "historical" / "main_or_history.csv"
 MIN_COUNT = 5
 FEATS = ["hier", "surg_med", "surg_n", "age", "planned_hour", "dow", "month",

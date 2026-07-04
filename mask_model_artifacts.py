@@ -1,7 +1,7 @@
 """
 mask_model_artifacts.py — แปลงชื่อแพทย์จริงในไฟล์โมเดล → รหัส SURG_xxx (one-shot)
 ═══════════════════════════════════════════════════════════════════════
-ปัญหา: models/honest_v1/hier_*.json (git-tracked) มีชื่อแพทย์จริงเป็น key
+ปัญหา: models/thesis_ML/hier_*.json (git-tracked) มีชื่อแพทย์จริงเป็น key
        ของ surg_med / surg_n → ขัดนโยบาย masking (PDPA บุคลากร)
 
 วิธีแก้: เปลี่ยน key เป็นรหัส SURG_xxx (ชุดเดียวกับ staff_mapping.csv ที่ใช้
@@ -26,7 +26,7 @@ from pathlib import Path
 from staff_unmask import assign_codes, _load_mapping
 
 ROOT = Path(__file__).resolve().parent
-MODEL_DIR = ROOT / "models" / "honest_v1"
+MODEL_DIR = ROOT / "models" / "thesis_ML"
 FILES = ["hier_room_use.json", "hier_surg_time.json"]
 BACKUP_DIR = ROOT / "data" / "_backup_model_names" / datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -104,7 +104,7 @@ def main():
         r = mask_file(MODEL_DIR / f)
         print(f"✅ {r['file']}: {r['status']} (แพทย์ {r['n']} คน)")
     print("เสร็จ — ตรวจซ้ำ: python -c \"import json,re;"
-          "d=json.load(open('models/honest_v1/hier_room_use.json',encoding='utf-8'));"
+          "d=json.load(open('models/thesis_ML/hier_room_use.json',encoding='utf-8'));"
           "print(all(not re.search(r'[\\u0e00-\\u0e7f]',k) for k in d['surg_med']))\"")
 
 

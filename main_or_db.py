@@ -1344,7 +1344,7 @@ def _predict_for_case(procedure, surgeon, division, optype, op_date_str,
         })
     except Exception as _hx:
         # ⚠️ เดิมเงียบ — โมเดลหลักล่ม/ไฟล์หายแล้วไม่มีใครรู้ → log เสมอ
-        _plog.warning("_predict_for_case: honest_v1 ใช้ไม่ได้ จะ fallback (%s)", _hx)
+        _plog.warning("_predict_for_case: thesis_ML ใช้ไม่ได้ จะ fallback (%s)", _hx)
     # fallback: โมเดลเดิม
     try:
         from main_or_core import predict_surgical_time
@@ -1400,7 +1400,7 @@ def rebackfill_ai_predictions(progress_cb=None):
         pass
 
     # โมเดลที่ deploy = or_time_model (hier + XGBoost residual)
-    model_label = 'honest_v1'
+    model_label = 'thesis_ML'
 
     rows = conn.execute(
         "SELECT case_id, procedure_name, surgeon_name, division_code, room_no, "
@@ -1461,7 +1461,7 @@ def _repredict_case_row(r):
             diagnosis=r['diagnosis'] or '',
         )
         pred = result.get('predicted_min')
-        # 🔁 M-04: คืน source จริงด้วย (honest_v1/local_history/default/...) — ไม่ปั๊ม honest_v1 เหมา
+        # 🔁 M-04: คืน source จริงด้วย (thesis_ML/local_history/default/...) — ไม่ปั๊ม thesis_ML เหมา
         return (int(round(pred)) if pred else None), result.get('source')
     except Exception:
         return None, None
@@ -1955,9 +1955,9 @@ def _log_prediction(conn, case_id, procedure, surgeon, predicted, actual):
     # ทำให้ข้อมูลวิจัยใน prediction_log ตามรอยโมเดลไม่ได้)
     try:
         from pathlib import Path as _P
-        _hdir = _P(__file__).resolve().parent / 'models' / 'honest_v1'
+        _hdir = _P(__file__).resolve().parent / 'models' / 'thesis_ML'
         if (_hdir / 'hier_room_use.json').exists() and (_hdir / 'resid_room_use.pkl').exists():
-            model_ver = 'honest_v1'
+            model_ver = 'thesis_ML'
         else:
             import json as _json
             _reg = _json.loads((_P(__file__).resolve().parent / 'models'

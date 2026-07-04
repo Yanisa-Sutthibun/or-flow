@@ -1,0 +1,29 @@
+{
+ "global": {
+  "q50": 15.184234619140625,
+  "q80": 43.514640808105476,
+  "q90": 72.34619140625
+ },
+ "per_proc_group_q90": {
+  "Anorectal": 25.3,
+  "Blepharoplasty": 67.5,
+  "Breast": 87.2,
+  "Central_line": 23.0,
+  "Cystoscopy_URO": 30.0,
+  "ENT": 82.1,
+  "Endoscopy_GI": 62.2,
+  "GI_abdominal": 182.8,
+  "Hepatobiliary": 168.3,
+  "Neuro_cranial": 167.8,
+  "Other": 120.1,
+  "Skin_softtissue": 55.6,
+  "Spine": 78.9,
+  "Thyroid_neck": 71.0,
+  "Tracheostomy": 33.6,
+  "Uro_other": 40.9,
+  "Vascular_access": 34.4,
+  "Vascular_interv": 81.0
+ },
+ "n_calib": 3803,
+ "note": "ช่วง 90% = pred ± q90 (คาลิเบรตจาก test ปีงบ 67)"
+}

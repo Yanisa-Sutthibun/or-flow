@@ -21,6 +21,30 @@ WORK_MINUTES = (WORK_END - WORK_START) * 60   # 540 นาที
 # Backward-compat alias (เผื่อ admin/tracking imported TURNOVER_MINOR)
 TURNOVER_MINOR = TURNOVER_MAIN
 
+
+# ============================================================================
+# ⚡ rerun_board — rerun ให้ "แคบที่สุด" (perf fix ก.ค. 2026)
+# ถ้าโค้ดกำลังรันอยู่ใน st.fragment → rerun เฉพาะ fragment นั้น (บอร์ดขยับ
+# แต่ CSS/เมนู/หน้าอื่นไม่ต้องวิ่งใหม่) · นอก fragment / streamlit เก่า → rerun ปกติ
+# ============================================================================
+
+def rerun_board():
+    """st.rerun แบบ scope แคบสุดที่รุ่น streamlit รองรับ — ใช้แทน st.rerun()
+    ในทุก action ของ OR Board (ปุ่มรับเข้า/เข้าห้อง/ผ่าเสร็จ/undo/แก้เวลา ฯลฯ)"""
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        _in_frag = bool(getattr(get_script_run_ctx(), 'current_fragment_id', None))
+    except Exception:
+        _in_frag = False
+    if _in_frag:
+        try:
+            st.rerun(scope="fragment")
+            return
+        except TypeError:       # streamlit เก่า: ไม่มี kwarg scope
+            pass
+    st.rerun()
+
+
 # ============================================================================
 # ML MODEL LOADER — ใช้ SurgicalTimePredictor v2 (XGBoost + multi-evidence)
 # ============================================================================
@@ -95,7 +119,7 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
       - evidence_levels: list หลักฐานหลายระดับ
       - fuzzy_correction: ถ้ามี auto-correct
     """
-    # honest_v1: ทำนายด้วย hier + XGBoost residual (เวลาครองห้อง) เป็นหลัก; fallback v2 ด้านล่าง
+    # thesis_ML: ทำนายด้วย hier + XGBoost residual (เวลาครองห้อง) เป็นหลัก; fallback v2 ด้านล่าง
     try:
         import or_time_model as _otm
         _det = _otm.predict_detail({
@@ -113,9 +137,9 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
         _iv80 = _det.get('interval80')
         return {
             'predicted_min': _pm, 'confidence': _conf,
-            'method': 'มัธยฐานลำดับชั้น + XGBoost residual (honest_v1)',
+            'method': 'มัธยฐานลำดับชั้น + XGBoost residual (thesis_ML)',
             'details': 'อิงกลุ่มหัตถการระดับ %s จาก %d เคส' % (_det['level'], _n),
-            'proc_n': _n, 'surg_n': 0, 'source': 'honest_v1', 'tier': 1,
+            'proc_n': _n, 'surg_n': 0, 'source': 'thesis_ML', 'tier': 1,
             'predicted_range': (tuple(_iv90) if _iv90
                                 else (max(5, int(_pm * 0.6)), int(_pm * 1.5))),
             'predicted_range80': tuple(_iv80) if _iv80 else None,
@@ -127,9 +151,9 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
         # ⚠️ เดิม except เงียบ — โมเดลหลักล่มแล้ว fallback โดยไม่มีใครรู้ → log ไว้เสมอ
         try:
             from logger_setup import get_logger
-            get_logger("core").warning("honest_v1 ใช้ไม่ได้ จะ fallback: %s", _hx)
+            get_logger("core").warning("thesis_ML ใช้ไม่ได้ จะ fallback: %s", _hx)
         except Exception:
-            print(f"[core] honest_v1 fallback: {_hx}")
+            print(f"[core] thesis_ML fallback: {_hx}")
 
     assets = load_ml_assets()
     now = op_date if op_date else datetime.now()

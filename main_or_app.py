@@ -180,11 +180,11 @@ if not st.session_state.get('_room_settings_loaded'):
 # ============================================================================
 
 def render_system_status():
-    """🤖 กล่องสถานะโมเดล AI (honest_v1) — อ่านจาก artifact จริง · เอาแค่กล่องนี้พอ"""
+    """🤖 กล่องสถานะโมเดล AI (thesis_ML) — อ่านจาก artifact จริง · เอาแค่กล่องนี้พอ"""
     try:
         import json as _json
         from pathlib import Path as _Path
-        _hdir = _Path(__file__).resolve().parent / 'models' / 'honest_v1'
+        _hdir = _Path(__file__).resolve().parent / 'models' / 'thesis_ML'
         _honest_ok = ((_hdir / 'hier_room_use.json').exists()
                       and (_hdir / 'resid_room_use.pkl').exists())
         _meta_h = (_json.loads((_hdir / 'meta.json').read_text(encoding='utf-8'))
@@ -202,7 +202,7 @@ def render_system_status():
         st.markdown(
             f'<div style="background:#e8f5e9;padding:8px;border-radius:8px;text-align:center;">'
             f'<p style="margin:0;font-size:11px;color:#2e7d32;">'
-            f'🤖 <b>AI Model: honest_v1</b> (ตัวที่ทำนายบนบอร์ด)<br>'
+            f'🤖 <b>AI Model: thesis_ML</b> (ตัวที่ทำนายบนบอร์ด)<br>'
             f'มัธยฐานลำดับชั้น + XGBoost residual<br>'
             f'เทรน {_ntr} เคส (พ.ศ. 2564–2567)<br>'
             f'MAE {_hl.get("mae", "—")} นาที · ±15 นาที {_hl.get("within15_pct", "—")}% '
@@ -214,8 +214,8 @@ def render_system_status():
         st.markdown(
             '<div style="background:#ffebee;padding:8px;border-radius:8px;text-align:center;">'
             '<p style="margin:0;font-size:11px;color:#c62828;">'
-            '⚠️ <b>ไม่พบโมเดล honest_v1</b><br>'
-            'ตรวจ models/honest_v1/ (hier_*.json + resid_*.pkl)<br>'
+            '⚠️ <b>ไม่พบโมเดล thesis_ML</b><br>'
+            'ตรวจ models/thesis_ML/ (hier_*.json + resid_*.pkl)<br>'
             'ระบบจะ fallback เป็นค่ามัธยฐานจากฐานข้อมูล</p></div>',
             unsafe_allow_html=True,
         )
@@ -828,7 +828,7 @@ def main():
         st.markdown(
             '<div class="or-chips" style="margin-top:6px;">'
             '<span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>'
-            '<span class="or-chip">🤖 AI: honest_v1</span>'
+            '<span class="or-chip">🤖 AI: thesis_ML</span>'
             '<span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>'
             f'<span class="or-chip">📅 ปรับล่าสุด {_now_hdr}</span>'
             '</div>',
@@ -843,7 +843,7 @@ def main():
 
     # เมนูหลัก = แท็บแนวนอนบนสุด · เก็บค่าใน URL ให้รอด refresh (รันเฉพาะหน้าที่เลือก)
     _page_options = ["📋 ตารางผ่าตัด", "📊 ภาพรวมวันนี้", "📈 สถิติย้อนหลัง",
-                     "🤖 AI Prediction", "⚙️ ตั้งค่า"]
+                     "🤖 ผลวิจัย AI", "⚙️ ตั้งค่า"]
     try:
         _default_page = st.query_params.get('page', _page_options[0])
     except Exception:
@@ -875,7 +875,7 @@ def main():
         page_admin('today')
     elif page == "📈 สถิติย้อนหลัง":
         page_admin('history')
-    elif page == "🤖 AI Prediction":
+    elif page == "🤖 ผลวิจัย AI":
         page_admin('ai')
     elif page == "⚙️ ตั้งค่า":
         page_room_settings()

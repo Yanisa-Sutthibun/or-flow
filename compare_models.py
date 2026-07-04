@@ -19,7 +19,7 @@ compare_models.py — Benchmark เปรียบเทียบโมเดล
   4. RandomForest   : RF บน features ชุดเต็ม (ทำนาย y ตรงๆ)
   5. XGBoost        : XGB บน features ชุดเดียวกัน (ทำนาย y ตรงๆ)
   6. Hier+RF resid  : RF เรียน "ส่วนต่างจาก hier"
-  7. Hier+XGB resid : XGB เรียน "ส่วนต่างจาก hier"   ← โมเดลที่เลือก (honest_v1)
+  7. Hier+XGB resid : XGB เรียน "ส่วนต่างจาก hier"   ← โมเดลที่เลือก (thesis_ML)
   A. ข้อ 7 + random split (ภาคผนวก) : สาธิตว่า random split ให้ตัวเลขสวยเกินจริง
 
 ใช้:  python compare_models.py        (ผล markdown → stdout + docs/_model_comparison_raw.md)
@@ -40,7 +40,7 @@ OUT_RAW = ROOT / "docs" / "_model_comparison_raw.md"
 MIN_COUNT = 5
 SEED = 42
 
-# feature ชุดเดียวกับ honest_v1 เป๊ะ (train_honest_model.FEATS) — ใช้กับโมเดล ML ทุกตัว
+# feature ชุดเดียวกับ thesis_ML เป๊ะ (train_honest_model.FEATS) — ใช้กับโมเดล ML ทุกตัว
 # เพื่อให้ "ข้อมูลที่เห็นเท่ากันหมด ต่างกันแค่อัลกอริทึม/สถาปัตยกรรม"
 FEATS = ["hier", "surg_med", "surg_n", "age", "planned_hour", "dow", "month",
          "orroom", "division", "full_n"]
@@ -144,7 +144,7 @@ def make_rf():
 
 
 def make_xgb():
-    """🔒 CR-3: สเปคเดียวกับโมเดลที่ deploy จริง (train_honest_model.py / honest_v1):
+    """🔒 CR-3: สเปคเดียวกับโมเดลที่ deploy จริง (train_honest_model.py / thesis_ML):
     XGBoost 800 ต้น คงที่ ไม่ใช้ early stopping → ตารางเปรียบเทียบ = โมเดลที่ใช้งานจริง"""
     from xgboost import XGBRegressor
     return XGBRegressor(n_estimators=800, max_depth=3, learning_rate=0.02,
@@ -192,7 +192,7 @@ def run_target(d: pd.DataFrame, target: str) -> tuple[list, dict]:
 
     xg_r = make_xgb(); xg_r.fit(Xtr, y_tr - h_tr)
     p_chosen = add("7. hier + XGBoost residual ★", h_te + xg_r.predict(Xte),
-                   "โมเดลที่เลือก (honest_v1)")
+                   "โมเดลที่เลือก (thesis_ML)")
 
     # ── ภาคผนวก: random split (สาธิต leakage จากการแบ่งผิดวิธี) ──
     rng = np.random.RandomState(SEED)

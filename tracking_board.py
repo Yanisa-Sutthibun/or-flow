@@ -14,6 +14,10 @@ import streamlit as st
 import streamlit.components.v1 as components
 from datetime import datetime, timedelta, timezone
 
+# ⚡ rerun เฉพาะ fragment บอร์ด (perf fix ก.ค. 2026) — บอร์ดถูกครอบด้วย
+# st.fragment ใน main_or_pages แล้ว ปุ่มบนบอร์ดจึงต้องใช้ rerun_board แทน st.rerun
+from main_or_core import rerun_board as _rerun_board
+
 # 🕐 เวลามาตรฐานกรุงเทพ — กันเพี้ยนเมื่อ deploy บน cloud ต่าง timezone
 _BKK = timezone(timedelta(hours=7))
 
@@ -95,7 +99,9 @@ def _pt_meta(c) -> str:
 def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
                           loc, rid, tlabel, sched_min, room_opts=None,
                           mark_dirty=None):
-    """วาดกระดานติดตามทั้งหมด (เรียกจาก page_or_board).
+    """วาดกระดานติดตามแบบ 3 โซนตามพื้นที่จริง (spec approve 3 ก.ค. 2026):
+    🚪 ห้องรับ-ส่ง (ก่อนผ่า + หลังผ่ารอจำหน่าย) → 🏥 ห้องผ่าตัด → 🛏️ ห้องพักฟื้น
+    + จำหน่ายแล้วพับท้ายบอร์ด · state machine เดิมทุกอย่าง แค่จัด render ใหม่
     room_opts = [(room_no, ชื่อห้อง)] ห้องที่เปิดใช้ — สำหรับ dropdown ย้ายห้องใน ✏️"""
     now = _now()
     room_opts = room_opts or []
@@ -106,8 +112,10 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     q = fc1.text_input("ค้นหา", key="tb_q", placeholder="ค้นหา ชื่อ / HN / หัตถการ",
                        label_visibility="collapsed")
     rooms_avail = sorted({loc(c) for c in cases})
-    room_f = fc2.selectbox("ห้อง", ["ทุกห้อง"] + rooms_avail, key="tb_room",
-                           label_visibility="collapsed")
+    # 🚪🛏️ โซนกายภาพอยู่บนสุด (เหนือ OR1) — กรอง "ที่ที่ผู้ป่วยอยู่ตอนนี้" ไม่ใช่ห้องผ่า
+    _Z_HOLD, _Z_RECOV = '🚪 ห้องรับ-ส่ง', '🛏️ ห้องพักฟื้น'
+    room_f = fc2.selectbox("ห้อง", ["ทุกห้อง", _Z_HOLD, _Z_RECOV] + rooms_avail,
+                           key="tb_room", label_visibility="collapsed")
     status_f = fc3.selectbox("สถานะ", ["ทุกสถานะ", "ยังไม่มา", "รอผ่าตัด", "กำลังผ่า",
                                        "รอจำหน่าย", "จำหน่ายแล้ว"], key="tb_status",
                              label_visibility="collapsed")
@@ -128,21 +136,26 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         '<span style="min-width:110px;">เวลา</span></div>',
         unsafe_allow_html=True)
 
-    # ---------- แถว (เรียง ห้อง → ฉุกเฉินก่อนในห้อง → เวลานัด → ลำดับ) ----------
-    # เคสฉุกเฉินลอยขึ้นบนสุดของแต่ละห้อง · is_emergency เป็นค่าคงที่ →
-    # ลำดับยังนิ่ง (แถวไม่ขยับเมื่อสถานะเปลี่ยน) ตามหลักการเดิม
-    rows = list(enumerate(cases))
-    rows.sort(key=lambda t: ((rid(t[1]) or 999),
-                             (0 if _is_emer(t[1]) else 1),
-                             (sched_min(t[1]) or 9999),
-                             t[1].get('ororder') or 999))
-    shown = 0
-    for idx, c in rows:
+    # ---------- เตรียมแถว: กรอง + คำนวณสถานะแสดงผล ----------
+    # เรียง ห้อง → ฉุกเฉินก่อนในห้อง → เวลานัด → ลำดับ (ลำดับนิ่ง แถวไม่ขยับเมื่อกดปุ่ม)
+    ordered = list(enumerate(cases))
+    ordered.sort(key=lambda t: ((rid(t[1]) or 999),
+                                (0 if _is_emer(t[1]) else 1),
+                                (sched_min(t[1]) or 9999),
+                                t[1].get('ororder') or 999))
+    rows = []
+    for idx, c in ordered:
         if ql and (ql not in str(c.get('name', '')).lower()
                    and ql not in str(c.get('hn', '')).lower()
                    and ql not in str(c.get('procedure', '')).lower()):
             continue
-        if room_f != 'ทุกห้อง' and loc(c) != room_f:
+        if room_f == _Z_HOLD:
+            if c['status'] not in ('not_arrived', 'holding_pre', 'holding_post'):
+                continue
+        elif room_f == _Z_RECOV:
+            if c['status'] != 'recovery':
+                continue
+        elif room_f != 'ทุกห้อง' and loc(c) != room_f:
             continue
 
         eff = c.get('effective_min') or c.get('ai_predicted_min') or c.get('predicted_min') or 30
@@ -157,14 +170,85 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
                     disp = 'overrun'
         if status_f != 'ทุกสถานะ' and _STATUS_GROUP.get(disp) != status_f:
             continue
+        rows.append((idx, c, disp, eff, elapsed))
 
-        _render_row(idx, c, disp, eff, elapsed, now, rid(c), busy_rooms,
-                    do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
-                    room_opts, mark_dirty, tov_map)
-        shown += 1
-
-    if shown == 0:
+    if not rows:
         st.caption("ไม่พบเคสตามเงื่อนไขที่กรอง")
+        return
+
+    def _pick(*statuses):
+        return [r for r in rows if r[2] in statuses]
+
+    def _zone_head(title, n, color):
+        st.markdown(
+            f'<div style="display:flex;align-items:center;gap:8px;margin:14px 0 2px;'
+            f'padding:6px 12px;background:#f8fafc;border-left:4px solid {color};'
+            f'border-radius:0;font-size:14px;font-weight:700;color:#334155;">{title}'
+            f'<span style="font-size:11.5px;font-weight:500;color:#94a3b8;">'
+            f'{n} เคส</span></div>',
+            unsafe_allow_html=True)
+
+    def _sub_head(txt):
+        st.markdown(f'<div style="font-size:12px;color:#94a3b8;margin:6px 0 0 4px;">'
+                    f'{txt}</div>', unsafe_allow_html=True)
+
+    def _rows(rs):
+        for idx, c, disp, eff, elapsed in rs:
+            _render_row(idx, c, disp, eff, elapsed, now, rid(c), busy_rooms,
+                        do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
+                        room_opts, mark_dirty, tov_map)
+
+    z_pre = _pick('not_arrived', 'holding_pre')
+    z_or = _pick('in_or', 'overrun')
+    z_post = _pick('holding_post')
+    z_rec = _pick('recovery')
+    z_done = _pick('discharged')
+    # สถานะนอกเหนือ (snapshot รุ่นเก่า) — ไม่ให้เคสหายจากบอร์ด
+    z_other = [r for r in rows if r[2] not in (
+        'not_arrived', 'holding_pre', 'in_or', 'overrun',
+        'holding_post', 'recovery', 'discharged')]
+
+    # ---------- โซน 1: ห้องรับ-ส่ง ----------
+    _zone_head('🚪 ห้องรับ-ส่ง', len(z_pre) + len(z_post), '#f1c40f')
+    if z_pre:
+        _sub_head('ก่อนผ่าตัด')
+        _rows(z_pre)
+    if z_post:
+        _sub_head('หลังผ่าตัด — รอจำหน่าย')
+        _rows(z_post)
+    if not z_pre and not z_post:
+        st.caption("ไม่มีผู้ป่วยในห้องรับ-ส่ง")
+
+    # ---------- โซน 2: ห้องผ่าตัด ----------
+    _zone_head('🏥 ห้องผ่าตัด', len(z_or), '#2196f3')
+    _rows(z_or)
+    # ห้องเปิดใช้ที่ยังว่าง — แถวจาง (เฉพาะตอนไม่ได้กรอง จะได้ไม่รกผลค้นหา)
+    if room_f == 'ทุกห้อง' and status_f == 'ทุกสถานะ' and not ql:
+        _busy_now = {rid(c1_) for _, c1_, d_, _, _ in z_or if rid(c1_)}
+        _free = [(rn, lbl) for rn, lbl in room_opts if rn not in _busy_now]
+        if _free:
+            _names = ' · '.join(lbl for _, lbl in _free)
+            st.markdown(
+                f'<div style="border:1px dashed #e2e8f0;border-radius:10px;'
+                f'padding:8px 12px;margin:4px 0;font-size:12.5px;color:#94a3b8;">'
+                f'ห้องว่าง: {_names}</div>', unsafe_allow_html=True)
+    elif not z_or:
+        st.caption("ไม่มีเคสกำลังผ่าตัด")
+
+    # ---------- โซน 3: ห้องพักฟื้น ----------
+    _zone_head('🛏️ ห้องพักฟื้น', len(z_rec), '#4caf50')
+    if z_rec:
+        _rows(z_rec)
+    else:
+        st.caption("ไม่มีผู้ป่วยพักฟื้น")
+
+    if z_other:
+        _rows(z_other)
+
+    # ---------- จำหน่ายแล้ว (พับท้ายบอร์ด) ----------
+    if z_done:
+        with st.expander(f"✅ จำหน่ายแล้ววันนี้ ({len(z_done)} ราย)", expanded=False):
+            _rows(z_done)
 
 
 _CALL_LEAD_MIN = 30  # เวลาเตรียม/เคลื่อนย้ายผู้ป่วยก่อนห้องว่าง (นาที) สำหรับ Call next
@@ -180,8 +264,20 @@ def _turnover_map():
         return {}
 
 
+def _band_halfwidth(eff):
+    """ครึ่งความกว้างช่วง "ออกห้อง" แบบขั้นบันไดตามความยาวเคส (adaptive band)
+    คาลิเบรตจาก |error| จริงของ thesis_ML บน hold-out ปี 2567 (n=1,939):
+      ทำนาย <60 น.  → ±15 (ครอบจริง 66%)   · 60–120 → ±30 (58%)
+      120–240      → ±45 (53%)             · >240   → ±60 (57%)
+    ทุกกลุ่มครอบ ~5-6 ใน 10 เคสสม่ำเสมอ — ดีกว่า ±30 คงที่ที่ครอบเคสสั้นเกินจริง (88%)
+    แต่เคสยาวผิดบ่อยกว่าถูก (22-39%)"""
+    e = int(eff)
+    return 15 if e < 60 else 30 if e < 120 else 45 if e < 240 else 60
+
+
 def _callnext_html(c, eff, tov_map):
-    """บรรทัด 'ออกห้อง ~HH:MM · Call next ~HH:MM' (คิด turnover รายห้อง + lead)"""
+    """บรรทัด '🚪 ออกห้อง ~ช่วงเวลา · ⏰ Call next' — ออกห้องบอกเป็น "ช่วง" ไม่ใช่จุดเดียว
+    ความกว้างช่วงปรับตามความยาวเคส (_band_halfwidth) · ช่วง 90% formal อยู่ในปุ่ม ✏️"""
     ent = c.get('time_entered_or')
     if ent is None or not hasattr(ent, 'hour'):
         return ''
@@ -191,11 +287,15 @@ def _callnext_html(c, eff, tov_map):
     except (TypeError, ValueError):
         rm = None
     tov = (tov_map or {}).get(rm) or (tov_map or {}).get('_global') or 15
-    out_dt = ent + _td(minutes=int(eff))
+    _hw = _band_halfwidth(eff)
+    lo_dt = ent + _td(minutes=max(int(eff) - _hw, 5))
+    hi_dt = ent + _td(minutes=int(eff) + _hw)
     call_dt = ent + _td(minutes=int(eff) + float(tov) - _CALL_LEAD_MIN)
-    return ('<div style="font-size:11px;color:#8a96a3;margin-top:2px;white-space:nowrap;">'
-            '🚪 ออกห้อง ~' + out_dt.strftime('%H:%M')
-            + ' · <span style="color:#2f7d52;font-weight:600;">⏰ Call next ~'
+    return ('<div style="font-size:11px;color:#8a96a3;margin-top:2px;white-space:nowrap;" '
+            f'title="ช่วงคาดการณ์ ±{_hw} นาที (กว้างตามความยาวเคส — คาลิเบรตจากเคสจริงปี 2567 '
+            'ครอบราว 5-6 ใน 10 เคส) · ช่วงมั่นใจ 90% ของเคสนี้ดูในปุ่ม ✏️">'
+            '🚪 ออกห้อง ~' + lo_dt.strftime('%H:%M') + '–' + hi_dt.strftime('%H:%M')
+            + ' · <span style="color:#2f7d52;font-weight:600;">⏰ เรียกเคสถัดไป ~'
             + call_dt.strftime('%H:%M') + ' น.</span></div>')
 
 
@@ -227,7 +327,19 @@ def _time_cell(c, disp, eff, elapsed, now):
         return (f'<b style="font-weight:600;">{eff} น.</b> '
                 f'<span style="text-decoration:line-through;color:#94a3b8;'
                 f'font-size:12px;">AI {ai0 or "?"}</span>')
-    return f'AI ~{ai0 or "?"} น.'
+    # 🤖 หลักฐานความมั่นใจบนแถวเลย — พยาบาลเห็นทันทีว่าคำทำนายอิงกี่เคส
+    _n = c.get('proc_n')
+    _cf = str(c.get('confidence') or '')
+    _ev = ''
+    if _n is not None or _cf:
+        _cfc = ('#27ae60' if _cf.startswith('สูง')
+                else '#f39c12' if _cf == 'ปานกลาง' else '#e74c3c')
+        _txt = f'จาก {int(_n)} เคส' if _n else 'ไม่มีเคสใกล้เคียง'
+        if _cf:
+            _txt += f' · มั่นใจ: {_cf}'
+        _ev = (f'<br><span style="font-size:11px;color:{_cfc};'
+               f'white-space:nowrap;">{_txt}</span>')
+    return f'AI ~{ai0 or "?"} น.{_ev}'
 
 
 def _holding_row_iframe(c, loc, tlabel, now):
@@ -417,9 +529,8 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 new_t = st.number_input("นาที", min_value=5, max_value=600,
                                         value=eff, key=f"tb_ov_{idx}",
                                         label_visibility="collapsed")
-                if disp in ('in_or', 'overrun'):
-                    st.selectbox("ส่งต่อหลังผ่า", ["ห้องรับ-ส่ง", "ห้องพักฟื้น"],
-                                 key=f"dest_{idx}")
+                # (dropdown "ส่งต่อหลังผ่า" ถอดออกแล้ว — ปลายทางเลือกจากปุ่ม
+                #  "เสร็จ → รับ-ส่ง / พักฟื้น" บนแถวโดยตรง · spec 3 ก.ค. 2026)
 
                 # 🔀 ย้ายห้อง — เลือกได้ทุกห้องที่เปิดใช้ (ชื่อล้วน ไม่มีรหัส)
                 _new_room = None
@@ -455,7 +566,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                         c['or_room_assigned'] = _new_room
                     if mark_dirty:
                         mark_dirty(c)   # CR-2: ✏️ แก้เวลา/ย้ายห้อง ต้องเซฟขึ้นบอร์ดกลาง
-                    st.rerun()
+                    _rerun_board()
 
     with c2:
         if disp == 'not_arrived':
@@ -473,8 +584,14 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 else:
                     do_enter(idx, R)
         elif disp in ('in_or', 'overrun'):
-            if st.button("ผ่าเสร็จ", key=f"tb_f_{idx}", type="primary", width='stretch'):
-                do_finish(idx, R, st.session_state.get(f"dest_{idx}", "ห้องรับ-ส่ง"))
+            # ⑂ ผ่าเสร็จ 2 ปลายทาง — กดครั้งเดียวจบ ไม่ต้องเปิด popover เลือก dropdown
+            if st.button("เสร็จ → รับ-ส่ง", key=f"tb_f_{idx}", type="primary",
+                         width='stretch',
+                         help="ผ่าเสร็จ · กลับห้องรับ-ส่ง เพื่อรอจำหน่าย"):
+                do_finish(idx, R, "ห้องรับ-ส่ง")
+            if st.button("เสร็จ → พักฟื้น", key=f"tb_f2_{idx}", width='stretch',
+                         help="ผ่าเสร็จ · ไปห้องพักฟื้น เพื่อรอจำหน่าย"):
+                do_finish(idx, R, "ห้องพักฟื้น")
         elif disp in ('holding_post', 'recovery'):
             if st.button("จำหน่าย", key=f"tb_d_{idx}", width='stretch'):
                 if c.get('status') != 'discharged':  # กันกดรัว
@@ -482,7 +599,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                     c['time_discharged'] = _now()
                     if mark_dirty:
                         mark_dirty(c)   # CR-2: จำหน่าย ต้องเซฟขึ้นบอร์ดกลาง
-                st.rerun()
+                _rerun_board()
 
     with c3:
         if disp in _UNDO_TARGET:

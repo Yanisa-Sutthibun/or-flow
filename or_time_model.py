@@ -18,7 +18,7 @@ or_time_model.py — โมเดลทำนายเวลา OR แบบ hon
            จากนั้น XGBoost เรียน "ส่วนต่าง" จาก hier เพื่อปรับละเอียด
 
 ช่วงทำนาย (prediction interval): split conformal prediction — คาลิเบรตจาก
-           ชุด hold-out ปี 2567 (build_conformal.py → models/honest_v1/conformal.json)
+           ชุด hold-out ปี 2567 (build_conformal.py → models/thesis_ML/conformal.json)
            ช่วง = ŷ ± q̂ ที่ระดับ coverage 80% / 90%
 
 🔒 PDPA บุคลากร: key ของ surg_med/surg_n ในไฟล์ artifact เป็นรหัส SURG_xxx
@@ -32,7 +32,7 @@ from functools import lru_cache
 
 from main_or_predictor import normalize_proc, normalize_surgeon
 
-_DIR = Path(__file__).resolve().parent / "models" / "honest_v1"
+_DIR = Path(__file__).resolve().parent / "models" / "thesis_ML"
 _FEATS = ['hier', 'surg_med', 'surg_n', 'age', 'planned_hour', 'dow', 'month',
           'orroom', 'division', 'full_n']
 TARGETS = ('room_use', 'surg_time')
@@ -101,7 +101,7 @@ def _surgeon_key(raw_name: str, meta: dict) -> str:
 
 @lru_cache(maxsize=1)
 def _conformal() -> dict:
-    """โหลดค่าคาลิเบรต split conformal (models/honest_v1/conformal.json)
+    """โหลดค่าคาลิเบรต split conformal (models/thesis_ML/conformal.json)
     — ไม่มีไฟล์ = dict ว่าง (ช่วงทำนายจะไม่ถูกแสดง)"""
     try:
         return json.load(open(_DIR / "conformal.json", encoding="utf-8"))

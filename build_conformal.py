@@ -6,12 +6,12 @@ build_conformal.py — คาลิเบรต Split Conformal Prediction ส�
   - surg_time : เวลาผ่าตัดสุทธิ   (validation_surg_time.csv)
 
 หลักการ (split conformal, absolute residual score):
-  1. ใช้ชุด hold-out ปี พ.ศ. 2567 (โมเดล deploy honest_v1 เทรน ≤พ.ศ.2566 ทำนาย 2567)
+  1. ใช้ชุด hold-out ปี พ.ศ. 2567 (โมเดล deploy thesis_ML เทรน ≤พ.ศ.2566 ทำนาย 2567)
   2. คะแนน nonconformity s_i = |actual_i − predicted_i|
   3. q̂ = ควอนไทล์อันดับ ⌈(n+1)(1−α)⌉/n ของ s (finite-sample correction)
   4. ช่วงทำนาย = [ŷ − q̂, ŷ + q̂] → coverage ≥ 1−α ภายใต้ exchangeability
 ตรวจสอบตัวเอง (temporal): คาลิเบรต 60% แรก → วัด coverage 40% หลัง
-ผลลัพธ์ → models/honest_v1/conformal.json (ไม่มีข้อมูลผู้ป่วย/บุคลากร)
+ผลลัพธ์ → models/thesis_ML/conformal.json (ไม่มีข้อมูลผู้ป่วย/บุคลากร)
 ใช้:  python build_conformal.py
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np, pandas as pd
 
 ROOT = Path(__file__).resolve().parent
-MDIR = ROOT / "models" / "honest_v1"
+MDIR = ROOT / "models" / "thesis_ML"
 OUT = MDIR / "conformal.json"
 ALPHAS = (0.20, 0.10, 0.05)            # → coverage 80% / 90% / 95%
 TARGETS = ("room_use", "surg_time")
@@ -50,7 +50,7 @@ def build_target(target: str) -> dict:
                                "coverage_on_last40pct": round(float(np.mean(s_test <= qh)), 3)}
     return {
         "calib_source": f"validation_{target}.csv — hold-out ปี พ.ศ. 2567 "
-                        "(honest_v1 เทรน ≤พ.ศ.2566) → split conformal แท้ (same model, out-of-sample)",
+                        "(thesis_ML เทรน ≤พ.ศ.2566) → split conformal แท้ (same model, out-of-sample)",
         "n_calib": int(n), "q": q,
         "headline": {"mae": round(float(scores.mean()), 1),
                      "median_ae": round(float(np.median(scores)), 1),

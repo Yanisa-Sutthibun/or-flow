@@ -1,7 +1,7 @@
 """
 build_prospective_2568.py — ผลทำนาย prospective ปี พ.ศ. 2568 และ 2569 (ทั้ง 2 target)
 ═══════════════════════════════════════════════════════════════════════
-ทำนายเคสจริงปี 2568–2569 ด้วยโมเดล deploy ตัวปัจจุบัน (honest_v1) — PREDICTION-ONLY
+ทำนายเคสจริงปี 2568–2569 ด้วยโมเดล deploy ตัวปัจจุบัน (thesis_ML) — PREDICTION-ONLY
   • ไม่ retrain / ไม่ recalibrate (ใช้พารามิเตอร์เดิมที่เทรนจาก ≤พ.ศ.2566)
   • เป็นการแสดง generalization ของเครื่องมือบนข้อมูลปีถัดมา (ไม่ใช่การพัฒนาโมเดลใหม่)
   • เทียบกับเวลาจริงที่บันทึกใน HIS
@@ -16,7 +16,7 @@ target:
   • room_use  = roomtimeout − roomtimein            (เวลาครองห้อง)
   • surg_time = opendtime − opesttime  (ต้อง roomin ≤ opst ≤ opend ≤ roomout)
 
-ผลลัพธ์ → models/honest_v1/validation_{room_use|surg_time}_{2568|2569}.csv
+ผลลัพธ์ → models/thesis_ML/validation_{room_use|surg_time}_{2568|2569}.csv
   คอลัมน์: op_date, ai_predicted_min, actual_duration_min, op_type, procedure_name
 ใช้:  python build_prospective_2568.py
 """
@@ -28,7 +28,7 @@ import pandas as pd
 import or_time_model
 
 ROOT = Path(__file__).resolve().parent
-OUT = ROOT / "models" / "honest_v1"
+OUT = ROOT / "models" / "thesis_ML"
 COMPLETED = ROOT / "data" / "year68_69_completed.csv"
 # (ค.ศ. ที่ใช้กรอง, พ.ศ. สำหรับชื่อไฟล์, path ไฟล์ intraop ที่มี opendtime)
 YEARS = [

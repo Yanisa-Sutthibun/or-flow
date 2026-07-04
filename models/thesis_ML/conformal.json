@@ -2,7 +2,7 @@
   "created": "2026-06-14 07:34:46",
   "method": "split conformal prediction (absolute residual score, finite-sample quantile)",
   "room_use": {
-    "calib_source": "validation_room_use.csv — hold-out ปี พ.ศ. 2567 (honest_v1 เทรน ≤พ.ศ.2566) → split conformal แท้ (same model, out-of-sample)",
+    "calib_source": "validation_room_use.csv — hold-out ปี พ.ศ. 2567 (thesis_ML เทรน ≤พ.ศ.2566) → split conformal แท้ (same model, out-of-sample)",
     "n_calib": 1939,
     "q": {
       "0.80": 62.1,
@@ -37,7 +37,7 @@
     "note": "ช่วงทำนาย = ŷ ± q · coverage การันตีภายใต้ exchangeability; กับข้อมูลตามเวลาเป็นค่าประมาณ — ดู temporal_check ประกอบ"
   },
   "surg_time": {
-    "calib_source": "validation_surg_time.csv — hold-out ปี พ.ศ. 2567 (honest_v1 เทรน ≤พ.ศ.2566) → split conformal แท้ (same model, out-of-sample)",
+    "calib_source": "validation_surg_time.csv — hold-out ปี พ.ศ. 2567 (thesis_ML เทรน ≤พ.ศ.2566) → split conformal แท้ (same model, out-of-sample)",
     "n_calib": 1927,
     "q": {
       "0.80": 55.2,

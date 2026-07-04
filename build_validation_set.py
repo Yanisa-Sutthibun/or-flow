@@ -9,7 +9,7 @@ build_validation_set.py — ⛔ DEPRECATED (CR-3, 11 มิ.ย. 2026)
 (เก็บไฟล์ไว้อ้างอิงประวัติ — ถ้าจำเป็นต้องรันจริง ตั้ง env ALLOW_LEGACY_VALIDATION=1)
 ───────────────────────────────────────────────────────────────────────
 เดิม: เทรน (hier + XGBoost residual) ด้วยปี 2021-2023 → ทำนายปี 2024 (held-out)
-แล้วเซฟ (ทำนาย vs จริง) ลง models/honest_v1/validation_room_use.csv
+แล้วเซฟ (ทำนาย vs จริง) ลง models/thesis_ML/validation_room_use.csv
 
 ทำให้หน้า "ความแม่น AI" ในแอป แสดงตัวเลขเดียวกับในเล่ม (MAE ≈ 42 นาที, out-of-sample)
 ไม่มีชื่อแพทย์/ผู้ป่วยในไฟล์ (PDPA-safe)
@@ -26,7 +26,7 @@ from xgboost import XGBRegressor
 from main_or_predictor import normalize_proc, normalize_surgeon
 
 ROOT = Path(__file__).resolve().parent
-OUT = ROOT / "models" / "honest_v1"
+OUT = ROOT / "models" / "thesis_ML"
 DATA = ROOT / "data" / "historical" / "main_or_history.csv"
 MIN_COUNT = 5
 FEATS = ["hier", "surg_med", "surg_n", "age", "planned_hour", "dow", "month",
