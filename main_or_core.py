@@ -1,6 +1,8 @@
 """
-Main OR Core — ML Engine v4 (XGBoost + multi-level evidence + fuzzy)
-ใช้ SurgicalTimePredictor จาก main_or_predictor.py แทน RF เก่า
+Main OR Core — เครื่องทำนายเวลาผ่าตัดของบอร์ด
+ตัวหลัก: thesis_ML (or_time_model — hierarchical median + XGBoost residual + conformal)
+fallback: ค่ากลางจากประวัติใน DB → ค่าเริ่มต้น
+(ชั้น SurgicalTimePredictor เก่าถูกถอดออก 4 ก.ค. 2026 — ดู git history ถ้าต้องการคืน)
 """
 import os
 import pickle
@@ -43,24 +45,6 @@ def rerun_board():
         except TypeError:       # streamlit เก่า: ไม่มี kwarg scope
             pass
     st.rerun()
-
-
-# ============================================================================
-# ML MODEL LOADER — ใช้ SurgicalTimePredictor v2 (XGBoost + multi-evidence)
-# ============================================================================
-
-@st.cache_resource
-def load_ml_assets():
-    """โหลด predictor v2 (XGBoost + fuzzy + multi-level evidence)"""
-    assets = {'predictor': None, 'model_loaded': False, 'error': None}
-    try:
-        from main_or_predictor import SurgicalTimePredictor
-        assets['predictor'] = SurgicalTimePredictor.load_default()
-        assets['model_loaded'] = True
-    except Exception as e:
-        assets['error'] = str(e)
-        print(f"Warning: Cannot load predictor: {e}")
-    return assets
 
 
 # ============================================================================
@@ -155,133 +139,34 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
         except Exception:
             print(f"[core] thesis_ML fallback: {_hx}")
 
-    assets = load_ml_assets()
-    now = op_date if op_date else datetime.now()
-
-    # ถ้า predictor โหลดไม่ขึ้น → fallback local DB
-    if not assets.get('model_loaded') or assets.get('predictor') is None:
-        try:
-            from main_or_db import predict_from_local_history
-            # 🔁 M-05: ส่งวันผ่าตัดเป็น as_of_date → fallback ใช้เฉพาะเคสก่อนหน้า (กัน leak ตอน backfill)
-            local = predict_from_local_history(
-                procedure, surgeon,
-                as_of_date=(op_date.strftime('%Y-%m-%d') if op_date else None))
-            if local is not None:
-                return {
-                    'predicted_min': local['predicted_min'],
-                    'confidence': local['confidence'],
-                    'method': local['method_label'],
-                    'details': f'median ของ {local["n_cases"]} เคส (local DB)',
-                    'proc_n': local['n_cases'],
-                    'surg_n': local['n_cases'] if local['tier'] == 1 else 0,
-                    'source': 'local_history',
-                    'tier': local['tier'],
-                }
-        except Exception:
-            pass
-        return {
-            'predicted_min': 60, 'confidence': 'ต่ำ',
-            'method': 'ค่าเริ่มต้น',
-            'details': f'predictor v2 โหลดไม่สำเร็จ: {assets.get("error", "?")}',
-            'proc_n': 0, 'surg_n': 0,
-            'source': 'default', 'tier': 0,
-        }
-
-    predictor = assets['predictor']
-
-    # แปลง division string → int (Minor OR ใช้ "75", Main OR ใช้ 1-86)
+    # 🧯 Fallback 2 ชั้น (thesis_ML ใช้ไม่ได้): ค่ากลางจากประวัติใน DB → ค่าเริ่มต้น
+    # (ชั้น SurgicalTimePredictor เก่าถูกถอด 4 ก.ค. 2026 — บน cloud มันไม่เคยทำงาน
+    #  อยู่แล้วเพราะ pkl ถูก gitignore · เหลือ 2 ชั้น = พฤติกรรม local ตรงกับ cloud เป๊ะ)
     try:
-        div_int = int(str(division).strip())
-    except (ValueError, TypeError):
-        div_int = 1
-
-    # Predict
-    try:
-        result = predictor.predict(
-            procedure_name=procedure or "unknown",
-            surgeon_name=surgeon or "unknown",
-            division=div_int,
-            orroom=int(orroom) if orroom else 11,
-            age=int(age) if age else 50,
-            planned_hour=int(op_hour) if op_hour else 9,
-            opedate=now.strftime("%Y-%m-%d"),
-            diagnosis_name=diagnosis or "",
-        )
-    except Exception as e:
-        return {
-            'predicted_min': 60, 'confidence': 'ต่ำ',
-            'method': 'Predictor error',
-            'details': f'predict() error: {str(e)[:60]}',
-            'proc_n': 0, 'surg_n': 0,
-            'source': 'error', 'tier': 0,
-        }
-
-    # Map confidence: predictor v2 → Thai labels (Minor OR API)
-    conf_map = {
-        'high': 'สูงมาก',
-        'medium': 'สูง',
-        'low': 'ปานกลาง',
-        'very_low': 'ต่ำ',
-    }
-    confidence_th = conf_map.get(result.confidence_level, 'ปานกลาง')
-
-    # หลักฐานที่ใช้
-    best = result.best_evidence
-    n_evidence = best.n_cases if best else 0
-    evidence_name = best.level_name if best else 'global'
-
-    # ลักษณะ method label
-    method = f'AI XGBoost ({evidence_name})'
-
-    # Details — รวม info สำคัญ
-    detail_parts = [confidence_th]
-    detail_parts.append(f'อ้างอิง {n_evidence} เคส')
-    if best:
-        detail_parts.append(f'median={best.median:.0f}m IQR[{best.q1:.0f}-{best.q3:.0f}]')
-    if result.fuzzy_procedure:
-        fp = result.fuzzy_procedure
-        detail_parts.append(f'auto-correct: {fp["matched_name"][:25]} ({fp["similarity"]}%)')
-    if result.fuzzy_surgeon:
-        fs = result.fuzzy_surgeon
-        detail_parts.append(f'surg→{fs["matched_name"][:20]} ({fs["similarity"]}%)')
-
-    # tier (legacy compat): 1 = narrow, 2 = medium, 3 = broad
-    tier_map = {'narrow': 1, 'medium': 2, 'broad': 3}
-    tier = tier_map.get(best.granularity if best else 'broad', 3)
-
-    return {
-        'predicted_min': max(5, int(round(result.predicted_minutes))),
-        'confidence': confidence_th,
-        'method': method,
-        'details': ' | '.join(detail_parts),
-        'proc_n': n_evidence,
-        'surg_n': n_evidence,
-        'surg_proc_n': n_evidence,
-        'source': 'ml_v7',
-        'tier': tier,
-        # ─── v4 fields ───
-        'predicted_range': result.predicted_range,
-        'evidence_levels': [
-            {
-                'level': e.level_name,
-                'granularity': e.granularity,
-                'n': e.n_cases,
-                'median': e.median,
-                'q1': e.q1, 'q3': e.q3,
+        from main_or_db import predict_from_local_history
+        # 🔁 M-05: ส่งวันผ่าตัดเป็น as_of_date → fallback ใช้เฉพาะเคสก่อนหน้า (กัน leak ตอน backfill)
+        local = predict_from_local_history(
+            procedure, surgeon,
+            as_of_date=(op_date.strftime('%Y-%m-%d') if op_date else None))
+        if local is not None:
+            return {
+                'predicted_min': local['predicted_min'],
+                'confidence': local['confidence'],
+                'method': local['method_label'],
+                'details': f'median ของ {local["n_cases"]} เคส (local DB)',
+                'proc_n': local['n_cases'],
+                'surg_n': local['n_cases'] if local['tier'] == 1 else 0,
+                'source': 'local_history',
+                'tier': local['tier'],
             }
-            for e in result.evidence_levels
-        ],
-        'best_evidence': {
-            'level': best.level_name if best else None,
-            'granularity': best.granularity if best else None,
-            'n': n_evidence,
-            'median': best.median if best else None,
-            'q1': best.q1 if best else None,
-            'q3': best.q3 if best else None,
-        },
-        'fuzzy_procedure': result.fuzzy_procedure,
-        'fuzzy_surgeon': result.fuzzy_surgeon,
-        'notes': result.notes,
+    except Exception:
+        pass
+    return {
+        'predicted_min': 60, 'confidence': 'ต่ำ',
+        'method': 'ค่าเริ่มต้น',
+        'details': 'thesis_ML และประวัติ local ใช้ไม่ได้ — ใช้ค่าเริ่มต้น 60 นาที (ควรตรวจ ✏️)',
+        'proc_n': 0, 'surg_n': 0,
+        'source': 'default', 'tier': 0,
     }
 
 # ============================================================================

@@ -7,8 +7,7 @@ openpyxl>=3.1.0
 streamlit-autorefresh>=1.0.1
 xlsxwriter>=3.1.0
 
-# AI Agent (or_agent_demo.py)
-anthropic>=0.40.0
+# (anthropic ถูกถอด 4 ก.ค. 2026 — ใช้แค่ใน or_agent_demo.py ซึ่งย้ายเข้า _archive_legacy แล้ว)
 
 # ML — prediction + retrain/fine-tune
 xgboost>=2.0.0

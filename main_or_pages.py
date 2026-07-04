@@ -531,6 +531,15 @@ def render_csv_upload():
                                    key="orboard_csv", disabled=_demo_active)
             _rep = st.checkbox("แทนที่เคส 'ยังไม่มา' เดิม (กันซ้ำ)", value=True,
                                key="orboard_rep", disabled=_demo_active)
+            # 🧪 อัปโหลดเพื่อ "ทดสอบระบบ": ติดธง _demo ทุกเคส → กดได้ครบทุก flow
+            #    แต่ override_log / shadow_v2_log / case_history จะไม่ถูกเขียนเลย
+            #    (ไม่มีรอยใน DB วิจัย) · ทดสอบเสร็จกด 🗑️ ล้างกระดานวันนี้ = จบสะอาด
+            _testmode = st.checkbox(
+                "🧪 โหมดทดสอบระบบ — เคสชุดนี้จะไม่ถูกบันทึกลงฐานข้อมูลวิจัย",
+                value=False, key="orboard_testmode", disabled=_demo_active,
+                help="ติ๊กเมื่อใช้ไฟล์ทดสอบ: บอร์ดทำงานเหมือนจริงทุกอย่าง แต่ไม่เขียน "
+                     "override/shadow/case_history · เสร็จแล้วลบทิ้งด้วยปุ่ม "
+                     "'🗑️ ล้างกระดานวันนี้' ด้านล่าง")
             if _up is not None and not _demo_active and st.button(
                     "✅ โหลดเข้าบอร์ด + ทำนายเวลา",
                     type="primary", width='stretch', key="orboard_load"):
@@ -552,12 +561,17 @@ def render_csv_upload():
                     for _nc in _new:
                         if _nc.get('hn') and _nc['hn'] in _seen_hn:
                             continue
+                        if _testmode:
+                            _nc['_demo'] = True   # 🧪 เคสทดสอบ — guard ทุกจุดจะไม่เขียน DB วิจัย
                         _cur.append(_nc)
                         _added += 1
                     st.session_state.patient_cases = _cur
                     st.session_state['_or_demo'] = False
                     st.session_state['_board_dirty'] = True   # CR-2: โหลดตารางใหม่ → ดันขึ้นบอร์ดกลาง
-                    st.success(f"✅ โหลด {_added} เคสเข้าบอร์ดแล้ว — ไปดูที่หน้า 📋 ตารางผ่าตัด")
+                    _msg = f"✅ โหลด {_added} เคสเข้าบอร์ดแล้ว — ไปดูที่หน้า 📋 ตารางผ่าตัด"
+                    if _testmode:
+                        _msg += " · 🧪 โหมดทดสอบ (ไม่บันทึกลงฐานข้อมูลวิจัย)"
+                    st.success(_msg)
                     st.rerun()
 
 
@@ -736,6 +750,18 @@ def _board_fragment():
             '<span style="font-size:11px;color:#b6c2cf;border:1px solid #eef2f6;'
             'border-radius:999px;padding:1px 9px;">สาธิต · ไม่บันทึกจริง</span></div>',
             unsafe_allow_html=True)
+    else:
+        # 🧪 มีเคสทดสอบ (อัปโหลดแบบติ๊กโหมดทดสอบ) ปนบนบอร์ด — เตือนจาง ๆ
+        #    ให้ทุกเครื่องที่เปิดบอร์ดรู้ว่าไม่ใช่ผู้ป่วยจริง (เคสพวกนี้ไม่เขียน DB วิจัย)
+        _n_test = sum(1 for _c in st.session_state.patient_cases if _c.get('_demo'))
+        if _n_test:
+            st.markdown(
+                f'<div style="text-align:right;margin:-4px 0 2px;">'
+                f'<span style="font-size:11px;color:#9a6700;border:1px solid #fdf3dd;'
+                f'background:#fffcf3;border-radius:999px;padding:1px 9px;">'
+                f'🧪 เคสทดสอบ {_n_test} เคสบนบอร์ด · ไม่บันทึกจริง · '
+                f'ลบที่ ⚙️ ล้างกระดาน</span></div>',
+                unsafe_allow_html=True)
 
     _demo_active = bool(st.session_state.get('_or_demo'))
 
@@ -948,152 +974,7 @@ def _board_fragment():
 
 
 # ============================================================================
-# STATISTICS PAGE
+# (page_statistics ถูกถอดออก 4 ก.ค. 2026 — ไม่ถูก route จากเมนูตั้งแต่ยุค sidebar
+#  สถิติจริงย้ายไปหน้า "📈 สถิติย้อนหลัง" ใน main_or_admin นานแล้ว
+#  ต้องการคืน → ดู git history ก่อน commit "chore: ตัดโค้ดตาย")
 # ============================================================================
-
-def page_statistics():
-    st.markdown('<h1 style="color:#2c3e50;font-size:28px;font-weight:700;">📊 สถิติและรายงาน</h1>', unsafe_allow_html=True)
-
-    st.markdown('<h3 style="color:#34495e;font-size:18px;font-weight:600;">📈 สรุปรายวัน</h3>', unsafe_allow_html=True)
-    tc = st.session_state.statistics['total_cases']
-    cc = st.session_state.statistics['completed_cases']
-    xc = st.session_state.statistics['cancelled_cases']
-
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.markdown(f'<div style="background:white;border-radius:12px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:center;"><div style="color:#7f8c8d;font-size:14px;font-weight:600;">เคสทั้งหมด</div><div style="color:#2c3e50;font-size:32px;font-weight:bold;">{tc}</div></div>', unsafe_allow_html=True)
-    with c2:
-        st.markdown(f'<div style="background:white;border-radius:12px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:center;"><div style="color:#7f8c8d;font-size:14px;font-weight:600;">เสร็จแล้ว</div><div style="color:#27ae60;font-size:32px;font-weight:bold;">{cc}</div></div>', unsafe_allow_html=True)
-    with c3:
-        rate = round((cc / tc * 100) if tc > 0 else 0)
-        st.markdown(f'<div style="background:white;border-radius:12px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:center;"><div style="color:#7f8c8d;font-size:14px;font-weight:600;">อัตราสำเร็จ</div><div style="color:#2c3e50;font-size:32px;font-weight:bold;">{rate}%</div></div>', unsafe_allow_html=True)
-    with c4:
-        st.markdown(f'<div style="background:white;border-radius:12px;padding:15px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:center;"><div style="color:#7f8c8d;font-size:14px;font-weight:600;">ยกเลิก</div><div style="color:#e74c3c;font-size:32px;font-weight:bold;">{xc}</div></div>', unsafe_allow_html=True)
-
-    # AI vs Actual chart
-    st.markdown('<h3 style="color:#34495e;font-size:18px;font-weight:600;margin-top:20px;">🤖 AI ทำนายเวลาใช้ห้อง vs เวลาจริง</h3>', unsafe_allow_html=True)
-    history = st.session_state.statistics.get('case_history', [])
-    hist = [h for h in history if h.get('actual_duration_min') and h.get('ai_predicted_min')]
-
-    if hist:
-        df_h = pd.DataFrame(hist)
-        df_h['proc_short'] = df_h['procedure'].str[:40]
-        df_h['error'] = df_h['actual_duration_min'] - df_h['ai_predicted_min']
-
-        fig = go.Figure(data=[
-            go.Bar(name='AI ทำนายเวลาใช้ห้อง', x=df_h['proc_short'], y=df_h['ai_predicted_min'], marker_color='#3498db'),
-            go.Bar(name='เวลาจริง (room duration)', x=df_h['proc_short'], y=df_h['actual_duration_min'], marker_color='#2ecc71'),
-        ])
-        fig.update_layout(barmode='group', title='AI ทำนายเวลาใช้ห้อง vs เวลาจริง', font=dict(family="Sarabun"), height=400, xaxis_title='หัตถการ', yaxis_title='นาที (Room Duration)')
-        st.plotly_chart(fig, use_container_width=True)
-
-        mae = df_h['error'].abs().mean()
-        w10 = (df_h['error'].abs() <= 10).mean() * 100
-        w15 = (df_h['error'].abs() <= 15).mean() * 100
-        ec1, ec2, ec3 = st.columns(3)
-        ec1.metric("MAE", f"{mae:.1f} นาที")
-        ec2.metric("±10 นาที", f"{w10:.0f}%")
-        ec3.metric("±15 นาที", f"{w15:.0f}%")
-    else:
-        st.info("ยังไม่มีข้อมูล AI vs เวลาจริง — ใช้ OR Board แล้วจะเก็บสถิติอัตโนมัติ")
-
-    # Pie chart
-    st.markdown('<h3 style="color:#34495e;font-size:18px;font-weight:600;margin-top:20px;">📉 สถานะเคส</h3>', unsafe_allow_html=True)
-    fig_pie = px.pie(values=[cc, tc - cc, xc], names=['เสร็จแล้ว', 'รอดำเนินการ', 'ยกเลิก'],
-                     color_discrete_map={'เสร็จแล้ว': '#27ae60', 'รอดำเนินการ': '#f39c12', 'ยกเลิก': '#e74c3c'})
-    fig_pie.update_layout(font=dict(family="Sarabun"), height=350)
-    st.plotly_chart(fig_pie, use_container_width=True)
-
-    # ========================================================================
-    # TOP N OPERATION STATISTICS (persistent across sessions)
-    # ========================================================================
-    st.markdown('<h3 style="color:#34495e;font-size:18px;font-weight:600;margin-top:28px;">🏆 Top Statistics (ข้อมูลสะสม)</h3>', unsafe_allow_html=True)
-    from main_or_core import (load_case_history, top_n_procedures,
-                               top_n_surgeons, top_n_surg_proc, top_n_nurses)
-    df_hist = load_case_history()
-
-    if df_hist.empty:
-        st.info("ยังไม่มีข้อมูลสะสม — กด 'ผ่าเสร็จ' ใน OR Board จะเก็บเข้า case_history.csv อัตโนมัติ")
-    else:
-        cc1, cc2, cc3 = st.columns([1, 1, 2])
-        with cc1:
-            top_n = st.selectbox("แสดง Top", [5, 10, 20], index=1, key="topn_sel")
-        with cc2:
-            scope = st.selectbox("ขอบเขต", ["ทั้งหมด", "30 วันล่าสุด", "7 วันล่าสุด"], key="topn_scope")
-        with cc3:
-            st.caption(f"📦 ข้อมูลสะสมทั้งหมด: **{len(df_hist)}** เคส")
-
-        df_v = df_hist.copy()
-        df_v['timestamp'] = pd.to_datetime(df_v['timestamp'], errors='coerce')
-        if scope == "30 วันล่าสุด":
-            df_v = df_v[df_v['timestamp'] >= (_now() - pd.Timedelta(days=30))]
-        elif scope == "7 วันล่าสุด":
-            df_v = df_v[df_v['timestamp'] >= (_now() - pd.Timedelta(days=7))]
-
-        t1, t2, t3, t4, t5 = st.tabs([
-            "🔝 หัตถการยอดนิยม", "⏱️ หัตถการใช้เวลานาน",
-            "👨‍⚕️ ศัลยแพทย์", "🤝 Surgeon × Procedure", "👩‍⚕️ พยาบาล"
-        ])
-
-        with t1:
-            st.markdown(f"**Top {top_n} หัตถการ (ตามจำนวนเคส)**")
-            df_top = top_n_procedures(df_v, by='volume', n=top_n)
-            if not df_top.empty:
-                st.dataframe(df_top, use_container_width=True, hide_index=True)
-                fig = px.bar(df_top, x='procedure', y='n_cases',
-                             title=f'Top {top_n} หัตถการที่ทำบ่อยที่สุด',
-                             color='avg_duration', color_continuous_scale='Blues',
-                             labels={'n_cases': 'จำนวนเคส', 'avg_duration': 'เฉลี่ย (นาที)'})
-                fig.update_layout(font=dict(family="Sarabun"), height=400,
-                                  xaxis_title='หัตถการ', yaxis_title='จำนวนเคส')
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.caption("ยังไม่มีข้อมูล")
-
-        with t2:
-            st.markdown(f"**Top {top_n} หัตถการ (ตามเวลาเฉลี่ยที่ใช้)**")
-            df_dur = top_n_procedures(df_v, by='avg_duration', n=top_n)
-            if not df_dur.empty:
-                st.dataframe(df_dur, use_container_width=True, hide_index=True)
-                fig = px.bar(df_dur, x='procedure', y='avg_duration',
-                             title=f'Top {top_n} หัตถการที่ใช้เวลานานที่สุด',
-                             color='avg_duration', color_continuous_scale='Reds',
-                             labels={'avg_duration': 'เฉลี่ย (นาที)'})
-                fig.update_layout(font=dict(family="Sarabun"), height=400,
-                                  xaxis_title='หัตถการ', yaxis_title='นาที (เฉลี่ย)')
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.caption("ยังไม่มีข้อมูล")
-
-        with t3:
-            st.markdown(f"**Top {top_n} ศัลยแพทย์ (ตามจำนวนเคส)**")
-            df_surg = top_n_surgeons(df_v, by='volume', n=top_n)
-            if not df_surg.empty:
-                st.dataframe(df_surg, use_container_width=True, hide_index=True)
-                fig = px.bar(df_surg, x='surgeon', y='n_cases',
-                             title=f'Top {top_n} ศัลยแพทย์ (จำนวนเคส)',
-                             color='avg_duration', color_continuous_scale='Greens',
-                             labels={'n_cases': 'จำนวนเคส', 'avg_duration': 'เฉลี่ย (นาที)'})
-                fig.update_layout(font=dict(family="Sarabun"), height=400,
-                                  xaxis_title='ศัลยแพทย์', yaxis_title='จำนวนเคส')
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.caption("ยังไม่มีข้อมูล")
-
-        with t4:
-            st.markdown(f"**Top {top_n} คู่ ศัลยแพทย์ × หัตถการ**")
-            df_sp = top_n_surg_proc(df_v, n=top_n)
-            if not df_sp.empty:
-                st.dataframe(df_sp, use_container_width=True, hide_index=True)
-            else:
-                st.caption("ยังไม่มีข้อมูล")
-
-        with t5:
-            role_label = st.radio("บทบาทพยาบาล", ["scrub", "circ"],
-                                  horizontal=True, key="nurse_role_sel")
-            st.markdown(f"**Top {top_n} พยาบาล ({role_label})**")
-            df_nur = top_n_nurses(df_v, role=role_label, n=top_n)
-            if not df_nur.empty:
-                st.dataframe(df_nur, use_container_width=True, hide_index=True)
-            else:
-                st.caption("ยังไม่มีข้อมูลพยาบาลใน case_history")

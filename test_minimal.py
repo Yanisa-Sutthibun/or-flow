@@ -44,14 +44,14 @@ except Exception as e:
     st.error(f"❌ plotly: {e}")
 
 # Test 2: model file exists
+# (SurgicalTimePredictor + pkl v1 ถูกถอดจาก chain 4 ก.ค. 2026 — เช็คเฉพาะของที่ใช้จริง)
 st.subheader("Test 2: Files")
 import os
 for f in [
-    "models/main_or_model_v1.pkl",
-    "models/main_or_pipeline_v1.pkl",
-    "models/main_or_clusters_v1.pkl",
-    "data/historical/main_or_history.csv",
-    "main_or_predictor.py",
+    "models/thesis_ML/hier_room_use.json",
+    "models/thesis_ML/resid_room_use.pkl",
+    "models/thesis_ML/conformal.json",
+    "models/model_v2/model.pkl",
     "main_or_core.py",
 ]:
     if os.path.exists(f):
@@ -60,23 +60,21 @@ for f in [
     else:
         st.error(f"❌ ไม่พบ: {f}")
 
-# Test 3: load predictor
-st.subheader("Test 3: Load predictor")
+# Test 3: shadow model_v2 (โหลด + ทำนาย 1 เคส)
+st.subheader("Test 3: Shadow model_v2")
 try:
-    from main_or_predictor import SurgicalTimePredictor
-    p = SurgicalTimePredictor.load_default()
-    st.write(f"✅ Predictor loaded — vocab: {len(p.proc_kw_vocab)} หัตถการ, {len(p.surgeon_vocab)} แพทย์")
-
-    # Test predict
-    r = p.predict(
-        procedure_name="EGD + Colonoscopy",
-        surgeon_name="SURG_001",  # 🔒 M-12: ไม่ฝังชื่อแพทย์จริงในไฟล์ทดสอบ (git-tracked)
-        division=1, orroom=11, age=68, planned_hour=9,
-        opedate="2024-07-15",
-    )
-    st.write(f"✅ Test predict: {r.predicted_minutes} นาที, confidence={r.confidence_level}")
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                     'models', 'model_v2'))
+    from predictor import ModelV2
+    _mv2 = ModelV2()
+    r2 = _mv2.predict_case({'procedure': 'EGD + Colonoscopy',
+                            'surgeon': 'SURG_002',  # 🔒 รหัส ไม่ใช้ชื่อจริง
+                            'division': '75', 'age': 68})
+    st.write(f"✅ model_v2 ทำนาย {r2['predicted_min']} นาที · "
+             f"ช่วง 90%={r2['range90']} · มั่นใจ={r2['confidence']}")
 except Exception as e:
-    st.error(f"❌ Predictor error: {e}")
+    st.error(f"❌ model_v2 error: {e}")
     import traceback
     st.code(traceback.format_exc())
 

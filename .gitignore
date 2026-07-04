@@ -69,3 +69,9 @@ logs/
 
 # 🔒 สำรอง model keys "ก่อน mask" — มีชื่อแพทย์จริง ห้าม commit เด็ดขาด
 _model_backup/
+
+# 🔒 สำรองข้อมูลวิจัยจาก DB (backup_research_data.py) — ข้อมูลจริง ห้ามขึ้น repo
+backups_research/
+
+# ของ legacy ที่ถอดจากระบบแล้ว (pkl v1 + or_agent_demo) — เก็บ local เผื่ออ้างอิง
+_archive_legacy/
