@@ -592,8 +592,8 @@ def main():
                 st.rerun()
 
     # เมนูหลัก = แท็บแนวนอนบนสุด · เก็บค่าใน URL ให้รอด refresh (รันเฉพาะหน้าที่เลือก)
-    _page_options = ["📋 ตารางผ่าตัด", "📊 ภาพรวมวันนี้", "📈 สถิติย้อนหลัง",
-                     "🤖 ผลวิจัย AI", "⚙️ ตั้งค่า"]
+    _page_options = ["📋 ตารางผ่าตัด", "🗓️ จัดคิว AI", "📊 ภาพรวมวันนี้",
+                     "📈 สถิติย้อนหลัง", "🤖 ผลวิจัย AI", "⚙️ ตั้งค่า"]
     try:
         _default_page = st.query_params.get('page', _page_options[0])
     except Exception:
@@ -621,6 +621,9 @@ def main():
     # ========================================================================
     if page == "📋 ตารางผ่าตัด":
         page_or_board()
+    elif page == "🗓️ จัดคิว AI":
+        from or_scheduler import page_scheduler
+        page_scheduler()
     elif page == "📊 ภาพรวมวันนี้":
         page_admin('today')
     elif page == "📈 สถิติย้อนหลัง":
