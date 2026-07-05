@@ -32,7 +32,7 @@ _STATUS_META = {
     'in_or':        ('กำลังผ่า',     '#1b7f4b', '#e6f6ec', '#f4fbf7'),
     'overrun':      ('เกินเวลา',     '#c0392b', '#fbe9e8', '#fdf3f3'),
     'holding_post': ('ห้องรับ-ส่ง',  '#1565c0', '#e3f0fb', ''),
-    'recovery':     ('ห้องพักฟื้น',  '#1565c0', '#e3f0fb', ''),
+    'recovery':     ('ห้องพักฟื้น',  '#6b21a8', '#edd2ff', ''),   # 💜 สีวิสัญญี
     'discharged':   ('จำหน่ายแล้ว',  '#94a3b8', '#eceff3', '#f6f8fa'),
 }
 
@@ -65,6 +65,18 @@ _EMG_CSS = (
     "white-space:nowrap;display:inline-block;vertical-align:1px}"
 )
 _EMG_BADGE = '<span class="emg-dot"></span><span class="emg-tag">ฉุกเฉิน</span>'
+
+# 💜 ปุ่ม "เสร็จ → พักฟื้น" สีม่วงอ่อน #EDD2FF — สีประจำวิสัญญี (PACU อยู่ใต้วิสัญญี)
+#    เลือกด้วย class st-key-tb_f2_* (Streamlit ≥1.37 ใส่ class ตาม key ให้อัตโนมัติ
+#    — รุ่นเก่ากว่านั้นจะเป็นปุ่มขาวปกติ ไม่พัง)
+_PACU_BTN_CSS = (
+    '[class*="st-key-tb_f2_"] button{'
+    'background:#EDD2FF !important;border:1px solid #D8B4FE !important;'
+    'color:#5B2C87 !important;font-weight:600;}'
+    '[class*="st-key-tb_f2_"] button:hover{'
+    'background:#E2C0FC !important;border-color:#C084FC !important;'
+    'color:#4A1D6E !important;}'
+)
 
 
 def _is_emer(c):
@@ -105,7 +117,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     room_opts = [(room_no, ชื่อห้อง)] ห้องที่เปิดใช้ — สำหรับ dropdown ย้ายห้องใน ✏️"""
     now = _now()
     room_opts = room_opts or []
-    st.markdown(f'<style>{_EMG_CSS}</style>', unsafe_allow_html=True)
+    st.markdown(f'<style>{_EMG_CSS}{_PACU_BTN_CSS}</style>', unsafe_allow_html=True)
 
     # ---------- ค้นหา + กรอง ----------
     fc1, fc2, fc3 = st.columns([3, 1.4, 1.6])
@@ -235,8 +247,8 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     elif not z_or:
         st.caption("ไม่มีเคสกำลังผ่าตัด")
 
-    # ---------- โซน 3: ห้องพักฟื้น ----------
-    _zone_head('🛏️ ห้องพักฟื้น', len(z_rec), '#4caf50')
+    # ---------- โซน 3: ห้องพักฟื้น (💜 สีม่วง = วิสัญญี) ----------
+    _zone_head('🛏️ ห้องพักฟื้น', len(z_rec), '#c084fc')
     if z_rec:
         _rows(z_rec)
     else:

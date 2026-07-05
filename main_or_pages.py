@@ -402,6 +402,71 @@ _DIV_OPTIONS = [
 ]
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def _surgeons_by_specialty():
+    """🧑‍⚕️ {ชื่อสาขา: [ชื่อแพทย์]} จากประวัติในตาราง cases — เติม dropdown
+    "แพทย์ผ่าตัด" ตามสาขาที่เลือก · unmask รหัส SURG_xxx ได้เมื่อเครื่องมีกุญแจ
+    (เครื่องที่ไม่มีกุญแจ เช่น cloud → รายชื่อว่าง = ช่องกลายเป็นพิมพ์อิสระ ไม่พัง)
+    key ด้วย "ชื่อสาขา" (div_name) — ครอบทั้งรหัสสาขาชุดเก่า (75,74,…) และใหม่ (1-10)"""
+    try:
+        from main_or_db import get_conn, div_name
+        conn = get_conn()
+        try:
+            rows = conn.execute(
+                "SELECT DISTINCT division_code, surgeon_name FROM cases "
+                "WHERE surgeon_name IS NOT NULL AND surgeon_name <> ''").fetchall()
+        finally:
+            conn.close()
+    except Exception:
+        return {}
+    try:
+        from staff_unmask import unmask
+    except Exception:
+        def unmask(x):
+            return x
+
+    import re as _re
+    _thai = _re.compile(r'[ก-๙]')
+
+    # 🛡️ ชั้นที่ 1: whitelist จากทะเบียนแพทย์ (staff_mapping.csv — เครื่องที่มีกุญแจ)
+    #    กันข้อมูล "กรอกผิดช่อง" ในตาราง cases (เช่นชื่อวินิจฉัย/หัตถการหลุดมา
+    #    อยู่คอลัมน์แพทย์: 'C spondylosis', 'Sequelae of stroke') — เจอจริง 4 ก.ค. 2026
+    _wl = set()
+    try:
+        import csv as _csv
+        _mp = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
+                            'staff_mapping.csv')
+        with open(_mp, encoding='utf-8-sig') as _f:
+            for _r in _csv.DictReader(_f):
+                if str(_r.get('role', '')).strip() == 'surgeon':
+                    _nm = _re.sub(r'\s+', ' ',
+                                  str(_r.get('original_name', '')).strip())
+                    if _nm:
+                        _wl.add(_nm)
+    except Exception:
+        pass    # ไม่มีไฟล์ (เช่นบน cloud) → ใช้ heuristic ชั้นที่ 2 แทน
+
+    out = {}
+    for _dv, _nm in rows:
+        _nm2 = _re.sub(r'\s+', ' ', str(unmask(str(_nm))).strip())
+        if not _nm2 or _nm2.upper().startswith(('SURG_', 'SCRUB_', 'CIRC_')):
+            continue    # ยังเป็นรหัส mask (ไม่มีกุญแจบนเครื่องนี้) — ไม่โชว์รหัสให้ผู้ใช้
+        if _nm2.lower() == 'resident':
+            continue    # 🧑‍⚕️ dropdown = แพทย์ staff เท่านั้น (มุคกี้กำหนด 4 ก.ค. 2026)
+            # เคส resident: พยาบาลพิมพ์ชื่อเองในช่องได้ (accept_new_options)
+        if _wl:
+            if _nm2 not in _wl:
+                continue    # ไม่อยู่ในทะเบียนแพทย์ = ขยะกรอกผิดช่อง — ตัดทิ้ง
+        else:
+            # 🛡️ ชั้นที่ 2 (ไม่มีทะเบียน): ชื่อแพทย์ไทยต้องมีอักษรไทย ไม่มีตัวเลข
+            #    และยาวพอเหมาะ — ตัดชื่อโรค/หัตถการภาษาอังกฤษที่ปนมา
+            if (not _thai.search(_nm2) or any(ch.isdigit() for ch in _nm2)
+                    or len(_nm2) > 45):
+                continue
+        out.setdefault(div_name(_dv), set()).add(_nm2)
+    return {k: sorted(v) for k, v in out.items()}
+
+
 def _render_add_case_form(demo_active):
     """ฟอร์มเพิ่มเคส walk-in/แทรก — กรอกเฉพาะข้อมูลที่โมเดลใช้ แล้วทำนายเวลา เข้าบอร์ด"""
     import uuid
@@ -420,10 +485,27 @@ def _render_add_case_form(demo_active):
                          placeholder="เช่น Laparoscopic cholecystectomy")
     diag = st.text_input("🤖 วินิจฉัย (ICD-10)", key="ac_diag",
                          placeholder="เช่น Cholelithiasis")
+    # 🧑‍⚕️ ลำดับใหม่ (4 ก.ค. 2026): เลือก "สาขา" ก่อน → ช่องแพทย์กรองรายชื่อตามสาขา
+    #    แต่ยังพิมพ์ชื่อใหม่ได้ (แพทย์ที่ไม่เคยมีในระบบ) · บังคับกรอกเพราะโมเดลใช้
+    #    แพทย์ (~24%) + หัตถการ (~30%) เป็น feature หลัก
     c3, c4 = st.columns(2)
-    surg = c3.text_input("🤖 แพทย์ผ่าตัด", key="ac_surg", placeholder="ชื่อแพทย์")
-    _div_label = c4.selectbox("🤖 สาขา", [d[1] for d in _DIV_OPTIONS],
-                              key="ac_div")
+    _div_label = c3.selectbox("🤖 สาขา (เลือกก่อน — ใช้กรองรายชื่อแพทย์)",
+                              [d[1] for d in _DIV_OPTIONS], key="ac_div")
+    _div_code = next((d[0] for d in _DIV_OPTIONS if d[1] == _div_label), '75')
+    _known_surg = _surgeons_by_specialty().get(_div_label, [])
+    with c4:
+        try:
+            # Streamlit ≥1.45: selectbox พิมพ์ค้นหาได้ + accept_new_options
+            surg = st.selectbox(
+                "🤖 แพทย์ผ่าตัด *", options=_known_surg, index=None,
+                key="ac_surg_sel", accept_new_options=True,
+                placeholder="พิมพ์ค้นหา หรือพิมพ์ชื่อแพทย์ใหม่แล้วกด Enter",
+                help=(f"รายชื่อจากประวัติเคสสาขานี้ ({len(_known_surg)} คน) — "
+                      "ถ้าเป็นแพทย์ใหม่ พิมพ์ชื่อ-สกุลเต็มแล้วกด Enter ได้เลย"))
+        except TypeError:   # streamlit เก่ากว่า 1.45 — พิมพ์อิสระตามเดิม
+            surg = st.text_input("🤖 แพทย์ผ่าตัด *", key="ac_surg",
+                                 placeholder="ชื่อแพทย์")
+    surg = (surg or '').strip()
     c5, c6 = st.columns(2)
     _room_label = c5.selectbox("🤖 ห้อง", [lbl for _, lbl in _room_opts],
                                key="ac_room")
@@ -438,10 +520,10 @@ def _render_add_case_form(demo_active):
     cbtn1, cbtn2 = st.columns([3, 1])
     if cbtn1.button("🤖 เพิ่มเคส + ทำนายเวลา", type="primary", width='stretch',
                     key="ac_submit"):
-        if not (proc or '').strip():
-            st.error("กรุณากรอก 'หัตถการ' (ช่องบังคับ)")
+        if not (proc or '').strip() or not surg:
+            st.error("กรุณากรอก 'หัตถการ' และ 'แพทย์ผ่าตัด' ให้ครบ — "
+                     "AI ใช้สองช่องนี้เป็นข้อมูลหลักในการทำนายเวลา")
             return
-        _div_code = next((d[0] for d in _DIV_OPTIONS if d[1] == _div_label), '75')
         _room_no = next((rn for rn, lbl in _room_opts if lbl == _room_label),
                         _room_opts[0][0])
         if _sched is not None:
@@ -498,7 +580,7 @@ def _render_add_case_form(demo_active):
                    f"(based on {_pn} เคส){_rng_txt}")
         _rerun_board()
     if cbtn2.button("ล้างฟอร์ม", key="ac_clear", width='stretch'):
-        for _k in ('ac_name', 'ac_proc', 'ac_diag', 'ac_surg'):
+        for _k in ('ac_name', 'ac_proc', 'ac_diag', 'ac_surg', 'ac_surg_sel'):
             st.session_state.pop(_k, None)
         _rerun_board()
 
