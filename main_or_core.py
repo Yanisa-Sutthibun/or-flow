@@ -32,18 +32,29 @@ TURNOVER_MINOR = TURNOVER_MAIN
 
 def rerun_board():
     """st.rerun แบบ scope แคบสุดที่รุ่น streamlit รองรับ — ใช้แทน st.rerun()
-    ในทุก action ของ OR Board (ปุ่มรับเข้า/เข้าห้อง/ผ่าเสร็จ/undo/แก้เวลา ฯลฯ)"""
+    ในทุก action ของ OR Board (ปุ่มรับเข้า/เข้าห้อง/ผ่าเสร็จ/undo/แก้เวลา ฯลฯ)
+    🐛 fix 6 ก.ค. 2026: scope="fragment" ใช้ได้เฉพาะ "fragment rerun" จริง ๆ —
+    ถ้าปุ่มถูกกดในจังหวะ full run (เช่น เพิ่งเปิดหน้า) ต้องถอยเป็น rerun เต็ม"""
+    _in_frag = False
     try:
         from streamlit.runtime.scriptrunner import get_script_run_ctx
-        _in_frag = bool(getattr(get_script_run_ctx(), 'current_fragment_id', None))
+        _ctx = get_script_run_ctx()
+        # ต้องเป็น fragment rerun จริง (fragment_ids_this_run ไม่ว่าง) ไม่ใช่แค่
+        # "โค้ดอยู่ใน fragment" — full run แรกของหน้า render fragment ด้วยแต่ขอ scope ไม่ได้
+        _in_frag = (bool(getattr(_ctx, 'current_fragment_id', None))
+                    and bool(getattr(_ctx, 'fragment_ids_this_run', None)))
     except Exception:
         _in_frag = False
     if _in_frag:
         try:
             st.rerun(scope="fragment")
             return
-        except TypeError:       # streamlit เก่า: ไม่มี kwarg scope
+        except TypeError:               # streamlit เก่า: ไม่มี kwarg scope
             pass
+        except Exception as _e:         # กันเหนียว: StreamlitAPIException ตอน full run
+            if type(_e).__name__ == 'RerunException':
+                raise                   # rerun สำเร็จ — ปล่อย control flow ผ่าน
+            print(f"[rerun_board] fragment scope ใช้ไม่ได้ → rerun เต็ม: {_e}")
     st.rerun()
 
 

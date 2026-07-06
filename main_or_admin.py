@@ -821,6 +821,52 @@ def _render_ai_research_tab():
     3. Scatter plot (predicted vs actual)
     4. Error distribution histogram
     """
+    # ═══ 💚 ฉบับหน้างาน (UX 6 ก.ค. 2026): พยาบาลอ่านส่วนนี้ส่วนเดียวพอ ═══
+    #     ตัวเลข live จาก conformal.json ของ thesis_ML (ตัวเดียวกับที่บอร์ดใช้)
+    st.markdown('<div class="section-title">💚 AI ทำนายเวลา — สรุปฉบับหน้างาน</div>',
+                unsafe_allow_html=True)
+    _med, _w30, _w15 = 25, 57, 36     # fallback (ค่า ณ 4 ก.ค. 2026)
+    try:
+        import or_time_model as _otm_s
+        _hl_s = (_otm_s.conformal_info('room_use') or {}).get('headline') or {}
+        _med = int(round(float(_hl_s.get('median_ae', _med))))
+        _w30 = int(round(float(_hl_s.get('within30_pct', _w30))))
+        _w15 = int(round(float(_hl_s.get('within15_pct', _w15))))
+    except Exception:
+        pass
+    _n1, _n2, _n3, _n4 = st.columns(4)
+    _card = ('<div style="background:#f0f9f4;border:1px solid #d3ead9;border-radius:10px;'
+             'padding:10px 12px;min-height:96px;"><div style="font-size:12.5px;'
+             'color:#4b5f52;">{t}</div><div style="font-size:17px;font-weight:700;'
+             'color:#1b5e33;margin-top:4px;line-height:1.35;">{v}</div></div>')
+    _n1.markdown(_card.format(t='แม่นแค่ไหน?',
+                              v=f'ครึ่งหนึ่งของเคส คลาดไม่เกิน ~{_med} นาที'),
+                 unsafe_allow_html=True)
+    _n2.markdown(_card.format(t='โอกาสใกล้เคียง',
+                              v=f'{round(_w30/10)} ใน 10 เคส คลาดไม่เกิน 30 นาที'),
+                 unsafe_allow_html=True)
+    _n3.markdown(_card.format(t='จุดแข็ง–จุดอ่อน',
+                              v='เคสสั้นทายแม่น เคสใหญ่/ยาวควรเผื่อเวลา'),
+                 unsafe_allow_html=True)
+    _n4.markdown(_card.format(t='ความน่าเชื่อรายเคส',
+                              v='ดูบรรทัด "จาก N เคส" — N มาก = น่าเชื่อ'),
+                 unsafe_allow_html=True)
+    st.markdown(
+        '<div style="background:#ffffff;border:1px solid #eef2f6;border-left:4px solid '
+        '#2e7d32;border-radius:0 10px 10px 0;padding:10px 14px;margin:10px 0;'
+        'font-size:13.5px;line-height:1.7;color:#334155;">'
+        '<b>ใช้ยังไงหน้างาน (3 ข้อพอ):</b><br>'
+        '1️⃣ ใช้ตัวเลข AI เป็น "ตัวช่วยกะเวลา" เรียกเคสถัดไป/แจ้งวอร์ด — ไม่ใช่คำสัญญา '
+        'บอร์ดจึงแสดงเป็นช่วงเวลาเสมอ<br>'
+        '2️⃣ ถ้า "จาก N เคส" มีตัวเลขน้อยหรือขึ้นว่าไม่มีเคสใกล้เคียง → เชื่อประสบการณ์'
+        'ตัวเองมากกว่า แล้วแก้ตัวเลขผ่านปุ่ม ✏️ ได้เลย<br>'
+        '3️⃣ ทุกครั้งที่พยาบาลแก้ ระบบเก็บทั้งค่า AI และค่าที่แก้ไว้เปรียบเทียบ — '
+        'ความเห็นของหน้างานคือส่วนหนึ่งของงานวิจัยนี้</div>',
+        unsafe_allow_html=True)
+    st.markdown('---')
+    st.caption('🔬 ส่วนถัดไปทั้งหมดเป็นรายละเอียดเชิงวิชาการ (สำหรับผู้วิจัย/กรรมการสอบ) '
+               '— พยาบาลหน้างานอ่านแค่ด้านบนก็เพียงพอ')
+
     st.markdown('<div class="section-title">🤖 AI ทำนายเวลา — ผลการวิจัย</div>',
                 unsafe_allow_html=True)
 
