@@ -114,7 +114,37 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
       - evidence_levels: list หลักฐานหลายระดับ
       - fuzzy_correction: ถ้ามี auto-correct
     """
-    # thesis_ML: ทำนายด้วย hier + XGBoost residual (เวลาครองห้อง) เป็นหลัก; fallback v2 ด้านล่าง
+    # 🥇 thesis_ML_v2 (โมเดลเล่ม 13 features) — โปรโมตขึ้นตัวหลัก 7 ก.ค. 2026 ตามคำสั่งมุคกี้
+    #    (บอร์ดโชว์ v2 · thesis_ML ย้ายไปทำนายเงียบใน shadow_v2_log — การเทียบไม่ขาดตอน)
+    try:
+        from shadow_v2 import _get_model as _get_v2
+        _mv2 = _get_v2()
+        if _mv2 is not None:
+            _r2 = _mv2.predict_case({
+                'procedure': procedure, 'diagnosis': diagnosis,
+                'surgeon': surgeon, 'division': division, 'age': age,
+            })
+            _pn2 = int(_r2.get('proc_n') or 0)
+            return {
+                'predicted_min': int(_r2['predicted_min']),
+                'confidence': _r2.get('confidence', 'ปานกลาง'),
+                'method': 'General XGBoost 13 features (thesis_ML_v2 — โมเดลวิทยานิพนธ์)',
+                'details': f'จาก {_pn2} เคสใกล้เคียง' if _pn2 else 'ไม่มีเคสใกล้เคียง (ใช้ค่ากลาง)',
+                'proc_n': _pn2, 'surg_n': 0, 'source': 'thesis_ML_v2', 'tier': 1,
+                'predicted_range': tuple(_r2.get('range90') or ()) or None,
+                'predicted_range80': None,
+                'range_method': 'conformal' if _r2.get('range90') else None,
+                'range_coverage': 0.90 if _r2.get('range90') else None,
+                'evidence_levels': [], 'fuzzy_correction': None,
+            }
+    except Exception as _vx:
+        try:
+            from logger_setup import get_logger
+            get_logger("core").warning("thesis_ML_v2 ใช้ไม่ได้ จะ fallback thesis_ML: %s", _vx)
+        except Exception:
+            print(f"[core] thesis_ML_v2 fallback: {_vx}")
+
+    # 🥈 thesis_ML: fallback ชั้นสอง (และยังทำนายเงียบใน shadow เพื่อเทียบต่อเนื่อง)
     try:
         import or_time_model as _otm
         _det = _otm.predict_detail({

@@ -978,7 +978,7 @@ def _board_fragment():
             complete_override(cases[idx], cases[idx].get('actual_duration_min'))
         except Exception as _ex:
             print(f"[override_log] complete_override ล้มเหลว: {_ex}")
-        # 🕶️ shadow: model_v2 (13 features) ทำนายเทียบเงียบ ๆ — ไม่แสดงบนบอร์ด
+        # 🕶️ shadow: thesis_ML_v2 (13 features) ทำนายเทียบเงียบ ๆ — ไม่แสดงบนบอร์ด
         #    ไม่กระทบ flow (fail-safe ในตัว) · เคส demo ถูกข้ามใน log_shadow เอง
         try:
             from shadow_v2 import log_shadow

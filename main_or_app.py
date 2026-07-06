@@ -180,10 +180,31 @@ if not st.session_state.get('_room_settings_loaded'):
 # ============================================================================
 
 def render_system_status():
-    """🤖 กล่องสถานะโมเดล AI (thesis_ML) — อ่านจาก artifact จริง · เอาแค่กล่องนี้พอ"""
+    """🤖 กล่องสถานะโมเดล AI — ตัวหลัก thesis_ML_v2 (13 features) · fallback thesis_ML
+    (โปรโมต v2 ขึ้นบอร์ด 7 ก.ค. 2026 ตามคำสั่งมุคกี้ · อ่านจาก artifact จริง)"""
     try:
         import json as _json
         from pathlib import Path as _Path
+        _v2meta_p = _Path(__file__).resolve().parent / 'models' / 'thesis_ML_v2' / 'meta.json'
+        _v2pkl_ok = (_Path(__file__).resolve().parent / 'models' / 'thesis_ML_v2'
+                     / 'model.pkl').exists()
+        if _v2pkl_ok and _v2meta_p.exists():
+            _m2 = _json.loads(_v2meta_p.read_text(encoding='utf-8'))
+            _mt = _m2.get('metrics_test67') or {}
+            st.markdown(
+                f'<div style="background:#e8f5e9;padding:8px;border-radius:8px;text-align:center;">'
+                f'<p style="margin:0;font-size:11px;color:#2e7d32;">'
+                f'🤖 <b>AI Model: thesis_ML_v2</b> — โมเดลวิทยานิพนธ์ 13 features '
+                f'(ตัวที่ทำนายบนบอร์ด · เริ่ม 7 ก.ค. 2569)<br>'
+                f'General XGBoost + Target Encoding · เทรน {_m2.get("n_train", "—"):,} เคส '
+                f'(พ.ศ. 2564–2566)<br>'
+                f'MAE {_mt.get("MAE", "—")} นาที · R² {_mt.get("R2", "—")} · '
+                f'±30 นาที {_mt.get("within30min_pct", "—")}% (ทดสอบปี 2567)<br>'
+                f'ช่วงทำนาย 90%: split conformal · fallback: thesis_ML → ค่ากลาง DB'
+                f'</p></div>',
+                unsafe_allow_html=True,
+            )
+            return
         _hdir = _Path(__file__).resolve().parent / 'models' / 'thesis_ML'
         _honest_ok = ((_hdir / 'hier_room_use.json').exists()
                       and (_hdir / 'resid_room_use.pkl').exists())
@@ -578,7 +599,7 @@ def main():
         st.markdown(
             '<div class="or-chips" style="margin-top:6px;">'
             '<span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>'
-            '<span class="or-chip">🤖 AI: thesis_ML</span>'
+            '<span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>'
             '<span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>'
             f'<span class="or-chip">📅 ปรับล่าสุด {_now_hdr}</span>'
             '</div>',

@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-shadow_v2.py — 🕶️ Shadow mode: โมเดลวิทยานิพนธ์ 13 features (model_v2) ทำนายเทียบเงียบ ๆ
+shadow_v2.py — 🕶️ Shadow mode: โมเดลวิทยานิพนธ์ 13 features (thesis_ML_v2) ทำนายเทียบเงียบ ๆ
 ════════════════════════════════════════════════════════════════════════════
 บอร์ดยังแสดง thesis_ML ตามเดิมทุกอย่าง — v2 แค่ทำนาย "คู่ขนาน" แล้วบันทึกลงตาราง
 shadow_v2_log ตอนกด "ผ่าเสร็จ" (จังหวะที่รู้เวลาจริงแล้ว) → ได้ตารางเทียบ
-head-to-head บนเคสจริง: thesis_ML vs model_v2 vs พยาบาล override vs เวลาจริง
+head-to-head บนเคสจริง: thesis_ML vs thesis_ML_v2 vs พยาบาล override vs เวลาจริง
 
-✅ ไม่ติด ethics lock: model_v2 เทรนด้วยข้อมูล พ.ศ. 2564-2567 (ethics-approved)
+✅ ไม่ติด ethics lock: thesis_ML_v2 เทรนด้วยข้อมูล พ.ศ. 2564-2567 (ethics-approved)
    เท่านั้น — shadow คือ "การทำนาย" (prospective validation) ไม่ใช่การเทรน
 🔒 PDPA: surgeon ถูก mask เป็น SURG_xxx ก่อนลง log (ชุดเดียวกับ override_log)
-🛡️ Fail-safe ทุกชั้น: ไม่มีโฟลเดอร์ models/model_v2 / โหลดพัง / DB พัง
+🛡️ Fail-safe ทุกชั้น: ไม่มีโฟลเดอร์ models/thesis_ML_v2 / โหลดพัง / DB พัง
    → ข้ามเงียบ ๆ ไม่กระทบบอร์ด · เคส demo ไม่บันทึก
 
 ดูผลเทียบ (SQL):
@@ -22,7 +22,7 @@ import os
 import sys
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
-_V2_DIR = os.path.join(_DIR, 'models', 'model_v2')
+_V2_DIR = os.path.join(_DIR, 'models', 'thesis_ML_v2')
 
 _mv2 = None            # โหลดครั้งเดียวต่อ process (โมเดล ~0.4MB — เบา)
 _load_failed = False
@@ -38,9 +38,9 @@ def _get_model():
             raise FileNotFoundError(f"ไม่พบ {_V2_DIR}")
         if _V2_DIR not in sys.path:
             sys.path.insert(0, _V2_DIR)
-        from predictor import ModelV2   # models/model_v2/predictor.py
+        from predictor import ModelV2   # models/thesis_ML_v2/predictor.py
         _mv2 = ModelV2(_V2_DIR)
-        print("[shadow_v2] โหลด model_v2 สำเร็จ — เริ่ม shadow logging")
+        print("[shadow_v2] โหลด thesis_ML_v2 สำเร็จ — เริ่ม shadow logging")
     except Exception as ex:
         _load_failed = True
         print(f"[shadow_v2] โหลดไม่ได้ (ปิด shadow ไว้ · บอร์ดทำงานปกติ): {ex}")
@@ -70,21 +70,38 @@ def _ensure_table(conn):
 
 
 def log_shadow(case: dict, actual_min=None) -> bool:
-    """เรียกจากปุ่ม 'ผ่าเสร็จ' — ทำนายด้วย model_v2 แล้วบันทึกเทียบ (เงียบเมื่อพัง)"""
+    """เรียกจากปุ่ม 'ผ่าเสร็จ' — ทำนายด้วย thesis_ML_v2 แล้วบันทึกเทียบ (เงียบเมื่อพัง)"""
     try:
         if not case or case.get('_demo'):
             return False
+        # 🔄 บทบาทสลับ 7 ก.ค. 2026: บอร์ดโชว์ thesis_ML_v2 แล้ว →
+        #    ai_predicted_min จากบอร์ด = v2 · ชั้น shadow เรียก thesis_ML สดมาเทียบ
+        ai0 = case.get('ai_predicted_min') or case.get('predicted_min')   # = v2 (บนบอร์ด)
+        _thesis_pred = None
+        try:
+            import or_time_model as _otm
+            _thesis_pred = int(_otm.predict_detail({
+                'procedure_name': case.get('procedure'),
+                'surgeon_name': case.get('surgeon'),
+                'division': case.get('division'),
+                'orroom': case.get('or_room_assigned') or case.get('room') or 11,
+                'age': case.get('age'), 'planned_hour': 9,
+            }, 'room_use')['predicted_min'])
+        except Exception as _tx:
+            print(f"[shadow_v2] thesis_ML เงียบไม่ได้ (ข้ามช่องนั้น): {_tx}")
         mv2 = _get_model()
-        if mv2 is None:
-            return False
-        r = mv2.predict_case({
-            'procedure': case.get('procedure'),
-            'diagnosis': case.get('diagnosis'),
-            'surgeon': case.get('surgeon'),      # predictor map ชื่อ→SURG_xxx เอง
-            'division': case.get('division'),
-            'age': case.get('age'),
-            'ward': case.get('ward'),            # มี ward = ผู้ป่วยใน
-        })
+        _r90, _conf2, _pn2 = None, None, None
+        if mv2 is not None:
+            r = mv2.predict_case({
+                'procedure': case.get('procedure'),
+                'diagnosis': case.get('diagnosis'),
+                'surgeon': case.get('surgeon'),
+                'division': case.get('division'),
+                'age': case.get('age'),
+                'ward': case.get('ward'),
+            })
+            _r90 = r.get('range90')
+            _conf2, _pn2 = r.get('confidence'), r.get('proc_n')
         from main_or_db import get_conn, _mask_staff_for_log, _now
         conn = get_conn()
         try:        # 🔌 finally — exception ห้ามกิน connection จาก pool
@@ -94,8 +111,7 @@ def log_shadow(case: dict, actual_min=None) -> bool:
                                  or case.get('room') or 0)) or None
             except (TypeError, ValueError):
                 room = None
-            ai0 = case.get('ai_predicted_min') or case.get('predicted_min')
-            lo, hi = (r.get('range90') or (None, None))
+            lo, hi = (_r90 or (None, None))
             conn.execute(
                 "INSERT INTO shadow_v2_log (logged_at, case_ref, procedure_name, "
                 "surgeon_code, division, room_no, pred_thesis_ml, "
@@ -106,10 +122,10 @@ def log_shadow(case: dict, actual_min=None) -> bool:
                  str(case.get('procedure') or ''),
                  _mask_staff_for_log(case.get('surgeon')),
                  str(case.get('division') or ''), room,
-                 int(ai0) if ai0 else None,
+                 _thesis_pred,                       # thesis_ML (ทำนายเงียบ)
                  case.get('user_override_min'),
-                 int(r.get('predicted_min') or 0) or None,
-                 lo, hi, r.get('confidence'), r.get('proc_n'),
+                 int(ai0) if ai0 else None,          # v2 = ค่าที่บอร์ดใช้จริง
+                 lo, hi, _conf2, _pn2,
                  int(actual_min) if actual_min else None))
             conn.commit()
         finally:

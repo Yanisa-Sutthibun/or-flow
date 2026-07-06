@@ -66,7 +66,7 @@ class ModelV2:
         for pth in (staff_map,
                     os.path.join(art_dir, 'staff_mapping.csv'),
                     os.path.join(art_dir, '..', '..', 'staff_mapping.csv'),
-                    os.path.join(art_dir, '..', 'staff_mapping_ADD_model_v2.csv')):
+                    os.path.join(art_dir, '..', 'staff_mapping_ADD_thesis_ML_v2.csv')):
             if pth and os.path.exists(pth):
                 try:
                     df = pd.read_csv(pth, encoding='utf-8-sig')
@@ -215,7 +215,7 @@ class ModelV2:
             'predicted_min': int(round(pred)),
             'range90': (int(max(5, round(pred - q90))), int(round(pred + q90))),
             'confidence': confidence, 'proc_n': int(proc_n),
-            'model_version': 'model_v2',
+            'model_version': 'thesis_ML_v2',
             'details': {'procedure_canon': proc, 'proc_group': group_c,
                         'สาขา': spec, 'te_hit': te_hit, 'surgeon_known': surg_known,
                         'room_known': room_known, 'q90': round(float(q90), 1)},

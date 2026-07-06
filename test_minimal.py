@@ -51,7 +51,7 @@ for f in [
     "models/thesis_ML/hier_room_use.json",
     "models/thesis_ML/resid_room_use.pkl",
     "models/thesis_ML/conformal.json",
-    "models/model_v2/model.pkl",
+    "models/thesis_ML_v2/model.pkl",
     "main_or_core.py",
 ]:
     if os.path.exists(f):
@@ -60,21 +60,21 @@ for f in [
     else:
         st.error(f"❌ ไม่พบ: {f}")
 
-# Test 3: shadow model_v2 (โหลด + ทำนาย 1 เคส)
-st.subheader("Test 3: Shadow model_v2")
+# Test 3: shadow thesis_ML_v2 (โหลด + ทำนาย 1 เคส)
+st.subheader("Test 3: Shadow thesis_ML_v2")
 try:
     import sys as _sys
     _sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                     'models', 'model_v2'))
+                                     'models', 'thesis_ML_v2'))
     from predictor import ModelV2
     _mv2 = ModelV2()
     r2 = _mv2.predict_case({'procedure': 'EGD + Colonoscopy',
                             'surgeon': 'SURG_002',  # 🔒 รหัส ไม่ใช้ชื่อจริง
                             'division': '75', 'age': 68})
-    st.write(f"✅ model_v2 ทำนาย {r2['predicted_min']} นาที · "
+    st.write(f"✅ thesis_ML_v2 ทำนาย {r2['predicted_min']} นาที · "
              f"ช่วง 90%={r2['range90']} · มั่นใจ={r2['confidence']}")
 except Exception as e:
-    st.error(f"❌ model_v2 error: {e}")
+    st.error(f"❌ thesis_ML_v2 error: {e}")
     import traceback
     st.code(traceback.format_exc())
 
