@@ -17,8 +17,10 @@ or_scheduler.py — 🗓️ ผู้ช่วยจัดคิวผ่าต�
 การเชื่อมกับบอร์ด (ตารางผ่าตัดวันนี้):
   - อ่านเคสสดจาก st.session_state.patient_cases ทุกครั้ง → บอร์ดเปลี่ยน = คิวคำนวณใหม่
   - จัดเฉพาะเคส "ยังไม่มา" · เคสที่เข้า flow แล้ว/มีคิวแท้จริง (ororder ไม่ซ้ำ) = ล็อก 🔒
-  - "ส่งแผนเข้าบอร์ด" เขียน ororder + เวลาเริ่มตามแผนกลับเข้าบอร์ด (เก็บเวลานัดเดิมไว้ใน
-    orig_sched) → หน้างานแก้ manual ต่อได้ตามปกติ (✏️/ปุ่ม) — แผนเป็นคำแนะนำ ไม่ใช่คำสั่ง
+  - UI v3 (14 ก.ค. 2026 — มุคกี้สั่งลดความซับซ้อน): ปุ่มเดียว + 2 ตาราง
+    ① ใช้จริง (ห้องเดิม·คิวล็อก) · ② AI จัดอิสระ (ย้ายคิว/ห้องได้ — ดูเปรียบเทียบ)
+    ไม่มีปุ่มส่งเข้าบอร์ด = หน้านี้เป็นคำแนะนำอ่านอย่างเดียว · ไม่โชว์เวลานาฬิกา
+    (first case on time ยังทำไม่ได้) — โชว์เฉพาะลำดับคิว + เวลาคาดใช้ต่อเคส
 
 ช่วงกันเสี่ยง: เคสบนบอร์ดมีช่วง 90% (conformal) — ประมาณขอบบน P80 ด้วย
 hi80 ≈ p50 + 0.60×(hi90 − p50) (สัดส่วน q80/q90 ของ thesis_ML = 62.1/103.2)
@@ -225,70 +227,99 @@ def build_ideal(cases_by_room, rooms_enabled, tov_map, risk: str):
     return {'rooms': rooms_entries, 'metrics': plan_metrics(rooms_entries)}
 
 
-# ════════════════════════════════ UI ════════════════════════════════
+# ═════════════════════ UI (v3 — 14 ก.ค. 2026) ═════════════════════
+# มุคกี้สั่งลดความซับซ้อน: ปุ่มเดียว + 2 ตาราง — Gantt / ตารางเทียบ 4 กลยุทธ์ /
+# radio เผื่อเวลา / sensitivity / ปุ่มส่งเข้าบอร์ด ถอดออกแล้ว (โค้ดเดิมดู git history)
+# กันเสี่ยงล็อกที่ P80 (ค่าแนะนำเดิม) · start_sensitivity คงไว้เผื่อกลับมาใช้
 
-def _gantt_html(rooms_entries, room_label_fn, locked_ids):
-    """Gantt HTML ต่อห้อง (สเกล 08:00→16:00) — แบบ wireframe ที่ approve แล้ว"""
-    span = DAY_END_MIN - WORK_START_MIN
+_RISK_DEFAULT = 'p80'
 
-    def pct(m):
-        return max(0.0, min(100.0, (m - WORK_START_MIN) / span * 100))
+_TD = 'padding:7px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle;'
 
-    dl = pct(DEADLINE_MIN)
-    rows = []
+
+def _dur_txt(mins):
+    m = int(round(float(mins)))
+    h, mm = divmod(m, 60)
+    if h and mm:
+        return f"~{h} ชม. {mm} น."
+    return f"~{h} ชม." if h else f"~{mm} น."
+
+
+def _sect_html(no, title, tag, n_handover):
+    chip = ('<span style="color:#2e7d32;font-weight:700;">✅ คาดรับเวร 0 เคส</span>'
+            if n_handover == 0 else
+            f'<span style="color:#c0392b;font-weight:700;">⚠️ คาดรับเวร '
+            f'{n_handover} เคส</span>')
+    return (f'<div style="display:flex;justify-content:space-between;'
+            f'align-items:baseline;margin:18px 0 2px;">'
+            f'<span style="font-size:16px;font-weight:700;color:#0d47a1;">'
+            f'{no} {title} <span style="font-size:11.5px;color:#64748b;'
+            f'font-weight:400;">— {tag}</span></span>'
+            f'<span style="font-size:13.5px;">{chip}</span></div>')
+
+
+def _queue_table_html(rooms_entries, room_label_fn, locked_ids,
+                      notes=None, default_note='AI จัด'):
+    """ตารางคิว group ตามห้อง: คิวที่ | หัตถการ·แพทย์ | เวลาคาดใช้ | หมายเหตุ"""
+    notes = notes or {}
+    th = ('<th style="background:#eef4fb;color:#0d47a1;font-size:12.5px;'
+          'text-align:left;padding:7px 10px;border-bottom:2px solid #d7e3f4;'
+          '{w}">{t}</th>')
+    rows = ['<table style="width:100%;border-collapse:collapse;'
+            'font-size:13.5px;margin:4px 0 10px;">',
+            '<tr>' + th.format(w='width:52px;', t='คิวที่')
+            + th.format(w='', t='หัตถการ · แพทย์')
+            + th.format(w='width:110px;', t='เวลาคาดใช้')
+            + th.format(w='width:150px;', t='หมายเหตุ') + '</tr>']
     for rm in sorted(rooms_entries):
         es = rooms_entries[rm]
         if not es:
             continue
-        bars = []
-        for e in es:
+        rows.append(f'<tr><td colspan="4" style="{_TD}background:#f6f9fc;'
+                    f'font-weight:700;color:#334155;font-size:13px;">'
+                    f'🏥 {room_label_fn(rm)} ({len(es)} เคส)</td></tr>')
+        for seq, e in enumerate(es, start=1):
             c = e['case']
-            left, w = pct(e['start']), max(pct(e['end50']) - pct(e['start']), 1.5)
-            whk_w = max(pct(e['end_hi']) - pct(e['end50']), 0)
-            lock = '🔒 ' if str(c.get('id')) in locked_ids else ''
-            bg, bd, fg = ('#F7C1C1', '#E24B4A', '#501313') if e['handover'] \
-                else ('#B5D4F4', '#85B7EB', '#042C53')
-            label = f"{lock}{str(c.get('procedure') or '')[:18]} · {int(_p50(c))}น."
-            tip = (f"{c.get('name','')} | เริ่ม {_fmt(e['start'])} | "
-                   f"คาดเสร็จ {_fmt(e['end50'])} (ขอบบน {_fmt(e['end_hi'])})"
-                   + (' | ⚠️ คาดรับเวร' if e['handover'] else ''))
-            bars.append(
-                f'<div title="{tip}" style="position:absolute;left:{left:.2f}%;'
-                f'width:{w:.2f}%;top:3px;height:24px;background:{bg};'
-                f'border:1px solid {bd};color:{fg};border-radius:4px;'
-                f'font-size:10.5px;display:flex;align-items:center;'
-                f'justify-content:center;white-space:nowrap;overflow:hidden;">'
-                f'{label}</div>')
-            if whk_w > 0.3:
-                bars.append(
-                    f'<div style="position:absolute;left:{pct(e["end50"]):.2f}%;'
-                    f'width:{whk_w:.2f}%;top:14px;height:2px;'
-                    f'border-top:2px dashed #BA7517;"></div>')
-        rows.append(
-            f'<div style="display:flex;align-items:center;gap:8px;margin:5px 0;">'
-            f'<span style="min-width:88px;font-size:12.5px;font-weight:600;'
-            f'color:#1565c0;">{room_label_fn(rm)}</span>'
-            f'<div style="position:relative;flex:1;height:30px;background:#fff;'
-            f'border:1px solid #eef2f6;border-radius:6px;">'
-            f'<div style="position:absolute;left:{dl:.2f}%;top:0;bottom:0;'
-            f'width:2px;background:#E24B4A;"></div>{"".join(bars)}</div></div>')
-    axis = ('<div style="position:relative;margin:0 0 2px 96px;height:14px;'
-            'font-size:10.5px;color:#94a3b8;">'
-            + ''.join(f'<span style="position:absolute;left:{pct(h*60):.2f}%">'
-                      f'{h:02d}:00</span>' for h in (8, 10, 12, 14))
-            + f'<span style="position:absolute;left:{dl:.2f}%;color:#A32D2D;'
-              f'font-weight:600">15:30</span></div>')
-    return axis + ''.join(rows)
+            cid = str(c.get('id'))
+            locked = cid in locked_ids
+            q = ('<span style="display:inline-block;min-width:22px;height:22px;'
+                 'border-radius:50%;background:{bg};color:#fff;text-align:center;'
+                 'line-height:22px;font-size:12px;font-weight:700;">{s}</span>'
+                 ).format(bg='#607d8b' if locked else '#1565c0',
+                          s='🔒' if locked else seq)
+            if e['handover']:
+                note = ('<span style="color:#c0392b;font-weight:700;'
+                        'font-size:12.5px;">⚠️ เสี่ยงรับเวร</span>')
+            elif locked:
+                note = '<span style="color:#94a3b8;font-size:12.5px;">คิวเดิม</span>'
+            elif cid in notes:
+                note = ('<span style="background:#ede7f6;color:#5e35b1;'
+                        'border-radius:999px;padding:1px 9px;font-size:11.5px;'
+                        f'font-weight:600;">{notes[cid]}</span>')
+            else:
+                note = (f'<span style="color:#94a3b8;font-size:12.5px;">'
+                        f'{default_note}</span>')
+            bg = 'background:#fff5f5;' if e['handover'] else ''
+            proc = str(c.get('procedure') or '-')[:40]
+            surg = str(c.get('surgeon') or '')[:30]
+            rows.append(
+                f'<tr><td style="{_TD}{bg}">{q}</td>'
+                f'<td style="{_TD}{bg}">{proc}<br>'
+                f'<span style="color:#64748b;font-size:12px;">{surg}</span></td>'
+                f'<td style="{_TD}{bg}">{_dur_txt(_p50(c))}</td>'
+                f'<td style="{_TD}{bg}">{note}</td></tr>')
+    rows.append('</table>')
+    return ''.join(rows)
 
 
 def page_scheduler():
-    from main_or_pages import (_enabled_room_options, _mark_board_dirty,
-                               _save_board_snapshot)
+    from main_or_pages import _enabled_room_options
     from room_config import room_label
     from tracking_board import _turnover_map
 
-    st.caption("🗓️ จัดคิวเคสที่ยังไม่มีลำดับ — AI ลอง 4 กลยุทธ์แล้วเลือกตามกติกา "
-               "(อ่านจากบอร์ดสด: บอร์ดเปลี่ยน → คิวคำนวณใหม่อัตโนมัติ)")
+    st.caption("🗓️ เรียงลำดับเคสวันนี้ให้มีเคสค้างส่งเวรน้อยที่สุด — "
+               "คิวเดิม (ororder) ล็อก 🔒 ไม่ขยับ · หน้านี้เป็นคำแนะนำ "
+               "ไม่เขียนอะไรกลับเข้าบอร์ด")
 
     cases = st.session_state.get('patient_cases') or []
     room_opts = _enabled_room_options()          # 🔒 กฎ 3: เฉพาะห้องที่เปิดใช้
@@ -312,11 +343,9 @@ def page_scheduler():
     n_locked = sum(len(split_locked(rcs)[0]) for rcs in cases_by_room.values())
     n_free = len(schedulable) - n_locked
 
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("เคสจัดคิวได้", len(schedulable))
-    m2.metric("มีคิวเดิม 🔒", n_locked)
-    m3.metric("AI จัดให้", n_free)
-    m4.metric("เส้นตายออกห้อง", "15:30")
+    st.markdown(f"วันนี้มีเคสรอจัดคิว **{len(schedulable)} เคส** "
+                f"ใน {len(cases_by_room)} ห้อง "
+                f"(มีคิวเดิมแล้ว 🔒 {n_locked} เคส — AI จะจัดให้ {n_free} เคส)")
     if in_flow:
         st.caption(f"ℹ️ อีก {in_flow} เคสเข้ากระบวนการแล้ว (รอผ่า/กำลังผ่า/เสร็จ) — ไม่ถูกจัด")
     if no_room:
@@ -324,156 +353,72 @@ def page_scheduler():
                    f"(ไปกำหนดห้องผ่าน ✏️ บนบอร์ดก่อน): "
                    + ' · '.join(str(c.get('procedure', ''))[:20] for c in no_room[:5]))
 
-    risk = st.radio(
-        "เผื่อเวลาแค่ไหนดี? (เคสจริงมักใช้เวลางอกกว่าที่คาด — ยิ่งเผื่อมาก "
-        "ระบบยิ่งระวังไม่ให้มีเคสออกห้องหลัง 15:30)",
-        [r[1] for r in RISK_LEVELS], horizontal=True,
-        key='schd_risk', label_visibility='visible',
-        help="สำหรับอ้างอิงเชิงวิชาการ: เผื่อพอดี = ขอบบน ~P80 · "
-             "เผื่อมาก = ขอบบนช่วงความมั่นใจ 90% (conformal) · "
-             "ไม่เผื่อ = ค่ากลาง P50 — ระดับที่เลือกใช้เฉพาะการตัดสิน "
-             "'เคสเสี่ยงรับเวร' ไม่ได้ทำให้ตารางหลวมขึ้น")
-    risk_key = next(k for k, lbl in RISK_LEVELS if lbl == risk)
+    if st.button("🪄 จัดคิว", type="primary", use_container_width=True,
+                 key='schd_run'):
+        st.session_state['schd_ran'] = True
+    if not st.session_state.get('schd_ran'):
+        st.caption("กดปุ่มเพื่อให้ AI เรียงคิว — กดซ้ำได้ ไม่กระทบบอร์ด")
+        return
 
     tov_map = _turnover_map()
-    results, best = build_primary(cases_by_room, tov_map, risk_key)
-
-    # ---- ตารางเทียบกลยุทธ์ ----
-    st.markdown('<div style="font-size:14px;font-weight:700;color:#334155;'
-                'margin:10px 0 4px;">AI ลองจัด 4 แบบ — กติกา: ① รับเวรน้อยสุด '
-                '→ ② ใช้ห้องคุ้มสุด → ③ เลิกเร็วสุด</div>', unsafe_allow_html=True)
-    _rows_html = []
-    for sid, slabel in STRATEGIES:
-        m = results[sid]['metrics']
-        is_best = (sid == best)
-        chip = ('<span style="background:#3B6D11;color:#fff;border-radius:999px;'
-                'padding:1px 10px;font-size:11.5px;">✓ เลือกแผนนี้</span>' if is_best
-                else ('<span style="color:#94a3b8;font-size:11.5px;">ผ่าน</span>'
-                      if m['handover'] == 0 else
-                      '<span style="color:#c0392b;font-size:11.5px;">ตกกติกา ①</span>'))
-        bg = 'background:#EAF3DE;' if is_best else ''
-        hv = (f'<span style="color:#c0392b;">{m["handover"]} เคส</span>'
-              if m['handover'] else '0 เคส')
-        _rows_html.append(
-            f'<tr style="{bg}"><td style="padding:5px 8px;">{sid} · {slabel}</td>'
-            f'<td style="padding:5px 8px;">{hv}</td>'
-            f'<td style="padding:5px 8px;">{_fmt(m["latest_end"])}</td>'
-            f'<td style="padding:5px 8px;">{m["util"]:.0f}%</td>'
-            f'<td style="padding:5px 8px;">{chip}</td></tr>')
-    st.markdown(
-        '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
-        '<tr style="color:#64748b;font-size:12px;border-bottom:1px solid #eef2f6;">'
-        '<th style="text-align:left;padding:5px 8px;">กลยุทธ์เรียงเคสอิสระ</th>'
-        '<th style="text-align:left;padding:5px 8px;">เคสรับเวร</th>'
-        '<th style="text-align:left;padding:5px 8px;">เลิกช้าสุด</th>'
-        '<th style="text-align:left;padding:5px 8px;">ใช้ห้อง</th>'
-        '<th style="text-align:left;padding:5px 8px;">ผล</th></tr>'
-        + ''.join(_rows_html) + '</table>', unsafe_allow_html=True)
-
+    results, best = build_primary(cases_by_room, tov_map, _RISK_DEFAULT)
     best_plan = results[best]
-    if best_plan['metrics']['handover'] > 0:
-        _over = [e for es in best_plan['rooms'].values() for e in es
-                 if e['handover']]
-        st.error(f"⚠️ เคสล้นวัน: แผนที่ดีที่สุดยังคาดรับเวร "
-                 f"{best_plan['metrics']['handover']} เคส — เคสที่ควรพิจารณาเลื่อน: "
-                 + ' · '.join(f"{str(e['case'].get('procedure',''))[:25]} "
-                              f"(คาดออก {_fmt(e['end_hi'])})" for e in _over)
-                 + " — การเลื่อนเป็นการตัดสินใจของหัวหน้าเวร")
-
-    # ---- Gantt แผนหลัก ----
-    st.markdown(f'<div style="font-size:14px;font-weight:700;color:#334155;'
-                f'margin:14px 0 4px;">แผนที่แนะนำ (แบบ {best}) — '
-                f'🔒 คิวเดิม · เส้นประส้ม = ขอบบนช่วงกันเสี่ยง · '
-                f'เส้นแดง = เส้นตาย 15:30</div>', unsafe_allow_html=True)
     locked_ids = {str(c.get('id'))
                   for rcs in cases_by_room.values()
                   for c in split_locked(rcs)[0]}
-    st.markdown(_gantt_html(best_plan['rooms'], room_label, locked_ids),
+
+    # ── ① ตารางใช้จริง — ห้องเดิม · คิวเดิมล็อก ──
+    st.markdown(_sect_html('①', 'ตารางใช้จริง', 'ห้องเดิม · คิวเดิมล็อก 🔒',
+                           best_plan['metrics']['handover']),
+                unsafe_allow_html=True)
+    st.markdown(_queue_table_html(best_plan['rooms'], room_label, locked_ids),
+                unsafe_allow_html=True)
+    if best_plan['metrics']['handover']:
+        st.caption("แถวแดง = เผื่อเวลาแล้วยังคาดออกห้องหลัง 15:30 "
+                   "แม้จัดแบบดีที่สุด — การพิจารณาเลื่อนเป็นการตัดสินใจของหัวหน้าเวร")
+
+    # ── ② แบบ AI จัดอิสระ — ย้ายคิว/ย้ายห้องได้ (ดูอย่างเดียว) ──
+    ideal = build_ideal(cases_by_room, enabled_rooms, tov_map, _RISK_DEFAULT)
+    st.markdown(_sect_html('②', 'แบบ AI จัดอิสระ',
+                           'ย้ายคิว/ย้ายห้องได้ · ไว้ดูเปรียบเทียบ',
+                           ideal['metrics']['handover']),
+                unsafe_allow_html=True)
+    st.markdown('<div style="background:#f3e5f5;border:1px solid #ce93d8;'
+                'color:#6a1b9a;border-radius:8px;padding:8px 13px;'
+                'font-size:12.5px;margin:4px 0;">🔭 ดูอย่างเดียว — '
+                'หน้างานจริงไม่ย้ายเคสข้ามห้อง (ทีมห้องอื่นไม่พร้อมรับเคสต่างสาขา) '
+                'ตารางนี้ตอบคำถามเดียว: ถ้าย้ายได้อิสระ จะลดเคสรับเวรได้ไหม</div>',
                 unsafe_allow_html=True)
 
-    # ---- ⏰ ความไวต่อเวลาเริ่ม ----
-    with st.expander("⏰ ถ้าห้องเริ่มช้า จะรับเวรกี่เคส? (ความไวต่อเวลาเริ่มจริง)",
-                     expanded=True):
-        st.caption("ตารางผ่าตัดคำนวณจากสมมติเริ่ม 08:00 — แต่หน้างานอาจเริ่มช้า "
-                   "ตารางนี้บอกว่าแต่ละห้อง 'ทนได้ถึงกี่โมง'")
-        for rm in sorted(best_plan['rooms']):
-            es = best_plan['rooms'][rm]
-            if not es:
+    # ป้ายหมายเหตุตาราง ②: ย้ายห้อง / สลับคิวขึ้นก่อน (เทียบกับตาราง ①)
+    prim_pos = {str(e['case'].get('id')): (rm, i)
+                for rm, es in best_plan['rooms'].items()
+                for i, e in enumerate(es)}
+    notes = {}
+    for rm, es in ideal['rooms'].items():
+        for i, e in enumerate(es):
+            cid = str(e['case'].get('id'))
+            if cid in locked_ids or cid not in prim_pos:
                 continue
-            tov = float((tov_map or {}).get(rm)
-                        or (tov_map or {}).get('_global') or 15)
-            steps = start_sensitivity(es, tov, risk_key)
-            parts = []
-            for n_over, latest in steps[:3]:
-                if latest is None:
-                    break
-                if latest < WORK_START_MIN:
-                    parts.append(f"เริ่ม 08:00 ก็คาดรับเวร ≥{n_over} เคส")
-                    break
-                parts.append(f"เริ่มก่อน {_fmt(latest)} → รับเวร ≤{n_over} เคส")
-            st.markdown(f"**{room_label(rm)}** — " + ' · '.join(parts),
-                        unsafe_allow_html=True)
+            rm0, i0 = prim_pos[cid]
+            if rm != rm0:
+                notes[cid] = f'ย้ายจาก {room_label(rm0)}'
+            elif i < i0:
+                notes[cid] = 'สลับคิวขึ้นก่อน'
+    st.markdown(_queue_table_html(ideal['rooms'], room_label, locked_ids,
+                                  notes=notes, default_note=''),
+                unsafe_allow_html=True)
 
-    # ---- 🔭 แผนอุดมคติ ----
-    with st.expander("🔭 แผนอุดมคติ (ideal — ย้ายข้ามห้องได้) · ดูเปรียบเทียบเท่านั้น",
-                     expanded=False):
-        ideal = build_ideal(cases_by_room, enabled_rooms, tov_map, risk_key)
-        im, pm = ideal['metrics'], best_plan['metrics']
-        st.caption("⚠️ ไม่ใช่แผนปฏิบัติ — หน้างานไม่ย้ายเคสข้ามห้อง (ทีมไม่พร้อมรับ"
-                   "เคสต่างสาขา) แสดงเพื่อวัดว่าข้อจำกัดนี้มีต้นทุนเท่าไร")
-        st.markdown(f"ถ้าย้ายข้ามห้องได้อิสระ: รับเวร {im['handover']} เคส "
-                    f"(แผนจริง {pm['handover']}) · เลิกช้าสุด {_fmt(im['latest_end'])} "
-                    f"(แผนจริง {_fmt(pm['latest_end'])}) · ใช้ห้อง {im['util']:.0f}% "
-                    f"(แผนจริง {pm['util']:.0f}%)")
-        st.markdown(_gantt_html(ideal['rooms'], room_label, locked_ids),
-                    unsafe_allow_html=True)
-
-    # ---- 💡 วิธีคิด ----
-    with st.expander("💡 วิธีคิดของ AI", expanded=False):
-        risk_note = {'p80': "ขอบบน ~P80 (p50 + 0.60×(hi90−p50) — สัดส่วน q80/q90 "
-                            "ของ thesis_ML = 62.1/103.2)",
-                     'p90': "ขอบบนช่วง 90% (conformal)",
-                     'p50': "ค่ากลาง P50 (ไม่เผื่อความไม่แน่นอน)"}[risk_key]
+    # ── 💡 วิธีคิด (expander เดียวที่เหลือ) ──
+    with st.expander("💡 AI คิดยังไง", expanded=False):
         st.markdown(
-            f"1. **ทำนายเวลา + ช่วงต่อเคส** — ใช้ค่าบนบอร์ด (thesis_ML หรือค่าที่พยาบาล ✏️ ทับ)\n"
-            f"2. **ล็อกเคสมีคิวเดิม {n_locked} เคส 🔒** — คิวที่ตกลงกันแล้วไม่ขยับ (อยู่หัวแถวตาม ororder)\n"
-            f"3. **เคสอิสระ {n_free} เคส ลองเรียง 4 กลยุทธ์** ภายในห้องเดิมเท่านั้น "
-            f"(กฎเหล็ก: ไม่ย้ายข้ามห้อง · ห้องปิดไม่จัด · ห้อง EM จัด elective ได้ปกติ)\n"
-            f"4. **ตัดสิน 'เคสรับเวร' จาก{risk_note}** — เคสที่ขอบบนเกิน 15:30 นับเป็นรับเวร\n"
-            f"5. **เลือกแผน {best}** — รับเวรน้อยสุด → ใช้ห้องคุ้มสุด → เลิกเร็วสุด · "
-            f"เคสช่วงกว้างถูกดันขึ้นเช้า เหลือกันชนท้ายวัน\n\n"
-            f"หมายเหตุ: ตาราง (Gantt) เดินด้วยค่ากลาง P50 + turnover รายห้องจากข้อมูลจริง — "
-            f"ช่วงกันเสี่ยงใช้เฉพาะการตัดสินรับเวร ไม่ได้ถ่างตารางให้หลวม")
-
-    # ---- 📤 ส่งแผนเข้าบอร์ด ----
-    st.markdown("---")
-    c_ok, c_btn = st.columns([3, 2])
-    _confirm = c_ok.checkbox(
-        f"ยืนยันส่งแผน {best} เข้า OR Board — อัปเดตลำดับ (ororder) + เวลาเริ่มตามแผน "
-        f"ของเคสอิสระ {n_free} เคส (คิวล็อก 🔒 ไม่ถูกแตะ · หน้างานแก้ต่อได้ตามปกติ)",
-        key='schd_confirm')
-    if c_btn.button("📤 ส่งแผนเข้า OR Board", type="primary",
-                    use_container_width=True, disabled=not _confirm,
-                    key='schd_apply'):
-        n_upd = 0
-        for rm, es in best_plan['rooms'].items():
-            for seq, e in enumerate(es, start=1):
-                c = e['case']
-                if str(c.get('id')) in locked_ids:
-                    continue
-                if 'orig_sched' not in c:      # เก็บเวลานัดเดิมจาก HIS ไว้อ้างอิง
-                    c['orig_sched'] = (c.get('sched_hour'), c.get('sched_min'))
-                c['ororder'] = seq
-                c['sched_hour'] = int(e['start'] // 60)
-                c['sched_min'] = int(e['start'] % 60)
-                c['is_tf'] = False
-                _mark_board_dirty(c)
-                n_upd += 1
-            for seq, e in enumerate(es, start=1):   # ororder ของคิวล็อกให้ต่อเนื่อง
-                if str(e['case'].get('id')) in locked_ids:
-                    e['case']['ororder'] = seq
-        if n_upd:
-            _save_board_snapshot(cases)
-            st.session_state['_board_dirty'] = False
-        st.success(f"✅ ส่งแผนแล้ว — อัปเดต {n_upd} เคส · ไปดูที่ 📋 ตารางผ่าตัด "
-                   f"(เวลาบนบอร์ด = เวลาเริ่มตามแผน · เวลานัดเดิมเก็บไว้ใน orig_sched)")
+            f"1. **เวลาคาดใช้ต่อเคส** = ค่าทำนายบนบอร์ด (AI หรือค่าที่พยาบาล ✏️ ทับ)\n"
+            f"2. **คิวเดิม {n_locked} เคส 🔒** อยู่หัวแถวตามลำดับที่ตกลงกัน — ไม่ขยับ\n"
+            f"3. **เคสอิสระ {n_free} เคส** AI ลองเรียงหลายแบบภายในห้องเดิม "
+            f"แล้วเลือกแบบที่เคสค้างส่งเวรน้อยที่สุด (รอบนี้: แบบ {best})\n"
+            f"4. **'เสี่ยงรับเวร'** = เคสที่เผื่อความไม่แน่นอนแล้ว (ระดับ ~P80) "
+            f"คาดออกห้องหลังเส้นตาย 15:30 — คิดจากเวลาสะสมของคิวหน้า + turnover รายห้อง\n"
+            f"5. **ตาราง ②** ให้ AI ย้ายคิว/ย้ายห้องได้อิสระ เพื่อดูว่ากฎ "
+            f"'ไม่ย้ายข้ามห้อง' มีต้นทุนกี่เคส — ไม่ใช่แผนปฏิบัติ\n\n"
+            f"กฎเหล็ก: ไม่ย้ายเคสข้ามห้องในแผนจริง · ห้องปิดไม่จัด · "
+            f"ห้อง EM รับ elective ได้ปกติ")
