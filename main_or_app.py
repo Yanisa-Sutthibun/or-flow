@@ -308,14 +308,9 @@ def page_room_settings():
         st.success("✅ บันทึกการตั้งค่าสำเร็จ! (บันทึกลง DB แล้ว)")
         st.rerun()
 
-    # ---------- 🛠️ เครื่องมือผู้ดูแล (ย้ายมาจากหน้าตารางผ่าตัด) ----------
-    st.markdown("---")
-    st.markdown("### 🛠️ เครื่องมือผู้ดูแล")
-    st.caption("อัปโหลดตารางผ่าตัด (CSV) + ล้างกระดานทดสอบ — ย้ายมารวมที่หน้าตั้งค่า "
-               "(ล็อก PIN เหมือนเดิม) · หน้าตารางผ่าตัดเหลือเฉพาะ ➕ เพิ่มเคส")
-    from main_or_pages import render_csv_upload, render_clear_board
-    render_csv_upload()
-    render_clear_board()
+    # 🛠️ เครื่องมือผู้ดูแล (อัปโหลด CSV + ล้างกระดาน) ย้ายกลับไปหน้า 📋 ตารางผ่าตัด
+    #    แล้ว (14 ก.ค. 2026 — render_csv_upload บนบอร์ด เหนือ ➕ เพิ่มเคส ·
+    #    🗑️ ล้างกระดาน = ตัวเลือกใน expander อัปโหลด)
 
     st.markdown("---")
     st.markdown("### 🤖 โมเดล AI + สถานะระบบ")
@@ -482,7 +477,7 @@ def parse_schedule_csv_to_cases(uploaded_file):
 
 # ============================================================================
 # (page_plan_schedule ถูกถอดออก 4 ก.ค. 2026 — ไม่ถูก route จากเมนูแล้ว
-#  งานอัปโหลด CSV ทำที่หน้า ⚙️ ตั้งค่า (render_csv_upload → parse_schedule_csv_to_cases)
+#  งานอัปโหลด CSV ทำที่หน้า 📋 ตารางผ่าตัด (render_csv_upload → parse_schedule_csv_to_cases)
 #  ต้องการคืน → ดู git history ก่อน commit "chore: ตัดโค้ดตาย")
 # ============================================================================
 

@@ -586,11 +586,12 @@ def _render_add_case_form(demo_active):
 
 
 def render_csv_upload():
-    """📤 อัปโหลดตารางผ่าตัด (CSV) — ล็อก PIN · ย้ายมาหน้า ⚙️ ตั้งค่า (เดิมอยู่บนบอร์ด)"""
+    """📤 อัปโหลดตารางผ่าตัด (CSV) — ล็อก PIN · อยู่บนหน้าตารางผ่าตัด เหนือ ➕ เพิ่มเคส
+    (ย้ายกลับจาก ⚙️ ตั้งค่า 14 ก.ค. 2026) · 🗑️ ล้างกระดานยุบเป็นตัวเลือกท้าย expander นี้"""
     _demo_active = bool(st.session_state.get('_or_demo'))
     with st.expander("📤 อัปโหลดตารางผ่าตัดวันนี้ (CSV) 🔒", expanded=False):
         if _demo_active:
-            st.caption("ℹ️ ปิดสวิตช์ 🎬 สาธิต ในหน้าตารางผ่าตัดก่อน เพื่ออัปโหลดตารางจริง")
+            st.caption("ℹ️ ปิดสวิตช์ 🎬 สาธิต ด้านบนก่อน เพื่ออัปโหลดตารางจริง")
         if not st.session_state.get('_upload_unlocked'):
             _pin_cfg = _get_admin_pin()
             if not _pin_cfg:
@@ -656,67 +657,58 @@ def render_csv_upload():
                     st.success(_msg)
                     st.rerun()
 
+            # ---- 🗑️ ล้างกระดานวันนี้ — ยุบมาเป็นตัวเลือกในนี้ (14 ก.ค. 2026) ----
+            #      ใช้ประตู PIN เดียวกับอัปโหลด (_upload_unlocked) ไม่ต้องปลดซ้ำ
+            st.markdown("---")
+            if st.checkbox("🗑️ ล้างกระดานวันนี้ (สำหรับลบเคสทดสอบ)",
+                           key="orb_clear_open",
+                           help="ลบเคสทั้งหมดของวันนี้ออกจากบอร์ด+บอร์ดกลาง (ทุกเครื่อง) "
+                                "— ใช้เคลียร์ข้อมูลทดสอบ ไม่กระทบสถิติย้อนหลัง"):
+                _render_clear_board_body()
 
-def render_clear_board():
-    """🗑️ ล้างกระดานวันนี้ (สำหรับลบเคสทดสอบ) — ย้ายมาหน้า ⚙️ ตั้งค่า (เดิมอยู่บนบอร์ด)"""
-    with st.expander("🗑️ ล้างกระดานวันนี้ (สำหรับลบเคสทดสอบ) 🔒", expanded=False):
-        if not st.session_state.get('_clear_unlocked'):
-            _pin_cfg = _get_admin_pin()
-            if not _pin_cfg:
-                st.caption("🔒 ปิดการล้างกระดานไว้ — ผู้ดูแลยังไม่ได้ตั้งรหัส PIN "
-                           "(เพิ่ม `admin_pin = \"...\"` ใน secrets แล้ว reboot)")
-            else:
-                st.caption("🔒 เฉพาะผู้ดูแล (Mukky) — ใส่รหัส PIN เพื่อปลดล็อกการล้างกระดาน")
-                _cp1, _cp2 = st.columns([3, 1])
-                _cpin = _cp1.text_input("PIN", type="password", key="clear_pin",
-                                        placeholder="กรอก PIN",
-                                        label_visibility="collapsed")
-                if _cp2.button("🔓 ปลดล็อก", key="clear_unlock", width='stretch'):
-                    if (_cpin or '').strip() == _pin_cfg:
-                        st.session_state['_clear_unlocked'] = True
-                        st.rerun()
-                    else:
-                        st.error("PIN ไม่ถูกต้อง")
-            return
-        st.caption("ลบเคสทั้งหมดของวันนี้ออกจากบอร์ด + บอร์ดกลาง (ทุกเครื่อง) — "
-                   "ใช้เคลียร์ข้อมูลทดสอบ · ไม่กระทบสถิติย้อนหลัง/ฐานข้อมูลเคสที่ import")
-        _ok_clear = st.checkbox("ยืนยันต้องการล้างกระดานวันนี้", key="orb_clear_ok")
-        if st.button("🗑️ ล้างกระดานวันนี้", type="secondary", width='stretch',
-                     disabled=not _ok_clear, key="orb_clear_btn"):
-            st.session_state.patient_cases = []
-            st.session_state['_or_demo'] = False
-            st.session_state['_board_dirty'] = False          # ล้างแล้ว ไม่มีอะไรต้องเซฟ
-            st.session_state['_board_dirty_ids'] = set()
-            st.session_state['_board_was_restored'] = False
-            _td = _now().date().isoformat()
-            # 🧹 ล้างข้ามเครื่อง: เขียน payload "ว่าง" version+1 แทนการลบ key —
-            #    ลบ key เฉยๆ เครื่องอื่นจะ fallback ไฟล์ local ตัวเอง แล้วเซฟเคสกลับมา
-            #    (เคสผีคืนชีพ) · payload ว่างทำให้ทุกเครื่อง pull แล้วเห็นกระดานว่างจริง
+
+def _render_clear_board_body():
+    """เนื้อใน 🗑️ ล้างกระดานวันนี้ — เรียกจากตัวเลือกใน render_csv_upload
+    (อยู่หลังประตู PIN ของอัปโหลดแล้ว จึงไม่มีประตูซ้ำ)"""
+    st.caption("ลบเคสทั้งหมดของวันนี้ออกจากบอร์ด + บอร์ดกลาง (ทุกเครื่อง) — "
+               "ใช้เคลียร์ข้อมูลทดสอบ · ไม่กระทบสถิติย้อนหลัง/ฐานข้อมูลเคสที่ import")
+    _ok_clear = st.checkbox("ยืนยันต้องการล้างกระดานวันนี้", key="orb_clear_ok")
+    if st.button("🗑️ ล้างกระดานวันนี้", type="secondary", width='stretch',
+                 disabled=not _ok_clear, key="orb_clear_btn"):
+        st.session_state.patient_cases = []
+        st.session_state['_or_demo'] = False
+        st.session_state['_board_dirty'] = False          # ล้างแล้ว ไม่มีอะไรต้องเซฟ
+        st.session_state['_board_dirty_ids'] = set()
+        st.session_state['_board_was_restored'] = False
+        _td = _now().date().isoformat()
+        # 🧹 ล้างข้ามเครื่อง: เขียน payload "ว่าง" version+1 แทนการลบ key —
+        #    ลบ key เฉยๆ เครื่องอื่นจะ fallback ไฟล์ local ตัวเอง แล้วเซฟเคสกลับมา
+        #    (เคสผีคืนชีพ) · payload ว่างทำให้ทุกเครื่อง pull แล้วเห็นกระดานว่างจริง
+        try:
+            from main_or_db import load_board_state, save_board_state
+            _ver = 0
             try:
-                from main_or_db import load_board_state, save_board_state
-                _ver = 0
-                try:
-                    _s0 = load_board_state(_td)
-                    if _s0:
-                        _ver = int(json.loads(_s0).get('version', 0) or 0)
-                except Exception:
-                    pass
-                _empty = json.dumps(
-                    {'date': _td, 'pii_kept': False, 'version': _ver + 1,
-                     'saved_at': _now().isoformat(), 'cleared': True, 'cases': []},
-                    ensure_ascii=False)
-                save_board_state(_td, _empty)
-                st.session_state['_board_base_version'] = _ver + 1
-            except Exception as _ex:
-                st.session_state['_board_base_version'] = 0
-                print(f"[clear_board] DB ล้มเหลว: {_ex}")
-            try:                                              # ลบไฟล์ snapshot local ด้วย
-                if _os.path.exists(_SNAPSHOT_PATH):
-                    _os.remove(_SNAPSHOT_PATH)
+                _s0 = load_board_state(_td)
+                if _s0:
+                    _ver = int(json.loads(_s0).get('version', 0) or 0)
             except Exception:
                 pass
-            st.success("✅ ล้างกระดานวันนี้แล้ว (ทุกเครื่อง)")
-            st.rerun()
+            _empty = json.dumps(
+                {'date': _td, 'pii_kept': False, 'version': _ver + 1,
+                 'saved_at': _now().isoformat(), 'cleared': True, 'cases': []},
+                ensure_ascii=False)
+            save_board_state(_td, _empty)
+            st.session_state['_board_base_version'] = _ver + 1
+        except Exception as _ex:
+            st.session_state['_board_base_version'] = 0
+            print(f"[clear_board] DB ล้มเหลว: {_ex}")
+        try:                                              # ลบไฟล์ snapshot local ด้วย
+            if _os.path.exists(_SNAPSHOT_PATH):
+                _os.remove(_SNAPSHOT_PATH)
+        except Exception:
+            pass
+        st.success("✅ ล้างกระดานวันนี้แล้ว (ทุกเครื่อง)")
+        st.rerun()
 
 
 def page_or_board():
@@ -863,9 +855,11 @@ def _board_fragment():
             "- หน้าจออัปเดตเองทุก 30 วินาที — **ไม่ต้องกด F5** "
             "(อยากดึงข้อมูลทันทีกด 🔄 รีเฟรช มุมขวาบน)")
 
+    # ---------- 📤 อัปโหลด CSV — ย้ายกลับมาบอร์ด 14 ก.ค. 2026 (เหนือ ➕ เพิ่มเคส)
+    #    🗑️ ล้างกระดานวันนี้ = ตัวเลือกท้าย expander อัปโหลด (คลิกเลือก)
+    render_csv_upload()
+
     # ---------- ➕ เพิ่มเคส (Manual) — ทุกคนเพิ่มได้ ----------
-    #    (📤 อัปโหลด CSV + 🗑️ ล้างกระดานวันนี้ ย้ายไปหน้า ⚙️ ตั้งค่า แล้ว —
-    #     เรียก render_csv_upload()/render_clear_board() จาก page_room_settings)
     with st.expander("➕ เพิ่มเคส (Manual)", expanded=False):
         _render_add_case_form(_demo_active)
 
@@ -874,9 +868,9 @@ def _board_fragment():
         st.info("ยังไม่มีเคสบนบอร์ดวันนี้\n\n"
                 "- อยากลองใช้ก่อน → เปิดสวิตช์ **🎬 สาธิต** ด้านบน "
                 "(ข้อมูลตัวอย่าง ไม่บันทึกจริง)\n"
-                "- ใช้งานจริง → ผู้ดูแลอัปโหลดตารางที่หน้า **⚙️ ตั้งค่า › "
-                "📤 อัปโหลดตารางผ่าตัดวันนี้ (CSV)** "
-                "หรือเพิ่มเคสเองที่ **➕ เพิ่มเคส (Manual)** ด้านบน")
+                "- ใช้งานจริง → ผู้ดูแลอัปโหลดตารางที่ **📤 อัปโหลดตารางผ่าตัด"
+                "วันนี้ (CSV)** ด้านบน "
+                "หรือเพิ่มเคสเองที่ **➕ เพิ่มเคส (Manual)**")
         return
 
     # ---------- counters ----------
