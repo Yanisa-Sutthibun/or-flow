@@ -421,9 +421,10 @@ def _get_demo_kpi(current_sim_min):
 
 
 def _render_demo_controls():
-    """🎬 Demo Mode แบบ "เหมือนโหมดจริง" (นำเสนอผู้บริหารได้ — แก้ 3 ก.ค. 2026):
-    ตัวควบคุมทั้งหมดพับอยู่ใน expander · บนหน้าจอหลักเหลือแค่ชิปเวลาจำลองจาง ๆ
-    ไม่มีแถบส้ม/แถวปุ่มโผล่กลางหน้าอีก. Return current sim_min หรือ None."""
+    """🎬 Demo Mode แบบ "เหมือนโหมดจริง" (นำเสนอผู้บริหารได้):
+    toggle 🎬 สาธิต อยู่แถวบนเหมือนหน้าตารางผ่าตัด (แก้ 14 ก.ค. 2026 — เดิมซ่อนใน
+    expander) · ปุ่มเล่น/หยุด/ความเร็วพับใน expander 🎛️ โผล่เฉพาะตอนเปิดสาธิต ·
+    บนหน้าจอหลักเหลือชิปเวลาจำลองจาง ๆ. Return current sim_min หรือ None."""
     state = st.session_state.setdefault('demo', {
         'active': False, 'playing': True, 'speed': 1,
         'real_started': time.time(), 'paused_at_sim': 0.0,
@@ -438,6 +439,20 @@ def _render_demo_controls():
             st.rerun()
     with col_warn:
         st.markdown("<div style=\x27text-align:right;color:#808495;font-size:13px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
+
+    # ---- 🎬 toggle เปิด/ปิด อยู่แถวบนเลย (14 ก.ค. 2026 — เหมือนหน้าตารางผ่าตัด
+    #      เดิมซ่อนใน expander ต้องกางก่อนถึงเจอสวิตช์) ----
+    with col_info:
+        new_active = st.toggle(
+            '🎬 สาธิต', value=state['active'], key='demo_toggle',
+            help='จำลองการทำงาน 1 วัน ภายใน 5 นาที — ไม่บันทึก DB จริง')
+        if new_active != state['active']:
+            state['active'] = new_active
+            if new_active:
+                state['real_started'] = time.time()
+                state['paused_at_sim'] = 0.0
+                state['playing'] = True
+            st.rerun()
 
     # ---- คำนวณ sim_min (5 นาทีจริง = 600 นาทีจำลอง → 1 วิจริง = 2 นาทีจำลอง) ----
     sim_min = None
@@ -458,24 +473,14 @@ def _render_demo_controls():
             sim_hour = 8 + sim_min / 60
             sim_time_str = f'{int(sim_hour):02d}:{int((sim_hour % 1) * 60):02d}'
             st.markdown(
-                f'<div style="margin-top:6px;"><span style="font-size:11.5px;'
+                f'<div style="margin-top:2px;"><span style="font-size:11.5px;'
                 f'color:#b6c2cf;border:1px solid #eef2f6;border-radius:999px;'
                 f'padding:2px 10px;">🕐 {sim_time_str} · สาธิต</span></div>',
                 unsafe_allow_html=True)
 
-    # ---- ตัวควบคุมทั้งหมดพับใน expander — หน้าจอหลักสะอาดเหมือนโหมดจริง ----
-    with st.expander("🎬 โหมดสาธิต (สำหรับนำเสนอ)", expanded=False):
-        new_active = st.toggle(
-            'เปิดโหมดสาธิต', value=state['active'], key='demo_toggle',
-            help='จำลองการทำงาน 1 วัน ภายใน 5 นาที — ไม่บันทึก DB จริง')
-        if new_active != state['active']:
-            state['active'] = new_active
-            if new_active:
-                state['real_started'] = time.time()
-                state['paused_at_sim'] = 0.0
-                state['playing'] = True
-            st.rerun()
-        if state['active'] and sim_min is not None:
+    # ---- ปุ่มเล่น/หยุด/ความเร็ว พับเก็บ — โผล่เฉพาะตอนเปิดสาธิต (หน้าจริงสะอาด) ----
+    if state['active']:
+        with st.expander("🎛️ ควบคุมเวลาจำลอง (เล่น/หยุด/ความเร็ว)", expanded=False):
             pct = sim_min / _DEMO_END_MIN * 100
             st.caption(
                 f"เวลาจำลอง {sim_min:.0f}/{_DEMO_END_MIN} นาที ({pct:.0f}%) · "
