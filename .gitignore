@@ -64,8 +64,9 @@ logs/
 !models/thesis_ML/resid_room_use.pkl
 !models/thesis_ML/resid_surg_time.pkl
 
-# ✅ ยกเว้น: โมเดล shadow model_v2 (mask แล้ว SURG_xxx · ~0.4MB) — cloud ต้องมีถึงจะ shadow ได้
-!models/model_v2/model.pkl
+# ✅ ยกเว้น: โมเดลหลัก thesis_ML_v2 (mask แล้ว SURG_xxx · ~0.4MB) — cloud ต้องมีถึงจะทำนายได้
+#    (โฟลเดอร์ rename model_v2 → thesis_ML_v2 เมื่อ 7 ก.ค. 2026 — แก้ path ตาม 14 ก.ค.)
+!models/thesis_ML_v2/model.pkl
 
 # 🔒 สำรอง model keys "ก่อน mask" — มีชื่อแพทย์จริง ห้าม commit เด็ดขาด
 _model_backup/

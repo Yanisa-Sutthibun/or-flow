@@ -574,6 +574,13 @@ def main():
     try:
         if not st.session_state.get('_db_inited'):
             init_db()
+            # 🔐 cloud ไม่มี staff_mapping.csv → ดึงจากตาราง staff_map มาเขียนไฟล์
+            #    (โมเดลเห็นตัวแพทย์ + dropdown มีรายชื่อ) · เครื่อง รพ. มีไฟล์ = ข้ามเฉย ๆ
+            try:
+                from staff_map_sync import ensure_staff_mapping
+                ensure_staff_mapping()
+            except Exception as _sm_ex:
+                print(f"[main] staff_map_sync ข้าม: {_sm_ex}")
             st.session_state['_db_inited'] = True
     except Exception as _db_err:
         st.error(
