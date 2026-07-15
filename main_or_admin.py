@@ -1844,14 +1844,18 @@ def _render_nurse_progress(op_date: str):
 
 def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
     """Tab สถิติย้อนหลัง — จัดเรียงตามหลัก information architecture (general→specific):
-    1. 🎯 KPI Highlights → 2. 📋 สรุปยอดสะสม → 3. 📈 กราฟจำนวนเคสรายเดือน →
-    4. 🏆 อันดับยอดนิยม → 5. ⏱️ ประสิทธิภาพ → 6. 🌙 นอกเวลา → 7. 💾 Export
+    1. 📊 ภาพรวมทั้งหมด (= 🎯 KPI Highlights + 📋 สรุปยอดสะสม ยุบรวม 14 ก.ค. 2026)
+    → 2. 📈 กราฟจำนวนเคสรายเดือน → 3. 🏆 อันดับยอดนิยม → 4. ⏱️ ประสิทธิภาพ
+    → 5. 🌙 นอกเวลา → 6. 💾 Export
     """
     if _secs is None:
-        _secs = {'kpi', 'sum', 'trend', 'rank', 'eff', 'night'}
+        _secs = {'overview', 'trend', 'rank', 'eff', 'night'}
+    _secs = set(_secs)
+    if _secs & {'kpi', 'sum'}:      # id เก่าก่อนยุบ section — เผื่อค้างใน session
+        _secs.add('overview')
 
     data = (_ca_historical(date_from, date_to, _stats_ver())
-            if _secs & {'kpi', 'trend', 'rank'} else None)
+            if _secs & {'overview', 'trend', 'rank'} else None)
 
     if data is not None and data['total_cases'] == 0:
         st.info("ยังไม่มีข้อมูลเคสที่เสร็จแล้วในช่วงนี้ — เริ่มใช้งานแล้วสถิติจะสะสมอัตโนมัติ")
@@ -1890,14 +1894,13 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
             <span id="toc-minimize" title="ย่อหน้าต่าง" onclick="window.__toc_minimize && window.__toc_minimize()" style="cursor:pointer;color:#9e9e9e;font-size:16px;line-height:1;padding:2px 6px;border-radius:4px;user-select:none;">−</span>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
-            <a class="toc-item" data-target="sec-kpi" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">1</span>🎯 KPI Highlights</a>
-            <a class="toc-item" data-target="sec-sum" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">2</span>📋 สรุปยอดสะสม</a>
-            <a class="toc-item" data-target="sec-trend" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">3</span>📈 กราฟจำนวนเคสรายเดือน</a>
-            <a class="toc-item" data-target="sec-rank" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">4</span>🏆 อันดับยอดนิยม</a>
-            <a class="toc-item" data-target="sec-eff" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">5</span>⏱️ ประสิทธิภาพ</a>
-            <a class="toc-item" data-target="sec-night" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">6</span>🌙 นอกเวลา</a>
-            <a class="toc-item" data-target="sec-nurse" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">7</span>👥 Progress (PIN)</a>
-            <a class="toc-item" data-target="sec-export" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">8</span>💾 Export</a>
+            <a class="toc-item" data-target="sec-overview" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">1</span>📊 ภาพรวมทั้งหมด</a>
+            <a class="toc-item" data-target="sec-trend" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">2</span>📈 กราฟจำนวนเคสรายเดือน</a>
+            <a class="toc-item" data-target="sec-rank" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">3</span>🏆 อันดับยอดนิยม</a>
+            <a class="toc-item" data-target="sec-eff" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">4</span>⏱️ ประสิทธิภาพ</a>
+            <a class="toc-item" data-target="sec-night" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">5</span>🌙 นอกเวลา</a>
+            <a class="toc-item" data-target="sec-nurse" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">6</span>👥 Progress (PIN)</a>
+            <a class="toc-item" data-target="sec-export" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">7</span>💾 Export</a>
           </div>
           <div style="border-top:0.5px solid #eceff1;margin-top:10px;padding-top:10px;">
             <a id="toc-top" style="display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;border-radius:6px;color:#1976d2;text-decoration:none;cursor:pointer;">⬆ กลับด้านบน</a>
@@ -1946,7 +1949,7 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
         if (topBtn) {
             topBtn.addEventListener('click', () => {
                 // ลองหลายวิธี - Streamlit version ต่างกัน
-                const first = parent.getElementById('sec-kpi');
+                const first = parent.getElementById('sec-overview');
                 if (first) {
                     first.scrollIntoView({behavior: 'smooth', block: 'start'});
                 } else {
@@ -2011,7 +2014,7 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
         }
 
         // Active state via IntersectionObserver
-        const sections = ['sec-kpi','sec-sum','sec-trend','sec-rank',
+        const sections = ['sec-overview','sec-trend','sec-rank',
                           'sec-eff','sec-night','sec-nurse','sec-export'];
         const sectionEls = sections.map(id => parent.getElementById(id))
                                     .filter(x => x);
@@ -2043,10 +2046,8 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
     </script>
     """, height=0)
 
-    if 'kpi' in _secs:
-        _hist_sec_kpi(date_from, date_to, data)
-    if 'sum' in _secs:
-        _hist_sec_sum(date_from, date_to, data)
+    if 'overview' in _secs:
+        _hist_sec_overview(date_from, date_to, data)
     if 'trend' in _secs:
         _hist_sec_trend(date_from, date_to, data)
     if 'rank' in _secs:
@@ -2102,81 +2103,61 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
 
 
 
-def _hist_sec_kpi(date_from, date_to, data=None):
+def _hist_sec_overview(date_from, date_to, data=None):
     # ════════════════════════════════════════════════════════════════
-    # 1️⃣  🎯 KPI HIGHLIGHTS — เลขสำคัญที่กรรมการต้องเห็นก่อน
+    # 1️⃣  📊 ภาพรวมทั้งหมด — ยุบ 🎯 KPI Highlights + 📋 สรุปยอดสะสม
+    #     (14 ก.ค. 2026 มุคกี้สั่งรวม — "เคสรวม" กับ "เคสทั้งหมด" คือเลขซ้ำ)
+    #     แถวแรก 4 การ์ดหลัก · แถวสองความเร่งด่วน — โค้ดเดิมดู git history
     # ════════════════════════════════════════════════════════════════
-    st.markdown('<div id="sec-kpi" class="group-header">🎯 KPI Highlights</div>',
-                unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-label">เคสรวม</div>
-            <div class="kpi-value" style="color:#1565c0;">{data['total_cases']}</div>
-        </div>""", unsafe_allow_html=True)
-    with c2:
-        # การ์ดใหม่: รวม "วันที่ยุ่ง (จ-ศ) + ช่วงเวลายุ่ง"
-        _tdn = data.get('top_dow_name', '-')
-        _tdh = data.get('top_dow_hour', 0)
-        _tdc = data.get('top_dow_count', 0)
-        if _tdn != '-':
-            _peak_dh = f"{_tdn} {_tdh:02d}:00 น."
-        else:
-            _peak_dh = '—'
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-label">วัน+ช่วงเวลาเคสเยอะ</div>
-            <div class="kpi-value" style="color:#1565c0;font-size:18px;">{_peak_dh}</div>
-            <div style="font-size:12px;color:#999;">วัน{_tdn}รวม {_tdc} เคส</div>
-        </div>""", unsafe_allow_html=True)
-    with c3:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-label">สาขาเยอะสุด</div>
-            <div class="kpi-value" style="color:#6a1b9a;font-size:16px;">{data['top_div_name']}</div>
-            <div style="font-size:12px;color:#999;">{data['top_div_count']} เคส ({data['top_div_pct']}%)</div>
-        </div>""", unsafe_allow_html=True)
-
-
-def _hist_sec_sum(date_from, date_to, data=None):
-    # ════════════════════════════════════════════════════════════════
-    # 2️⃣  📋 สรุปยอดสะสม — categorical breakdowns
-    # ════════════════════════════════════════════════════════════════
-    st.markdown('<div id="sec-sum" class="group-header green">📋 สรุปยอดสะสม</div>',
+    st.markdown('<div id="sec-overview" class="group-header">📊 ภาพรวมทั้งหมด</div>',
                 unsafe_allow_html=True)
     s_all = _ca_summary(date_from, date_to, _stats_ver())
-
-    # 📊 ภาพรวม + ผู้ป่วย — รวมเป็น row เดียว 4 cards (sub-info ใต้)
-    st.markdown('<div class="sub-title">📊 ภาพรวม</div>', unsafe_allow_html=True)
     cancel_r = s_all['cancelled'] / s_all['total'] * 100 if s_all['total'] > 0 else 0
     opd_pct = (s_all['n_opd'] / s_all['total'] * 100) if s_all['total'] > 0 else 0
     ipd_pct = (s_all['n_ipd'] / s_all['total'] * 100) if s_all['total'] > 0 else 0
 
-    def _stat_card(label, value, sub_text, value_color='#212121'):
+    def _stat_card(label, value, sub_text, value_color='#212121',
+                   value_size='26px'):
         return (
             f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
             f'<div style="font-size:12px;color:#757575;margin-bottom:4px;">{label}</div>'
-            f'<div style="font-size:26px;font-weight:500;line-height:1;color:{value_color};">{value}</div>'
+            f'<div style="font-size:{value_size};font-weight:500;line-height:1.1;color:{value_color};">{value}</div>'
             f'<div style="font-size:11px;color:#9e9e9e;margin-top:4px;">{sub_text}</div>'
             f'</div>'
         )
 
+    # แถวแรก: ตัวเลขหลัก 4 การ์ด (ยกเลิก/OPD/IPD ยุบเป็นบรรทัดรองใต้ตัวเลข)
     k1, k2, k3, k4 = st.columns(4)
     with k1:
-        st.markdown(_stat_card("📊 เคสทั้งหมด", s_all['total'],
-                               f"✓ ผ่าตัดสำเร็จ {s_all['completed']}",
-                               value_color='#1565c0'), unsafe_allow_html=True)
+        st.markdown(_stat_card(
+            "📊 เคสทั้งหมด", s_all['total'],
+            f"✓ สำเร็จ {s_all['completed']} · ⚠️ ยกเลิก {s_all['cancelled']} "
+            f"({cancel_r:.0f}%)", value_color='#1565c0'),
+            unsafe_allow_html=True)
     with k2:
-        st.markdown(_stat_card("🏥 OPD", s_all['n_opd'], f"{opd_pct:.1f}%"),
-                    unsafe_allow_html=True)
+        st.markdown(_stat_card(
+            "🏥 ประเภทผู้ป่วย",
+            f"OPD {s_all['n_opd']} <span style=\"color:#b6c2cf\">|</span> "
+            f"IPD {s_all['n_ipd']}",
+            f"{opd_pct:.1f}% | {ipd_pct:.1f}%", value_size='19px'),
+            unsafe_allow_html=True)
     with k3:
-        st.markdown(_stat_card("🏨 IPD", s_all['n_ipd'], f"{ipd_pct:.1f}%"),
-                    unsafe_allow_html=True)
+        _tdn = (data or {}).get('top_dow_name', '-')
+        _tdh = (data or {}).get('top_dow_hour', 0)
+        _tdc = (data or {}).get('top_dow_count', 0)
+        _peak_dh = f"{_tdn} {_tdh:02d}:00 น." if _tdn != '-' else '—'
+        st.markdown(_stat_card(
+            "📅 วัน+ช่วงเวลาเคสเยอะ", _peak_dh,
+            f"วัน{_tdn}รวม {_tdc} เคส",
+            value_color='#1565c0', value_size='19px'),
+            unsafe_allow_html=True)
     with k4:
-        st.markdown(_stat_card("⚠️ ยกเลิก", s_all['cancelled'],
-                               f"อัตรา {cancel_r:.0f}%",
-                               value_color='#c62828'), unsafe_allow_html=True)
+        st.markdown(_stat_card(
+            "🏷️ สาขาเยอะสุด", (data or {}).get('top_div_name', '—'),
+            f"{(data or {}).get('top_div_count', 0)} เคส "
+            f"({(data or {}).get('top_div_pct', 0)}%)",
+            value_color='#6a1b9a', value_size='17px'),
+            unsafe_allow_html=True)
 
     # ⚠️ ระดับความเร่งด่วน — Elective (มี breakdown นัดหมาย/Walk-in) / Urgent / Emergency
     # 🆕 Filter เฉพาะเคสที่ผ่าตัดสำเร็จ (consistent กับ "เคสสะสม" 701)
@@ -4022,8 +4003,8 @@ def page_admin(section='today'):
                         "(เลือกครบแล้วกดปุ่มเดียว — ระหว่างเลือกไม่โหลดอะไรทั้งนั้น)</span>",
                         unsafe_allow_html=True)
             _SEC_OPTS = [
-                ('kpi',   '🎯 KPI Highlights',   True),
-                ('sum',   '📋 สรุปยอดสะสม',       True),
+                # 🎯 KPI Highlights + 📋 สรุปยอดสะสม ยุบเป็นหัวข้อเดียว (14 ก.ค. 2026)
+                ('overview', '📊 ภาพรวมทั้งหมด',   True),
                 ('trend', '📈 กราฟจำนวนเคสรายเดือน',       False),
                 ('rank',  '🏆 อันดับยอดนิยม',     False),
                 ('eff',   '⏱️ ประสิทธิภาพ (เวลารอ/รับเวร)', False),
