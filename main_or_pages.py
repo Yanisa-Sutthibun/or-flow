@@ -889,11 +889,21 @@ def _board_fragment():
 
     # ---------- action handlers ----------
     # (มี guard กันกดรัว/กดซ้ำ — ถ้าสถานะเปลี่ยนไปแล้วจากคลิกก่อนหน้า ไม่ทำซ้ำ)
+    def _rlog(c):
+        """📊 upsert ตารางวิจัยถาวร research_case_log (waiting time + AI vs actual
+        + override) — fail-safe: พังก็เงียบ ไม่กระทบบอร์ด · เคส _demo ถูกข้ามในตัว"""
+        try:
+            from research_log import log_case_state
+            log_case_state(c)
+        except Exception as _rx:
+            print(f"[research_log] ข้าม: {_rx}")
+
     def _do_arrive(idx):
         if cases[idx].get('status') != 'not_arrived':
             return  # กดซ้ำ/สถานะเปลี่ยนแล้ว — ไม่ทำซ้ำ
         cases[idx]['status'] = 'holding_pre'
         cases[idx]['time_arrived_holding'] = _now()
+        _rlog(cases[idx])               # 📊 จุดเริ่มนาฬิกา waiting time
         _mark_board_dirty(cases[idx])   # CR-2: เครื่องนี้แก้จริง → ค่อยเซฟ + กันถูกดึงทับ
         _rerun_board()
 
@@ -925,6 +935,7 @@ def _board_fragment():
         _rm['start_time'] = now
         _rm['predicted_time'] = cases[idx].get('effective_min', 30)
         st.session_state.statistics['total_cases'] += 1
+        _rlog(cases[idx])               # 📊 ปิดนาฬิกา waiting time (ได้ wait_holding_min)
         _mark_board_dirty(cases[idx])   # CR-2
         _rerun_board()
 
@@ -979,6 +990,7 @@ def _board_fragment():
             log_shadow(cases[idx], cases[idx].get('actual_duration_min'))
         except Exception as _sx:
             print(f"[shadow_v2] ข้าม: {_sx}")
+        _rlog(cases[idx])               # 📊 บันทึก AI vs actual + override + ปลายทางออก
         _mark_board_dirty(cases[idx])   # CR-2
         _rerun_board()
 
@@ -1029,6 +1041,7 @@ def _board_fragment():
         elif s == 'discharged':
             c['status'] = 'holding_post'
             c['time_discharged'] = None
+        _rlog(c)               # 📊 undo แล้วเขียนสถานะล่าสุดทับ — ตารางวิจัยตรงกับบอร์ดเสมอ
         _mark_board_dirty(c)   # CR-2
         _rerun_board()
 

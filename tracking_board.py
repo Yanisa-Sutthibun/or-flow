@@ -609,6 +609,11 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 if c.get('status') != 'discharged':  # กันกดรัว
                     c['status'] = 'discharged'
                     c['time_discharged'] = _now()
+                    try:    # 📊 ตารางวิจัยถาวร (wait_post_min ครบตอนจำหน่าย)
+                        from research_log import log_case_state
+                        log_case_state(c)
+                    except Exception as _rx:
+                        print(f"[research_log] ข้าม: {_rx}")
                     if mark_dirty:
                         mark_dirty(c)   # CR-2: จำหน่าย ต้องเซฟขึ้นบอร์ดกลาง
                 _rerun_board()
