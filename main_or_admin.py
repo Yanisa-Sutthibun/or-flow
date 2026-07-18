@@ -3958,9 +3958,7 @@ def page_admin(section='today'):
             'border-left:4px solid #c62828;'
             'border-radius:10px;padding:11px 16px;margin:12px 0 8px;">'
             '<span style="font-size:17px;font-weight:600;color:#b71c1c;">'
-            '🌙 เคสนอกเวลา</span>'
-            '<span style="font-size:13px;color:#d32f2f;margin-left:8px;">'
-            'ยืนยัน / ยกเลิก เท่านั้น</span></div>',
+            '🌙 เคสนอกเวลา</span></div>',
             unsafe_allow_html=True,
         )
         _render_after_hours_admin(op_date)
