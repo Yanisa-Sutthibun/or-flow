@@ -380,14 +380,8 @@ def page_scheduler():
     # ── ② แบบ AI จัดอิสระ — ย้ายคิว/ย้ายห้องได้ (ดูอย่างเดียว) ──
     ideal = build_ideal(cases_by_room, enabled_rooms, tov_map, _RISK_DEFAULT)
     st.markdown(_sect_html('②', 'แบบ AI จัดอิสระ',
-                           'ย้ายคิว/ย้ายห้องได้ · ไว้ดูเปรียบเทียบ',
+                           'ย้ายคิวและย้ายห้องได้อิสระเพื่อลดเคสรับเวร',
                            ideal['metrics']['handover']),
-                unsafe_allow_html=True)
-    st.markdown('<div style="background:#f3e5f5;border:1px solid #ce93d8;'
-                'color:#6a1b9a;border-radius:8px;padding:8px 13px;'
-                'font-size:12.5px;margin:4px 0;">🔭 ดูอย่างเดียว — '
-                'หน้างานจริงไม่ย้ายเคสข้ามห้อง (ทีมห้องอื่นไม่พร้อมรับเคสต่างสาขา) '
-                'ตารางนี้ตอบคำถามเดียว: ถ้าย้ายได้อิสระ จะลดเคสรับเวรได้ไหม</div>',
                 unsafe_allow_html=True)
 
     # ป้ายหมายเหตุตาราง ②: ย้ายห้อง / สลับคิวขึ้นก่อน (เทียบกับตาราง ①)
