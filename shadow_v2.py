@@ -99,6 +99,10 @@ def log_shadow(case: dict, actual_min=None) -> bool:
                 'division': case.get('division'),
                 'age': case.get('age'),
                 'ward': case.get('ward'),
+                # 💉 feature จาก preop วิสัญญี (ถ้าเคสมี — 19 ก.ค. 2026)
+                'ASA': case.get('ASA'), 'BMI': case.get('BMI'),
+                'sex': case.get('sex'), 'planicu': case.get('planicu'),
+                'blood': case.get('blood'),
             })
             _r90 = r.get('range90')
             _conf2, _pn2 = r.get('confidence'), r.get('proc_n')
