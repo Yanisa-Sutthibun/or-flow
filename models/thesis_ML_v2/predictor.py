@@ -131,7 +131,8 @@ class ModelV2:
     #    ตรงตัวอักษรไม่เจอทั้งที่ข้อมูลเทรนมีหัตถการนั้น → proc_n=0 มั่นใจต่ำผิดจริง
     #    มาตรฐานเดียวกับ thesis_ML เดิมที่ใช้ rapidfuzz ตอน inference
     _NOISE = re.compile(
-        r'\bUNDER\s*(?:GA|SB|LA|TA)\b|\bUNDERGA\b|\b(?:RT|LT)\.?(?=\s|$)|รายปี')
+        r'\bUNDER\s*(?:GA|SB|LA|TA)\b|\bUNDERGA\b|\b(?:RT|LT)\.?(?=\s|$)'
+        r'|รายปี|นอกเวลา')
     _SPLIT = re.compile(r'\s*\+\s*|\s+WITH\s+|\s*,\s*|\s+AND\s+')
 
     @staticmethod
@@ -152,7 +153,10 @@ class ModelV2:
             self._fz_keys = list(self.te['procedure']['map'].keys())
             self._fz_compact = {}
             for k in self._fz_keys:            # คีย์อัดแน่น (TURBT ← TUR-BT)
-                self._fz_compact.setdefault(self._compact(k), k)
+                ck = self._compact(k)          # ชนกัน (TUR P/TURP) → เอาตัวเคสเยอะกว่า
+                old = self._fz_compact.get(ck)
+                if old is None or (self._proc_count(k) or 0) > (self._proc_count(old) or 0):
+                    self._fz_compact[ck] = k
         cn = self._clean_proc(n)
         cand = []
         # ① ตัดคำรบกวน (ข้าง/วิธีระงับความรู้สึก/รายปี) → ลองตรง + แบบอัดแน่น
