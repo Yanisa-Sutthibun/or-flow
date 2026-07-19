@@ -610,8 +610,15 @@ def render_csv_upload():
                     else:
                         st.error("PIN ไม่ถูกต้อง")
         else:
-            _up = st.file_uploader("เลือกไฟล์ CSV ตารางผ่าตัด (HIS)", type=["csv"],
+            _up = st.file_uploader("① ไฟล์ CSV ตารางผ่าตัด (HIS)", type=["csv"],
                                    key="orboard_csv", disabled=_demo_active)
+            # 💉 ไฟล์ preop วิสัญญี (19 ก.ค. 2026) — เติม ASA/BMI/จองเลือด/จอง ICU
+            #    ให้โมเดล (feature ที่บอร์ดไม่เคยมี) · ไม่ใส่ = ทำงานแบบเดิม
+            _up_pre = st.file_uploader(
+                "② ไฟล์ preop วิสัญญี (.xls) — ไม่บังคับ แต่ใส่แล้ว AI แม่นขึ้น",
+                type=["xls", "xlsx"], key="orboard_preop", disabled=_demo_active,
+                help="ไฟล์ประเมินก่อนผ่าตัดจากวิสัญญี — ระบบจับคู่ผู้ป่วยด้วย HN "
+                     "แล้วเติม ASA / BMI / จองเลือด / จอง ICU ให้ AI ใช้ทำนาย")
             _rep = st.checkbox("แทนที่เคส 'ยังไม่มา' เดิม (กันซ้ำ)", value=True,
                                key="orboard_rep", disabled=_demo_active)
             # 🧪 อัปโหลดเพื่อ "ทดสอบระบบ": ติดธง _demo ทุกเคส → กดได้ครบทุก flow
@@ -636,6 +643,37 @@ def render_csv_upload():
                 if not _new:
                     st.warning("ไม่พบเคสในไฟล์ — ลองตรวจหัวคอลัมน์ (hn/ชื่อ/หัตถการ/เวลา/ห้อง)")
                 else:
+                    # 💉 เติมเพศจากคำนำหน้า + ข้อมูล preop วิสัญญี → ทำนายใหม่ครบ feature
+                    try:
+                        from preop_merge import enrich_cases, load_preop
+                        _pm = load_preop(_up_pre) if _up_pre is not None else None
+                        _nm = enrich_cases(_new, _pm)
+                        if _pm is not None:
+                            st.info(f"💉 จับคู่ข้อมูลวิสัญญีได้ {_nm}/{len(_new)} เคส "
+                                    f"(จับคู่ด้วย HN — เคสที่ไม่เจอใช้ค่าทำนายแบบเดิม)")
+                        from main_or_core import predict_surgical_time as _pst
+                        for _ec in _new:
+                            if not (_ec.get('ASA') or _ec.get('BMI') or _ec.get('sex')
+                                    or _ec.get('planicu') or _ec.get('blood')):
+                                continue
+                            _pr = _pst(
+                                _ec['procedure'], _ec['age'], _ec['surgeon'],
+                                _ec['division'],
+                                _ec['sched_hour'] if _ec['sched_hour'] < 23 else 9,
+                                diagnosis=(_ec.get('diagnosis')
+                                           if _ec.get('diagnosis') != '-' else ''),
+                                ward=_ec.get('ward') or '',
+                                asa=_ec.get('ASA'), bmi=_ec.get('BMI'),
+                                sex=_ec.get('sex'), planicu=_ec.get('planicu'),
+                                blood=_ec.get('blood'))
+                            _ec['predicted_min'] = _pr['predicted_min']
+                            _ec['ai_predicted_min'] = _pr['predicted_min']
+                            _ec['effective_min'] = _pr['predicted_min']
+                            _ec['confidence'] = _pr['confidence']
+                            _ec['proc_n'] = _pr.get('proc_n', 0)
+                            _ec['predicted_range'] = _pr.get('predicted_range')
+                    except Exception as _px:
+                        st.warning(f"เติมข้อมูล preop ไม่สำเร็จ (ใช้ค่าทำนายเดิม): {_px}")
                     _cur = list(st.session_state.patient_cases)
                     if _rep:
                         _cur = [c for c in _cur if c.get('status') != 'not_arrived']

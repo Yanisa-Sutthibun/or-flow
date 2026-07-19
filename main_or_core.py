@@ -99,7 +99,12 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
                           op_date: datetime = None,
                           orroom: int = 11,             # NEW: Main OR room (11-17)
                           diagnosis: str = "",           # NEW: ICD10 diagnosis
-                          ward: str = "") -> dict:       # NEW: ward (ว่าง = OPD) — v2 ใช้แยก IPD/OPD
+                          ward: str = "",                # NEW: ward (ว่าง = OPD) — v2 ใช้แยก IPD/OPD
+                          asa: str = None,               # 💉 จากไฟล์ preop วิสัญญี (19 ก.ค. 2026)
+                          bmi: float = None,
+                          sex: str = None,
+                          planicu: str = None,
+                          blood: str = None) -> dict:
     """
     ทำนายเวลาผ่าตัด — ใช้ predictor v2 (XGBoost + fuzzy + multi-level evidence)
 
@@ -121,11 +126,17 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
         from shadow_v2 import _get_model as _get_v2
         _mv2 = _get_v2()
         if _mv2 is not None:
-            _r2 = _mv2.predict_case({
+            _case_in = {
                 'procedure': procedure, 'diagnosis': diagnosis,
                 'surgeon': surgeon, 'division': division, 'age': age,
                 'ward': ward,       # ว่าง = OPD · มีค่า = IPD (feature is_inpatient)
-            })
+            }
+            # 💉 feature จาก preop วิสัญญี — ส่งเฉพาะที่มี (predictor เติม Unknown/median เอง)
+            for _k, _v in (('ASA', asa), ('BMI', bmi), ('sex', sex),
+                           ('planicu', planicu), ('blood', blood)):
+                if _v is not None:
+                    _case_in[_k] = _v
+            _r2 = _mv2.predict_case(_case_in)
             _pn2 = int(_r2.get('proc_n') or 0)
             return {
                 'predicted_min': int(_r2['predicted_min']),
