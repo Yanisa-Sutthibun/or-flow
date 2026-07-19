@@ -721,10 +721,19 @@ def _render_kpi(kpi):
             <div class="kpi-value" style="color:{color};">{kpi['utilization']}%</div>
         </div>""", unsafe_allow_html=True)
     with c5:
+        # ยังไม่มีเคสเสร็จ→เข้าห้องถัดไปของวันนี้ = ยังวัด turnover ไม่ได้ →
+        # โชว์ "—" (เดิมโชว์ 0 นาที อ่านเหมือนเทิร์นห้องเร็วมากทั้งที่แค่ไม่มีข้อมูล)
+        _n_to = kpi.get('n_turnovers')
+        if _n_to == 0:
+            _to_html = ('—<span style="font-size:13px;color:#94a3b8;"> '
+                        'รอเคส</span>')
+        else:
+            _to_html = (f"{kpi['avg_turnover']:.0f}"
+                        f'<span style="font-size:14px;"> นาที</span>')
         st.markdown(f"""
         <div class="kpi-card">
-            <div class="kpi-label">Turnover เฉลี่ย</div>
-            <div class="kpi-value" style="color:#6a1b9a;">{kpi['avg_turnover']:.0f}<span style="font-size:14px;"> นาที</span></div>
+            <div class="kpi-label">Turnover เฉลี่ย (วันนี้)</div>
+            <div class="kpi-value" style="color:#6a1b9a;">{_to_html}</div>
         </div>""", unsafe_allow_html=True)
 
 

@@ -176,19 +176,58 @@ class ModelV2:
             from rapidfuzz import fuzz, process
         except ImportError:
             return None
-        got = process.extract(cn, self._fz_keys, scorer=fuzz.token_set_ratio,
-                              score_cutoff=92, limit=8)
+        hit = self._fz_extract(cn, fuzz, process, self._fz_keys, cutoff=92)
+        if hit:
+            return hit
+        # ④ เทียบแบบตัดหางคำ (stem) — HIS เขียนคนละรูป: CYSTOSCOPY/CYSTOSCOPE,
+        #    CLOT/CLOTTED, REMOVE/REMOVAL → stem แล้วเป็นคำเดียวกัน
+        #    (ยังแยก CYSTOSCOPY กับ CYSTOSTOMY ได้ — stem ต่างกัน)
+        if not hasattr(self, '_fz_stem_keys'):
+            self._fz_stem_map = {}
+            for k in self._fz_keys:
+                self._fz_stem_map.setdefault(self._stem_str(k), k)
+            self._fz_stem_keys = list(self._fz_stem_map.keys())
+        s_hit = self._fz_extract(self._stem_str(cn), fuzz, process,
+                                 self._fz_stem_keys, cutoff=90,
+                                 back=self._fz_stem_map)
+        return s_hit
+
+    _STOP = {'C', 'WITH', 'AND', 'UNDER'}
+
+    @classmethod
+    def _stem_str(cls, s):
+        out = []
+        for t in s.split():
+            if t in cls._STOP:
+                continue
+            for suf in ('ING', 'TED', 'ED', 'ES', 'AL', 'S', 'E', 'Y'):
+                if len(t) > 4 and t.endswith(suf):
+                    t = t[:-len(suf)]
+                    break
+            if len(t) > 3 and t[-1] == t[-2]:   # ยุบตัวอักษรซ้ำท้าย (CLOTT→CLOT)
+                t = t[:-1]
+            out.append(t)
+        return ' '.join(out)
+
+    def _fz_extract(self, q, fuzz, process, keys, cutoff, back=None):
+        got = process.extract(q, keys, scorer=fuzz.token_set_ratio,
+                              score_cutoff=cutoff, limit=8)
+        q_tok = set(q.split())
         best = None
         for k, sc, _ in got:
-            if len(self._compact(k)) < 5:      # กันคีย์สั้นเกินจับมั่ว
+            orig = back[k] if back else k
+            if len(self._compact(orig)) < 5:   # กันคีย์สั้นเกินจับมั่ว
                 continue
-            n_c = self._proc_count(k) or 0
+            n_c = self._proc_count(orig) or 0
             if n_c < 3:                        # หลักฐานน้อยกว่า 3 เคส → ไม่คุ้มเสี่ยงจับผิด
                 continue                       #   (ปล่อยตกไปใช้ค่ากลางแบบซื่อสัตย์)
-            item = (sc, n_c, len(k), k)
+            # ครอบคลุมเนื้อหาชื่อเคสมากสุดก่อน (CLOT REMOVAL เจาะจงกว่า CYSTOSCOPE
+            # เปล่า ๆ) → ค่อยดูจำนวนเคส — กันจับคีย์กว้างที่ทิ้งรายละเอียดหัตถการ
+            cover = len(q_tok & set(k.split()))
+            item = (sc, cover, n_c, len(orig), orig)
             if best is None or item > best:
                 best = item
-        return best[3] if best else None
+        return best[4] if best else None
 
     def resolve_procedure(self, name):
         n = _norm(name)
