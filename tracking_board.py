@@ -351,7 +351,7 @@ def _time_cell(c, disp, eff, elapsed, now):
             _txt += f' · มั่นใจ: {_cf}'
         _ev = (f'<br><span style="font-size:11px;color:{_cfc};'
                f'white-space:nowrap;">{_txt}</span>')
-    return f'AI ~{ai0 or "?"} น.{_ev}'
+    return f'AI ทำนายการใช้ห้อง ~{ai0 or "?"} น.{_ev}'
 
 
 def _holding_row_iframe(c, loc, tlabel, now):
