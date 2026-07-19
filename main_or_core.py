@@ -98,7 +98,8 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
                           wait_min: int = 0,             # API compat
                           op_date: datetime = None,
                           orroom: int = 11,             # NEW: Main OR room (11-17)
-                          diagnosis: str = "") -> dict:  # NEW: ICD10 diagnosis
+                          diagnosis: str = "",           # NEW: ICD10 diagnosis
+                          ward: str = "") -> dict:       # NEW: ward (ว่าง = OPD) — v2 ใช้แยก IPD/OPD
     """
     ทำนายเวลาผ่าตัด — ใช้ predictor v2 (XGBoost + fuzzy + multi-level evidence)
 
@@ -123,6 +124,7 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
             _r2 = _mv2.predict_case({
                 'procedure': procedure, 'diagnosis': diagnosis,
                 'surgeon': surgeon, 'division': division, 'age': age,
+                'ward': ward,       # ว่าง = OPD · มีค่า = IPD (feature is_inpatient)
             })
             _pn2 = int(_r2.get('proc_n') or 0)
             return {

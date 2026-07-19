@@ -125,11 +125,79 @@ class ModelV2:
                 return c, True
         return s, False
 
+    # ── 🔎 fuzzy resolver (15 ก.ค. 2026 — ชั้น inference เท่านั้น โมเดล/ค่าเทรนไม่ถูกแตะ)
+    #    ปัญหา: ชื่อจาก HIS มีหางติดมา ("TUR-BT UNDERGA", "FLEX. CYSTO",
+    #    "DJ STENT EXCHANGING RT. + ... LT.", "CHANGE DJ STENT รายปี") ทำให้เทียบ
+    #    ตรงตัวอักษรไม่เจอทั้งที่ข้อมูลเทรนมีหัตถการนั้น → proc_n=0 มั่นใจต่ำผิดจริง
+    #    มาตรฐานเดียวกับ thesis_ML เดิมที่ใช้ rapidfuzz ตอน inference
+    _NOISE = re.compile(
+        r'\bUNDER\s*(?:GA|SB|LA|TA)\b|\bUNDERGA\b|\b(?:RT|LT)\.?(?=\s|$)|รายปี')
+    _SPLIT = re.compile(r'\s*\+\s*|\s+WITH\s+|\s*,\s*|\s+AND\s+')
+
+    @staticmethod
+    def _compact(s):
+        return re.sub(r'[^A-Z0-9ก-๙]', '', s)
+
+    def _clean_proc(self, n):
+        n = self._NOISE.sub(' ', n)
+        return re.sub(r'\s+', ' ', n).strip(' .+-')
+
+    def _proc_count(self, key):
+        e = self.te['procedure']['map'].get(key)
+        return e[1] if e else None
+
+    def _fuzzy_procedure(self, n):
+        """หาคีย์ TE ที่ใกล้ที่สุด — คืนคีย์ หรือ None ถ้าไม่มั่นใจพอ"""
+        if not hasattr(self, '_fz_compact'):
+            self._fz_keys = list(self.te['procedure']['map'].keys())
+            self._fz_compact = {}
+            for k in self._fz_keys:            # คีย์อัดแน่น (TURBT ← TUR-BT)
+                self._fz_compact.setdefault(self._compact(k), k)
+        cn = self._clean_proc(n)
+        cand = []
+        # ① ตัดคำรบกวน (ข้าง/วิธีระงับความรู้สึก/รายปี) → ลองตรง + แบบอัดแน่น
+        hit = (cn if cn in self.te['procedure']['map']
+               else self._fz_compact.get(self._compact(cn)))
+        if hit:
+            cand.append((self._proc_count(hit) or 0, hit))
+        # ② หัตถการพ่วง (A + B / A WITH B) → เลือกส่วนที่โมเดลรู้จักและเคสเยอะสุด
+        for part in self._SPLIT.split(cn):
+            p = part.strip(' .')
+            if len(p) < 4:
+                continue
+            hit = (p if p in self.te['procedure']['map']
+                   else self._fz_compact.get(self._compact(p)))
+            if hit:
+                cand.append((self._proc_count(hit) or 0, hit))
+        if cand:
+            return max(cand)[1]
+        # ③ rapidfuzz token-set (คีย์ที่เป็น subset ของชื่อยาว = คะแนนเต็ม)
+        try:
+            from rapidfuzz import fuzz, process
+        except ImportError:
+            return None
+        got = process.extract(cn, self._fz_keys, scorer=fuzz.token_set_ratio,
+                              score_cutoff=92, limit=8)
+        best = None
+        for k, sc, _ in got:
+            if len(self._compact(k)) < 5:      # กันคีย์สั้นเกินจับมั่ว
+                continue
+            n_c = self._proc_count(k) or 0
+            if n_c < 3:                        # หลักฐานน้อยกว่า 3 เคส → ไม่คุ้มเสี่ยงจับผิด
+                continue                       #   (ปล่อยตกไปใช้ค่ากลางแบบซื่อสัตย์)
+            item = (sc, n_c, len(k), k)
+            if best is None or item > best:
+                best = item
+        return best[3] if best else None
+
     def resolve_procedure(self, name):
         n = _norm(name)
         if n in self.abbrev and self.abbrev[n][0]:
             n = self.abbrev[n][0]
-        return self.canon9.get(n, n)
+        n = self.canon9.get(n, n)
+        if n in self.te['procedure']['map']:
+            return n
+        return self._fuzzy_procedure(n) or n
 
     def resolve_proc_group(self, canon, raw=''):
         for key in (_norm(canon), _norm(raw)):

@@ -451,9 +451,13 @@ def parse_schedule_csv_to_cases(uploaded_file):
             'is_tf': is_tf, 'is_after_note': is_after,
             'procnote': raw_note, 'predicted_min': None, 'confidence': None,
         }
+        # 🔧 15 ก.ค. 2026: เดิมไม่ส่ง diagnosis/ward → โมเดล v2 ขาด feature
+        #    (ทายเพี้ยนไปทางค่ากลางทุกเคสที่มาจาก CSV) — ส่งให้ครบเท่าที่ไฟล์มี
         pred = predict_surgical_time(
             case['procedure'], case['age'], case['surgeon'], case['division'],
-            case['sched_hour'] if case['sched_hour'] < 23 else 9)
+            case['sched_hour'] if case['sched_hour'] < 23 else 9,
+            diagnosis=case['diagnosis'] if case['diagnosis'] != '-' else '',
+            ward=case['ward'])
         case['predicted_min'] = pred['predicted_min']
         case['confidence'] = pred['confidence']
         case['pred_method'] = pred['method']
