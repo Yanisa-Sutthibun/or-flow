@@ -50,7 +50,21 @@ def load_preop(file) -> dict:
     """อ่านไฟล์ preop (.xls/.xlsx) → {hn: {'ASA','BMI','planicu','blood'}}
     ผู้ป่วยมีหลายแถว (มาหลายครั้ง) → ใช้แถว estmdate ล่าสุด"""
     import pandas as pd
-    df = pd.read_excel(file, dtype=str)
+    _fname = str(getattr(file, 'name', file)).lower()
+    if _fname.endswith('.csv'):
+        df = None
+        for _enc in ('utf-8-sig', 'cp874', 'utf-16'):   # HIS ส่งออกได้หลาย encoding
+            try:
+                if hasattr(file, 'seek'):
+                    file.seek(0)
+                df = pd.read_csv(file, dtype=str, encoding=_enc)
+                break
+            except (UnicodeError, UnicodeDecodeError):
+                continue
+        if df is None:
+            raise ValueError('อ่านไฟล์ CSV ไม่ได้ — encoding ไม่รู้จัก')
+    else:
+        df = pd.read_excel(file, dtype=str)
     df.columns = [str(c).strip() for c in df.columns]
     if 'hn' not in df.columns:
         raise ValueError(f"ไฟล์ preop ไม่มีคอลัมน์ hn — เจอ: {list(df.columns)[:8]}")

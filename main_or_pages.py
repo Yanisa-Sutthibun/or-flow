@@ -615,8 +615,8 @@ def render_csv_upload():
             # 💉 ไฟล์ preop วิสัญญี (19 ก.ค. 2026) — เติม ASA/BMI/จองเลือด/จอง ICU
             #    ให้โมเดล (feature ที่บอร์ดไม่เคยมี) · ไม่ใส่ = ทำงานแบบเดิม
             _up_pre = st.file_uploader(
-                "② ไฟล์ preop วิสัญญี (.xls) — ไม่บังคับ แต่ใส่แล้ว AI แม่นขึ้น",
-                type=["xls", "xlsx"], key="orboard_preop", disabled=_demo_active,
+                "② ไฟล์ preop วิสัญญี (.xls/.csv) — ไม่บังคับ แต่ใส่แล้ว AI แม่นขึ้น",
+                type=["xls", "xlsx", "csv"], key="orboard_preop", disabled=_demo_active,
                 help="ไฟล์ประเมินก่อนผ่าตัดจากวิสัญญี — ระบบจับคู่ผู้ป่วยด้วย HN "
                      "แล้วเติม ASA / BMI / จองเลือด / จอง ICU ให้ AI ใช้ทำนาย")
             _rep = st.checkbox("แทนที่เคส 'ยังไม่มา' เดิม (กันซ้ำ)", value=True,
