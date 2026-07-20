@@ -28,6 +28,18 @@ import os
 
 # ─────────────────────────── helpers ───────────────────────────
 
+def in_research_scope(case) -> bool:
+    """🚪 ประตูข้อมูลวิจัย (19 ก.ค. 2026) — เกณฑ์คัดเข้าบังคับด้วยซอฟต์แวร์:
+    ① ไม่ใช่เคสสาธิต/ทดสอบ (_demo) ② เป็น elective เท่านั้น (ขอบเขตวิทยานิพนธ์)
+    เคส emergency/urgency ใช้บอร์ด/AI ได้ครบ แต่ไม่ทิ้งรอยใน log วิจัยใด ๆ"""
+    if case is None or case.get('_demo'):
+        return False
+    if case.get('is_emergency'):
+        return False
+    ct = str(case.get('case_type') or 'Elective').strip().lower()
+    return ct == 'elective'
+
+
 def _salt() -> str:
     """salt สำหรับ hash HN — ลำดับ: secrets → env → default (ควรตั้งใน secrets!)"""
     try:
@@ -122,7 +134,7 @@ def _ensure_table(conn):
 def log_case_state(case) -> bool:
     """upsert สถานะปัจจุบันของเคสลง research_case_log — เรียกหลังทุกปุ่มบนบอร์ด"""
     try:
-        if not case or case.get('_demo'):
+        if not in_research_scope(case):    # 🚪 สาธิต/ทดสอบ/ฉุกเฉิน — ไม่เข้าข้อมูลวิจัย
             return False
         cref = str(case.get('id') or '')
         if not cref:

@@ -64,7 +64,12 @@ _EMG_CSS = (
     "font-size:11.5px;font-weight:600;letter-spacing:.3px;margin-right:6px;"
     "white-space:nowrap;display:inline-block;vertical-align:1px}"
 )
-_EMG_BADGE = '<span class="emg-dot"></span><span class="emg-tag">ฉุกเฉิน</span>'
+_EMG_BADGE = ('<span class="emg-dot"></span><span class="emg-tag">ฉุกเฉิน</span>'
+              # 🚪 เคสฉุกเฉินอยู่นอกขอบเขตวิจัย (elective เท่านั้น) — ชิปเทาแจ้งจาง ๆ
+              '<span style="color:#6b7280;background:#f3f4f6;border:1px solid #e5e7eb;'
+              'border-radius:8px;padding:1px 7px;font-size:10.5px;margin-right:6px;'
+              'white-space:nowrap;display:inline-block;vertical-align:1px;">'
+              'นอกขอบเขตวิจัย</span>')
 
 # 💜 ปุ่ม "เสร็จ → พักฟื้น" สีม่วงอ่อน #EDD2FF — สีประจำวิสัญญี (PACU อยู่ใต้วิสัญญี)
 #    เลือกด้วย class st-key-tb_f2_* (Streamlit ≥1.37 ใส่ class ตาม key ให้อัตโนมัติ
@@ -522,6 +527,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             except TypeError:
                 pop = st.popover("✏️")
             with pop:
+                if _is_emer(c):
+                    st.caption("🚨 เคสฉุกเฉิน — อยู่นอกขอบเขตวิจัย: ใช้บอร์ด/AI ได้ปกติ "
+                               "แต่จะไม่ถูกบันทึกเข้าข้อมูลวิจัยใด ๆ")
                 st.caption("เวลาคาดการณ์ใช้ห้องผ่าตัด (นาที) — แก้แทนค่า AI ได้ "
                            "(เวลาใช้ห้องตั้งแต่ room in ถึง room out)")
                 # 🤖 ที่มาของคำทำนาย — หลักฐานช่วยตัดสินใจว่าควรเชื่อ AI แค่ไหน

@@ -1645,13 +1645,22 @@ def _mask_staff_for_log(name):
     return f"{_p[0]} {_p[1][0]}." if len(_p) >= 2 else (_p[0] if _p else s)
 
 
+def _in_research_scope(case) -> bool:
+    """🚪 ประตูข้อมูลวิจัย — สาธิต/ทดสอบ/ฉุกเฉิน ไม่เข้า log วิจัย (19 ก.ค. 2026)"""
+    try:
+        from research_log import in_research_scope
+        return in_research_scope(case)
+    except ImportError:
+        return not (case or {}).get('_demo')
+
+
 def log_override(case, override_min, source='board'):
     """บันทึกเหตุการณ์ "คนแก้เวลา AI" — เรียกตอนกด 💾 บนกระดาน
     case = dict เคสจาก session · แก้หลายครั้ง = หลายแถว (audit trail)
     เก็บค่า AI เดิมแช่แข็งไว้คู่กับค่าที่คนแก้ ใช้เทียบ คน vs AI ภายหลัง
     (ข้ามเคส demo — กันข้อมูลทดลองปนเข้าผลวิจัย)"""
     try:
-        if case.get('_demo'):
+        if not _in_research_scope(case):
             return False
         conn = get_conn()
         try:                          # 🔌 finally — กดปุ่มบนบอร์ดทุกครั้งเรียกฟังก์ชันนี้
@@ -1681,7 +1690,7 @@ def complete_override(case, actual_min):
     """เติมเวลาจริงให้ log ของเคสนี้ — เรียกตอนกด 'ผ่าเสร็จ'
     (อัปเดตทุกแถวของเคสที่ยังไม่มีเวลาจริง — รองรับการแก้หลายครั้ง)"""
     try:
-        if actual_min is None or case.get('_demo'):
+        if actual_min is None or not _in_research_scope(case):
             return False
         conn = get_conn()
         try:
@@ -1704,7 +1713,7 @@ def reset_override_actual(case):
     (เคสกลับไปสถานะกำลังผ่า เวลาจริงเดิมไม่ถูกต้องแล้ว
     พอผ่าเสร็จรอบใหม่ complete_override จะเติมค่าที่ถูกให้เอง)"""
     try:
-        if case.get('_demo'):
+        if not _in_research_scope(case):
             return False
         conn = get_conn()
         try:

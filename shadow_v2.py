@@ -72,8 +72,14 @@ def _ensure_table(conn):
 def log_shadow(case: dict, actual_min=None) -> bool:
     """เรียกจากปุ่ม 'ผ่าเสร็จ' — ทำนายด้วย thesis_ML_v2 แล้วบันทึกเทียบ (เงียบเมื่อพัง)"""
     try:
-        if not case or case.get('_demo'):
-            return False
+        # 🚪 ประตูวิจัย (19 ก.ค. 2026): สาธิต/ทดสอบ/ฉุกเฉิน — ไม่เข้า log วิจัย
+        try:
+            from research_log import in_research_scope
+            if not in_research_scope(case):
+                return False
+        except ImportError:                     # fallback เดิม
+            if not case or case.get('_demo'):
+                return False
         # 🔄 บทบาทสลับ 7 ก.ค. 2026: บอร์ดโชว์ thesis_ML_v2 แล้ว →
         #    ai_predicted_min จากบอร์ด = v2 · ชั้น shadow เรียก thesis_ML สดมาเทียบ
         ai0 = case.get('ai_predicted_min') or case.get('predicted_min')   # = v2 (บนบอร์ด)
