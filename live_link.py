@@ -62,6 +62,7 @@ def _rec(c):
 
 def rooms_from_session(cases, now=None):
     """โครงเดียวกับ get_room_status() แต่ใช้เคสสดจากกระดาน (เชื่อมกัน realtime)."""
+    cases = [c for c in cases if c.get("status") != "removed"]   # 🗑️ tombstone
     now = now or datetime.now()
     try:
         from room_config import get_active_rooms, room_label
@@ -100,6 +101,7 @@ def rooms_from_session(cases, now=None):
 
 def kpi_from_session(cases):
     """โครงเดียวกับ get_kpi() แต่คิดจากเคสสดบนกระดาน."""
+    cases = [c for c in cases if c.get("status") != "removed"]   # 🗑️ tombstone
     recs = [_rec(c) for c in cases]
     done = [x for x in recs if x['status'] in ('post_op', 'discharged')]
     # 📐 M-08: utilization = เวลาที่ตกในช่วง 8:00–16:00 (clip) ÷ (ห้อง×480) — นิยามเดียวกับทั้งระบบ
@@ -158,6 +160,7 @@ def workload_from_session(cases):
     """โครงเดียวกับ get_workload() แต่คิดจากเคสสดบนกระดาน.
     OPD/IPD ดูจาก ward (reqward ในไฟล์ HIS): ว่าง/มีคำว่า OPD = OPD ·
     มีชื่อ ward = IPD (SET = เคสจากไฟล์ตาราง · Walk-in = เพิ่มด้วยมือ)"""
+    cases = [c for c in cases if c.get("status") != "removed"]   # 🗑️ tombstone
     surg = {}
     for c in cases:
         s = (c.get('surgeon') or '').strip()
@@ -212,6 +215,7 @@ def workload_from_session(cases):
 
 def alerts_from_session(cases, now=None):
     """โครงเดียวกับ get_delay_alerts() แต่คิดจากเคสสดบนกระดาน."""
+    cases = [c for c in cases if c.get("status") != "removed"]   # 🗑️ tombstone
     now = now or datetime.now()
     alerts = []
     for c in cases:

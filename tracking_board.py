@@ -157,6 +157,8 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
                                 t[1].get('ororder') or 999))
     rows = []
     for idx, c in ordered:
+        if c.get('status') == 'removed':
+            continue   # 🗑️ tombstone — ถูกลบจากกระดานแล้ว (คง idx เดิมของเคสอื่นไว้)
         if ql and (ql not in str(c.get('name', '')).lower()
                    and ql not in str(c.get('hn', '')).lower()
                    and ql not in str(c.get('procedure', '')).lower()):
@@ -579,6 +581,34 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                     if mark_dirty:
                         mark_dirty(c)   # CR-2: ✏️ แก้เวลา/ย้ายห้อง ต้องเซฟขึ้นบอร์ดกลาง
                     _rerun_board()
+
+                # 🌙 เคสที่ผ่าไปแล้วก่อนบอร์ดเปิด (เช่นฉุกเฉินกลางคืน) — มุคกี้สั่ง 19 ก.ค. 2026
+                #    มีเฉพาะเคส "ยังไม่มา" · เคสที่เข้า flow แล้วใช้ปุ่มปกติ/↩️ ตามเดิม
+                if disp == 'not_arrived':
+                    st.markdown("---")
+                    st.caption("🌙 เคสผ่าไปแล้วก่อนเปิดบอร์ด หรือไม่ต้องการบนกระดาน")
+                    if st.button("✅ ผ่าไปแล้ว — ย้ายไป 'จำหน่ายแล้ว'",
+                                 key=f"tb_pd_{idx}", width='stretch',
+                                 help="เคสผ่าเสร็จก่อนบอร์ดเปิด (เช่นเที่ยงคืน) — "
+                                      "ย้ายพ้นคิว ไม่บันทึกเวลารอ/เวลาผ่า "
+                                      "เพราะไม่ได้เดินผ่านบอร์ด"):
+                        c['status'] = 'discharged'
+                        c['done_before_board'] = True   # ธงกันสับสน — ไม่ใช่เคสเดินครบ flow
+                        if mark_dirty:
+                            mark_dirty(c)
+                        _rerun_board()
+                    _okdel = st.checkbox("ยืนยันลบเคสนี้ออกจากกระดาน",
+                                         key=f"tb_delok_{idx}")
+                    if st.button("🗑️ ลบออกจากกระดาน", key=f"tb_del_{idx}",
+                                 width='stretch', disabled=not _okdel,
+                                 help="นำเคสออกจากกระดานทุกเครื่อง — ไม่กระทบ"
+                                      "ฐานข้อมูลสถิติ/วิจัยใด ๆ"):
+                        # tombstone: คงเคสไว้แต่สถานะ 'removed' (ไม่แสดงทุกหน้า)
+                        # — ลบทิ้งจริงจะโดนบอร์ดกลาง merge คืนชีพจากเครื่องอื่น
+                        c['status'] = 'removed'
+                        if mark_dirty:
+                            mark_dirty(c)
+                        _rerun_board()
 
     with c2:
         if disp == 'not_arrived':
