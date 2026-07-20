@@ -84,6 +84,18 @@ _PACU_BTN_CSS = (
 )
 
 
+def _dur_str(m) -> str:
+    """นาที → ข้อความอ่านง่าย: ≤60 = 'X น.' · เกิน = 'X ชม. Y น.' (มุคกี้สั่ง 19 ก.ค. 2026)"""
+    try:
+        m = int(round(float(m)))
+    except (TypeError, ValueError):
+        return '? น.'
+    h, mm = divmod(m, 60)
+    if h and mm:
+        return f'{h} ชม. {mm} น.'
+    return f'{h} ชม.' if h else f'{mm} น.'
+
+
 def _is_emer(c):
     """เคสฉุกเฉิน/เร่งด่วน — ดูจาก flag หรือข้อความประเภทเคส (emergency/urgency)"""
     if c.get('is_emergency'):
@@ -343,9 +355,9 @@ def _time_cell(c, disp, eff, elapsed, now):
                 if (dc is not None and hasattr(dc, 'hour')) else '—')
     # not_arrived
     if ov:
-        return (f'<b style="font-weight:600;">{eff} น.</b> '
+        return (f'<b style="font-weight:600;">{_dur_str(eff)}</b> '
                 f'<span style="text-decoration:line-through;color:#94a3b8;'
-                f'font-size:12px;">AI {ai0 or "?"}</span>')
+                f'font-size:12px;">AI {_dur_str(ai0) if ai0 else "?"}</span>')
     # 🤖 หลักฐานความมั่นใจบนแถวเลย — พยาบาลเห็นทันทีว่าคำทำนายอิงกี่เคส
     _n = c.get('proc_n')
     _cf = str(c.get('confidence') or '')
@@ -358,7 +370,8 @@ def _time_cell(c, disp, eff, elapsed, now):
             _txt += f' · มั่นใจ: {_cf}'
         _ev = (f'<br><span style="font-size:11px;color:{_cfc};'
                f'white-space:nowrap;">{_txt}</span>')
-    return f'AI ทำนายการใช้ห้อง ~{ai0 or "?"} น.{_ev}'
+    return ('AI ทำนายการใช้ห้อง ~'
+            + (_dur_str(ai0) if ai0 else '? น.') + _ev)
 
 
 def _holding_row_iframe(c, loc, tlabel, now):
@@ -535,7 +548,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 # 🤖 ที่มาของคำทำนาย — หลักฐานช่วยตัดสินใจว่าควรเชื่อ AI แค่ไหน
                 _ai0 = c.get('ai_predicted_min') or c.get('predicted_min')
                 if _ai0:
-                    _bits = [f"🤖 AI {int(_ai0)} นาที"]
+                    _bits = [f"🤖 AI {_dur_str(_ai0)}"]
                     if c.get('proc_n') is not None:
                         _nev = int(c.get('proc_n') or 0)
                         _bits.append(f"based on {_nev} เคส" if _nev
