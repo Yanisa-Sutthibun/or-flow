@@ -595,7 +595,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 if disp == 'not_arrived':
                     st.markdown("---")
                     st.caption("🌙 เคสผ่าไปแล้วก่อนเปิดบอร์ด หรือไม่ต้องการบนกระดาน")
-                    if st.button("✅ ผ่าไปแล้ว — ย้ายไป 'จำหน่ายแล้ว'",
+                    if st.button("✅ จำหน่ายแล้ว",
                                  key=f"tb_pd_{idx}", width='stretch',
                                  help="เคสผ่าเสร็จก่อนบอร์ดเปิด (เช่นเที่ยงคืน) — "
                                       "ย้ายพ้นคิว ไม่บันทึกเวลารอ/เวลาผ่า "
