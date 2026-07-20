@@ -511,6 +511,16 @@ def _render_add_case_form(demo_active):
                                key="ac_room")
     from datetime import time as _time
     _sched = c6.time_input("🤖 เวลานัด", value=_time(9, 0), key="ac_time")
+    # 💉 feature จาก preop (19 ก.ค. 2026) — จอง ICU 8.5% · จองเลือด 8.0% · ASA 5.9%
+    #    ของ feature importance รวม — ไม่รู้ก็ข้ามได้ (โมเดลใช้ค่ากลางแทน)
+    cp1, cp2, cp3 = st.columns(3)
+    _asa = cp1.selectbox("🤖 ASA", ['ไม่ระบุ', '1', '2', '3', '4', '5',
+                                    '1E', '2E', '3E', '4E', '5E'],
+                         key="ac_asa", help="จากใบประเมิน preop วิสัญญี — ถ้ามี")
+    _blood = cp2.selectbox("🤖 จองเลือด", ['ไม่ระบุ', 'จอง', 'ไม่จอง'],
+                           key="ac_blood")
+    _icu = cp3.selectbox("🤖 จอง ICU", ['ไม่ระบุ', 'จอง', 'ไม่จอง'],
+                         key="ac_icu")
     ce1, ce2 = st.columns(2)
     _no_time = ce1.checkbox("ไม่ระบุเวลา (เคส TF — เรียงท้ายคิว)", key="ac_tf")
     is_emer = ce2.checkbox("🔴 เคสฉุกเฉิน (ติดไฟแดงบนบอร์ด)", key="ac_emer")
@@ -530,6 +540,15 @@ def _render_add_case_form(demo_active):
             sched_h, sched_m, is_tf = _sched.hour, _sched.minute, False
         else:
             sched_h, sched_m, is_tf = 23, 55, True  # ไม่ระบุเวลา = TF (เรียงท้าย)
+        # แปลงค่าฟอร์ม preop → รูปแบบที่โมเดลใช้ ('ไม่ระบุ' = ไม่ส่ง)
+        _asa_v = _asa if _asa != 'ไม่ระบุ' else None
+        _blood_v = {'จอง': 'มี', 'ไม่จอง': 'ไม่มี'}.get(_blood)
+        _icu_v = {'จอง': 'มี', 'ไม่จอง': 'ไม่มี'}.get(_icu)
+        try:
+            from preop_merge import sex_from_name as _sfn
+            _sex_v = _sfn(name)
+        except Exception:
+            _sex_v = None
         # ทำนายเวลาด้วยโมเดล (ส่งข้อมูลครบที่กรอก)
         try:
             from main_or_core import predict_surgical_time
@@ -538,7 +557,8 @@ def _render_add_case_form(demo_active):
                 surgeon=(surg or '').strip(), division=str(_div_code),
                 op_hour=sched_h if sched_h < 23 else 9,
                 op_date=_now(), orroom=int(_room_no),
-                diagnosis=(diag or '').strip())
+                diagnosis=(diag or '').strip(),
+                asa=_asa_v, blood=_blood_v, planicu=_icu_v, sex=_sex_v)
             _pm = int(_pred.get('predicted_min') or 60)
             _conf = _pred.get('confidence')
             _pn = _pred.get('proc_n', 0)
@@ -567,6 +587,8 @@ def _render_add_case_form(demo_active):
             'time_arrived_holding': None, 'time_entered_or': None,
             'time_exited_or': None, 'time_discharged': None,
             'actual_duration_min': None,
+            # 💉 เก็บ feature preop ติดเคสไว้ — shadow log ใช้ชุดเดียวกับบอร์ด
+            'ASA': _asa_v, 'blood': _blood_v, 'planicu': _icu_v, 'sex': _sex_v,
         }
         _cur = list(st.session_state.patient_cases)
         _cur.append(case)
