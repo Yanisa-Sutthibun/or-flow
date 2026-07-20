@@ -608,122 +608,123 @@ def _render_add_case_form(demo_active):
 
 
 def render_csv_upload():
-    """📤 อัปโหลดตารางผ่าตัด (CSV) — ล็อก PIN · อยู่บนหน้าตารางผ่าตัด เหนือ ➕ เพิ่มเคส
-    (ย้ายกลับจาก ⚙️ ตั้งค่า 14 ก.ค. 2026) · 🗑️ ล้างกระดานยุบเป็นตัวเลือกท้าย expander นี้"""
+    """📤 อัปโหลดตารางผ่าตัด (CSV+preop) — อยู่บนหน้าตารางผ่าตัด เหนือ ➕ เพิ่มเคส
+    🔓 19 ก.ค. 2026 (มุคกี้สั่ง): อัปโหลดเปิดให้พยาบาลทุกคน ไม่ต้องใส่ PIN —
+    PIN ย้ายไปคุมเฉพาะ 🗑️ ล้างกระดาน (ลบได้เฉพาะผู้ดูแล)"""
     _demo_active = bool(st.session_state.get('_or_demo'))
-    with st.expander("📤 อัปโหลดตารางผ่าตัดวันนี้ (CSV) 🔒", expanded=False):
+    with st.expander("📤 อัปโหลดตารางผ่าตัดวันนี้ (CSV)", expanded=False):
         if _demo_active:
             st.caption("ℹ️ ปิดสวิตช์ 🎬 สาธิต ด้านบนก่อน เพื่ออัปโหลดตารางจริง")
-        if not st.session_state.get('_upload_unlocked'):
-            _pin_cfg = _get_admin_pin()
-            if not _pin_cfg:
-                st.caption("🔒 ปิดการอัปโหลดไว้ — ผู้ดูแลยังไม่ได้ตั้งรหัส PIN "
-                           "(เพิ่ม `admin_pin = \"...\"` ใน secrets แล้ว reboot)")
+        _up = st.file_uploader("① ไฟล์ CSV ตารางผ่าตัด (HIS)", type=["csv"],
+                               key="orboard_csv", disabled=_demo_active)
+        # 💉 ไฟล์ preop วิสัญญี (19 ก.ค. 2026) — เติม ASA/BMI/จองเลือด/จอง ICU
+        #    ให้โมเดล (feature ที่บอร์ดไม่เคยมี) · ไม่ใส่ = ทำงานแบบเดิม
+        _up_pre = st.file_uploader(
+            "② ไฟล์ preop ของวิสัญญี (.xls/.csv)",
+            type=["xls", "xlsx", "csv"], key="orboard_preop", disabled=_demo_active,
+            help="ไฟล์ประเมินก่อนผ่าตัดจากวิสัญญี — ระบบจับคู่ผู้ป่วยด้วย HN "
+                 "แล้วเติม ASA / BMI / จองเลือด / จอง ICU ให้ AI ใช้ทำนาย")
+        _rep = st.checkbox("แทนที่เคส 'ยังไม่มา' เดิม (กันซ้ำ)", value=True,
+                           key="orboard_rep", disabled=_demo_active)
+        # 🧪 อัปโหลดเพื่อ "ทดสอบระบบ": ติดธง _demo ทุกเคส → กดได้ครบทุก flow
+        #    แต่ override_log / shadow_v2_log / case_history จะไม่ถูกเขียนเลย
+        #    (ไม่มีรอยใน DB วิจัย) · ทดสอบเสร็จกด 🗑️ ล้างกระดานวันนี้ = จบสะอาด
+        _testmode = st.checkbox(
+            "🧪 โหมดทดสอบระบบ — เคสชุดนี้จะไม่ถูกบันทึกลงฐานข้อมูลวิจัย",
+            value=False, key="orboard_testmode", disabled=_demo_active,
+            help="ติ๊กเมื่อใช้ไฟล์ทดสอบ: บอร์ดทำงานเหมือนจริงทุกอย่าง แต่ไม่เขียน "
+                 "override/shadow/case_history · เสร็จแล้วลบทิ้งด้วยปุ่ม "
+                 "'🗑️ ล้างกระดานวันนี้' ด้านล่าง")
+        if _up is not None and not _demo_active and st.button(
+                "✅ โหลดเข้าบอร์ด + ทำนายเวลา",
+                type="primary", width='stretch', key="orboard_load"):
+            with st.spinner("กำลังอ่านไฟล์ + ทำนายเวลา..."):
+                try:
+                    from main_or_app import parse_schedule_csv_to_cases
+                    _new = parse_schedule_csv_to_cases(_up)
+                except Exception as _ex:
+                    _new = []
+                    st.error(f"อ่านไฟล์ไม่สำเร็จ: {_ex}")
+            if not _new:
+                st.warning("ไม่พบเคสในไฟล์ — ลองตรวจหัวคอลัมน์ (hn/ชื่อ/หัตถการ/เวลา/ห้อง)")
             else:
-                st.caption("🔒 เฉพาะผู้ดูแล (Mukky) — ใส่รหัส PIN เพื่อปลดล็อกการอัปโหลด")
-                _up1, _up2 = st.columns([3, 1])
-                _upin = _up1.text_input("PIN", type="password", key="upload_pin",
-                                        placeholder="กรอก PIN",
-                                        label_visibility="collapsed")
-                if _up2.button("🔓 ปลดล็อก", key="upload_unlock", width='stretch'):
-                    if (_upin or '').strip() == _pin_cfg:
-                        st.session_state['_upload_unlocked'] = True
-                        st.rerun()
-                    else:
-                        st.error("PIN ไม่ถูกต้อง")
-        else:
-            _up = st.file_uploader("① ไฟล์ CSV ตารางผ่าตัด (HIS)", type=["csv"],
-                                   key="orboard_csv", disabled=_demo_active)
-            # 💉 ไฟล์ preop วิสัญญี (19 ก.ค. 2026) — เติม ASA/BMI/จองเลือด/จอง ICU
-            #    ให้โมเดล (feature ที่บอร์ดไม่เคยมี) · ไม่ใส่ = ทำงานแบบเดิม
-            _up_pre = st.file_uploader(
-                "② ไฟล์ preop ของวิสัญญี (.xls/.csv)",
-                type=["xls", "xlsx", "csv"], key="orboard_preop", disabled=_demo_active,
-                help="ไฟล์ประเมินก่อนผ่าตัดจากวิสัญญี — ระบบจับคู่ผู้ป่วยด้วย HN "
-                     "แล้วเติม ASA / BMI / จองเลือด / จอง ICU ให้ AI ใช้ทำนาย")
-            _rep = st.checkbox("แทนที่เคส 'ยังไม่มา' เดิม (กันซ้ำ)", value=True,
-                               key="orboard_rep", disabled=_demo_active)
-            # 🧪 อัปโหลดเพื่อ "ทดสอบระบบ": ติดธง _demo ทุกเคส → กดได้ครบทุก flow
-            #    แต่ override_log / shadow_v2_log / case_history จะไม่ถูกเขียนเลย
-            #    (ไม่มีรอยใน DB วิจัย) · ทดสอบเสร็จกด 🗑️ ล้างกระดานวันนี้ = จบสะอาด
-            _testmode = st.checkbox(
-                "🧪 โหมดทดสอบระบบ — เคสชุดนี้จะไม่ถูกบันทึกลงฐานข้อมูลวิจัย",
-                value=False, key="orboard_testmode", disabled=_demo_active,
-                help="ติ๊กเมื่อใช้ไฟล์ทดสอบ: บอร์ดทำงานเหมือนจริงทุกอย่าง แต่ไม่เขียน "
-                     "override/shadow/case_history · เสร็จแล้วลบทิ้งด้วยปุ่ม "
-                     "'🗑️ ล้างกระดานวันนี้' ด้านล่าง")
-            if _up is not None and not _demo_active and st.button(
-                    "✅ โหลดเข้าบอร์ด + ทำนายเวลา",
-                    type="primary", width='stretch', key="orboard_load"):
-                with st.spinner("กำลังอ่านไฟล์ + ทำนายเวลา..."):
-                    try:
-                        from main_or_app import parse_schedule_csv_to_cases
-                        _new = parse_schedule_csv_to_cases(_up)
-                    except Exception as _ex:
-                        _new = []
-                        st.error(f"อ่านไฟล์ไม่สำเร็จ: {_ex}")
-                if not _new:
-                    st.warning("ไม่พบเคสในไฟล์ — ลองตรวจหัวคอลัมน์ (hn/ชื่อ/หัตถการ/เวลา/ห้อง)")
-                else:
-                    # 💉 เติมเพศจากคำนำหน้า + ข้อมูล preop วิสัญญี → ทำนายใหม่ครบ feature
-                    try:
-                        from preop_merge import enrich_cases, load_preop
-                        _pm = load_preop(_up_pre) if _up_pre is not None else None
-                        _nm = enrich_cases(_new, _pm)
-                        if _pm is not None:
-                            st.info(f"💉 จับคู่ข้อมูลวิสัญญีได้ {_nm}/{len(_new)} เคส "
-                                    f"(จับคู่ด้วย HN — เคสที่ไม่เจอใช้ค่าทำนายแบบเดิม)")
-                        from main_or_core import predict_surgical_time as _pst
-                        for _ec in _new:
-                            if not (_ec.get('ASA') or _ec.get('BMI') or _ec.get('sex')
-                                    or _ec.get('planicu') or _ec.get('blood')):
-                                continue
-                            _pr = _pst(
-                                _ec['procedure'], _ec['age'], _ec['surgeon'],
-                                _ec['division'],
-                                _ec['sched_hour'] if _ec['sched_hour'] < 23 else 9,
-                                diagnosis=(_ec.get('diagnosis')
-                                           if _ec.get('diagnosis') != '-' else ''),
-                                ward=_ec.get('ward') or '',
-                                asa=_ec.get('ASA'), bmi=_ec.get('BMI'),
-                                sex=_ec.get('sex'), planicu=_ec.get('planicu'),
-                                blood=_ec.get('blood'))
-                            _ec['predicted_min'] = _pr['predicted_min']
-                            _ec['ai_predicted_min'] = _pr['predicted_min']
-                            _ec['effective_min'] = _pr['predicted_min']
-                            _ec['confidence'] = _pr['confidence']
-                            _ec['proc_n'] = _pr.get('proc_n', 0)
-                            _ec['predicted_range'] = _pr.get('predicted_range')
-                    except Exception as _px:
-                        st.warning(f"เติมข้อมูล preop ไม่สำเร็จ (ใช้ค่าทำนายเดิม): {_px}")
-                    _cur = list(st.session_state.patient_cases)
-                    if _rep:
-                        _cur = [c for c in _cur if c.get('status') != 'not_arrived']
-                    _seen_hn = {c.get('hn') for c in _cur if c.get('hn')}
-                    _added = 0
-                    for _nc in _new:
-                        if _nc.get('hn') and _nc['hn'] in _seen_hn:
+                # 💉 เติมเพศจากคำนำหน้า + ข้อมูล preop วิสัญญี → ทำนายใหม่ครบ feature
+                try:
+                    from preop_merge import enrich_cases, load_preop
+                    _pm = load_preop(_up_pre) if _up_pre is not None else None
+                    _nm = enrich_cases(_new, _pm)
+                    if _pm is not None:
+                        st.info(f"💉 จับคู่ข้อมูลวิสัญญีได้ {_nm}/{len(_new)} เคส "
+                                f"(จับคู่ด้วย HN — เคสที่ไม่เจอใช้ค่าทำนายแบบเดิม)")
+                    from main_or_core import predict_surgical_time as _pst
+                    for _ec in _new:
+                        if not (_ec.get('ASA') or _ec.get('BMI') or _ec.get('sex')
+                                or _ec.get('planicu') or _ec.get('blood')):
                             continue
-                        if _testmode:
-                            _nc['_demo'] = True   # 🧪 เคสทดสอบ — guard ทุกจุดจะไม่เขียน DB วิจัย
-                        _cur.append(_nc)
-                        _added += 1
-                    st.session_state.patient_cases = _cur
-                    st.session_state['_or_demo'] = False
-                    st.session_state['_board_dirty'] = True   # CR-2: โหลดตารางใหม่ → ดันขึ้นบอร์ดกลาง
-                    _msg = f"✅ โหลด {_added} เคสเข้าบอร์ดแล้ว — ไปดูที่หน้า 📋 ตารางผ่าตัด"
+                        _pr = _pst(
+                            _ec['procedure'], _ec['age'], _ec['surgeon'],
+                            _ec['division'],
+                            _ec['sched_hour'] if _ec['sched_hour'] < 23 else 9,
+                            diagnosis=(_ec.get('diagnosis')
+                                       if _ec.get('diagnosis') != '-' else ''),
+                            ward=_ec.get('ward') or '',
+                            asa=_ec.get('ASA'), bmi=_ec.get('BMI'),
+                            sex=_ec.get('sex'), planicu=_ec.get('planicu'),
+                            blood=_ec.get('blood'))
+                        _ec['predicted_min'] = _pr['predicted_min']
+                        _ec['ai_predicted_min'] = _pr['predicted_min']
+                        _ec['effective_min'] = _pr['predicted_min']
+                        _ec['confidence'] = _pr['confidence']
+                        _ec['proc_n'] = _pr.get('proc_n', 0)
+                        _ec['predicted_range'] = _pr.get('predicted_range')
+                except Exception as _px:
+                    st.warning(f"เติมข้อมูล preop ไม่สำเร็จ (ใช้ค่าทำนายเดิม): {_px}")
+                _cur = list(st.session_state.patient_cases)
+                if _rep:
+                    _cur = [c for c in _cur if c.get('status') != 'not_arrived']
+                _seen_hn = {c.get('hn') for c in _cur if c.get('hn')}
+                _added = 0
+                for _nc in _new:
+                    if _nc.get('hn') and _nc['hn'] in _seen_hn:
+                        continue
                     if _testmode:
-                        _msg += " · 🧪 โหมดทดสอบ (ไม่บันทึกลงฐานข้อมูลวิจัย)"
-                    st.success(_msg)
-                    st.rerun()
+                        _nc['_demo'] = True   # 🧪 เคสทดสอบ — guard ทุกจุดจะไม่เขียน DB วิจัย
+                    _cur.append(_nc)
+                    _added += 1
+                st.session_state.patient_cases = _cur
+                st.session_state['_or_demo'] = False
+                st.session_state['_board_dirty'] = True   # CR-2: โหลดตารางใหม่ → ดันขึ้นบอร์ดกลาง
+                _msg = f"✅ โหลด {_added} เคสเข้าบอร์ดแล้ว — ไปดูที่หน้า 📋 ตารางผ่าตัด"
+                if _testmode:
+                    _msg += " · 🧪 โหมดทดสอบ (ไม่บันทึกลงฐานข้อมูลวิจัย)"
+                st.success(_msg)
+                st.rerun()
 
-            # ---- 🗑️ ล้างกระดานวันนี้ — ยุบมาเป็นตัวเลือกในนี้ (14 ก.ค. 2026) ----
-            #      ใช้ประตู PIN เดียวกับอัปโหลด (_upload_unlocked) ไม่ต้องปลดซ้ำ
-            st.markdown("---")
-            if st.checkbox("🗑️ ล้างกระดานวันนี้ (สำหรับลบเคสทดสอบ)",
-                           key="orb_clear_open",
-                           help="ลบเคสทั้งหมดของวันนี้ออกจากบอร์ด+บอร์ดกลาง (ทุกเครื่อง) "
-                                "— ใช้เคลียร์ข้อมูลทดสอบ ไม่กระทบสถิติย้อนหลัง"):
+        # ---- 🗑️ ล้างกระดานวันนี้ — ล็อก PIN เฉพาะผู้ดูแล (Mukky) ----
+        #      (19 ก.ค. 2026: สลับกุญแจ — อัปโหลดฟรี / การลบต้องมี PIN)
+        st.markdown("---")
+        if st.checkbox("🗑️ ล้างกระดานวันนี้ (สำหรับลบเคสทดสอบ) 🔒",
+                       key="orb_clear_open",
+                       help="ลบเคสทั้งหมดของวันนี้ออกจากบอร์ด+บอร์ดกลาง (ทุกเครื่อง) "
+                            "— เฉพาะผู้ดูแล (ใส่รหัส PIN) · ไม่กระทบสถิติย้อนหลัง"):
+            if not st.session_state.get('_clear_unlocked'):
+                _pin_cfg = _get_admin_pin()
+                if not _pin_cfg:
+                    st.caption("🔒 ปิดการล้างกระดานไว้ — ผู้ดูแลยังไม่ได้ตั้งรหัส PIN "
+                               "(เพิ่ม `admin_pin = \"...\"` ใน secrets แล้ว reboot)")
+                else:
+                    st.caption("🔒 เฉพาะผู้ดูแล (Mukky) — ใส่รหัส PIN เพื่อปลดล็อกการล้างกระดาน")
+                    _cp1, _cp2 = st.columns([3, 1])
+                    _cpin = _cp1.text_input("PIN", type="password", key="clear_pin",
+                                            placeholder="กรอก PIN",
+                                            label_visibility="collapsed")
+                    if _cp2.button("🔓 ปลดล็อก", key="clear_unlock", width='stretch'):
+                        if (_cpin or '').strip() == _pin_cfg:
+                            st.session_state['_clear_unlocked'] = True
+                            st.rerun()
+                        else:
+                            st.error("PIN ไม่ถูกต้อง")
+            else:
                 _render_clear_board_body()
 
 
