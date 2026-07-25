@@ -114,19 +114,28 @@ def _complete_cases_from_files(schedule_src, intraop_src) -> int:
         if circ and circ.upper() in ("NAN", "NONE", ""):
             circ = None
         # 🔒 จับคู่ด้วย (วันที่, ห้อง, หัตถการ, หมอ) — รองรับทั้งชื่อจริงและรหัส masked
-        cur = conn.execute(
-            "UPDATE cases SET status='discharged', "
-            "actual_duration_min=COALESCE(?, actual_duration_min), "
-            "in_or_at=COALESCE(?, in_or_at), op_end_at=COALESCE(?, op_end_at), "
-            "discharged_at=COALESCE(?, discharged_at), "
-            "scrub_nurse=COALESCE(?, scrub_nurse), circ_nurse=COALESCE(?, circ_nurse) "
-            "WHERE op_date=? AND COALESCE(room_no,-1)=? AND procedure_name=? "
-            "AND COALESCE(scheduled_surgeon,'') IN (?, ?)",
-            (dur, in_ts, out_ts, out_ts, scrub, circ,
-             r["opedate"], room, r["icd9cm_name"], surg, surg_code),
-        )
-        n += cur.rowcount
-    conn.commit()
+        # 🛡️ 19 ก.ค. 2026: พังรายเคส (เช่นชน unique index จากข้อมูลซ้ำ) → ข้าม
+        #    เคสนั้นแล้วไปต่อ — เดิม exception เดียวล้มทั้งขั้นตอน (0 เคสถูก mark)
+        try:
+            cur = conn.execute(
+                "UPDATE cases SET status='discharged', "
+                "actual_duration_min=COALESCE(?, actual_duration_min), "
+                "in_or_at=COALESCE(?, in_or_at), op_end_at=COALESCE(?, op_end_at), "
+                "discharged_at=COALESCE(?, discharged_at), "
+                "scrub_nurse=COALESCE(?, scrub_nurse), circ_nurse=COALESCE(?, circ_nurse) "
+                "WHERE op_date=? AND COALESCE(room_no,-1)=? AND procedure_name=? "
+                "AND COALESCE(scheduled_surgeon,'') IN (?, ?)",
+                (dur, in_ts, out_ts, out_ts, scrub, circ,
+                 r["opedate"], room, r["icd9cm_name"], surg, surg_code),
+            )
+            n += cur.rowcount
+            conn.commit()          # commit รายเคส — เคสก่อนหน้าไม่หายถ้าเคสหลังพัง
+        except Exception as _rx:
+            try:
+                conn.rollback()    # postgres: ต้อง rollback ก่อน execute ต่อ
+            except Exception:
+                pass
+            print(f"[complete_cases] ข้ามเคส {r.get('opedate')} ห้อง {room}: {_rx}")
     conn.close()
     return n
 
@@ -162,17 +171,31 @@ def render_process_panel():
 
         # 1) schedule → dashboard (DB) — มีแถบ progress ให้เห็นว่าไม่ค้าง
         try:
-            from main_or_db import import_schedule
+            from main_or_db import import_schedule, get_conn as _gc
             df_sched = build_schedule_db_df(sched)
             days = list(df_sched.groupby("opedate"))
-            total = 0
+            # 🛡️ 19 ก.ค. 2026: ข้ามวันที่มีข้อมูลใน DB แล้ว — กันเคสซ้ำเมื่อไฟล์
+            #    ครอบช่วงที่เคยนำเข้า (บทเรียนจากรอบ มี.ค.–พ.ค. ซ้ำ 999 แถว)
+            _c = _gc()
+            try:
+                _exist = {str(r[0]) for r in _c.execute(
+                    "SELECT DISTINCT op_date FROM cases").fetchall()}
+            finally:
+                _c.close()
+            total, skipped = 0, 0
             prog = st.progress(0.0, text="① นำเข้า schedule → dashboard...")
             for i, (op_date, grp) in enumerate(days):
-                total += import_schedule(grp.copy(), op_date)
+                if str(op_date) in _exist:
+                    skipped += 1
+                else:
+                    total += import_schedule(grp.copy(), op_date)
                 prog.progress((i + 1) / max(len(days), 1),
                               text=f"① นำเข้า schedule → dashboard... {i + 1}/{len(days)} วัน")
             prog.empty()
-            report["schedule"] = f"✅ นำเข้า {total} เคส จาก {len(days)} วัน"
+            report["schedule"] = (f"✅ นำเข้า {total} เคส จาก "
+                                  f"{len(days) - skipped} วัน"
+                                  + (f" · ข้าม {skipped} วันที่มีข้อมูลแล้ว"
+                                     if skipped else ""))
         except Exception as e:
             import traceback
             report["schedule"] = f"❌ {e}"
