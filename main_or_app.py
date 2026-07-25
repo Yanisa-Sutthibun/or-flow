@@ -243,14 +243,8 @@ def render_system_status():
 
 
 def page_room_settings():
-    # 👤 ประตูบทบาท (production 19 ก.ค. 2026): หน้า ⚙️ เฉพาะผู้ดูแล —
-    #    บทบาทถูกกำหนดตั้งแต่หน้า login (รหัสผู้ดูแล) ไม่ถามรหัสซ้ำที่นี่
-    if st.session_state.get('role') != 'admin':
-        st.markdown("### ⚙️ ตั้งค่า (เฉพาะผู้ดูแล)")
-        st.info("🔒 หน้านี้สำหรับผู้ดูแลระบบ — กด **🔒 ออกจากระบบ** (มุมขวาบน) "
-                "แล้วเข้าสู่ระบบใหม่ด้วยรหัสผู้ดูแล")
-        return
-
+    # 👤 production 19 ก.ค. 2026: เปิด/ปิดห้อง = ทุกคนใช้ได้ (รหัสหน่วยงาน) ·
+    #    เฉพาะ 📥 นำเข้าข้อมูลย้อนหลัง ที่กันด้วยบทบาทผู้ดูแล (ดูท้ายฟังก์ชัน)
     # ห้องผ่าตัดศัลยกรรมตึกใหม่ (1 มี.ค. 69) — 8 ห้อง อ้างตาม OR_mapping_reference
     ROOM_INFO = {
         90: {'label': 'OR1 — ส่องกล้อง (SCOPE)',        'desc': 'ห้องผ่าตัดส่องกล้อง'},
@@ -329,15 +323,20 @@ def page_room_settings():
     #    ปลอดภัยเรื่องจริยธรรม: ส่วน fine-tune ถูกถอดจาก process_panel ถาวรแล้ว
     #    (ethics lock) — เหลือเฉพาะ นำเข้าเคส + เติมเวลาจริง + mask ชื่อ
     st.markdown("---")
-    with st.expander("📥 นำเข้าข้อมูลย้อนหลังเข้าฐานสถิติ", expanded=False):
-        # (อยู่ในหน้า ⚙️ ที่กันด้วยบทบาทผู้ดูแลแล้ว — ไม่ถามรหัสซ้ำ)
-        try:
-            from process_panel import render_process_panel
-            render_process_panel()
-        except Exception as _pe:
-            import traceback
-            st.error(f"❌ โหลดส่วนนำเข้าไม่สำเร็จ: {_pe}")
-            st.code(traceback.format_exc())
+    with st.expander("📥 นำเข้าข้อมูลย้อนหลังเข้าฐานสถิติ (เฉพาะผู้ดูแล) 🔒",
+                     expanded=False):
+        # 👤 เฉพาะบทบาทผู้ดูแล (login ด้วยรหัสผู้ดูแล) — ไม่ถามรหัสซ้ำ
+        if st.session_state.get('role') != 'admin':
+            st.info("🔒 ส่วนนี้สำหรับผู้ดูแลระบบ — ออกจากระบบแล้วเข้าใหม่"
+                    "ด้วยรหัสผู้ดูแล")
+        else:
+            try:
+                from process_panel import render_process_panel
+                render_process_panel()
+            except Exception as _pe:
+                import traceback
+                st.error(f"❌ โหลดส่วนนำเข้าไม่สำเร็จ: {_pe}")
+                st.code(traceback.format_exc())
 
 
 # ============================================================================
