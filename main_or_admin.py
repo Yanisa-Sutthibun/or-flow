@@ -1904,12 +1904,13 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
             <a class="toc-item" data-target="sec-overview" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">1</span>📊 ภาพรวมทั้งหมด</a>
-            <a class="toc-item" data-target="sec-trend" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">2</span>📈 กราฟจำนวนเคสรายเดือน</a>
-            <a class="toc-item" data-target="sec-rank" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">3</span>🏆 อันดับยอดนิยม</a>
-            <a class="toc-item" data-target="sec-eff" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">4</span>⏱️ ประสิทธิภาพ</a>
-            <a class="toc-item" data-target="sec-night" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">5</span>🌙 นอกเวลา</a>
-            <a class="toc-item" data-target="sec-nurse" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">6</span>👥 Progress (PIN)</a>
-            <a class="toc-item" data-target="sec-export" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">7</span>💾 Export</a>
+            <a class="toc-item" data-target="sec-room" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">2</span>🏥 สถิติรายห้อง</a>
+            <a class="toc-item" data-target="sec-trend" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">3</span>📈 กราฟจำนวนเคสรายเดือน</a>
+            <a class="toc-item" data-target="sec-rank" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">4</span>🏆 อันดับยอดนิยม</a>
+            <a class="toc-item" data-target="sec-eff" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">5</span>⏱️ ประสิทธิภาพ</a>
+            <a class="toc-item" data-target="sec-night" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">6</span>🌙 นอกเวลา</a>
+            <a class="toc-item" data-target="sec-nurse" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">7</span>👥 Progress (PIN)</a>
+            <a class="toc-item" data-target="sec-export" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">8</span>💾 Export</a>
           </div>
           <div style="border-top:0.5px solid #eceff1;margin-top:10px;padding-top:10px;">
             <a id="toc-top" style="display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;border-radius:6px;color:#1976d2;text-decoration:none;cursor:pointer;">⬆ กลับด้านบน</a>
@@ -2023,7 +2024,7 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
         }
 
         // Active state via IntersectionObserver
-        const sections = ['sec-overview','sec-trend','sec-rank',
+        const sections = ['sec-overview','sec-room','sec-trend','sec-rank',
                           'sec-eff','sec-night','sec-nurse','sec-export'];
         const sectionEls = sections.map(id => parent.getElementById(id))
                                     .filter(x => x);
@@ -2057,6 +2058,8 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
 
     if 'overview' in _secs:
         _hist_sec_overview(date_from, date_to, data)
+    if 'room' in _secs:
+        _hist_sec_room(date_from, date_to)
     if 'trend' in _secs:
         _hist_sec_trend(date_from, date_to, data)
     if 'rank' in _secs:
@@ -2229,6 +2232,68 @@ def _hist_sec_overview(date_from, date_to, data=None):
     # k10.metric("💵 รายได้รวม", f"{s_all['total_revenue']:,} ฿")
     # k11.metric("🧬 ส่งชิ้นเนื้อ", f"{s_all['n_patho_sent']} ราย")
     # k12.metric("🔬 ค่าชิ้นเนื้อ", f"{s_all['total_patho']:,} ฿")
+
+
+def _hist_sec_room(date_from, date_to, data=None):
+    # ════════════════════════════════════════════════════════════════
+    # 🏥 สถิติรายห้องผ่าตัด (มุคกี้สั่ง 19 ก.ค. 2026) — บริบทตึกใหม่เท่านั้น:
+    #    เคสสะสม · วันที่มีเคส · เฉลี่ยเคส/วัน · turnover เฉลี่ย (median) ต่อห้อง
+    # ════════════════════════════════════════════════════════════════
+    st.markdown('<div id="sec-room" class="group-header">🏥 สถิติรายห้องผ่าตัด</div>',
+                unsafe_allow_html=True)
+    from room_config import MOVE_DATE, NEW_BUILDING_ROOMS, room_label
+
+    _from = max(str(date_from), MOVE_DATE)
+    if str(date_from) < MOVE_DATE:
+        st.caption(f"ℹ️ สถิติรายห้องนับจากวันย้ายตึกใหม่ ({MOVE_DATE}) เป็นต้นไป — "
+                   "ผังห้องก่อนหน้านั้นเป็นตึกเก่า เทียบกันไม่ได้")
+
+    df = get_cases()
+    df = df[(df['op_date'] >= _from) & (df['op_date'] <= str(date_to))
+            & (df['status'].isin(['post_op', 'discharged', 'done']))]
+    try:
+        df = df[df['room_no'].astype(float).astype('Int64').isin(NEW_BUILDING_ROOMS)]
+    except (TypeError, ValueError):
+        pass
+    if df.empty:
+        st.info("ยังไม่มีเคสเสร็จสิ้นในช่วงที่เลือก (หลังย้ายตึกใหม่)")
+        return
+
+    from main_or_db import get_room_turnover_map
+    tov = get_room_turnover_map(_from, str(date_to)) or {}
+
+    _td = 'padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:center;'
+    _th = ('<th style="background:#eef4fb;color:#0d47a1;font-size:12.5px;'
+           'padding:7px 10px;text-align:center;">{}</th>')
+    rows_html = ['<table style="width:100%;border-collapse:collapse;font-size:13.5px;">',
+                 '<tr>' + ''.join(_th.format(h) for h in
+                                  ('ห้อง', 'เคสสะสม', 'วันที่มีเคส',
+                                   'เฉลี่ย (เคส/วัน)', 'Turnover เฉลี่ย')) + '</tr>']
+    df['_rm'] = df['room_no'].astype(float).astype(int)
+    for rm in NEW_BUILDING_ROOMS:
+        g = df[df['_rm'] == rm]
+        if g.empty:
+            continue
+        n = len(g)
+        days = g['op_date'].nunique()
+        avg = n / days if days else 0
+        _tv = tov.get(rm)
+        tv_txt = (f"{_tv:.0f} นาที" if _tv is not None
+                  else '<span style="color:#94a3b8;">ข้อมูลไม่พอ</span>')
+        rows_html.append(
+            f'<tr><td style="{_td}text-align:left;font-weight:600;color:#1565c0;">'
+            f'{room_label(rm)}</td>'
+            f'<td style="{_td}">{n:,}</td>'
+            f'<td style="{_td}">{days}</td>'
+            f'<td style="{_td}">{avg:.1f}</td>'
+            f'<td style="{_td}">{tv_txt}</td></tr>')
+    rows_html.append('</table>')
+    st.markdown(''.join(rows_html), unsafe_allow_html=True)
+    _n_to = tov.get('_n')
+    st.caption(f"ช่วงข้อมูล: {_from} ถึง {date_to} · เคสเสร็จสิ้นเท่านั้น · "
+               "Turnover = ค่ากลาง (median) ของช่องว่างระหว่างเคสในห้องเดียวกัน "
+               "(กรอง 1–90 นาที · ห้องที่มีต่ำกว่า 5 คู่ = ข้อมูลไม่พอ)"
+               + (f" · รวม turnover ที่วัดได้ {_n_to} คู่" if _n_to else ""))
 
 
 def _hist_sec_trend(date_from, date_to, data=None):
@@ -3986,7 +4051,13 @@ def page_admin(section='today'):
         # 🔒 จำกัดช่วงสถิติย้อนหลัง: 1 ม.ค. 2568 (2025-01-01) → วันนี้ — เพื่อความเร็วในการโหลด
         #    (ข้อมูลก่อนหน้านี้เก็บไว้เป็นชุดเทรน/ทดสอบโมเดล · เลือกได้เฉพาะในช่วงนี้)
         hist_floor = datetime(2025, 1, 1).date()
-        default_from = hist_floor
+        # 📅 ค่าเริ่มต้น = วันย้ายตึกใหม่ (มุคกี้สั่ง 19 ก.ค. 2026) — turnover/สถิติ
+        #    รายห้องมีความหมายเฉพาะบริบทตึกใหม่ · เลือกย้อนก่อนหน้าได้ถ้าต้องการ
+        try:
+            from room_config import MOVE_DATE as _MV
+            default_from = datetime.strptime(_MV, '%Y-%m-%d').date()
+        except Exception:
+            default_from = hist_floor
         default_to = today_dt
 
         st.info("ℹ️ ข้อมูลสถิติจะปรับปรุงในวันทำการถัดไป — เคสของวันศุกร์จะอัปเดตในวันจันทร์")
@@ -4012,6 +4083,7 @@ def page_admin(section='today'):
             _SEC_OPTS = [
                 # 🎯 KPI Highlights + 📋 สรุปยอดสะสม ยุบเป็นหัวข้อเดียว (14 ก.ค. 2026)
                 ('overview', '📊 ภาพรวมทั้งหมด',   True),
+                ('room',  '🏥 สถิติรายห้อง',       True),
                 ('trend', '📈 กราฟจำนวนเคสรายเดือน',       False),
                 ('rank',  '🏆 อันดับยอดนิยม',     False),
                 ('eff',   '⏱️ ประสิทธิภาพ (เวลารอ/รับเวร)', False),

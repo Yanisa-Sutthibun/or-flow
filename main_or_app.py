@@ -243,6 +243,14 @@ def render_system_status():
 
 
 def page_room_settings():
+    # 👤 ประตูบทบาท (production 19 ก.ค. 2026): หน้า ⚙️ เฉพาะผู้ดูแล —
+    #    บทบาทถูกกำหนดตั้งแต่หน้า login (รหัสผู้ดูแล) ไม่ถามรหัสซ้ำที่นี่
+    if st.session_state.get('role') != 'admin':
+        st.markdown("### ⚙️ ตั้งค่า (เฉพาะผู้ดูแล)")
+        st.info("🔒 หน้านี้สำหรับผู้ดูแลระบบ — กด **🔒 ออกจากระบบ** (มุมขวาบน) "
+                "แล้วเข้าสู่ระบบใหม่ด้วยรหัสผู้ดูแล")
+        return
+
     # ห้องผ่าตัดศัลยกรรมตึกใหม่ (1 มี.ค. 69) — 8 ห้อง อ้างตาม OR_mapping_reference
     ROOM_INFO = {
         90: {'label': 'OR1 — ส่องกล้อง (SCOPE)',        'desc': 'ห้องผ่าตัดส่องกล้อง'},
@@ -315,6 +323,21 @@ def page_room_settings():
     st.markdown("---")
     st.markdown("### 🤖 โมเดล AI + สถานะระบบ")
     render_system_status()
+
+    # 📥 นำเข้าข้อมูลย้อนหลังเข้าฐานสถิติ (คืนแบบย่อ 19 ก.ค. 2026 — Maintenance เดิม
+    #    ถูกถอด 14 ก.ค. แต่ยังต้องมีช่องเติมเคสรายเดือน เช่น มิ.ย.–ก.ค. ที่ขาด)
+    #    ปลอดภัยเรื่องจริยธรรม: ส่วน fine-tune ถูกถอดจาก process_panel ถาวรแล้ว
+    #    (ethics lock) — เหลือเฉพาะ นำเข้าเคส + เติมเวลาจริง + mask ชื่อ
+    st.markdown("---")
+    with st.expander("📥 นำเข้าข้อมูลย้อนหลังเข้าฐานสถิติ", expanded=False):
+        # (อยู่ในหน้า ⚙️ ที่กันด้วยบทบาทผู้ดูแลแล้ว — ไม่ถามรหัสซ้ำ)
+        try:
+            from process_panel import render_process_panel
+            render_process_panel()
+        except Exception as _pe:
+            import traceback
+            st.error(f"❌ โหลดส่วนนำเข้าไม่สำเร็จ: {_pe}")
+            st.code(traceback.format_exc())
 
 
 # ============================================================================
@@ -513,7 +536,12 @@ def _check_password():
                 "ผู้ดูแล: ไปที่ Streamlit Cloud → App settings → Secrets แล้วเพิ่ม\n"
                 "`app_password = \"รหัสที่ต้องการ\"` จากนั้น reboot แอป")
             return False
-        return True  # local dev (SQLite) — allow access
+        # local dev (SQLite) — allow access · ถือเป็นผู้ดูแล (เครื่องพัฒนา)
+        if not st.session_state.get('role'):
+            st.session_state['role'] = 'admin'
+            st.session_state['_maint_unlocked'] = True
+            st.session_state['_clear_unlocked'] = True
+        return True
 
     if st.session_state.get('authenticated'):
         return True
@@ -557,8 +585,24 @@ def _check_password():
                                             use_container_width=True,
                                             type='primary')
             if submit:
-                if pwd == _pwd_set:
+                # 👤 role-based login (มุคกี้สั่ง 19 ก.ค. 2026 — production):
+                #    app_password = ผู้ใช้ทั่วไป · admin_pin = ผู้ดูแล (Mukky)
+                #    ใส่รหัสของตัวเองครั้งเดียวที่หน้านี้ — ไม่ถามซ้ำอีกทุกจุด
+                _admin_pwd = None
+                try:
+                    from main_or_db import get_admin_pin as _gap
+                    _admin_pwd = _gap()
+                except Exception:
+                    pass
+                if _admin_pwd and pwd == _admin_pwd:
                     st.session_state['authenticated'] = True
+                    st.session_state['role'] = 'admin'
+                    st.session_state['_maint_unlocked'] = True
+                    st.session_state['_clear_unlocked'] = True
+                    st.rerun()
+                elif pwd == _pwd_set:
+                    st.session_state['authenticated'] = True
+                    st.session_state['role'] = 'user'
                     st.rerun()
                 else:
                     st.error("❌ รหัสผ่านไม่ถูกต้อง")
@@ -608,7 +652,10 @@ def main():
             '<span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>'
             '<span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>'
             f'<span class="or-chip">📅 ปรับล่าสุด {_now_hdr}</span>'
-            '</div>',
+            + ('<span class="or-chip" style="background:#fff3e0;color:#e65100;">'
+               '👤 ผู้ดูแลระบบ</span>'
+               if st.session_state.get('role') == 'admin' else '')
+            + '</div>',
             unsafe_allow_html=True,
         )
     with _hdr_r:
@@ -616,6 +663,9 @@ def main():
             if st.button("🔒 ออกจากระบบ", use_container_width=True,
                          key='_logout_btn'):
                 st.session_state['authenticated'] = False
+                # 👤 ล้างบทบาท/กุญแจทั้งหมด — login ใหม่กำหนดบทบาทใหม่
+                for _k in ('role', '_maint_unlocked', '_clear_unlocked'):
+                    st.session_state.pop(_k, None)
                 st.rerun()
 
     # เมนูหลัก = แท็บแนวนอนบนสุด · เก็บค่าใน URL ให้รอด refresh (รันเฉพาะหน้าที่เลือก)
