@@ -69,11 +69,29 @@ def upload_staff_mapping() -> int:
     """รันจากเครื่อง รพ.: อ่านไฟล์จริง → แทนที่ตาราง staff_map ทั้งตาราง (full refresh)"""
     if not os.path.exists(CSV_PATH):
         raise SystemExit(f"❌ ไม่พบ {CSV_PATH} — ต้องรันจากเครื่องที่มีไฟล์จริง")
+    # 🧹 กรองก่อนขึ้น cloud (19 ก.ค. 2026 — มุคกี้พบชื่อหัตถการ/วินิจฉัย/ทีมห้องเล็กปน):
+    #   ① เอาเฉพาะ role แพทย์ (surgeon/SURG) — scrub/circ ห้องเล็ก cloud ไม่ใช้
+    #   ② ชื่อต้องมีอักษรไทย (ขยะจาก HIS เป็นอังกฤษล้วน: 'CKD III', 'Excision of...')
+    #   ③ ตัด resident · ชื่อยาวผิดปกติ
+    #   ⚠️ กรองเฉพาะตอนอัปโหลด — ไฟล์ CSV ต้นทางไม่ถูกแตะ (รหัสเก่าต้องคงอยู่
+    #      เพื่อถอด log ย้อนหลังได้)
+    import re as _re
+    _TH = _re.compile(r'[ก-๙]')
     with open(CSV_PATH, encoding='utf-8-sig', newline='') as f:
-        rows = [(r['role'], r['masked_code'], r['original_name'])
-                for r in csv.DictReader(f) if (r.get('masked_code') or '').strip()]
+        raw = [r for r in csv.DictReader(f) if (r.get('masked_code') or '').strip()]
+    rows, skipped = [], 0
+    for r in raw:
+        name = (r.get('original_name') or '').strip()
+        role = (r.get('role') or '').strip().lower()
+        if (role in ('surgeon', 'surg') and _TH.search(name)
+                and 'resident' not in name.lower() and len(name) < 60):
+            rows.append((r['role'], r['masked_code'], name))
+        else:
+            skipped += 1
+    print(f"กรองแล้ว: ขึ้น cloud {len(rows)} แถว · คัดออก {skipped} แถว "
+          f"(ขยะ/ทีมห้องเล็ก/resident)")
     if not rows:
-        raise SystemExit("❌ ไฟล์ว่าง — ไม่อัปโหลด")
+        raise SystemExit("❌ ไม่มีแถวที่ผ่านเกณฑ์ — ไม่อัปโหลด")
     from main_or_db import get_conn
     conn = get_conn()
     try:
