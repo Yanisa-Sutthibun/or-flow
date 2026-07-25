@@ -49,21 +49,26 @@ DEFAULT_DB_PATH = str(_SCRIPT_DIR / "main_or.db")
 
 
 def _read_secrets() -> dict:
-    """อ่าน .streamlit/secrets.toml — silent fallback หากไม่มี"""
-    if not _SECRETS_PATH.exists():
-        return {}
+    """อ่าน secrets — ลอง st.secrets ก่อนเสมอ แล้วค่อยไฟล์ .streamlit/secrets.toml
+    🔧 25 ก.ค. 2026: เดิมเช็ก "มีไฟล์ไหม" ก่อนถาม st.secrets → Streamlit Cloud
+    รุ่นใหม่ (py3.14/uv) เลิกวางไฟล์ลงดิสก์ ทำให้ได้ {} แล้วหลุดเป็น SQLite เงียบ ๆ
+    ทั้งที่ st.secrets มีค่าครบ (อาการ: 'no such table: cases' บน cloud)"""
+    # 1) st.secrets — แหล่งหลักบน Streamlit Cloud (ไม่ต้องมีไฟล์)
     try:
-        # ลองใช้ Streamlit's secrets ก่อน (มี caching ในตัว)
+        import streamlit as st
+        d = dict(st.secrets)
+        if d:
+            return d
+    except Exception:
+        pass
+    # 2) ไฟล์ local (เครื่อง รพ./dev)
+    if _SECRETS_PATH.exists():
         try:
-            import streamlit as st
-            return dict(st.secrets)
+            import toml
+            return toml.load(_SECRETS_PATH)
         except Exception:
             pass
-        # Fallback: อ่าน toml ตรงๆ
-        import toml
-        return toml.load(_SECRETS_PATH)
-    except Exception:
-        return {}
+    return {}
 
 
 _SECRETS = _read_secrets()
