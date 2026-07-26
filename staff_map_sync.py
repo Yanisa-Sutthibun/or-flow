@@ -98,9 +98,11 @@ def upload_staff_mapping() -> int:
         conn.execute("CREATE TABLE IF NOT EXISTS staff_map ("
                      "role TEXT, masked_code TEXT, original_name TEXT)")
         conn.execute("DELETE FROM staff_map")        # แทนที่ทั้งตาราง — แก้ชื่อ/ลบคนออกก็ตามไฟล์
-        for r in rows:
-            conn.execute("INSERT INTO staff_map (role, masked_code, original_name) "
-                         "VALUES (?,?,?)", r)
+        # ⚡ 26 ก.ค. 2026: ยิงเป็นชุดเดียว (executemany) — เดิมยิงทีละแถว 208 รอบ
+        #    ช้า (~40 วิ) และเคยล้มกลางทาง · ทั้งก้อนอยู่ใน transaction เดียว
+        #    พังตรงไหน rollback ทั้งหมด ตารางไม่ค้างครึ่ง ๆ กลาง ๆ
+        conn.executemany("INSERT INTO staff_map (role, masked_code, original_name) "
+                         "VALUES (?,?,?)", rows)
         conn.commit()
     finally:
         conn.close()

@@ -147,8 +147,10 @@ def plan_metrics(rooms_entries):
             'util': busy / capacity * 100 if capacity else 0}
 
 
-def build_primary(cases_by_room, tov_map, risk: str):
-    """ลองทุกกลยุทธ์ (เรียงเฉพาะเคสอิสระ ภายในห้องเดิม) → เลือกตามกติกา"""
+def build_primary(cases_by_room, tov_map, risk: str, start_map=None):
+    """ลองทุกกลยุทธ์ (เรียงเฉพาะเคสอิสระ ภายในห้องเดิม) → เลือกตามกติกา
+    start_map: เวลาเริ่มรายห้อง (นาทีจากเที่ยงคืน) — มุมมองระหว่างวันใช้
+    'ตอนนี้ + เวลาที่เหลือของเคสกำลังผ่า' แทน 08:00 (26 ก.ค. 2026)"""
     results = {}
     for sid, _label in STRATEGIES:
         rooms_entries = {}
@@ -157,7 +159,9 @@ def build_primary(cases_by_room, tov_map, risk: str):
             ordered = locked + order_free(free, sid, risk)
             tov = float((tov_map or {}).get(rm)
                         or (tov_map or {}).get('_global') or 15)
-            rooms_entries[rm] = simulate_room(ordered, tov, risk)
+            rooms_entries[rm] = simulate_room(
+                ordered, tov, risk,
+                start_min=(start_map or {}).get(rm, WORK_START_MIN))
         results[sid] = {'rooms': rooms_entries,
                         'metrics': plan_metrics(rooms_entries)}
     best = min(results, key=lambda s: (results[s]['metrics']['handover'],
@@ -192,21 +196,24 @@ def start_sensitivity(entries, turnover: float, risk: str):
     return steps
 
 
-def build_ideal(cases_by_room, rooms_enabled, tov_map, risk: str):
+def build_ideal(cases_by_room, rooms_enabled, tov_map, risk: str,
+                start_map=None):
     """🔭 แผนอุดมคติ (ย้ายข้ามห้องได้ — ดูอย่างเดียว ไม่มีปุ่มใช้จริง):
     เคสล็อกอยู่ห้องเดิม · เคสอิสระรวม pool แล้ว LPT ลงห้องที่ว่างเร็วสุด"""
+    def _start(rm):
+        return float((start_map or {}).get(rm, WORK_START_MIN))
     cursors, rooms_entries, tovs = {}, {}, {}
     pool = []
     for rm in rooms_enabled:
         tovs[rm] = float((tov_map or {}).get(rm)
                          or (tov_map or {}).get('_global') or 15)
-        cursors[rm] = float(WORK_START_MIN)
+        cursors[rm] = _start(rm)
         rooms_entries[rm] = []
     for rm, rcs in cases_by_room.items():
         locked, free = split_locked(rcs)
         pool.extend(free)
         if rm not in cursors:      # ห้องไม่ได้เปิด — คิวล็อกยังต้องอยู่ห้องเดิม
-            cursors[rm] = float(WORK_START_MIN)
+            cursors[rm] = _start(rm)
             tovs[rm] = float((tov_map or {}).get('_global') or 15)
             rooms_entries[rm] = []
         for c in locked:
@@ -259,9 +266,12 @@ def _sect_html(no, title, tag, n_handover):
 
 
 def _queue_table_html(rooms_entries, room_label_fn, locked_ids,
-                      notes=None, default_note='AI จัด'):
-    """ตารางคิว group ตามห้อง: คิวที่ | หัตถการ·แพทย์ | เวลาคาดใช้ | หมายเหตุ"""
+                      notes=None, default_note='AI จัด', flow_by_room=None):
+    """ตารางคิว group ตามห้อง: คิวที่ | หัตถการ·แพทย์ | เวลาคาดใช้ | หมายเหตุ
+    flow_by_room (มุมมองระหว่างวัน 26 ก.ค. 2026): แถวเคสที่เสร็จแล้ว ✓ /
+    กำลังผ่า 🔵 ของแต่ละห้อง แสดงก่อนคิวที่เหลือ · เลขคิวต่อเนื่อง"""
     notes = notes or {}
+    flow_by_room = flow_by_room or {}
     th = ('<th style="background:#eef4fb;color:#0d47a1;font-size:12.5px;'
           'text-align:left;padding:7px 10px;border-bottom:2px solid #d7e3f4;'
           '{w}">{t}</th>')
@@ -269,16 +279,45 @@ def _queue_table_html(rooms_entries, room_label_fn, locked_ids,
             'font-size:13.5px;margin:4px 0 10px;">',
             '<tr>' + th.format(w='width:52px;', t='คิวที่')
             + th.format(w='', t='หัตถการ · แพทย์')
-            + th.format(w='width:110px;', t='เวลาคาดใช้')
+            + th.format(w='width:130px;', t='เวลา')
             + th.format(w='width:150px;', t='หมายเหตุ') + '</tr>']
-    for rm in sorted(rooms_entries):
-        es = rooms_entries[rm]
-        if not es:
+    for rm in sorted(set(rooms_entries) | set(flow_by_room)):
+        es = rooms_entries.get(rm) or []
+        fl = flow_by_room.get(rm) or []
+        if not es and not fl:
             continue
+        _nd = sum(1 for f in fl if f['kind'] == 'done')
+        _nr = len(fl) - _nd
+        _summ = (f' — เสร็จ {_nd} · กำลังผ่า {_nr} · รอ {len(es)}'
+                 if fl else f' ({len(es)} เคส)')
         rows.append(f'<tr><td colspan="4" style="{_TD}background:#f6f9fc;'
                     f'font-weight:700;color:#334155;font-size:13px;">'
-                    f'🏥 {room_label_fn(rm)} ({len(es)} เคส)</td></tr>')
-        for seq, e in enumerate(es, start=1):
+                    f'🏥 {room_label_fn(rm)}{_summ}</td></tr>')
+        for i, f in enumerate(fl, start=1):
+            if f['kind'] == 'done':
+                _q = ('<span style="display:inline-block;min-width:22px;height:22px;'
+                      'border-radius:50%;background:#a5d6a7;color:#1b5e20;'
+                      'text-align:center;line-height:22px;font-size:13px;'
+                      'font-weight:700;">✓</span>')
+                _bg = 'background:#fbfdfb;color:#94a3b8;'
+                _tm = (f'<span style="color:#2e7d32;font-weight:600;'
+                       f'font-size:12.5px;">{f["time_txt"]}</span>')
+            else:
+                _q = ('<span style="display:inline-block;min-width:22px;height:22px;'
+                      'border-radius:50%;background:#1565c0;color:#fff;'
+                      'text-align:center;line-height:22px;font-size:12px;'
+                      f'font-weight:700;box-shadow:0 0 0 3px #bbdefb;">{i}</span>')
+                _bg = 'background:#eef6ff;'
+                _tm = (f'<span style="color:#1565c0;font-weight:700;'
+                       f'font-size:12.5px;white-space:nowrap;">🔵 {f["time_txt"]}</span>')
+            rows.append(
+                f'<tr><td style="{_TD}{_bg}">{_q}</td>'
+                f'<td style="{_TD}{_bg}">{f["proc"]}<br>'
+                f'<span style="color:#94a3b8;font-size:12px;">{f["surg"]}</span></td>'
+                f'<td style="{_TD}{_bg}">{_tm}</td>'
+                f'<td style="{_TD}{_bg}"><span style="font-size:11px;'
+                f'color:#94a3b8;">{f["note_txt"]}</span></td></tr>')
+        for seq, e in enumerate(es, start=len(fl) + 1):
             c = e['case']
             cid = str(c.get('id'))
             locked = cid in locked_ids
@@ -326,13 +365,73 @@ def page_scheduler():
     enabled_rooms = [rn for rn, _ in room_opts]
 
     schedulable = [c for c in cases if c.get('status') == 'not_arrived']
-    in_flow = len(cases) - len(schedulable)
     no_room = [c for c in schedulable if not c.get('room')
                or c.get('room') not in enabled_rooms]
     schedulable = [c for c in schedulable if c.get('room') in enabled_rooms]
 
-    if not schedulable:
-        st.info("ยังไม่มีเคส 'ยังไม่มา' ให้จัดคิว — อัปโหลดตารางที่ ⚙️ ตั้งค่า "
+    # ── 🕐 มุมมองระหว่างวัน (26 ก.ค. 2026 — wireframe approve แล้ว):
+    #    เคสเสร็จ ✓ / กำลังผ่า 🔵 แสดงในตาราง ① ด้วย (AI ไม่แตะ แค่เล่าให้เห็นทั้งวัน)
+    now = datetime.now(_BKK).replace(tzinfo=None)
+    now_min = now.hour * 60 + now.minute
+
+    def _to_dt(t):
+        if t is None or not isinstance(t, str):
+            return t
+        try:
+            return datetime.fromisoformat(t)
+        except ValueError:
+            return None
+
+    def _rm_of(c):
+        try:
+            return int(float(c.get('or_room_assigned') or c.get('room')))
+        except (TypeError, ValueError):
+            return None
+
+    flow_by_room = {}
+    for c in cases:
+        st_ = c.get('status')
+        rm = _rm_of(c)
+        if rm is None or c.get('status') == 'removed':
+            continue
+        ai = c.get('ai_predicted_min') or c.get('predicted_min')
+        if st_ in ('holding_post', 'recovery', 'discharged'):
+            if not c.get('time_exited_or') and not c.get('actual_duration_min'):
+                continue        # เช่นเคส "ผ่าไปแล้วก่อนเปิดบอร์ด" — ไม่มีเวลาให้เล่า
+            act = c.get('actual_duration_min')
+            _diff = (f' (คลาด {_dur_txt(abs(int(act) - int(ai)))})'
+                     if act and ai else '')
+            flow_by_room.setdefault(rm, []).append({
+                'kind': 'done', '_t': _to_dt(c.get('time_entered_or')),
+                'proc': str(c.get('procedure') or '-')[:40],
+                'surg': str(c.get('surgeon') or '')[:30],
+                'time_txt': f'ใช้จริง {_dur_txt(act)}' if act else 'เสร็จแล้ว',
+                'note_txt': (f'AI ทำนาย ~{_dur_txt(ai)}{_diff}' if ai else ''),
+            })
+        elif st_ == 'in_or':
+            ent = _to_dt(c.get('time_entered_or'))
+            elapsed = (max((now - ent).total_seconds() / 60, 0)
+                       if ent is not None and hasattr(ent, 'hour') else 0)
+            eff = float(c.get('effective_min') or ai or 30)
+            _st8 = ('เกินคาดแล้ว' if elapsed > eff else 'น่าจะใกล้เสร็จ'
+                    if elapsed > 0.75 * eff else 'ตามแผน')
+            flow_by_room.setdefault(rm, []).append({
+                'kind': 'run', '_t': ent, '_elapsed': elapsed, '_eff': eff,
+                'proc': str(c.get('procedure') or '-')[:40],
+                'surg': str(c.get('surgeon') or '')[:30],
+                'time_txt': f'ผ่ามาแล้ว {_dur_txt(elapsed)}',
+                'note_txt': (f'AI ~{_dur_txt(eff)} · {_st8}'),
+            })
+    from datetime import datetime as _dtmin
+    for rm in flow_by_room:                       # เรียงตามเวลาเข้าห้องจริง
+        flow_by_room[rm].sort(key=lambda f: f['_t'] or _dtmin(1970, 1, 1))
+    n_done = sum(1 for fl in flow_by_room.values()
+                 for f in fl if f['kind'] == 'done')
+    n_run = sum(1 for fl in flow_by_room.values()
+                for f in fl if f['kind'] == 'run')
+
+    if not schedulable and not flow_by_room:
+        st.info("ยังไม่มีเคส 'ยังไม่มา' ให้จัดคิว — อัปโหลดตารางที่ 📋 ตารางผ่าตัด "
                 "หรือเปิด 🎬 สาธิต ที่หน้าตารางผ่าตัดก่อน")
         return
 
@@ -343,42 +442,63 @@ def page_scheduler():
     n_locked = sum(len(split_locked(rcs)[0]) for rcs in cases_by_room.values())
     n_free = len(schedulable) - n_locked
 
-    st.markdown(f"วันนี้มีเคสรอจัดคิว **{len(schedulable)} เคส** "
-                f"ใน {len(cases_by_room)} ห้อง "
-                f"(มีคิวเดิมแล้ว 🔒 {n_locked} เคส — AI จะจัดให้ {n_free} เคส)")
-    if in_flow:
-        st.caption(f"ℹ️ อีก {in_flow} เคสเข้ากระบวนการแล้ว (รอผ่า/กำลังผ่า/เสร็จ) — ไม่ถูกจัด")
+    st.markdown(f"วันนี้: ✅ เสร็จแล้ว **{n_done}** · 🔵 กำลังผ่า **{n_run}** · "
+                f"⏳ รอจัดคิว **{len(schedulable)}** เคส "
+                f"(มีคิวเดิม 🔒 {n_locked} — AI จัดให้ {n_free})")
     if no_room:
         st.warning(f"⚠️ {len(no_room)} เคสไม่มีห้อง/ห้องถูกปิด — จัดไม่ได้ "
                    f"(ไปกำหนดห้องผ่าน ✏️ บนบอร์ดก่อน): "
                    + ' · '.join(str(c.get('procedure', ''))[:20] for c in no_room[:5]))
 
-    if st.button("🪄 จัดคิว", type="primary", use_container_width=True,
-                 key='schd_run'):
-        st.session_state['schd_ran'] = True
-    if not st.session_state.get('schd_ran'):
-        st.caption("กดปุ่มเพื่อให้ AI เรียงคิว — กดซ้ำได้ ไม่กระทบบอร์ด")
-        return
+    if schedulable:
+        if st.button("🪄 จัดคิว", type="primary", use_container_width=True,
+                     key='schd_run'):
+            st.session_state['schd_ran'] = True
+        if not st.session_state.get('schd_ran'):
+            st.caption("กดปุ่มเพื่อให้ AI เรียงคิวที่เหลือ — กดซ้ำได้ ไม่กระทบบอร์ด")
+            return
+    else:
+        st.caption("ทุกเคสเข้ากระบวนการแล้ว — แสดงภาพรวมของวัน (ไม่มีคิวให้จัด)")
 
     tov_map = _turnover_map()
-    results, best = build_primary(cases_by_room, tov_map, _RISK_DEFAULT)
+    # ⏱️ เวลาเริ่มของคิวที่เหลือ = ตอนนี้ (ไม่ใช่ 08:00) · ห้องที่มีเคสกำลังผ่า
+    #    = ตอนนี้ + เวลาที่คาดว่าเหลือ + turnover — คาดรับเวรแม่นตามสถานการณ์จริง
+    start_map = {}
+    for rm in set(list(cases_by_room) + list(flow_by_room)):
+        base = float(max(WORK_START_MIN, now_min))
+        run = next((f for f in flow_by_room.get(rm, []) if f['kind'] == 'run'),
+                   None)
+        if run is not None:
+            _tov = float((tov_map or {}).get(rm)
+                         or (tov_map or {}).get('_global') or 15)
+            base = now_min + max(run['_eff'] - run['_elapsed'], 5) + _tov
+        start_map[rm] = base
+
+    results, best = build_primary(cases_by_room, tov_map, _RISK_DEFAULT,
+                                  start_map=start_map)
     best_plan = results[best]
     locked_ids = {str(c.get('id'))
                   for rcs in cases_by_room.values()
                   for c in split_locked(rcs)[0]}
 
-    # ── ① ตารางใช้จริง — ห้องเดิม · คิวเดิมล็อก ──
-    st.markdown(_sect_html('①', 'ตารางใช้จริง', 'ห้องเดิม · คิวเดิมล็อก 🔒',
+    # ── ① ตารางใช้จริง — ทั้งวันของแต่ละห้อง: เสร็จ ✓ → กำลังผ่า 🔵 → คิวที่เหลือ ──
+    st.markdown(_sect_html('①', 'ตารางใช้จริง',
+                           f'เสร็จ {n_done} · กำลังผ่า {n_run} · '
+                           f'รอคิว {len(schedulable)}',
                            best_plan['metrics']['handover']),
                 unsafe_allow_html=True)
-    st.markdown(_queue_table_html(best_plan['rooms'], room_label, locked_ids),
+    st.markdown(_queue_table_html(best_plan['rooms'], room_label, locked_ids,
+                                  flow_by_room=flow_by_room),
                 unsafe_allow_html=True)
     if best_plan['metrics']['handover']:
         st.caption("แถวแดง = เผื่อเวลาแล้วยังคาดออกห้องหลัง 15:30 "
                    "แม้จัดแบบดีที่สุด — การพิจารณาเลื่อนเป็นการตัดสินใจของหัวหน้าเวร")
 
     # ── ② แบบ AI จัดอิสระ — ย้ายคิว/ย้ายห้องได้ (ดูอย่างเดียว) ──
-    ideal = build_ideal(cases_by_room, enabled_rooms, tov_map, _RISK_DEFAULT)
+    if not schedulable:
+        return          # ไม่มีคิวเหลือให้จัด — ตาราง ② กับวิธีคิดไม่มีอะไรให้เล่า
+    ideal = build_ideal(cases_by_room, enabled_rooms, tov_map, _RISK_DEFAULT,
+                        start_map=start_map)
     st.markdown(_sect_html('②', 'แบบ AI จัดอิสระ',
                            'ย้ายคิวและย้ายห้องได้อิสระเพื่อลดเคสรับเวร',
                            ideal['metrics']['handover']),

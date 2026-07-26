@@ -129,6 +129,16 @@ def _ensure_table(conn):
             updated_at TEXT
         )""")
     conn.commit()
+    # 🔒 เปิด RLS ทันทีที่ตารางเกิด (26 ก.ค. 2026) — กันประตู REST API ของ
+    #    Supabase โดยไม่ต้องจำไปรัน SQL มือ · sqlite ไม่รู้จักคำสั่งนี้ = ข้ามเงียบ
+    try:
+        conn.execute("ALTER TABLE research_case_log ENABLE ROW LEVEL SECURITY")
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
 
 
 def log_case_state(case) -> bool:

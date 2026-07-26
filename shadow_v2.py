@@ -67,6 +67,15 @@ def _ensure_table(conn):
             actual_duration_min INTEGER
         )""")
     conn.commit()
+    # 🔒 เปิด RLS ทันทีที่ตารางเกิด (26 ก.ค. 2026) — sqlite ข้ามเงียบ
+    try:
+        conn.execute("ALTER TABLE shadow_v2_log ENABLE ROW LEVEL SECURITY")
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
 
 
 def log_shadow(case: dict, actual_min=None) -> bool:
