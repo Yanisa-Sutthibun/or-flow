@@ -2196,8 +2196,11 @@ def _hist_sec_overview(date_from, date_to, data=None):
 
         st.markdown('<div class="sub-title">⚠️ ระดับความเร่งด่วน</div>',
                     unsafe_allow_html=True)
-        ko1, ko2, ko3 = st.columns(3)
-        with ko1:
+        # ⚡ 26 ก.ค. 2026: HIS จำแนกแค่ elective/emergency (ตรวจข้อมูลจริงแล้ว —
+        #    urgency ถูกคีย์รวมเป็น emergency ที่ต้นทาง) → การ์ด Urgent แสดง
+        #    เฉพาะเมื่อมีค่าจริง (ถ้าวันหน้า HIS ส่ง urgent มา การ์ดโผล่เอง)
+        _urg_cols = st.columns(3 if n_urg > 0 else 2)
+        with _urg_cols[0]:
             st.markdown(
                 f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
                 f'<div style="font-size:13px;color:#666;margin-bottom:4px;">📋 Elective</div>'
@@ -2208,14 +2211,15 @@ def _hist_sec_overview(date_from, date_to, data=None):
                 f'<span>Walk-in <b style="color:#444;font-weight:500;">{n_elec_walkin}</b></span>'
                 f'</div></div>',
                 unsafe_allow_html=True)
-        with ko2:
-            st.markdown(
-                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
-                f'<div style="font-size:13px;color:#666;margin-bottom:4px;">⚡ Urgent</div>'
-                f'<div style="font-size:28px;font-weight:500;line-height:1.1;">{n_urg}</div>'
-                f'</div>',
-                unsafe_allow_html=True)
-        with ko3:
+        if n_urg > 0:
+            with _urg_cols[1]:
+                st.markdown(
+                    f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
+                    f'<div style="font-size:13px;color:#666;margin-bottom:4px;">⚡ Urgent</div>'
+                    f'<div style="font-size:28px;font-weight:500;line-height:1.1;">{n_urg}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True)
+        with _urg_cols[-1]:
             st.markdown(
                 f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
                 f'<div style="font-size:13px;color:#666;margin-bottom:4px;">🚨 Emergency</div>'

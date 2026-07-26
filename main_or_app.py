@@ -644,7 +644,8 @@ def main():
     _hdr_l, _hdr_r = st.columns([5, 1])
     with _hdr_l:
         from datetime import datetime as _dtm, timedelta as _td
-        _now_hdr = (_dtm.utcnow() + _td(hours=7)).strftime('%d/%m/%Y')
+        from datetime import timezone as _tzu
+        _now_hdr = _dtm.now(_tzu(_td(hours=7))).strftime('%d/%m/%Y')
         st.markdown(
             '<div class="or-chips" style="margin-top:6px;">'
             '<span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>'
