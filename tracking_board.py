@@ -358,18 +358,21 @@ def _time_cell(c, disp, eff, elapsed, now):
         return (f'<b style="font-weight:600;">{_dur_str(eff)}</b> '
                 f'<span style="text-decoration:line-through;color:#94a3b8;'
                 f'font-size:12px;">AI {_dur_str(ai0) if ai0 else "?"}</span>')
-    # 🤖 หลักฐานความมั่นใจบนแถวเลย — พยาบาลเห็นทันทีว่าคำทำนายอิงกี่เคส
+    # 🤖 หลักฐานบนแถว — จำนวนเคสอ้างอิง + ช่วง 90% (28 ก.ค. 2026: ตัดป้าย
+    #    "มั่นใจ" heuristic ออก — ให้ช่วง conformal สื่อความไม่แน่นอนแทน
+    #    เพราะมีการันตีเชิงสถิติ อธิบายที่มาในเล่มได้)
     _n = c.get('proc_n')
-    _cf = str(c.get('confidence') or '')
     _ev = ''
-    if _n is not None or _cf:
-        _cfc = ('#27ae60' if _cf.startswith('สูง')
-                else '#f39c12' if _cf == 'ปานกลาง' else '#e74c3c')
-        _txt = f'จาก {int(_n)} เคส' if _n else 'ไม่มีเคสใกล้เคียง'
-        if _cf:
-            _txt += f' · มั่นใจ: {_cf}'
-        _ev = (f'<br><span style="font-size:11px;color:{_cfc};'
-               f'white-space:nowrap;">{_txt}</span>')
+    if _n is not None:
+        _bits2 = [f'จาก {int(_n)} เคส' if _n else 'ไม่มีเคสใกล้เคียง']
+        _rng = c.get('predicted_range')
+        if c.get('range_method') == 'conformal' and _rng:
+            _bits2.append(f'ช่วง {int(_rng[0])}–{int(_rng[1])} น.')
+        _clr = '#27ae60' if _n else '#e74c3c'
+        _ev = (f'<br><span style="font-size:11px;color:{_clr};white-space:nowrap;" '
+               f'title="ช่วง 90% = เคสลักษณะนี้ราว 9 ใน 10 ใช้เวลาอยู่ในช่วงนี้ · '
+               f'ช่วงแคบ = ค่อนข้างแน่นอน · ช่วงกว้าง = เวลาแกว่งได้มาก '
+               f'ควรเผื่อเวลา/ปรับด้วย ✏️">{" · ".join(_bits2)}</span>')
     return ('AI ทำนายการใช้ห้อง ~'
             + (_dur_str(ai0) if ai0 else '? น.') + _ev)
 
@@ -553,8 +556,6 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                         _nev = int(c.get('proc_n') or 0)
                         _bits.append(f"จาก {_nev} เคส" if _nev
                                      else "ไม่มีเคสใกล้เคียง")
-                    if c.get('confidence'):
-                        _bits.append(f"มั่นใจ: {c['confidence']}")
                     st.caption(" · ".join(_bits))
                 # 📏 ช่วงทำนาย 90% (split conformal — คาลิเบรตจากข้อมูลจริงปี 2567)
                 _rng = c.get('predicted_range')
