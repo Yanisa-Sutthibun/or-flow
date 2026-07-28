@@ -551,7 +551,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                     _bits = [f"🤖 AI {_dur_str(_ai0)}"]
                     if c.get('proc_n') is not None:
                         _nev = int(c.get('proc_n') or 0)
-                        _bits.append(f"based on {_nev} เคส" if _nev
+                        _bits.append(f"จาก {_nev} เคส" if _nev
                                      else "ไม่มีเคสใกล้เคียง")
                     if c.get('confidence'):
                         _bits.append(f"มั่นใจ: {c['confidence']}")

@@ -635,7 +635,7 @@ def _render_add_case_form(demo_active):
                     if (_rngm == 'conformal' and _rng) else "")
         from main_or_db import mask_patient_name as _mpn
         st.success(f"✅ เพิ่มเคส '{_mpn(case['name'])}' แล้ว — AI ทำนาย {_pm} นาที "
-                   f"(based on {_pn} เคส){_rng_txt}")
+                   f"(จาก {_pn} เคส){_rng_txt}")
         _rerun_board()
     if cbtn2.button("ล้างฟอร์ม", key="ac_clear", width='stretch'):
         for _k in ('ac_name', 'ac_proc', 'ac_diag', 'ac_surg', 'ac_surg_sel'):
