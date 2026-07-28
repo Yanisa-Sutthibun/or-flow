@@ -195,26 +195,70 @@ def render_room_timeline(rooms, now=None):
              'เสร็จแล้ว': 4, 'ว่าง': 5}
     fcs.sort(key=lambda x: order.get(x[1]['status'], 9))
 
+    # 🗓️ รายเคส (28 ก.ค. 2026 — ย้าย Gantt จากหน้าจัดคิวมาที่นี่ตามคำสั่งมุคกี้):
+    #    แต่ละแถวแสดง "แท่งเคส" ซ้าย→ขวาเหมือนอ่านตารางผ่าตัดจริง — เสร็จ ✓ จาง /
+    #    กำลังผ่าเขียว(เกิน=แดง) ต่อด้วยเส้นประ AI ที่เหลือ / คิวถัดไปกรอบเทา
+    #    ต่อหลังเวลาปัจจุบัน + turnover · ◆ คาดเสร็จ = จุดเดียวกับการ์ดห้องเสมอ
+    def _blk(l, w, sty, txt, tip):
+        _t = txt if w > 6 else ''
+        return (f'<div title="{tip}" style="position:absolute;left:{l:.1f}%;'
+                f'width:{max(w, 0.8):.1f}%;height:20px;border-radius:4px;{sty}'
+                f'font-size:10.5px;line-height:20px;padding:0 4px;overflow:hidden;'
+                f'white-space:nowrap;box-sizing:border-box;">{_t}</div>')
+
     rows = ''
     for rm, fc in fcs:
         label = rm.get('room_label') or f"ห้อง {rm.get('room_no')}"
         dot, lblc = _STATUS_C.get(fc['status'], _STATUS_C['ว่าง'])
-        s_min = _mins(fc['earliest']) if fc['earliest'] else now_min
-        f_min = _mins(fc['finish']) if fc['finish'] else now_min
-        used_l, used_r = pos(s_min), pos(min(now_min, f_min))
-        used_w = max(used_r - used_l, 0)
-        dash_l, dash_r = pos(min(now_min, f_min)), pos(f_min)
-        dash_w = max(dash_r - dash_l, 0)
         bar = ''
-        if used_w > 0.3:
-            bar += (f'<div style="position:absolute;left:{used_l:.1f}%;width:{used_w:.1f}%;'
-                    f'height:100%;background:{dot};border-radius:4px 0 0 4px;"></div>')
-        if dash_w > 0.3 and fc['has_future']:
-            bar += (f'<div style="position:absolute;left:{dash_l:.1f}%;width:{dash_w:.1f}%;'
-                    f'height:100%;border:1.5px dashed {dot};border-radius:0 4px 4px 0;'
-                    f'box-sizing:border-box;"></div>')
+        cases = rm.get('cases')
+        df = cases if (cases is not None and len(cases)) else None
+        if df is not None:
+            for _, c in df.iterrows():
+                stt = str(c.get('status') or '')
+                proc = str(c.get('procedure_name') or '-')[:36]
+                sdt = _parse_dt(c.get('in_or_at'))
+                if stt == 'cancelled' or sdt is None:
+                    continue
+                s = _mins(sdt)
+                edt = _parse_dt(c.get('op_end_at'))
+                if stt in ('post_op', 'discharged') and edt is not None:
+                    bar += _blk(pos(s), pos(_mins(edt)) - pos(s),
+                                'background:#f8faf8;border:1px solid #cfd8d1;'
+                                'color:#94a3b8;', f'✓ {proc}',
+                                f'{proc} · เสร็จแล้ว')
+                elif stt == 'in_or':
+                    # ส่วนที่ผ่าไปแล้ว (ทึบ) + ที่ AI คาดว่าเหลือ (เส้นประ)
+                    bar += _blk(pos(s), pos(now_min) - pos(s),
+                                f'background:{dot};color:#fff;font-weight:600;',
+                                proc, f'{proc} · กำลังผ่า')
+                    _rem = fc['active_rem'] or 0
+                    if _rem > 0:
+                        bar += _blk(pos(now_min), pos(now_min + _rem) - pos(now_min),
+                                    f'border:1.5px dashed {dot};color:{lblc};',
+                                    '', f'{proc} · AI คาดเหลือ ~{int(_rem)} น.')
+        # คิวถัดไป: ต่อจาก ตอนนี้ + เวลาที่เหลือของเคสในห้อง + turnover
+        if df is not None:
+            cur = now_min + (fc['active_rem'] or 0) + (fc['turnover_min']
+                                                       if fc['active_rem'] else 0)
+            try:
+                wdf = df[df['status'].isin(['scheduled', 'arrived'])]
+            except Exception:
+                wdf = df.iloc[0:0]
+            for _, c in wdf.iterrows():
+                proc = str(c.get('procedure_name') or '-')[:36]
+                try:
+                    ai = int(c.get('ai_predicted_min') or 60)
+                except (ValueError, TypeError):
+                    ai = 60
+                bar += _blk(pos(cur), pos(cur + ai) - pos(cur),
+                            'background:#ffffff;border:1px solid #90a4ae;'
+                            'color:#334155;', proc,
+                            f'{proc} · คิวถัดไป · AI ~{ai} น.')
+                cur += ai + fc['turnover_min']
         bar += (f'<div style="position:absolute;left:{pos(now_min):.1f}%;top:-2px;'
                 f'width:2px;height:24px;background:#0f172a;"></div>')
+        f_min = _mins(fc['finish']) if fc['finish'] else now_min
         if fc['has_future']:
             bar += (f'<div style="position:absolute;left:{pos(f_min):.1f}%;top:0;'
                     f'font-size:11px;color:{lblc};transform:translateX(2px);">◆</div>')
@@ -231,12 +275,18 @@ def render_room_timeline(rooms, now=None):
 
     legend = (
         '<div style="display:flex;flex-wrap:wrap;gap:13px;margin-top:6px;font-size:11px;color:#64748b;">'
+        '<span><span style="display:inline-block;width:15px;height:8px;background:#f8faf8;'
+        'border:1px solid #cfd8d1;border-radius:2px;vertical-align:middle;'
+        'box-sizing:border-box;"></span> ✓ เสร็จแล้ว</span>'
         '<span><span style="display:inline-block;width:15px;height:8px;background:#22a565;'
         'border-radius:2px;vertical-align:middle;"></span> กำลังผ่า</span>'
         '<span><span style="display:inline-block;width:15px;height:8px;background:#e24b4a;'
         'border-radius:2px;vertical-align:middle;"></span> เกินเวลา</span>'
         '<span><span style="display:inline-block;width:15px;height:8px;border:1.5px dashed #94a3b8;'
         'border-radius:2px;vertical-align:middle;box-sizing:border-box;"></span> AI ประมาณการ</span>'
+        '<span><span style="display:inline-block;width:15px;height:8px;background:#fff;'
+        'border:1px solid #90a4ae;border-radius:2px;vertical-align:middle;'
+        'box-sizing:border-box;"></span> คิวถัดไป</span>'
         '<span><b style="color:#0f172a;">|</b> ตอนนี้ &middot; ◆ คาดเสร็จ</span></div>')
 
     st.markdown(
