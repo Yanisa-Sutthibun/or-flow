@@ -242,22 +242,59 @@ _ADMIN_CSS = """
 # ใช้ session_state — ไม่บันทึก DB
 # ============================================================================
 
-# Timeline (นาทีจาก 8:00 AM): arr, in_or, op_end, dc, room, name, hn, dx, proc, surgeon, ai_min, override
+# Timeline (นาทีจาก 8:00 AM): arr, in_or, op_end, dc, room, name, hn, dx, proc,
+#   surgeon, ai_min, n_cases, conf, override
+# 🎬 28 ก.ค. 2026: ชุดเดียวกับบอร์ดสาธิต (demo_cases_data.DEMO_POOL — ตารางจริง
+#   Main OR mask แล้ว) · ai_min/n_cases/conf = ค่าจริงจาก thesis_ML_v2
+#   OR1(90) ว่าง = ห้องเก็บของตามจริง · 95#3 เลื่อนเคส · 91#3 นอกเวลาค้างตอนจบวัน
 _DEMO_CASES = [
-    (15, 30, 60, 75, 90, 'นาย สมชาย ทดสอบ', 'DEMO001',
-        'Lipoma at neck', 'Excision', 'นพ.เอ ทดสอบ', 30, None),
-    (30, 45, 105, 120, 91, 'น.ส. มาลี ทดลองใช้', 'DEMO002',
-        'Rt. Renal stone', 'ESWL', 'นพ.บี ทดสอบ', 60, None),
-    (90, 120, 145, 160, 92, 'นาย สมศักดิ์ ทดสอบ', 'DEMO003',
-        'Abscess Lt. arm', 'I+D', 'นพ.ซี ทดสอบ', 25, None),
-    (150, None, None, None, 93, 'นาง พรรณี ทดลองใช้', 'DEMO004',
-        'Mass at chest', 'Excision', 'นพ.เอ ทดสอบ', 30, 'cancelled'),
-    (180, 210, 230, 240, 93, 'นาย วิชัย ทดสอบ', 'DEMO005',
-        'ESRD', 'Off PERM', 'นพ.บี ทดสอบ', 20, None),
-    (300, 330, 365, 380, 94, 'น.ส. กัญญา ทดลองใช้', 'DEMO006',
-        'Melasma', 'Q-Switch', 'นพ.ดี ทดสอบ', 35, None),
-    (480, 510, 560, 580, 95, 'นาย ปรีชา ทดสอบ', 'DEMO007',
-        'Aging Face', 'Morpheus', 'นพ.ดี ทดสอบ', 50, None),  # นอกเวลา
+    # OR8·ENT (97)
+    (20, 45, 105, 120, 97, 'ร.ต.อ. ทดสอบ1 นามสกุล1', '99000001',
+        'CA hypopharynx', 'TEMPORARY TRACHEOSTOMY', 'แพทย์ทดสอบ 1', 58, 27, 'สูง', None),
+    (90, 120, 255, 275, 97, 'นาง ทดสอบ2 นามสกุล2', '99000002',
+        'Symptomatic gall stone', 'LC', 'แพทย์ทดสอบ 2', 139, 216, 'สูง', None),
+    # OR3·URO (92) — แพทย์ประจำวันคนเดียวทั้งห้อง
+    (15, 45, 90, 105, 92, 'นาย ทดสอบ3 นามสกุล3', '99000003',
+        'Lt. nephrocalcinosis', 'LT. DJ STENT EXCHANGING', 'แพทย์ทดสอบ 3', 43, 8, 'สูง', None),
+    (75, 105, 140, 155, 92, 'ด.ต. ทดสอบ4 นามสกุล4', '99000004',
+        'BPH', 'REZUM', 'แพทย์ทดสอบ 3', 32, 22, 'สูง', None),
+    (130, 155, 174, 190, 92, 'น.ส. ทดสอบ5 นามสกุล5', '99000005',
+        'CA bladder', 'FLEX. CYSTO', 'แพทย์ทดสอบ 3', 20, 4, 'สูง', None),
+    # OR2·EM (91) — ฉุกเฉินเช้า + elective นอกเวลา 15:30 ตามตารางจริง
+    (0, 20, 130, 150, 91, 'พ.ต.ท. ทดสอบ6 นามสกุล6', '99000006',
+        'Ruptured appendicitis', 'OPEN APPENDECTOMY', 'แพทย์ทดสอบ 4', 107, 9, 'สูง', None),
+    (450, 475, 555, 575, 91, 'นาย ทดสอบ7 นามสกุล7', '99000007',
+        'Giant AVF Rt arm', 'ANEURYSMECTOMY OR LIGATE AVF', 'แพทย์ทดสอบ 5', 76, 4, 'สูง', None),
+    (460, 560, None, None, 91, 'ร.ต.ท.หญิง ทดสอบ8 นามสกุล8', '99000008',
+        'AVF stenosis', 'PROXIMALIZED AVF RT WRIST', 'แพทย์ทดสอบ 5', 62, 0, 'ต่ำ', None),
+    # OR4·GEN (93)
+    (20, 50, 175, 195, 93, 'นาง ทดสอบ9 นามสกุล9', '99000009',
+        'SGS', 'LC', 'แพทย์ทดสอบ 6', 123, 216, 'สูง', None),
+    (155, 190, 260, 278, 93, 'ส.ต.ต. ทดสอบ10 นามสกุล10', '99000010',
+        'NF left foot', 'DEBRIDEMENT LEFT FOOT', 'แพทย์ทดสอบ 7', 67, 50, 'ปานกลาง', None),
+    (240, 275, 425, 445, 93, 'นาย ทดสอบ11 นามสกุล11', '99000011',
+        'Symptomatic GB polyp', 'LC', 'แพทย์ทดสอบ 8', 153, 216, 'สูง', None),
+    # OR5·VAS (94) — แพทย์ประจำวันคนเดียวทั้งห้อง
+    (10, 30, 72, 88, 94, 'พ.ต.อ. ทดสอบ12 นามสกุล12', '99000012',
+        'ESRD', 'TCC LT IJV , CENTROS', 'แพทย์ทดสอบ 5', 41, 64, 'สูง', None),
+    (60, 88, 150, 168, 94, 'น.ส. ทดสอบ13 นามสกุล13', '99000013',
+        'ESRD', 'TCC', 'แพทย์ทดสอบ 5', 63, 4, 'ปานกลาง', None),
+    (135, 168, 230, 248, 94, 'ด.ต.หญิง ทดสอบ14 นามสกุล14', '99000014',
+        'ESRD', 'AVF RT CUBITAL', 'แพทย์ทดสอบ 5', 63, 507, 'สูง', None),
+    # OR6·NEURO (95) — เคสยาว 2 เคส + เลื่อน 1 เคส
+    (15, 45, 245, 265, 95, 'นาย ทดสอบ15 นามสกุล15', '99000015',
+        'L4-S1 spondylosis', 'L4-S1 LAMINECTOMY WITH PDS FIXATION', 'แพทย์ทดสอบ 9', 195, 48, 'สูง', None),
+    (225, 265, 470, 490, 95, 'ร.ต.ต. ทดสอบ16 นามสกุล16', '99000016',
+        'Rt parasagital glioma', 'RT CRANIOTOMY C TUMOR REMOVAL', 'แพทย์ทดสอบ 9', 205, 24, 'สูง', None),
+    (300, None, None, None, 95, 'นาง ทดสอบ17 นามสกุล17', '99000017',
+        'Hydrocephalus', 'LEFT FRONTAL VP SHUNT', 'แพทย์ทดสอบ 10', 216, 3, 'ปานกลาง', 'cancelled'),
+    # OR7·PLASTIC (96) — แพทย์ประจำวันคนเดียวทั้งห้อง
+    (10, 30, 66, 82, 96, 'จ.ส.อ. ทดสอบ18 นามสกุล18', '99000018',
+        'Forehead osteoma', 'OSTEOTOM, EXCISION', 'แพทย์ทดสอบ 11', 34, 178, 'สูง', None),
+    (55, 82, 120, 136, 96, 'นาย ทดสอบ19 นามสกุล19', '99000019',
+        'Mass at eyelid', 'EXCISION', 'แพทย์ทดสอบ 11', 39, 178, 'สูง', None),
+    (105, 136, 160, 175, 96, 'พ.ต.ต.หญิง ทดสอบ20 นามสกุล20', '99000020',
+        'Mass at neck', 'EXCISION', 'แพทย์ทดสอบ 11', 26, 178, 'สูง', None),
 ]
 _DEMO_END_MIN = 600  # 8:00 + 10hr = 18:00
 
@@ -278,7 +315,7 @@ def _get_demo_cases_df(current_sim_min):
     rows = []
     for c in _DEMO_CASES:
         (arr_m, ior_m, end_m, dc_m, room, name, hn, dx, proc,
-         surg, ai_min, override) = c
+         surg, ai_min, _n_ev, _conf, override) = c
 
         # Determine status at current sim_min (same logic as _get_demo_rooms)
         if override == 'cancelled':
@@ -294,7 +331,9 @@ def _get_demo_cases_df(current_sim_min):
         elif dc_m and current_sim_min >= dc_m:
             status = 'discharged'
         else:
-            status = 'arrived'
+            # เข้าห้องแล้วแต่ไม่มีเวลาจบ (เคสค้างตอนจบวันจำลอง) → ยังผ่าอยู่
+            status = ('in_or' if (ior_m and current_sim_min >= ior_m)
+                      else 'arrived')
 
         rows.append({
             'case_id': hn,
@@ -320,7 +359,7 @@ def _get_demo_rooms(current_sim_min):
 
     for c in _DEMO_CASES:
         (arr_m, ior_m, end_m, dc_m, room, name, hn, dx, proc,
-         surg, ai_min, override) = c
+         surg, ai_min, _n_ev, _conf, override) = c
 
         # Determine status at current sim_min
         if override == 'cancelled':
@@ -336,7 +375,9 @@ def _get_demo_rooms(current_sim_min):
         elif dc_m and current_sim_min >= dc_m:
             status = 'discharged'
         else:
-            status = 'arrived'
+            # เข้าห้องแล้วแต่ไม่มีเวลาจบ (เคสค้างตอนจบวันจำลอง) → ยังผ่าอยู่
+            status = ('in_or' if (ior_m and current_sim_min >= ior_m)
+                      else 'arrived')
 
         case = {
             'case_id': hn,
@@ -354,9 +395,9 @@ def _get_demo_rooms(current_sim_min):
             'actual_duration_min': (
                 (end_m - ior_m) if (end_m and ior_m
                                     and current_sim_min >= end_m) else None),
-            '_ai_n_cases': 5,                    # mock
-            '_ai_confidence': 'สูง',              # mock
-            '_ai_source': 'local_history',
+            '_ai_n_cases': _n_ev,                 # ค่าจริงจาก thesis_ML_v2
+            '_ai_confidence': _conf,              # ค่าจริงจาก thesis_ML_v2
+            '_ai_source': 'thesis_ML_v2',
         }
         rooms_data[room].append(case)
 
@@ -3148,6 +3189,10 @@ def _hist_sec_eff(date_from, date_to, data=None):
             fig_dow.update_layout(
                 margin=dict(t=30, b=30, l=30, r=10), height=220,
                 xaxis_title='',
+                # 📅 26 ก.ค. 2026: บังคับเรียง จ→ศ (เดิมเรียงตามลำดับข้อมูล → สลับมั่ว)
+                xaxis=dict(categoryorder='array',
+                           categoryarray=['จันทร์', 'อังคาร', 'พุธ',
+                                          'พฤหัสฯ', 'ศุกร์']),
                 yaxis=dict(title='', range=[0, _y_max_ho * 1.25]),
                 showlegend=False,
                 plot_bgcolor='#fff8f0',
