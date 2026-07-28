@@ -260,71 +260,107 @@ def _load_board_snapshot():
 
 
 def _or_board_demo():
-    """เคสตัวอย่างสำหรับลองใช้ OR Board (ไม่ใช่ข้อมูลจริง)
-    🎓 เรียงเฟสจากบนลงล่างตาม workflow จริง — ไว้สอนผู้ใช้ทีละขั้น:
-    OR1 ยังไม่มา → OR2 รอผ่าตัด(ฉุกเฉิน+นาฬิการอ) → OR3 กำลังผ่า(เขียว)
-    → OR4 ใกล้ครบเวลา(ส้ม) → OR5 เกินเวลา(แดง) → OR6 ห้องรับ-ส่ง
-    → OR7 ห้องพักฟื้น → OR8 จำหน่ายแล้ว(เทา) → OR9 นอกเวลา+AI ไม่มีข้อมูล"""
+    """เคสสาธิต Main OR — สร้างจาก demo_cases_data.DEMO_POOL (28 ก.ค. 2026)
+    ═══════════════════════════════════════════════════════════════════
+    ที่มา: ตารางผ่าตัดจริง 5 วัน (13-17 ก.ค. 69) mix แบบ "ห้องละหนึ่งวัน"
+    → คง pattern แพทย์ประจำวัน · mask ครบ (แพทย์ทดสอบ N / ทดสอบN นามสกุลN /
+    HN ปลอม) แต่หัตถการ+วินิจฉัย+ASA/BMI คงจริง → ทำนายด้วยโมเดลจริง
+    ตอนเปิดสาธิต (ส่ง SURG_xxx เข้าโมเดล) — ตัวเลข AI จึงเท่า production
+
+    🎓 เคสแรกของแต่ละห้องเรียงเฟสตาม workflow ไว้สอนผู้ใช้:
+    OR2 รอผ่าตัด(ฉุกเฉิน+นาฬิการอ) → OR3 กำลังผ่า(เขียว) → OR4 ใกล้ครบ(ส้ม)
+    → OR5 เกินเวลา(แดง) → OR6 ห้องรับ-ส่ง → OR7 พักฟื้น → OR8 จำหน่าย(เทา)
+    เคสถัดไปของทุกห้อง = ยังไม่มา/รอผ่าตัด (มีปุ่ม "รับเข้า" ให้กดเล่นครบ flow)
+    ทุกเคส _demo=True → ไม่เขียน DB วิจัย/สถิติจริงเด็ดขาด"""
     from datetime import timedelta
     now = _now()
+    try:
+        from demo_cases_data import DEMO_POOL
+    except ImportError:
+        print("[demo] ไม่พบ demo_cases_data.py — โหมดสาธิตว่าง")
+        return []
+    try:
+        from main_or_core import predict_surgical_time as _pst
+    except ImportError:
+        _pst = None
 
-    def C(status, order, h, m, name, hn, age, proc, surg, pred, room, division='1', **extra):
-        c = {'status': status, 'ororder': order, 'sched_hour': h, 'sched_min': m,
-             'name': name, 'hn': hn, 'age': age, 'procedure': proc, 'surgeon': surg,
-             'division': division, 'predicted_min': pred, 'effective_min': pred,
-             'ai_predicted_min': pred, 'is_tf': False, '_demo': True, 'room': room,
-             'diagnosis': extra.pop('diagnosis', proc)}
-        c.update(extra)
-        return c
+    # เฟสสอนของ "เคสแรก" แต่ละห้อง (ห้องอื่น ๆ ของเคสถัดไป = ยังไม่มา)
+    _PHASE = {91: 'wait', 92: 'run_ok', 93: 'run_near', 94: 'run_over',
+              95: 'post_hold', 96: 'post_rec', 97: 'done'}
+    cases = []
+    for d in DEMO_POOL:
+        # 🔮 ทำนายด้วยโซ่โมเดลจริง — surgeon ส่งเป็น SURG_xxx (TE ตรงตัวจริง)
+        pred, rng, conf, pn = 60, None, 'ต่ำ', 0
+        if _pst is not None:
+            try:
+                _r = _pst(d['procedure'], d['age'],
+                          surgeon=d.get('surgeon_code') or d['surgeon'],
+                          division=d.get('division') or '1',
+                          orroom=d['room'],
+                          diagnosis=d.get('diagnosis') or '',
+                          ward=d.get('ward') or '',
+                          asa=d.get('ASA'), bmi=d.get('BMI'),
+                          planicu=d.get('planicu'), blood=d.get('blood'))
+                pred = int(_r.get('predicted_min') or 60)
+                rng = _r.get('predicted_range')
+                conf = _r.get('confidence', 'ปานกลาง')
+                pn = int(_r.get('proc_n') or 0)
+            except Exception as _px:
+                print(f"[demo] ทำนายไม่ได้ ใช้ 60 นาที: {_px}")
+        _emg = d.get('optype', 'Elective') != 'Elective'
+        c = {'status': 'not_arrived', 'ororder': d['ororder'],
+             'sched_hour': d['sched_h'], 'sched_min': d['sched_m'],
+             'name': d['name'], 'hn': d['hn'], 'age': d['age'],
+             'procedure': d['procedure'], 'diagnosis': d.get('diagnosis') or d['procedure'],
+             'surgeon': d['surgeon'],          # 🎭 ชื่อ mask — โชว์บนบอร์ด
+             'division': d.get('division') or '1', 'room': d['room'],
+             'ward': d.get('ward') or '',
+             'predicted_min': pred, 'effective_min': pred,
+             'ai_predicted_min': pred, 'predicted_range': rng,
+             'proc_n': pn, 'confidence': conf,
+             'is_tf': False, '_demo': True,
+             'is_emergency': _emg,
+             'case_type': d.get('optype', 'Elective') if _emg else 'Elective'}
+        for _k in ('ASA', 'BMI', 'planicu', 'blood'):   # 💉 preop (โชว์/ส่ง shadow)
+            if d.get(_k) is not None:
+                c[_k] = d[_k]
 
-    # 🎬 ชื่อ/HN สมมุติแบบสมจริง (นำเสนอผู้บริหารได้ — ไม่มีคำว่า "ทดสอบ" สะดุดตา)
-    #    ยังเป็นข้อมูลปลอม 100%: _demo=True → ไม่บันทึกลง DB/สถิติจริง
-    return [
-        # ① OR1 — ยังไม่มา (จุดเริ่ม: เห็นค่า AI + ปุ่ม "รับเข้า")
-        C('not_arrived', 1, 8, 30, 'นาย สมชาย พูนทรัพย์', '21048213', 55, 'EGD',
-          'นพ.ธนายุทธ ชัยมงคล', 30, 90, division='1', proc_n=142, confidence='สูงมาก'),
-        # ② OR2 — รอผ่าตัด + ⚠️ ฉุกเฉิน (นาฬิการอเดิน + ไฟแดงกะพริบ + ปุ่ม "เข้าห้อง")
-        C('holding_pre', 2, 9, 0, 'นาง พรรณี ศรีวิไล', '21967741', 70, 'Appendectomy',
-          'นพ.ปริญ วงศ์วัฒนา', 60, 91, division='1',
-          time_arrived_holding=now - timedelta(minutes=12),
-          is_emergency=True, case_type='Emergency', proc_n=85, confidence='สูง'),
-        # ③ OR3 — กำลังผ่า ปกติ (เขียว นาทีเดินเอง — เหลือเวลาอีกเยอะ)
-        C('in_or', 3, 9, 30, 'นาย สมศักดิ์ จันทร์แก้ว', '22105532', 62, 'TURP',
-          'นพ.อธิป จันทราภรณ์', 90, 92, division='5',
-          time_entered_or=now - timedelta(minutes=40), proc_n=47, confidence='สูง'),
-        # ④ OR4 — กำลังผ่า ใกล้ครบเวลา (เหลือ ~3 นาที → mm:ss สีส้ม)
-        C('in_or', 4, 10, 0, 'นาง มาลี ทองอินทร์', '20881246', 51, 'Laparoscopic cholecystectomy',
-          'นพ.ภาคิน สุขสวัสดิ์', 60, 93, division='1',
-          time_entered_or=now - timedelta(minutes=57), proc_n=58, confidence='สูง'),
-        # ⑤ OR5 — เกินเวลาแล้ว 35 นาที (แดงสด + เด้งแจ้งเตือนระดับสูงหน้าบริหาร
-        #    เพราะเกิน 1.5 เท่าของเวลาทำนาย)
-        C('in_or', 5, 10, 30, 'นาย ประสิทธิ์ แก้วกาญจน์', '21534409', 65, 'AVF creation',
-          'นพ.ณัฐดนัย พรหมมินทร์', 60, 94, division='7',
-          time_entered_or=now - timedelta(minutes=95), proc_n=63, confidence='สูง'),
-        # ⑥ OR6 — ผ่าเสร็จ → ห้องรับ-ส่ง (ปุ่ม "จำหน่าย")
-        C('holding_post', 6, 8, 0, 'นาย วิชัย รุ่งเรืองกิจ', '21776220', 58, 'Craniotomy',
-          'นพ.รชต อินทรกำแหง', 180, 95, division='2',
-          time_entered_or=now - timedelta(minutes=210),
-          time_exited_or=now - timedelta(minutes=25),
-          actual_duration_min=185, proc_n=18, confidence='ปานกลาง'),
-        # ⑦ OR7 — ผ่าเสร็จ → ห้องพักฟื้น (ปลายทางอีกแบบ)
-        C('recovery', 7, 8, 30, 'น.ส. กัญญา บุญนาค', '22093178', 33, 'Q-Switch laser',
-          'นพ.วีรภัทร มณีโชติ', 35, 96, division='4',
-          time_entered_or=now - timedelta(minutes=120),
-          time_exited_or=now - timedelta(minutes=35),
-          actual_duration_min=33, proc_n=210, confidence='สูงมาก'),
-        # ⑧ OR8 — จำหน่ายแล้ว (แถบเทาจาง — จบ flow)
-        C('discharged', 8, 8, 0, 'ด.ช. ภูมิพัฒน์ ใจดี', '22214455', 12, 'Tonsillectomy',
-          'นพ.ศุภกฤต บุญประเสริฐ', 45, 97, division='3',
-          time_entered_or=now - timedelta(minutes=180),
-          time_exited_or=now - timedelta(minutes=95),
-          time_discharged=now - timedelta(minutes=10),
-          actual_duration_min=42, proc_n=31, confidence='สูง'),
-        # ⑨ OR9 — โบนัส: เคสนอกเวลา + หัตถการที่ AI ไม่มีประวัติ (สอนเรื่อง ✏️ override)
-        C('not_arrived', 9, 18, 30, 'น.ส. อรอุมา สายทองคำ', '21668901', 48,
-          'Open cholecystectomy', 'นพ.ภาคิน สุขสวัสดิ์', 90, 98, division='9',
-          proc_n=0, confidence='ต่ำ'),
-    ]
+        # 🎬 จัดสถานะ: เคสแรกของห้อง = เฟสสอน · เคสถัดไป = ยังไม่มา (กดเล่นเอง)
+        ph = _PHASE.get(d['room']) if d['ororder'] == 1 else None
+        if ph == 'wait':                      # รอผ่าตัด (91 = เคสฉุกเฉินจริง → ไฟแดง)
+            c['status'] = 'holding_pre'
+            c['time_arrived_holding'] = now - timedelta(minutes=12)
+        elif ph == 'run_ok':                  # กำลังผ่า เหลือเวลาเยอะ (เขียว)
+            c['status'] = 'in_or'
+            c['time_entered_or'] = now - timedelta(minutes=max(5, int(pred * 0.4)))
+        elif ph == 'run_near':                # ใกล้ครบเวลา ~3 นาที (ส้ม mm:ss)
+            c['status'] = 'in_or'
+            c['time_entered_or'] = now - timedelta(minutes=max(1, pred - 3))
+        elif ph == 'run_over':                # เกิน 1.5 เท่า (แดง + แจ้งเตือนหน้าบริหาร)
+            c['status'] = 'in_or'
+            c['time_entered_or'] = now - timedelta(minutes=int(pred * 1.5) + 8)
+        elif ph == 'post_hold':               # ผ่าเสร็จ → ห้องรับ-ส่ง (ปุ่ม "จำหน่าย")
+            act = pred + 9
+            c.update(status='holding_post', actual_duration_min=act,
+                     time_exited_or=now - timedelta(minutes=25),
+                     time_entered_or=now - timedelta(minutes=25 + act))
+        elif ph == 'post_rec':                # ผ่าเสร็จ → ห้องพักฟื้น (อีกปลายทาง)
+            act = max(10, pred - 6)
+            c.update(status='recovery', actual_duration_min=act,
+                     time_exited_or=now - timedelta(minutes=35),
+                     time_entered_or=now - timedelta(minutes=35 + act))
+        elif ph == 'done':                    # จำหน่ายแล้ว (แถบเทา — จบ flow)
+            act = pred + 4
+            c.update(status='discharged', actual_duration_min=act,
+                     time_discharged=now - timedelta(minutes=10),
+                     time_exited_or=now - timedelta(minutes=95),
+                     time_entered_or=now - timedelta(minutes=95 + act))
+        # ห้อง 92 เคสที่ 2 → รอผ่าตัดปกติ (เทียบกับ 91 ที่เป็นฉุกเฉิน)
+        if d['room'] == 92 and d['ororder'] == 2:
+            c['status'] = 'holding_pre'
+            c['time_arrived_holding'] = now - timedelta(minutes=6)
+        cases.append(c)
+    return cases
 
 
 _CUT_MIN = 15 * 60 + 30   # 15:30 = นาทีจากเที่ยงคืน
@@ -856,7 +892,8 @@ def _board_fragment():
     with _ctl_l:
         _demo_on = st.toggle(
             "🎬 สาธิต", key="orboard_demo_toggle",
-            help="เปิด: โหลดเคสตัวอย่างมาลองใช้บอร์ด (ไม่ใช่ข้อมูลจริง) · ปิด: ล้างตัวอย่าง")
+            help="เปิด: โหลดเคสสาธิตจากตารางผ่าตัดจริง (mask ชื่อเป็น 'ทดสอบ' หมดแล้ว "
+                 "— AI ทำนายด้วยโมเดลจริง) · ปิด: ล้างเคสสาธิต")
     if _demo_on and not st.session_state.get('_or_demo'):
         st.session_state.patient_cases = _or_board_demo()
         st.session_state['_or_demo'] = True
