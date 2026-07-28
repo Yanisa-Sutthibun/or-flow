@@ -351,6 +351,96 @@ def _queue_table_html(rooms_entries, room_label_fn, locked_ids,
     return ''.join(rows)
 
 
+def _gantt_html(flow_by_room, rooms_entries, room_label_fn, now_min,
+                locked_ids):
+    """📊 มุมมองแนวนอน (28 ก.ค. 2026 — wireframe approve แล้ว): แถวละห้อง
+    เวลาไหลซ้าย→ขวาเหมือนอ่านตารางผ่าตัดจริง · เสร็จ ✓ จาง / กำลังผ่า 🔵 /
+    คิวที่เหลือ (ต่อจากเวลาปัจจุบัน) / แดง = เสี่ยงรับเวร · เส้นทึบน้ำเงิน =
+    ตอนนี้ · เส้นประแดง = เส้นตาย 15:30 — อ่านคู่กับตารางรายละเอียดด้านล่าง"""
+    rooms = sorted(set(rooms_entries or {}) | set(flow_by_room or {}))
+    if not rooms:
+        return ''
+    blocks_by_room, lo, hi = {}, WORK_START_MIN, DEADLINE_MIN + 60
+    for rm in rooms:
+        blks = []
+        for f in (flow_by_room or {}).get(rm, []):
+            t = f.get('_t')
+            if t is None or not hasattr(t, 'hour'):
+                continue
+            s = t.hour * 60 + t.minute
+            if f['kind'] == 'done':
+                e = s + (f.get('_act') or 30)
+                blks.append((s, e, f'✓ {f["proc"]}',
+                             'background:#f8faf8;border:1px solid #cfd8d1;'
+                             'color:#94a3b8;', f'{f["proc"]} · {f["time_txt"]}'))
+            else:
+                e = now_min + max(f['_eff'] - f['_elapsed'], 3)
+                blks.append((s, e, f'🔵 {f["proc"]}',
+                             'background:#bbdefb;border:1px solid #1565c0;'
+                             'color:#0d47a1;font-weight:600;',
+                             f'{f["proc"]} · {f["time_txt"]} · {f["note_txt"]}'))
+        for e_ in (rooms_entries or {}).get(rm, []):
+            c = e_['case']
+            lock = '🔒 ' if str(c.get('id')) in locked_ids else ''
+            sty = ('background:#fff5f5;border:1px solid #e24b4a;color:#c0392b;'
+                   if e_['handover'] else
+                   'background:#ffffff;border:1px solid #90a4ae;color:#334155;')
+            blks.append((e_['start'], e_['end50'],
+                         lock + str(c.get('procedure') or '-'), sty,
+                         f'{c.get("procedure", "-")} · {c.get("surgeon", "")} · '
+                         f'{_dur_txt(_p50(c))}'
+                         + (' · ⚠️ เสี่ยงรับเวร' if e_['handover'] else '')))
+        blocks_by_room[rm] = blks
+        for s, e, *_ in blks:
+            lo, hi = min(lo, s), max(hi, e + 10)
+    lo = (int(lo) // 60) * 60
+    hi = ((int(hi) + 59) // 60) * 60
+    span = float(hi - lo)
+
+    def _pct(m):
+        return (m - lo) / span * 100
+
+    ticks = ''.join(
+        f'<div style="position:absolute;left:{_pct(t)}%;top:0;bottom:0;'
+        f'border-left:1px solid #eef2f6;"></div>'
+        f'<div style="position:absolute;left:{_pct(t)}%;top:-16px;'
+        f'font-size:10.5px;color:#94a3b8;transform:translateX(-50%);">'
+        f'{t // 60}:00</div>'
+        for t in range(lo, hi + 1, 120))
+    rows_html = []
+    for rm in rooms:
+        bars = ''.join(
+            f'<div title="{tip}" style="position:absolute;left:{_pct(s)}%;'
+            f'width:{max(_pct(e) - _pct(s), 1.2)}%;top:3px;height:22px;'
+            f'border-radius:4px;{sty}font-size:11px;line-height:22px;'
+            f'padding:0 4px;overflow:hidden;white-space:nowrap;'
+            f'box-sizing:border-box;">'
+            + (txt if (_pct(e) - _pct(s)) > 6 else '') + '</div>'
+            for s, e, txt, sty, tip in blocks_by_room[rm])
+        rows_html.append(
+            f'<div style="display:flex;align-items:center;height:30px;'
+            f'border-top:1px solid #f1f5f9;">'
+            f'<div style="width:74px;flex:none;font-size:12px;font-weight:700;'
+            f'color:#334155;">{room_label_fn(rm)}</div>'
+            f'<div style="position:relative;flex:1;height:28px;">'
+            f'{bars}</div></div>')
+    grid = (f'<div style="position:absolute;left:74px;right:0;top:0;bottom:0;'
+            f'pointer-events:none;">{ticks}'
+            f'<div style="position:absolute;left:{_pct(min(max(now_min, lo), hi))}%;'
+            f'top:0;bottom:0;border-left:2px solid #1565c0;"></div>'
+            f'<div style="position:absolute;left:{_pct(DEADLINE_MIN)}%;top:0;'
+            f'bottom:0;border-left:2px dashed #e24b4a;"></div></div>')
+    legend = ('<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;'
+              'color:#64748b;margin:6px 0 2px 74px;">'
+              '<span>✓ เสร็จแล้ว</span><span>🔵 กำลังผ่า</span>'
+              '<span>⬜ คิวที่เหลือ (ต่อจากตอนนี้)</span>'
+              '<span style="color:#c0392b;">🟥 เสี่ยงรับเวร</span>'
+              '<span style="color:#1565c0;">│ ตอนนี้</span>'
+              '<span style="color:#c0392b;">┆ เส้นตาย 15:30</span></div>')
+    return (f'<div style="position:relative;margin:22px 0 4px;">{grid}'
+            + ''.join(rows_html) + '</div>' + legend)
+
+
 def page_scheduler():
     from main_or_pages import _enabled_room_options
     from room_config import room_label
@@ -403,6 +493,7 @@ def page_scheduler():
                      if act and ai else '')
             flow_by_room.setdefault(rm, []).append({
                 'kind': 'done', '_t': _to_dt(c.get('time_entered_or')),
+                '_act': int(act) if act else None,
                 'proc': str(c.get('procedure') or '-')[:40],
                 'surg': str(c.get('surgeon') or '')[:30],
                 'time_txt': f'ใช้จริง {_dur_txt(act)}' if act else 'เสร็จแล้ว',
@@ -486,6 +577,10 @@ def page_scheduler():
                            f'เสร็จ {n_done} · กำลังผ่า {n_run} · '
                            f'รอคิว {len(schedulable)}',
                            best_plan['metrics']['handover']),
+                unsafe_allow_html=True)
+    # 📊 มุมมองแนวนอน (ซ้าย→ขวาเหมือนตารางผ่าตัดจริง) — มุคกี้สั่ง 28 ก.ค. 2026
+    st.markdown(_gantt_html(flow_by_room, best_plan['rooms'], room_label,
+                            now_min, locked_ids),
                 unsafe_allow_html=True)
     st.markdown(_queue_table_html(best_plan['rooms'], room_label, locked_ids,
                                   flow_by_room=flow_by_room),
