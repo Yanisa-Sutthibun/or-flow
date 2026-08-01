@@ -23,9 +23,12 @@ import sys
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # ตาราง log วิจัย: (ชื่อตาราง, คอลัมน์เวลา)
+# 🔧 1 ส.ค. 2026: เพิ่ม research_case_log (ตารางวิจัยถาวร เขียนทุกปุ่มบนบอร์ด)
+#    — เดิมสคริปต์ไม่ครอบคลุม ทดสอบจริงแล้วมีรอยค้าง
 LOG_TABLES = [('override_log', 'logged_at'),
               ('shadow_v2_log', 'logged_at'),
-              ('prediction_log', 'created_at')]
+              ('prediction_log', 'created_at'),
+              ('research_case_log', 'log_date')]
 
 
 def main():

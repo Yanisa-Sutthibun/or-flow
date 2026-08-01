@@ -570,7 +570,10 @@ def _render_one_room_card(rm):
     room_title = rm.get('room_label') or f'ห้อง {room_no}'   # เช่น 'OR1 · SCOPE'
 
     # 🔒 ห้องที่ถูกปิดในหน้าตั้งค่า → การ์ด "ปิดให้บริการ"
-    if rm.get('closed'):
+    #    🔧 1 ส.ค. 2026: บังการ์ดเฉพาะห้องปิดที่ "ไม่มีเคสเลย" — ถ้ายังมีเคสกำลังผ่า/
+    #    รอคิว/ผ่าเสร็จ ให้แสดงการ์ดปกติ + ป้าย "ปิดรับเคสใหม่" (กันเคสหายจากสายตาผู้บริหาร)
+    _closed = bool(rm.get('closed'))
+    if (_closed and not active and not rm.get('waiting') and not rm.get('done')):
         st.markdown(
             f'<div style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:12px;'
             f'padding:18px 16px;text-align:center;min-height:110px;display:flex;'
@@ -579,6 +582,10 @@ def _render_one_room_card(rm):
             f'<div style="font-size:13px;margin-top:6px;color:#94a3b8;">🔒 ปิดให้บริการ</div>'
             f'</div>', unsafe_allow_html=True)
         return
+    closed_badge = ('<span style="background:#f1f5f9;color:#64748b;'
+                    'border:1px solid #cbd5e1;border-radius:8px;padding:0 6px;'
+                    'font-size:10.5px;margin-left:6px;white-space:nowrap;">'
+                    '🔒 ปิดรับเคสใหม่</span>') if _closed else ''
 
     # 🤖 บรรทัด "คาดเสร็จ" (ใช้ room_forecast เดียวกับ section ไทม์ไลน์ → ตรงกันเสมอ)
     try:
@@ -696,7 +703,7 @@ def _render_one_room_card(rm):
         f'<div style="background:{card_bg};border:{card_border};'
         f'border-radius:12px;padding:13px 15px;">'
         f'<div style="font-size:12px;color:#1565c0;font-weight:500;margin-bottom:5px;">'
-        f'{room_title}</div>'
+        f'{room_title}{closed_badge}</div>'
         f'<div style="display:flex;align-items:center;gap:6px;'
         f'margin-bottom:8px;">'
         f'<span style="width:8px;height:8px;background:{status_dot};'

@@ -261,6 +261,14 @@ def page_room_settings():
     # page header — slim
     st.caption('เปิด/ปิด ห้องผ่าตัดที่ใช้งานวันนี้ — ห้องที่ปิดจะไม่แสดงบนบอร์ด')
 
+    # ⚠️ 1 ส.ค. 2026: คำเตือนหลังบันทึก (เก็บใน session ให้รอด st.rerun) —
+    #    ปิดห้องที่ยังมีเคสกำลังผ่า: ทำได้ แต่ต้องรู้ตัว
+    _warn_rooms = st.session_state.pop('_room_close_warn', None)
+    if _warn_rooms:
+        st.warning("⚠️ ปิดห้องที่ยังมีเคสกำลังผ่าอยู่: " + ", ".join(_warn_rooms)
+                   + " — เคสเดิมดำเนินต่อได้จนจบ แต่ห้องจะไม่รับเคสใหม่ "
+                     "(การ์ดภาพรวมวันนี้แสดงป้าย 🔒 ปิดรับเคสใหม่)")
+
     all_inputs = {}
 
     for rm in ROOM_LIST:
@@ -308,6 +316,20 @@ def page_room_settings():
             _circ = settings.get('circ') if isinstance(settings.get('circ'), list) else ['', '', '', '']
             save_room_settings(rm, settings['enabled'], _scrub, _circ)
         st.success("✅ บันทึกการตั้งค่าสำเร็จ! (บันทึกลง DB แล้ว)")
+        # ⚠️ 1 ส.ค. 2026: ปิดห้องที่มีเคสกำลังผ่าบนบอร์ด → ฝากคำเตือนไว้โชว์หลัง rerun
+        _active_room_nos = set()
+        for _c in st.session_state.get('patient_cases', []):
+            if _c.get('status') == 'in_or':
+                _r = _c.get('or_room_assigned') or _c.get('room')
+                try:
+                    _active_room_nos.add(int(float(_r)))
+                except (TypeError, ValueError):
+                    pass
+        _closed_active = [ROOM_INFO[_rm]['label'].split(' — ')[0]
+                          for _rm, _ri in all_inputs.items()
+                          if not _ri['enabled'] and _rm in _active_room_nos]
+        if _closed_active:
+            st.session_state['_room_close_warn'] = _closed_active
         st.rerun()
 
     # 🛠️ เครื่องมือผู้ดูแล (อัปโหลด CSV + ล้างกระดาน) ย้ายกลับไปหน้า 📋 ตารางผ่าตัด
