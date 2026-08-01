@@ -344,8 +344,10 @@ def page_room_settings():
 # ============================================================================
 
 def parse_schedule_csv_to_cases(uploaded_file):
-    """อ่าน CSV ตารางผ่าตัด (HIS — UTF-16 + quote ซ้อน หรือ CSV ปกติ) → list เคส
-    พร้อมทำนายเวลา + ฟิลด์ flow (status='not_arrived') สำหรับโหลดเข้า OR Board ในขั้นตอนเดียว."""
+    """อ่านตารางผ่าตัด CSV/Excel (HIS — UTF-16 + quote ซ้อน หรือ CSV ปกติ) → list เคส
+    พร้อมทำนายเวลา + ฟิลด์ flow (status='not_arrived') สำหรับโหลดเข้า OR Board ในขั้นตอนเดียว.
+    📊 1 ส.ค. 2026: รองรับ .xls/.xlsx — Excel เก็บเป็นเซลล์ comma ในข้อความไม่ทำคอลัมน์เลื่อน
+    (ปัญหา CSV จาก HIS ที่ไม่ครอบ quote) · อ่านทุกช่องเป็น text กัน HN เลขศูนย์นำหน้าหาย"""
     import csv as _csv
     import io as _io
 
@@ -355,25 +357,53 @@ def parse_schedule_csv_to_cases(uploaded_file):
         data = uploaded_file.getvalue() if hasattr(uploaded_file, 'getvalue') else uploaded_file.read()
     except (AttributeError, ValueError):
         return []
-    text = data
-    if isinstance(data, (bytes, bytearray)):
-        text = None
-        for enc in ['utf-16', 'utf-8-sig', 'utf-8', 'cp874', 'tis-620']:
-            try:
-                text = data.decode(enc)
-                break
-            except (UnicodeDecodeError, LookupError):
-                continue
-    if not text:
-        return []
 
-    # ---- two-pass parse: แกะ quote ชั้นนอกของ HIS (no-op สำหรับ CSV ปกติ) ----
-    rows = []
-    for outer in _csv.reader(_io.StringIO(text)):
-        if not outer:
-            continue
-        inner = outer[0] if len(outer) == 1 else ",".join(outer)
-        rows.append(next(_csv.reader([inner])))
+    # ---- 📊 ไฟล์ Excel? (ดูนามสกุล + magic bytes) → อ่านเป็นแถวตรง ๆ ด้วย pandas
+    #      ข้าม two-pass parser (ท่านั้นไว้แกะ quote ซ้อนของ CSV จาก HIS เท่านั้น)
+    #      แล้วไหลเข้าตัว map คอลัมน์/ทำนายชุดเดียวกันทุกอย่าง ----
+    _fname = str(getattr(uploaded_file, 'name', '') or '').lower()
+    _is_excel = (_fname.endswith(('.xls', '.xlsx'))
+                 or (isinstance(data, (bytes, bytearray))
+                     and (data[:4] == b'PK\x03\x04'                      # .xlsx (zip)
+                          or data[:8] == b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1')))  # .xls (OLE2)
+    _excel_rows = None
+    if _is_excel:
+        try:
+            # dtype=str = ทุกช่องเป็นข้อความ (HN ไม่โดนแปลงเป็นตัวเลข/วันที่ไม่ถูกสลับ)
+            _df = pd.read_excel(_io.BytesIO(bytes(data)), dtype=str)
+        except Exception:
+            try:    # HIS บางรุ่น export .xls ที่ข้างในเป็นตาราง HTML → อ่านอีกวิธี
+                _df = pd.read_html(_io.BytesIO(bytes(data)))[0].astype(str)
+            except Exception:
+                return []
+        _excel_rows = ([[str(c) for c in _df.columns]]
+                       + _df.fillna('').astype(str).values.tolist())
+
+    text = None
+    if _excel_rows is None:
+        text = data
+        if isinstance(data, (bytes, bytearray)):
+            text = None
+            for enc in ['utf-16', 'utf-8-sig', 'utf-8', 'cp874', 'tis-620']:
+                try:
+                    text = data.decode(enc)
+                    break
+                except (UnicodeDecodeError, LookupError):
+                    continue
+        if not text:
+            return []
+
+    # ---- two-pass parse: แกะ quote ชั้นนอกของ HIS (no-op สำหรับ CSV ปกติ)
+    #      📊 ไฟล์ Excel ข้ามส่วนนี้ — ได้แถวมาแล้วจาก pandas ----
+    if _excel_rows is not None:
+        rows = _excel_rows
+    else:
+        rows = []
+        for outer in _csv.reader(_io.StringIO(text)):
+            if not outer:
+                continue
+            inner = outer[0] if len(outer) == 1 else ",".join(outer)
+            rows.append(next(_csv.reader([inner])))
     rows = [r for r in rows if any(str(x).strip() for x in r)]
     if len(rows) < 2:
         return []

@@ -649,11 +649,16 @@ def render_csv_upload():
     🔓 19 ก.ค. 2026 (มุคกี้สั่ง): อัปโหลดเปิดให้พยาบาลทุกคน ไม่ต้องใส่ PIN —
     PIN ย้ายไปคุมเฉพาะ 🗑️ ล้างกระดาน (ลบได้เฉพาะผู้ดูแล)"""
     _demo_active = bool(st.session_state.get('_or_demo'))
-    with st.expander("📤 อัปโหลดตารางผ่าตัดวันนี้ (CSV)", expanded=False):
+    with st.expander("📤 อัปโหลดตารางผ่าตัดวันนี้ (CSV/Excel)", expanded=False):
         if _demo_active:
             st.caption("ℹ️ ปิดสวิตช์ 🎬 สาธิต ด้านบนก่อน เพื่ออัปโหลดตารางจริง")
-        _up = st.file_uploader("① ไฟล์ CSV ตารางผ่าตัด (HIS)", type=["csv"],
-                               key="orboard_csv", disabled=_demo_active)
+        # 📊 1 ส.ค. 2026: เปิดรับ Excel — แนะนำใช้ .xls/.xlsx จาก HIS แทน CSV
+        #    (CSV ที่ HIS ไม่ครอบ quote เจอ comma ในช่องหัตถการแล้วคอลัมน์เลื่อน)
+        _up = st.file_uploader("① ไฟล์ตารางผ่าตัดจาก HIS (.xls/.xlsx/.csv)",
+                               type=["xls", "xlsx", "csv"],
+                               key="orboard_csv", disabled=_demo_active,
+                               help="แนะนำไฟล์ Excel — กันปัญหาคอลัมน์เลื่อน"
+                                    "จาก comma ในชื่อหัตถการ/วินิจฉัยของไฟล์ CSV")
         # 💉 ไฟล์ preop วิสัญญี (19 ก.ค. 2026) — เติม ASA/BMI/จองเลือด/จอง ICU
         #    ให้โมเดล (feature ที่บอร์ดไม่เคยมี) · ไม่ใส่ = ทำงานแบบเดิม
         _up_pre = st.file_uploader(
