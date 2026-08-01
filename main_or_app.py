@@ -697,7 +697,7 @@ def main():
     #    โค้ดหน้า (page_admin('ai')) + route ด้านล่างยังอยู่ครบ
     #    คืนเมนูเมื่อไร = เติม "🤖 ผลวิจัย AI" กลับใน list นี้บรรทัดเดียวจบ
     _page_options = ["📋 ตารางผ่าตัด", "🗓️ จัดคิว AI", "📊 ภาพรวมวันนี้",
-                     "📈 สถิติย้อนหลัง", "⚙️ ตั้งค่า"]
+                     "📈 สถิติย้อนหลัง", "📺 จอญาติ", "⚙️ ตั้งค่า"]
     try:
         _default_page = st.query_params.get('page', _page_options[0])
     except Exception:
@@ -734,6 +734,11 @@ def main():
         page_admin('history')
     elif page == "🤖 ผลวิจัย AI":
         page_admin('ai')
+    elif page == "📺 จอญาติ":
+        # 👀 พรีวิวหน้าจอญาติในแอปหลัก — พยาบาลเห็นชุดเดียวกับทีวีหน้า OR เป๊ะ ๆ
+        #    (render เดียวกับ kiosk route ต่างแค่อยู่หลัง login และยังมีเมนูให้กดออก)
+        from family_board import render_family_board
+        render_family_board()
     elif page == "⚙️ ตั้งค่า":
         page_room_settings()
 
