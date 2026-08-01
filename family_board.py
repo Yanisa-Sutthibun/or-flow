@@ -10,6 +10,8 @@ family_board.py — 📺 จอสถานะสำหรับญาติผ�
   - แถวเรียงตามลำดับบนบอร์ดพยาบาล (ไม่สลับที่เมื่อสถานะเปลี่ยน — ญาติหาเจอง่าย)
   - refresh อัตโนมัติทุก 30 วิ (streamlit-autorefresh · fallback = JS reload)
   - 🎨 โหมดทีวี: แบนเนอร์ gradient + นาฬิกาสด + การ์ด fade-in + จุดสถานะเต้น + ECG
+  - 🛗 auto-scroll: เคสเยอะจนล้นจอ → เลื่อนขึ้น-ลงเองช้า ๆ (ทีวีไม่มีเมาส์)
+    เปิดเฉพาะ kiosk (?view=family) — แท็บพรีวิวในแอปพยาบาลไม่เลื่อนเอง
 """
 import html
 import json
@@ -123,6 +125,45 @@ _ECG_SVG = """
   <path d="M0 55 H180 L205 55 L220 20 L240 90 L255 40 L268 55 H400 L420 55 L432 35 L448 75 L460 55 H640"
         stroke="#0891b2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
+"""
+
+# 🛗 auto-scroll (เฉพาะจอทีวี): พัก 6 วิบนสุด → เลื่อนลงช้า ๆ → พัก 6 วิล่างสุด →
+#    เลื่อนกลับขึ้น → วนซ้ำ · ถ้าเนื้อหาไม่ล้นจอ = ไม่เลื่อนเลย
+#    (รันใน iframe ของ components.html → คุม scroll ของหน้าแม่ผ่าน window.parent)
+_AUTOSCROLL_JS = """
+<script>
+(function () {
+  var SPEED = 0.9;          // px ต่อเฟรม (~54px/วินาที) — ช้าพออ่านทัน
+  var PAUSE_MS = 6000;      // หยุดพักบน/ล่างสุด
+  var dir = 1, pauseUntil = Date.now() + PAUSE_MS;
+  function scroller() {
+    try {
+      var P = window.parent.document;
+      var cands = [P.querySelector('[data-testid="stAppViewContainer"]'),
+                   P.querySelector('section.main'),
+                   P.scrollingElement || P.documentElement];
+      for (var i = 0; i < cands.length; i++) {
+        var el = cands[i];
+        if (el && el.scrollHeight > el.clientHeight + 60) return el;
+      }
+    } catch (e) {}
+    return null;
+  }
+  function tick() {
+    var el = scroller();
+    if (el && Date.now() > pauseUntil) {
+      el.scrollTop += SPEED * dir;
+      if (dir === 1 && el.scrollTop + el.clientHeight >= el.scrollHeight - 4) {
+        dir = -1; pauseUntil = Date.now() + PAUSE_MS;
+      } else if (dir === -1 && el.scrollTop <= 2) {
+        dir = 1; pauseUntil = Date.now() + PAUSE_MS;
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
 """
 
 # นาฬิกาสด (JS เดินทุกวินาที) — แสดงในการ์ดขาว วางคู่แบนเนอร์
@@ -270,3 +311,11 @@ def render_family_board():
         'แสดงชื่อย่อและเลข HN 4 ตัวท้ายเพื่อคุ้มครองข้อมูลส่วนบุคคล · '
         'มีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่หน้าห้องผ่าตัด</p>',
         unsafe_allow_html=True)
+
+    # 🛗 auto-scroll เฉพาะโหมดทีวี (?view=family) — แท็บพรีวิวในแอปไม่เลื่อนเอง
+    try:
+        _is_kiosk = st.query_params.get('view', '') == 'family'
+    except Exception:
+        _is_kiosk = False
+    if _is_kiosk:
+        components.html(_AUTOSCROLL_JS, height=0)
