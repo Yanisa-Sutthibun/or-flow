@@ -135,22 +135,40 @@ _AUTOSCROLL_JS = """
 (function () {
   var SPEED = 0.9;          // px ต่อเฟรม (~54px/วินาที) — ช้าพออ่านทัน
   var PAUSE_MS = 6000;      // หยุดพักบน/ล่างสุด
-  var dir = 1, pauseUntil = Date.now() + PAUSE_MS;
-  function scroller() {
+  var dir = 1, pauseUntil = Date.now() + PAUSE_MS, cached = null;
+
+  // ทดสอบ "ดันจริง": เลื่อนได้จริงไหม (กัน element ที่ overflow แต่ scroll ไม่ขยับ)
+  function canScroll(el) {
+    if (!el || el.scrollHeight <= el.clientHeight + 60) return false;
+    var b = el.scrollTop;
+    el.scrollTop = b + 2;
+    var ok = el.scrollTop !== b;
+    el.scrollTop = b;
+    return ok;
+  }
+
+  // หากล่อง scroll ของ Streamlit — ชื่อ element ต่างกันตามรุ่น จึงลองหลาย selector
+  // แล้วปิดท้ายด้วยการไล่สแกน section/div ทั้งหน้า (ครอบคลุมรุ่นอนาคต)
+  function find() {
     try {
       var P = window.parent.document;
-      var cands = [P.querySelector('[data-testid="stAppViewContainer"]'),
-                   P.querySelector('section.main'),
-                   P.scrollingElement || P.documentElement];
-      for (var i = 0; i < cands.length; i++) {
-        var el = cands[i];
-        if (el && el.scrollHeight > el.clientHeight + 60) return el;
+      var sels = ['[data-testid="stMain"]', 'section.stMain', 'section.main',
+                  '[data-testid="stAppViewContainer"]'];
+      for (var i = 0; i < sels.length; i++) {
+        var e = P.querySelector(sels[i]);
+        if (canScroll(e)) return e;
       }
-    } catch (e) {}
+      var se = P.scrollingElement || P.documentElement;
+      if (canScroll(se)) return se;
+      var all = P.querySelectorAll('section,div');
+      for (var j = 0; j < all.length; j++) { if (canScroll(all[j])) return all[j]; }
+    } catch (err) {}
     return null;
   }
+
   function tick() {
-    var el = scroller();
+    if (!cached || !cached.isConnected) cached = find();
+    var el = cached;
     if (el && Date.now() > pauseUntil) {
       el.scrollTop += SPEED * dir;
       if (dir === 1 && el.scrollTop + el.clientHeight >= el.scrollHeight - 4) {
@@ -313,9 +331,11 @@ def render_family_board():
         unsafe_allow_html=True)
 
     # 🛗 auto-scroll เฉพาะโหมดทีวี (?view=family) — แท็บพรีวิวในแอปไม่เลื่อนเอง
+    #    ปิดชั่วคราวได้ด้วย &scroll=0 (เช่น เปิดตรวจงานบน notebook)
     try:
         _is_kiosk = st.query_params.get('view', '') == 'family'
+        _no_scroll = st.query_params.get('scroll', '') == '0'
     except Exception:
-        _is_kiosk = False
-    if _is_kiosk:
+        _is_kiosk, _no_scroll = False, False
+    if _is_kiosk and not _no_scroll:
         components.html(_AUTOSCROLL_JS, height=0)
