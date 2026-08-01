@@ -789,6 +789,7 @@ def _render_alerts(alerts):
         """, unsafe_allow_html=True)
         return
 
+    from room_config import room_label   # 95 → 'OR6 · NEURO' (ป้ายเดียวกับการ์ดห้อง)
     for a in alerts:
         icon = '🔴' if a['severity'] == 'high' else ('🟡' if a['severity'] == 'medium' else '⚪')
         css_class = f"alert-{a['severity']}"
@@ -796,7 +797,7 @@ def _render_alerts(alerts):
         <div class="alert-card {css_class}">
             <span style="font-size:18px;">{icon}</span>
             <div>
-                <div style="font-size:13px;font-weight:600;">ห้อง {a['room_no']} — {_esc(a['procedure'] or '-')}</div>
+                <div style="font-size:13px;font-weight:600;">{room_label(a['room_no'])} — {_esc(a['procedure'] or '-')}</div>
                 <div style="font-size:12px;color:#666;">{_esc(a['name'] or '-')} | {_esc(a['message'])}</div>
             </div>
         </div>
