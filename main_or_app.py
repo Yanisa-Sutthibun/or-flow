@@ -448,6 +448,14 @@ def parse_schedule_csv_to_cases(uploaded_file):
         # ward ที่ขอผ่าตัด (reqward หลัก, rgtward สำรอง) — ว่าง = เคส OPD
         ward_val = (get('ward') or get('ward2') or '').strip()
 
+        # 🛡️ 1 ส.ค. 2026: กันคอลัมน์เลื่อน (HIS ใส่ comma ในช่องหัตถการโดยไม่มี quote
+        #    → ช่องแตก คอลัมน์ขยับ ข้อความวินิจฉัยไหลไปโผล่ช่องแพทย์ เช่น 'mass at buttock')
+        #    ชื่อแพทย์ไทยต้องมีอักษรไทยเสมอ — ไม่มี = ถือว่าว่าง (บอร์ดแสดง '-')
+        import re as _re
+        surgeon_val = (get('surgeon') or '').strip()
+        if surgeon_val and not _re.search(r'[ก-๙]', surgeon_val):
+            surgeon_val = ''
+
         # นอกเวลา: มีคำว่า "นอกเวลา" ใน procnote / หัตถการ (ICD-9) / วินิจฉัย (ICD-10)
         _after_txt = ' '.join(
             x for x in (raw_note, get('procedure'), get('diagnosis')) if x)
@@ -464,7 +472,7 @@ def parse_schedule_csv_to_cases(uploaded_file):
             'hn': get('hn') or '', 'name': get('name') or 'ไม่ระบุ',
             'age': age_val, 'diagnosis': get('diagnosis') or '-',
             'procedure': (get('procedure') or 'UNKNOWN').strip().upper(),
-            'anesthesia': '-', 'surgeon': get('surgeon') or '', 'room': room_val,
+            'anesthesia': '-', 'surgeon': surgeon_val, 'room': room_val,
             'division': get('division') or '75', 'ororder': order_val,
             'case_type': 'Emergency' if is_emer else 'Elective',
             'is_emergency': is_emer,
