@@ -612,6 +612,30 @@ def _check_password():
 
 
 def main():
+    # ========================================================================
+    # 📺 โหมดจอญาติ (kiosk) — URL: ?view=family&k=<family_board_token>
+    #    ดัก "ก่อน" password gate: ทีวีหน้า OR เห็นหน้าสถานะหน้าเดียวแล้วจบ (st.stop)
+    #    ใครลบ query param ออก → ตกลงมาเจอหน้า login ตามปกติ (หน้าอื่นล็อกเหมือนเดิม)
+    #    🔒 fail-closed: ไม่ได้ตั้ง family_board_token ใน secrets = โหมดนี้ปิดสนิท
+    # ========================================================================
+    try:
+        _view = st.query_params.get('view', '')
+    except Exception:
+        _view = ''
+    if _view == 'family':
+        import hmac
+        try:
+            _fam_tok = str(st.secrets.get('family_board_token', '') or '')
+        except Exception:
+            _fam_tok = ''
+        _k = str(st.query_params.get('k', '') or '')
+        if _fam_tok and hmac.compare_digest(_k, _fam_tok):
+            from family_board import render_family_board
+            render_family_board()
+        else:
+            st.error("📺 จอสถานะไม่พร้อมใช้งาน — กรุณาติดต่อเจ้าหน้าที่")
+        st.stop()   # ⛔ จบที่นี่เสมอ — ไม่มีทางไปถึงเมนู/หน้าอื่น
+
     # 🔒 Password gate ก่อนทุก action
     if not _check_password():
         st.stop()
