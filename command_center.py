@@ -5,7 +5,7 @@ command_center.py — พยากรณ์เวลาเสร็จราย�
 พร้อม ai_predicted_min / in_or_at / op_end_at / status)
 
 room_forecast(rm)        → dict สถานะ + เวลาเสร็จคาดการณ์ (ใช้ร่วมทั้ง 2 section)
-forecast_caption_html()  → บรรทัด "คาดเสร็จ" สำหรับการ์ด (Section 1)
+forecast_caption_html()  → บรรทัด "เคสสุดท้ายของวัน" สำหรับการ์ด (Section 1)
 render_room_timeline()   → ไทม์ไลน์รายห้อง (Section 2)
 ทั้งสอง section เรียก room_forecast ตัวเดียวกัน → ตัวเลขตรงกันเสมอ (เชื่อมกัน)
 
@@ -150,7 +150,8 @@ _STATUS_C = {
 
 
 def forecast_caption_html(fc):
-    """บรรทัด 'คาดเสร็จ' สำหรับใส่ท้ายการ์ดห้อง (Section 1)."""
+    """บรรทัด 'เคสสุดท้ายของวัน' สำหรับใส่ท้ายการ์ดห้อง (Section 1)
+    (เดิมใช้คำว่า 'คาดเสร็จ' — เปลี่ยน 1 ส.ค. 2026 เพราะกำกวม ผู้ใช้เข้าใจว่าเคสปัจจุบัน)"""
     if not fc['has_future']:
         return ''
     fin = fc['finish'].strftime('%H:%M') if fc['finish'] else '—'
@@ -161,7 +162,7 @@ def forecast_caption_html(fc):
             f'background:{bg};color:{col};border-radius:8px;padding:5px 9px;'
             f'font-size:11px;margin-top:8px;">'
             f'<span>เหลือ {fc["waiting_n"]} เคส</span>'
-            f'<span>🤖 คาดเสร็จ <b>{fin}</b></span></div>')
+            f'<span>🤖 เคสสุดท้ายของวัน <b>{fin}</b></span></div>')
 
 
 def render_room_timeline(rooms, now=None):
@@ -198,7 +199,7 @@ def render_room_timeline(rooms, now=None):
     # 🗓️ รายเคส (28 ก.ค. 2026 — ย้าย Gantt จากหน้าจัดคิวมาที่นี่ตามคำสั่งมุคกี้):
     #    แต่ละแถวแสดง "แท่งเคส" ซ้าย→ขวาเหมือนอ่านตารางผ่าตัดจริง — เสร็จ ✓ จาง /
     #    กำลังผ่าเขียว(เกิน=แดง) ต่อด้วยเส้นประ AI ที่เหลือ / คิวถัดไปกรอบเทา
-    #    ต่อหลังเวลาปัจจุบัน + turnover · ◆ คาดเสร็จ = จุดเดียวกับการ์ดห้องเสมอ
+    #    ต่อหลังเวลาปัจจุบัน + turnover · ◆ เคสสุดท้ายของวัน = จุดเดียวกับการ์ดห้องเสมอ
     def _blk(l, w, sty, txt, tip):
         _t = txt if w > 6 else ''
         return (f'<div title="{tip}" style="position:absolute;left:{l:.1f}%;'
@@ -287,7 +288,7 @@ def render_room_timeline(rooms, now=None):
         '<span><span style="display:inline-block;width:15px;height:8px;background:#fff;'
         'border:1px solid #90a4ae;border-radius:2px;vertical-align:middle;'
         'box-sizing:border-box;"></span> คิวถัดไป</span>'
-        '<span><b style="color:#0f172a;">|</b> ตอนนี้ &middot; ◆ คาดเสร็จ</span></div>')
+        '<span><b style="color:#0f172a;">|</b> ตอนนี้ &middot; ◆ เคสสุดท้ายของวัน</span></div>')
 
     st.markdown(
         f'<div style="position:relative;height:16px;margin-bottom:4px;">{axis}</div>'
