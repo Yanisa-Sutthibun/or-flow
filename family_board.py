@@ -1,9 +1,7 @@
 """
 family_board.py — 📺 จอสถานะสำหรับญาติผู้ป่วย (kiosk mode หน้าห้องผ่าตัด)
 
-เปิดผ่าน URL: ?view=family&k=<family_board_token>  (route ดักใน main_or_app.main
-ก่อน password gate — ลบ param ออกจะเจอหน้า login หน้าอื่นล็อกเหมือนเดิม)
-
+เปิดผ่าน URL: ?view=family&k=<family_board_token>  
 หลักการ:
   - อ่าน board_state วันนี้จาก DB (ชุดเดียวกับบอร์ดพยาบาล) — read-only 100%
   - PDPA: payload ใน DB ถูก mask ตั้งแต่ต้นทางแล้ว (ชื่อต้น+นามสกุลย่อ · HN 4 ตัวท้าย)
@@ -128,7 +126,7 @@ def render_family_board():
     # กรองแถวว่าง (ไม่มีทั้งชื่อและ HN) — กันการ์ดเปล่าบนจอ
     cases = [c for c in cases if (c.get('name') or c.get('hn'))]
     if not cases:
-        st.markdown('<p class="fam-empty">วันนี้ยังไม่มีรายการผ่าตัดในระบบ</p>',
+        st.markdown('<p class="fam-empty">ระบบอยู่ระหว่างเตรียมเปิดใช้งาน</p>',
                     unsafe_allow_html=True)
         return
 
