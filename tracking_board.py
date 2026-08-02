@@ -563,6 +563,15 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 if _is_emer(c):
                     st.caption("🚨 เคสฉุกเฉิน — อยู่นอกขอบเขตวิจัย: ใช้บอร์ด/AI ได้ปกติ "
                                "แต่จะไม่ถูกบันทึกเข้าข้อมูลวิจัยใด ๆ")
+                else:
+                    # 🌙 เคสนอกเวลา (elective นัด ≥ 15:30) — นอกขอบเขตเช่นกัน (2 ส.ค. 2026)
+                    try:
+                        from research_log import in_research_scope as _irs
+                        if not _irs(c) and not c.get('_demo'):
+                            st.caption("🌙 เคสนอกเวลา — อยู่นอกขอบเขตวิจัย: ใช้บอร์ด/AI "
+                                       "ได้ปกติ แต่จะไม่ถูกบันทึกเข้าข้อมูลวิจัยใด ๆ")
+                    except Exception:
+                        pass
                 st.caption("เวลาคาดการณ์ใช้ห้องผ่าตัด (นาที) — แก้แทนค่า AI ได้ "
                            "(เวลาใช้ห้องตั้งแต่ room in ถึง room out)")
                 # 🤖 ที่มาของคำทำนาย — หลักฐานช่วยตัดสินใจว่าควรเชื่อ AI แค่ไหน

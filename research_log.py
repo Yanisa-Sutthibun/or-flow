@@ -29,15 +29,32 @@ import os
 # ─────────────────────────── helpers ───────────────────────────
 
 def in_research_scope(case) -> bool:
-    """🚪 ประตูข้อมูลวิจัย (19 ก.ค. 2026) — เกณฑ์คัดเข้าบังคับด้วยซอฟต์แวร์:
-    ① ไม่ใช่เคสสาธิต/ทดสอบ (_demo) ② เป็น elective เท่านั้น (ขอบเขตวิทยานิพนธ์)
-    เคส emergency/urgency ใช้บอร์ด/AI ได้ครบ แต่ไม่ทิ้งรอยใน log วิจัยใด ๆ"""
+    """🚪 ประตูข้อมูลวิจัย — เกณฑ์คัดเข้าบังคับด้วยซอฟต์แวร์:
+    ① ไม่ใช่เคสสาธิต/ทดสอบ (_demo) ② เป็น elective เท่านั้น
+    ③ ไม่ใช่เคสนอกเวลา (นัดจริง ≥ 15:30 หรือระบุ "นอกเวลา") — เพิ่ม 2 ส.ค. 2026
+      ตามขอบเขตวิทยานิพนธ์: elective ในเวลา 8:00–16:00 เท่านั้น
+      (เคส "รับเวร" = เริ่มในเวลาแต่จบช้า ยังอยู่ในขอบเขต · TF ไม่นับนอกเวลา
+      เพราะ 23:55 เป็นแค่ placeholder เรียงท้ายคิว)
+    เคสนอกขอบเขตทุกชนิดใช้บอร์ด/AI ได้ครบ แต่ไม่ทิ้งรอยใน log วิจัยใด ๆ
+    (research_case_log / override_log / shadow_v2_log ใช้ประตูนี้ร่วมกัน)"""
     if case is None or case.get('_demo'):
         return False
     if case.get('is_emergency'):
         return False
     ct = str(case.get('case_type') or 'Elective').strip().lower()
-    return ct == 'elective'
+    if ct != 'elective':
+        return False
+    # ③ นอกเวลา — เกณฑ์เดียวกับ case_shift_class (ทำซ้ำในนี้ กัน circular import)
+    if case.get('is_after_note'):
+        return False
+    if not case.get('is_tf'):
+        try:
+            _sm = int(case.get('sched_hour')) * 60 + int(case.get('sched_min') or 0)
+            if _sm >= 15 * 60 + 30:
+                return False
+        except (TypeError, ValueError):
+            pass
+    return True
 
 
 def _salt() -> str:
