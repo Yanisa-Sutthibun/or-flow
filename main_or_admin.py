@@ -490,7 +490,8 @@ def _render_demo_controls():
         _demo_inst = False
     with col_info:
         if not _demo_inst:
-            new_active = bool(state['active'])
+            # 🔒 production: บังคับปิดสถานะสาธิตเสมอ (กัน session เก่าค้างค่า active)
+            new_active = False
         else:
             new_active = st.toggle(
                 '🎬 สาธิต', value=state['active'], key='demo_toggle',

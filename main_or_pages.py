@@ -906,7 +906,10 @@ def _board_fragment():
     except Exception:
         _is_demo_instance = False
     with _ctl_l:
-        if _room_scope_board or not _is_demo_instance:
+        if not _is_demo_instance:
+            # 🔒 production: บังคับปิดสาธิตเสมอ (โค้ดถัดไปจะล้างเคสสาธิตค้างให้เอง)
+            _demo_on = False
+        elif _room_scope_board:
             _demo_on = bool(st.session_state.get('_or_demo'))
         else:
             _demo_on = st.toggle(
