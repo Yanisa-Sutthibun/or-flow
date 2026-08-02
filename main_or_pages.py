@@ -901,7 +901,35 @@ def _board_fragment():
                     st.session_state['_board_force_pull'] = True
             except Exception:
                 pass
+        # ✏️ 2 ส.ค. 2026 (มุคกี้สั่ง): มีร่างแก้เวลาใน ✏️ ที่ยังไม่เซฟบนเครื่องนี้
+        #    → เลื่อนการดึงบอร์ดกลางของรอบ tick นั้น (กัน pull มาสลับ/รีเซ็ต
+        #    กลางมือพิมพ์) · per-session — เครื่องอื่น tick ปกติไม่กระทบ
+        #    เพดาน 4 รอบ (~2 นาที): พิมพ์ค้างแล้วเดินหนี = กลับมาดึงตามปกติ
+        #    กด 🔄 เอง (_board_user_pull) = ดึงเสมอ ไม่ถูกเลื่อน
+        def _editing_in_progress():
+            try:
+                for _i, _c in enumerate(cases):
+                    _v = st.session_state.get(f'tb_ov_{_i}')
+                    if _v is None:
+                        continue
+                    _e = (_c.get('effective_min') or _c.get('ai_predicted_min')
+                          or _c.get('predicted_min') or 30)
+                    if int(_v) != int(_e):
+                        return True
+            except Exception:
+                pass
+            return False
+
+        _editing = _editing_in_progress()
+        _user_pull = st.session_state.pop('_board_user_pull', False)
         _pull = st.session_state.pop('_board_force_pull', False)
+        if not _editing:
+            st.session_state['_edit_skip_n'] = 0
+        elif _pull and not _user_pull:
+            _n = int(st.session_state.get('_edit_skip_n', 0)) + 1
+            st.session_state['_edit_skip_n'] = _n
+            if _n <= 4:
+                _pull = False       # เลื่อนรอบนี้ — tick ถัดไปตั้งธงใหม่เอง
         if not cases and not st.session_state.get('_board_restored'):
             _pull = True
         st.session_state['_board_restored'] = True
@@ -929,6 +957,7 @@ def _board_fragment():
                      type='primary',
                      help="ดึงสถานะล่าสุดจากบอร์ดกลาง (เห็นที่เครื่องอื่นกด)"):
             st.session_state['_board_force_pull'] = True   # บังคับดึงจาก DB กลาง
+            st.session_state['_board_user_pull'] = True    # ✋ คนสั่งเอง — ห้ามถูกเลื่อน
             _rerun_board()
     with _ctl_warn:
         st.markdown("<div style=\x27text-align:right;color:#808495;font-size:13px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
