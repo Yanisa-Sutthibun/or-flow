@@ -60,6 +60,19 @@ def _rec(c):
     }
 
 
+def cases_df_from_session(cases):
+    """df เคสสดทั้งบอร์ด (คอลัมน์เข้ากันกับตาราง cases ใน DB) + room_no
+    📋 มุคกี้สั่ง 2 ส.ค. 2026: หน้า 'ภาพรวมวันนี้' ใช้ตารางผ่าตัดที่อัปโหลด
+    เช้านี้ (บอร์ดสด) เป็นแหล่งเดียว — DB cases มีไว้สถิติย้อนหลังเท่านั้น"""
+    cases = [c for c in (cases or []) if c.get('status') != 'removed']
+    recs = []
+    for c in cases:
+        r = _rec(c)
+        r['room_no'] = _rid(c)
+        recs.append(r)
+    return pd.DataFrame(recs, columns=_COLS + ['room_no'])
+
+
 def rooms_from_session(cases, now=None):
     """โครงเดียวกับ get_room_status() แต่ใช้เคสสดจากกระดาน (เชื่อมกัน realtime)."""
     cases = [c for c in cases if c.get("status") != "removed"]   # 🗑️ tombstone

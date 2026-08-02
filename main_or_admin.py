@@ -3820,19 +3820,50 @@ def page_admin(section='today'):
                 alerts = get_delay_alerts(op_date)
             _render_alerts(alerts)
 
-            wt_today = get_wait_stats(op_date, op_date)
-            if wt_today['over_60'] > 0:
-                st.markdown(f"""
-                <div style="background:#fce4ec;border-left:4px solid #c62828;
-                            padding:10px 14px;border-radius:6px;margin-bottom:8px;">
-                    <span style="font-weight:700;color:#c62828;">
-                        ⏱️ {wt_today['over_60']} เคส</span>
-                    <span style="color:#666;font-size:13px;">
-                        รอเกิน 60 นาที — เฉลี่ยรอ {wt_today['avg_all']} นาที,
-                        นานสุด {wt_today['max_all']} นาที</span>
-                </div>""", unsafe_allow_html=True)
-            elif wt_today['total'] > 0:
-                st.caption(f"⏱️ ไม่มีเคสรอเกิน 60 นาที — เฉลี่ยรอ {wt_today['avg_all']} นาที")
+            # 📋 2 ส.ค. 2026: เวลารอคำนวณจากบอร์ดสดก่อนเสมอ (หน้าวันนี้ = บอร์ดเช้านี้)
+            #    ไม่มีบอร์ด → fallback สถิติ DB แบบเดิม
+            if _live_cases:
+                def _wait_min_live(_c):
+                    _a = _c.get('time_arrived_holding')
+                    _e = _c.get('time_entered_or')
+                    try:
+                        if _a is None or not hasattr(_a, 'hour'):
+                            return None
+                        _end = (_e if (_e is not None and hasattr(_e, 'hour'))
+                                else _now_bkk())
+                        return max(int((_end - _a).total_seconds() / 60), 0)
+                    except Exception:
+                        return None
+                _waits = [w for w in (_wait_min_live(c) for c in _live_cases)
+                          if w is not None]
+                _n_over = sum(1 for w in _waits if w > 60)
+                if _n_over > 0:
+                    st.markdown(f"""
+                    <div style="background:#fce4ec;border-left:4px solid #c62828;
+                                padding:10px 14px;border-radius:6px;margin-bottom:8px;">
+                        <span style="font-weight:700;color:#c62828;">
+                            ⏱️ {_n_over} เคส</span>
+                        <span style="color:#666;font-size:13px;">
+                            รอเกิน 60 นาที — เฉลี่ยรอ {int(sum(_waits)/len(_waits))} นาที,
+                            นานสุด {max(_waits)} นาที</span>
+                    </div>""", unsafe_allow_html=True)
+                elif _waits:
+                    st.caption(f"⏱️ ไม่มีเคสรอเกิน 60 นาที — "
+                               f"เฉลี่ยรอ {int(sum(_waits)/len(_waits))} นาที")
+            else:
+                wt_today = get_wait_stats(op_date, op_date)
+                if wt_today['over_60'] > 0:
+                    st.markdown(f"""
+                    <div style="background:#fce4ec;border-left:4px solid #c62828;
+                                padding:10px 14px;border-radius:6px;margin-bottom:8px;">
+                        <span style="font-weight:700;color:#c62828;">
+                            ⏱️ {wt_today['over_60']} เคส</span>
+                        <span style="color:#666;font-size:13px;">
+                            รอเกิน 60 นาที — เฉลี่ยรอ {wt_today['avg_all']} นาที,
+                            นานสุด {wt_today['max_all']} นาที</span>
+                    </div>""", unsafe_allow_html=True)
+                elif wt_today['total'] > 0:
+                    st.caption(f"⏱️ ไม่มีเคสรอเกิน 60 นาที — เฉลี่ยรอ {wt_today['avg_all']} นาที")
 
         # 🏥 Section: Room status cards
         st.markdown('<div class="section-title">🛏️ สถานะห้องผ่าตัด</div>',
@@ -3865,6 +3896,11 @@ def page_admin(section='today'):
         if True:  # always render — เลือก data source ตาม mode
             if demo_active:
                 _cases_today = _get_demo_cases_df(sim_min)
+            elif _live_cases:
+                # 📋 2 ส.ค. 2026 (มุคกี้สั่ง): หน้า "วันนี้" = ตารางผ่าตัดที่อัปโหลด
+                #    เช้านี้ (บอร์ดสด) — DB cases ไว้สถิติย้อนหลังหลัง import เท่านั้น
+                from live_link import cases_df_from_session
+                _cases_today = cases_df_from_session(_live_cases)
             else:
                 from main_or_db import get_cases as _get_cases_today
                 _cases_today = _get_cases_today(op_date=op_date)
@@ -4052,8 +4088,15 @@ def page_admin(section='today'):
         # Section: สถิติรับเวร (วันนี้)
         # =========================================================
         with st.expander("🔄 สถิติรับเวร (หลัง 15:30 น.)", expanded=False):
-            ho_today = get_handover_stats(op_date, op_date)
-            if ho_today['n_handover'] > 0:
+            # 📋 2 ส.ค. 2026: มีบอร์ดสด → เคสรับเวรดูที่ "🌙 สรุปรายวัน / รับเวร"
+            #    (คำนวณจากบอร์ด) — ส่วนนี้เป็นสถิติจาก DB ใช้เมื่อไม่มีบอร์ดเท่านั้น
+            ho_today = (get_handover_stats(op_date, op_date) if not _live_cases
+                        else {'n_handover': 0, 'total': 0, 'pct': 0,
+                              'handover_cases': None})
+            if _live_cases:
+                st.caption("📋 วันนี้คำนวณจากบอร์ดสด — ดูรายการเคสรับเวรที่ "
+                           "'🌙 สรุปรายวัน / รับเวร' ด้านล่าง")
+            elif ho_today['n_handover'] > 0:
                 st.markdown(f"""
                 <div style="background:#fff3e0;border-left:4px solid #ef6c00;
                             padding:10px 14px;border-radius:6px;margin-bottom:8px;">
