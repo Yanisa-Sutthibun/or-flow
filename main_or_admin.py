@@ -3618,20 +3618,24 @@ def _render_daily_summary():
     else:
         _hcols = [1, 4, 5]
         _hh = st.columns(_hcols)
-        for _col, _lbl in zip(_hh, ["#", "Diagnosis", "Operation"]):
+        # 🔢 2 ส.ค. 2026: คอลัมน์แรกเปลี่ยนจาก ororder (คิวในห้อง — คนอ่านเข้าใจผิด
+        #    ว่าเป็นจำนวน เอาไปบวกกันแล้วไม่ตรง KPI) → ลำดับรายการ 1..n ตรง KPI เสมอ
+        for _col, _lbl in zip(_hh, ["ลำดับ", "Diagnosis", "Operation"]):
             _col.markdown(f"<span style='font-size:12px;color:#607d8b;font-weight:600;'>{_lbl}</span>",
                           unsafe_allow_html=True)
-        for c in _handover:
+        for _i, c in enumerate(_handover, start=1):
             _r = st.columns(_hcols)
-            _r[0].write(str(c.get('ororder', '-')))
+            _r[0].write(str(_i))
             _r[1].write(c.get('diagnosis') or '-')
             _r[2].write(c.get('procedure') or '-')
 
     if _after:
         st.markdown("##### 🌙 เคสนอกเวลา (นัด ≥ 15:30 หรือระบุนอกเวลา)")
+        # 🔒 mask ชื่อเสมอ (เครื่องอัปโหลด session ถือชื่อเต็ม — มาตรา 3.6.4)
+        from main_or_db import mask_patient_name as _mpn_ds
         for c in _after:
             st.markdown(
-                f"- **{c.get('procedure','-')}** · {c.get('name','-')} · "
+                f"- **{c.get('procedure','-')}** · {_mpn_ds(c.get('name') or '-')} · "
                 f"นัด {c.get('sched_hour',0):02d}:{c.get('sched_min',0):02d}")
 
 
@@ -4092,7 +4096,24 @@ def page_admin(section='today'):
             '🌙 เคสนอกเวลา</span></div>',
             unsafe_allow_html=True,
         )
-        _render_after_hours_admin(op_date)
+        # 🔗 2 ส.ค. 2026 (มุคกี้จับได้ตอนตรวจ demo): ใช้ชุดเดียวกับบอร์ดสดก่อนเสมอ
+        #    — เดิมอ่าน DB (cases) อย่างเดียว ทำให้ขึ้น "ไม่มีเคสนอกเวลา" ขัดกับ
+        #    KPI นอกเวลาในสรุปรายวันที่นับจากบอร์ด · ไม่มีบอร์ดสด → fallback DB เดิม
+        if _live_cases:
+            from main_or_pages import case_shift_class as _csc
+            from main_or_db import mask_patient_name as _mpn_ah
+            _aft_live = [c for c in _live_cases if _csc(c) == 'นอกเวลา']
+            if not _aft_live:
+                st.info("ไม่มีเคสนอกเวลาวันนี้")
+            else:
+                for c in _aft_live:
+                    st.markdown(
+                        f"- **{_esc(c.get('procedure', '-'))}** · "
+                        f"{_esc(_mpn_ah(c.get('name') or '-'))} · "
+                        f"นัด {int(c.get('sched_hour') or 0):02d}:"
+                        f"{int(c.get('sched_min') or 0):02d}")
+        else:
+            _render_after_hours_admin(op_date)
 
         # =========================================================
         # Section: สรุปรายวัน / รับเวร (ยุบมาจากแท็บแยก — หน้าเดียวจบ)
