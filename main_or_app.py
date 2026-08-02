@@ -680,6 +680,21 @@ def _check_password():
 
 def main():
     # ========================================================================
+    # 🧪 2 ส.ค. 2026: รองรับเส้นทาง demo_app.py (ประตูที่สองของแอป DEMO)
+    #    Python cache การ import → โค้ดระดับบนสุดของไฟล์นี้ไม่รันซ้ำใน rerun
+    #    ต้องตั้ง page config + init session ที่นี่ด้วย (idempotent ทั้งคู่ —
+    #    เส้นทางปกติที่รันไฟล์นี้ตรง ๆ ไม่กระทบ)
+    # ========================================================================
+    try:
+        st.set_page_config(
+            page_title="ห้องผ่าตัดศัลยกรรมทั่วไป Dashboard",
+            page_icon="🏥", layout="wide", initial_sidebar_state="collapsed")
+    except Exception:
+        pass    # ถูกตั้งไปแล้วตอนรันไฟล์นี้ตรง ๆ (เรียกซ้ำใน run เดียวกันไม่ได้)
+    init_session_state()
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)   # CSS ต้องฉีดทุก run (เส้นทาง demo)
+
+    # ========================================================================
     # 📺 โหมดจอญาติ (kiosk) — URL: ?view=family&k=<family_board_token>
     #    ดัก "ก่อน" password gate: ทีวีหน้า OR เห็นหน้าสถานะหน้าเดียวแล้วจบ (st.stop)
     #    ใครลบ query param ออก → ตกลงมาเจอหน้า login ตามปกติ (หน้าอื่นล็อกเหมือนเดิม)
