@@ -106,12 +106,20 @@ def load_real_nurse_list():
 # PAGE CONFIG & CSS
 # ============================================================================
 
-st.set_page_config(
-    page_title="ห้องผ่าตัดศัลยกรรมทั่วไป Dashboard",
-    page_icon="🏥",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+# 🖥️ แอป DEMO: ชื่อแท็บ+ไอคอนต่างจากระบบจริงชัดเจน (กันเปิดสลับแอป)
+def _page_config_kwargs():
+    try:
+        _d = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        _d = False
+    if _d:
+        return dict(page_title="DEMO · OR Flow ระบบสาธิต", page_icon="🖥️",
+                    layout="wide", initial_sidebar_state="collapsed")
+    return dict(page_title="ห้องผ่าตัดศัลยกรรมทั่วไป Dashboard", page_icon="🏥",
+                layout="wide", initial_sidebar_state="collapsed")
+
+
+st.set_page_config(**_page_config_kwargs())
 
 CUSTOM_CSS = """
 <style>
@@ -669,7 +677,7 @@ def _check_password():
         # 🧪 แอป demo: บอกผู้เข้าชมชัด ๆ ว่านี่คือระบบสาธิต (รหัสขอจากผู้วิจัย)
         try:
             if str(st.secrets.get('instance_mode', '')).lower() == 'demo':
-                st.info("🧪 ระบบสาธิต (DEMO) — ข้อมูลทั้งหมดเป็นข้อมูลจำลอง/"
+                st.info("🖥️ ระบบสาธิต (DEMO) — ข้อมูลทั้งหมดเป็นข้อมูลจำลอง/"
                         "สำเนาที่ไม่ระบุตัวตน ไม่ใช่ข้อมูลผู้ป่วยจริง")
         except Exception:
             pass
@@ -686,13 +694,27 @@ def main():
     #    เส้นทางปกติที่รันไฟล์นี้ตรง ๆ ไม่กระทบ)
     # ========================================================================
     try:
-        st.set_page_config(
-            page_title="ห้องผ่าตัดศัลยกรรมทั่วไป Dashboard",
-            page_icon="🏥", layout="wide", initial_sidebar_state="collapsed")
+        st.set_page_config(**_page_config_kwargs())
     except Exception:
         pass    # ถูกตั้งไปแล้วตอนรันไฟล์นี้ตรง ๆ (เรียกซ้ำใน run เดียวกันไม่ได้)
     init_session_state()
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)   # CSS ต้องฉีดทุก run (เส้นทาง demo)
+
+    # 🖥️ แถบเหลือง-ดำคาดหัว "ทุกหน้า" ของแอป DEMO (รวมหน้า login/จอญาติ/จอห้อง)
+    try:
+        _is_demo_app = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        _is_demo_app = False
+    if _is_demo_app:
+        st.markdown(
+            '<div style="background:repeating-linear-gradient(45deg,'
+            '#FACC15 0 26px,#1F2937 26px 52px);border-radius:10px;'
+            'padding:10px 14px;text-align:center;margin:0 0 10px 0;">'
+            '<span style="background:rgba(0,0,0,0.62);color:#FDE047;'
+            'font-size:20px;font-weight:800;letter-spacing:.5px;'
+            'padding:4px 20px;border-radius:8px;white-space:nowrap;">'
+            '🖥️ ระบบสาธิต DEMO — ข้อมูลจำลองทั้งหมด ไม่ใช่ผู้ป่วยจริง</span></div>',
+            unsafe_allow_html=True)
 
     # ========================================================================
     # 📺 โหมดจอญาติ (kiosk) — URL: ?view=family&k=<family_board_token>
@@ -786,8 +808,8 @@ def main():
         _now_hdr = _dtm.now(_tzu(_td(hours=7))).strftime('%d/%m/%Y')
         # 🧪 ชิป DEMO คาดหัวทุกหน้า — เฉพาะแอปสาธิต (instance_mode="demo")
         try:
-            _demo_chip = (('<span class="or-chip" style="background:#fbe9e8;'
-                           'color:#c0392b;font-weight:700;">🧪 DEMO — '
+            _demo_chip = (('<span class="or-chip" style="background:#fef9c3;'
+                           'color:#854d0e;font-weight:700;">🖥️ DEMO — '
                            'ข้อมูลสาธิต ไม่ใช่ผู้ป่วยจริง</span>')
                           if str(st.secrets.get('instance_mode', '')).lower() == 'demo'
                           else '')
