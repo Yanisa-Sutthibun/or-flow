@@ -895,11 +895,17 @@ def _board_fragment():
             _rerun_board()
     with _ctl_warn:
         st.markdown("<div style=\x27text-align:right;color:#808495;font-size:13px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
+    # 🚪 โหมดจอประจำห้อง: ไม่มีสวิตช์สาธิต (กันจอห้องเผลอสลับบอร์ดทั้งตึกเป็นสาธิต)
+    _room_scope_board = (st.session_state.get('room_scope')
+                         if st.session_state.get('role') == 'room' else None)
     with _ctl_l:
-        _demo_on = st.toggle(
-            "🎬 สาธิต", key="orboard_demo_toggle",
-            help="เปิด: โหลดเคสสาธิตจากตารางผ่าตัดจริง (mask ชื่อเป็น 'ทดสอบ' หมดแล้ว "
-                 "— AI ทำนายด้วยโมเดลจริง) · ปิด: ล้างเคสสาธิต")
+        if _room_scope_board:
+            _demo_on = bool(st.session_state.get('_or_demo'))
+        else:
+            _demo_on = st.toggle(
+                "🎬 สาธิต", key="orboard_demo_toggle",
+                help="เปิด: โหลดเคสสาธิตจากตารางผ่าตัดจริง (mask ชื่อเป็น 'ทดสอบ' หมดแล้ว "
+                     "— AI ทำนายด้วยโมเดลจริง) · ปิด: ล้างเคสสาธิต")
     if _demo_on and not st.session_state.get('_or_demo'):
         st.session_state.patient_cases = _or_board_demo()
         st.session_state['_or_demo'] = True
@@ -960,11 +966,13 @@ def _board_fragment():
 
     # ---------- 📤 อัปโหลด CSV — ย้ายกลับมาบอร์ด 14 ก.ค. 2026 (เหนือ ➕ เพิ่มเคส)
     #    🗑️ ล้างกระดานวันนี้ = ตัวเลือกท้าย expander อัปโหลด (คลิกเลือก)
-    render_csv_upload()
+    #    🚪 โหมดจอประจำห้อง: ซ่อนอัปโหลด/เพิ่มเคส/ล้างกระดาน — งานของจอรับ-ส่ง
+    if not _room_scope_board:
+        render_csv_upload()
 
-    # ---------- ➕ เพิ่มเคส (Manual) — ทุกคนเพิ่มได้ ----------
-    with st.expander("➕ เพิ่มเคส (Manual)", expanded=False):
-        _render_add_case_form(_demo_active)
+        # ---------- ➕ เพิ่มเคส (Manual) — ทุกคนเพิ่มได้ ----------
+        with st.expander("➕ เพิ่มเคส (Manual)", expanded=False):
+            _render_add_case_form(_demo_active)
 
     # ---------- empty state ----------
     if not cases:

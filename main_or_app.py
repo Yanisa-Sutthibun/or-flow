@@ -696,6 +696,38 @@ def main():
             st.error("📺 จอสถานะไม่พร้อมใช้งาน — กรุณาติดต่อเจ้าหน้าที่")
         st.stop()   # ⛔ จบที่นี่เสมอ — ไม่มีทางไปถึงเมนู/หน้าอื่น
 
+    # ========================================================================
+    # 🚪 โหมดจอประจำห้องผ่าตัด — URL: ?room=<เลขห้อง>&k=<token ของห้อง>
+    #    (เคาะดีไซน์ 2 ส.ค. 2026 หลัก "ล็อกที่มือ ไม่ล็อกที่ตา")
+    #    shortcut ติดตั้งค้างถาวรบนเครื่องในห้อง เปิดปุ๊บใช้ได้ ไม่ต้อง login
+    #    เห็นทุกห้อง (read-only) · กดได้เฉพาะเคสห้องตัวเอง (เสร็จ/✏️เวลา/↩️)
+    #    เมนูเหลือ 3 แท็บ · token รายห้องใน secrets [room_tokens] เพิกถอนรายห้องได้
+    #    ทางหนีไฟ: เครื่องห้องเปิดลิงก์ปกติ + login รหัสหน่วยงาน = master ได้เสมอ
+    # ========================================================================
+    try:
+        _room_q = str(st.query_params.get('room', '') or '')
+    except Exception:
+        _room_q = ''
+    if _room_q and not st.session_state.get('authenticated'):
+        import hmac as _hmac_r
+        try:
+            _rtoks = dict(st.secrets.get('room_tokens', {}))
+        except Exception:
+            _rtoks = {}
+        _rtok = str(_rtoks.get(_room_q, '') or '')
+        _rk = str(st.query_params.get('k', '') or '')
+        try:
+            _rn = int(float(_room_q))
+        except (TypeError, ValueError):
+            _rn = None
+        if _rtok and _rn is not None and _hmac_r.compare_digest(_rk, _rtok):
+            st.session_state['authenticated'] = True
+            st.session_state['role'] = 'room'
+            st.session_state['room_scope'] = _rn
+        else:   # 🔒 fail-closed: ไม่ตั้ง token / token ผิด = เข้าไม่ได้
+            st.error("🚪 จอประจำห้องไม่พร้อมใช้งาน — กรุณาติดต่อผู้ดูแลระบบ (Mukky)")
+            st.stop()
+
     # 🔒 Password gate ก่อนทุก action
     if not _check_password():
         st.stop()
@@ -739,11 +771,17 @@ def main():
             + ('<span class="or-chip" style="background:#fff3e0;color:#e65100;">'
                '👤 ผู้ดูแลระบบ</span>'
                if st.session_state.get('role') == 'admin' else '')
+            + (('<span class="or-chip" style="background:#e3f0fb;color:#1565c0;">'
+                f'🚪 จอประจำห้อง {__import__("room_config").room_label(st.session_state.get("room_scope"))}'
+                '</span>')
+               if st.session_state.get('role') == 'room' else '')
             + '</div>',
             unsafe_allow_html=True,
         )
     with _hdr_r:
-        if st.session_state.get('authenticated'):
+        # 🚪 โหมดจอห้อง: ไม่มีปุ่มออกจากระบบ (เข้าด้วย token ประจำเครื่อง ไม่ใช่ login)
+        if (st.session_state.get('authenticated')
+                and st.session_state.get('role') != 'room'):
             if st.button("🔒 ออกจากระบบ", use_container_width=True,
                          key='_logout_btn'):
                 st.session_state['authenticated'] = False
@@ -758,6 +796,10 @@ def main():
     #    คืนเมนูเมื่อไร = เติม "🤖 ผลวิจัย AI" กลับใน list นี้บรรทัดเดียวจบ
     _page_options = ["📋 ตารางผ่าตัด", "🗓️ จัดคิว AI", "📊 ภาพรวมวันนี้",
                      "📈 สถิติย้อนหลัง", "📺 จอญาติ", "⚙️ ตั้งค่า"]
+    # 🚪 โหมดจอประจำห้อง: เหลือ 3 แท็บ (ทำงาน + รับรู้สถานการณ์ + ดูสถิติ)
+    #    จัดคิว AI / จอญาติ / ตั้งค่า = สิทธิ์ master (จอรับ-ส่ง, หัวหน้าเวร) เท่านั้น
+    if st.session_state.get('role') == 'room':
+        _page_options = ["📋 ตารางผ่าตัด", "📊 ภาพรวมวันนี้", "📈 สถิติย้อนหลัง"]
     try:
         _default_page = st.query_params.get('page', _page_options[0])
     except Exception:

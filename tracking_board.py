@@ -143,6 +143,18 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     rooms_avail = sorted({loc(c) for c in cases})
     # 🚪🛏️ โซนกายภาพอยู่บนสุด (เหนือ OR1) — กรอง "ที่ที่ผู้ป่วยอยู่ตอนนี้" ไม่ใช่ห้องผ่า
     _Z_HOLD, _Z_RECOV = '🚪 ห้องรับ-ส่ง', '🛏️ ห้องพักฟื้น'
+    # 🚪 โหมดจอประจำห้อง: seed ตัวกรองครั้งแรก = ห้องตัวเอง (สลับดูห้องอื่นได้ read-only)
+    _scope_room = (st.session_state.get('room_scope')
+                   if st.session_state.get('role') == 'room' else None)
+    if _scope_room and not st.session_state.get('_tb_room_seeded'):
+        try:
+            from room_config import room_label as _rlbl
+            _own_lbl = _rlbl(_scope_room)
+            if _own_lbl in rooms_avail:
+                st.session_state['tb_room'] = _own_lbl
+        except Exception:
+            pass
+        st.session_state['_tb_room_seeded'] = True
     room_f = fc2.selectbox("ห้อง", ["ทุกห้อง", _Z_HOLD, _Z_RECOV] + rooms_avail,
                            key="tb_room", label_visibility="collapsed")
     status_f = fc3.selectbox("สถานะ", ["ทุกสถานะ", "ยังไม่มา", "รอผ่าตัด", "กำลังผ่า",
@@ -481,6 +493,11 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
                 room_opts=None, mark_dirty=None, tov_map=None):
     room_opts = room_opts or []
+    # 🚪 โหมดจอประจำห้อง ("ล็อกที่มือ ไม่ล็อกที่ตา"): เห็นทุกห้อง แต่กดได้เฉพาะ
+    #    เคสห้องตัวเองตามเขตหน้าที่ — รับเข้า/เข้าห้อง/จำหน่าย/ย้ายห้อง = จอรับ-ส่ง
+    _scope = (st.session_state.get('room_scope')
+              if st.session_state.get('role') == 'room' else None)
+    _own = (_scope is None) or (R == _scope)
     # .get + ค่า default — กัน KeyError ถ้าเจอสถานะแปลก (เช่น snapshot จากเวอร์ชันเก่า)
     label, fg, chipbg, rowbg = _STATUS_META.get(
         disp, (str(disp or 'ไม่ทราบสถานะ'), '#64748b', '#f1f5f9', ''))
@@ -537,7 +554,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 unsafe_allow_html=True)
 
     with c1:
-        if disp in ('not_arrived', 'holding_pre', 'in_or', 'overrun'):
+        if disp in ('not_arrived', 'holding_pre', 'in_or', 'overrun') and _own:
             try:
                 pop = st.popover("✏️", help=_EDIT_HELP)
             except TypeError:
@@ -569,8 +586,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 #  "เสร็จ → รับ-ส่ง / พักฟื้น" บนแถวโดยตรง · spec 3 ก.ค. 2026)
 
                 # 🔀 ย้ายห้อง — เลือกได้ทุกห้องที่เปิดใช้ (ชื่อล้วน ไม่มีรหัส)
+                #    🚪 โหมดจอห้อง: ซ่อน — ย้ายห้อง = การจัดคิว ต้องผ่านจอรับ-ส่ง
                 _new_room = None
-                if room_opts:
+                if room_opts and _scope is None:
                     _labels = [lbl for _, lbl in room_opts]
                     try:
                         _cur_rn = int(float(c.get('room')))
@@ -606,7 +624,8 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
 
                 # 🌙 เคสที่ผ่าไปแล้วก่อนบอร์ดเปิด (เช่นฉุกเฉินกลางคืน) — มุคกี้สั่ง 19 ก.ค. 2026
                 #    มีเฉพาะเคส "ยังไม่มา" · เคสที่เข้า flow แล้วใช้ปุ่มปกติ/↩️ ตามเดิม
-                if disp == 'not_arrived':
+                #    🚪 โหมดจอห้อง: ซ่อน (จำหน่ายก่อนบอร์ด/ลบเคส = งานจอรับ-ส่ง)
+                if disp == 'not_arrived' and _scope is None:
                     st.markdown("---")
                     st.caption("🌙 เคสผ่าไปแล้วก่อนเปิดบอร์ด หรือไม่ต้องการบนกระดาน")
                     if st.button("✅ จำหน่ายแล้ว",
@@ -633,10 +652,11 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                         _rerun_board()
 
     with c2:
-        if disp == 'not_arrived':
+        # 🚪 โหมดจอห้อง: รับเข้า/เข้าห้อง/จำหน่าย เป็นหน้าที่จอรับ-ส่ง — ไม่แสดง
+        if disp == 'not_arrived' and _scope is None:
             if st.button("รับเข้า", key=f"tb_a_{idx}", width='stretch'):
                 do_arrive(idx)
-        elif disp == 'holding_pre':
+        elif disp == 'holding_pre' and _scope is None:
             _busy = R in busy_rooms
             if st.button("ห้องไม่ว่าง" if _busy else "เข้าห้อง", key=f"tb_e_{idx}",
                          type="secondary" if _busy else "primary",
@@ -647,7 +667,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                     st.warning("ห้องนี้มีเคสกำลังผ่าอยู่")
                 else:
                     do_enter(idx, R)
-        elif disp in ('in_or', 'overrun'):
+        elif disp in ('in_or', 'overrun') and _own:
             # ⑂ ผ่าเสร็จ 2 ปลายทาง — กดครั้งเดียวจบ ไม่ต้องเปิด popover เลือก dropdown
             if st.button("เสร็จ → รับ-ส่ง", key=f"tb_f_{idx}", type="primary",
                          width='stretch',
@@ -656,7 +676,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             if st.button("เสร็จ → พักฟื้น", key=f"tb_f2_{idx}", width='stretch',
                          help="ผ่าเสร็จ · ไปห้องพักฟื้น เพื่อรอจำหน่าย"):
                 do_finish(idx, R, "ห้องพักฟื้น")
-        elif disp in ('holding_post', 'recovery'):
+        elif disp in ('holding_post', 'recovery') and _scope is None:
             if st.button("จำหน่าย", key=f"tb_d_{idx}", width='stretch'):
                 if c.get('status') != 'discharged':  # กันกดรัว
                     c['status'] = 'discharged'
@@ -671,7 +691,10 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 _rerun_board()
 
     with c3:
-        if disp in _UNDO_TARGET:
+        # 🚪 โหมดจอห้อง: ↩️ ได้เฉพาะย้อนผลการกด "เสร็จ" ของห้องตัวเอง
+        #    (ย้อนรับเข้า/เข้าห้อง/จำหน่าย เป็นของจอรับ-ส่ง)
+        _undo_ok = (_scope is None) or (_own and disp in ('holding_post', 'recovery'))
+        if disp in _UNDO_TARGET and _undo_ok:
             if st.button("↩️", key=f"tb_un_{idx}", width='stretch',
                          help=f"ย้อนกลับเป็น '{_UNDO_TARGET[disp]}' (กันกดพลาด)"):
                 do_undo(idx)
