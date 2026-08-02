@@ -813,6 +813,12 @@ def _board_fragment():
     from room_config import room_label
     import time as _tmod
 
+    # 🛡️ 2 ส.ค. 2026: fragment รันอิสระจาก main() ได้ (auto-rerun 30 วิ /
+    #    reconnect หลัง reboot) — init เองกัน session ไม่มี patient_cases
+    #    (idempotent: มี key แล้ว = ไม่ทำอะไร)
+    from main_or_core import init_session_state as _iss
+    _iss()
+
     def _rid(c):
         """หมายเลขห้องจริง (90-97) หรือ None ถ้าไม่ระบุ/placeholder"""
         try:

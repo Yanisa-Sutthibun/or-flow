@@ -710,7 +710,7 @@ def main():
             '<div style="background:repeating-linear-gradient(45deg,'
             '#FACC15 0 26px,#1F2937 26px 52px);border-radius:10px;'
             'padding:10px 14px;text-align:center;margin:0 0 10px 0;">'
-            '<span style="background:rgba(0,0,0,0.62);color:#FDE047;'
+            '<span style="background:rgba(0,0,0,0.62);color:#FFFFFF;'
             'font-size:20px;font-weight:800;letter-spacing:.5px;'
             'padding:4px 20px;border-radius:8px;white-space:nowrap;">'
             '🖥️ ระบบสาธิต DEMO — ข้อมูลจำลองทั้งหมด ไม่ใช่ผู้ป่วยจริง</span></div>',
