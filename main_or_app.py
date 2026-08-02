@@ -674,11 +674,19 @@ def _check_password():
                 else:
                     st.error("❌ รหัสผ่านไม่ถูกต้อง")
 
-        # 🧪 แอป demo: บอกผู้เข้าชมชัด ๆ ว่านี่คือระบบสาธิต (รหัสขอจากผู้วิจัย)
+        # 🖥️ แอป demo: แถบเหลือง-ดำเล็กบนหน้า login — "Demonstration mode"
+        #    (มุคกี้สั่ง 2 ส.ค. 2026: เลิกใช้กรอบฟ้า st.info ให้เข้าชุดแถบใหญ่)
         try:
             if str(st.secrets.get('instance_mode', '')).lower() == 'demo':
-                st.info("🖥️ ระบบสาธิต (DEMO) — ข้อมูลทั้งหมดเป็นข้อมูลจำลอง/"
-                        "สำเนาที่ไม่ระบุตัวตน ไม่ใช่ข้อมูลผู้ป่วยจริง")
+                st.markdown(
+                    '<div style="background:repeating-linear-gradient(45deg,'
+                    '#FACC15 0 20px,#1F2937 20px 40px);border-radius:8px;'
+                    'padding:8px 12px;text-align:center;margin:4px 0 10px 0;">'
+                    '<span style="background:rgba(0,0,0,0.62);color:#FFFFFF;'
+                    'font-size:16px;font-weight:800;letter-spacing:.5px;'
+                    'padding:3px 16px;border-radius:6px;white-space:nowrap;">'
+                    '🖥️ Demonstration mode</span></div>',
+                    unsafe_allow_html=True)
         except Exception:
             pass
         st.caption("🔑 รหัสผ่านจากเจ้าของระบบ — สำหรับบุคลากรที่ได้รับอนุญาตเท่านั้น")
@@ -713,7 +721,7 @@ def main():
             '<span style="background:rgba(0,0,0,0.62);color:#FFFFFF;'
             'font-size:20px;font-weight:800;letter-spacing:.5px;'
             'padding:4px 20px;border-radius:8px;white-space:nowrap;">'
-            '🖥️ ระบบสาธิต DEMO — ข้อมูลจำลองทั้งหมด ไม่ใช่ผู้ป่วยจริง</span></div>',
+            '🖥️ ระบบสาธิต OR Flow: ข้อมูลทั้งหมดถูกจำลองขึ้นมาเพื่อทดสอบการใช้งาน</span></div>',
             unsafe_allow_html=True)
 
     # ========================================================================
