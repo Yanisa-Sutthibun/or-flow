@@ -563,6 +563,26 @@ def _render_demo_controls():
     return sim_min
 
 
+def _demo_fx() -> bool:
+    """🎨 ลูกเล่น UI ทดลอง — เปิดเฉพาะแอป DEMO (มุคกี้สั่ง 2 ส.ค. 2026:
+    ทดลองใน demo ก่อน ถูกใจค่อยยกเข้า production — ปลดธงนี้จุดเดียว)"""
+    try:
+        return str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        return False
+
+
+# CSS ลูกเล่น demo: แถบ progress มีแสงไหล + จุดสถานะเต้นเฉพาะเคสมีปัญหา
+_DEMO_FX_CSS = """<style>
+@keyframes orFlow {0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes orPulse {0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.6);opacity:.5}}
+.or-bar-flow{background-image:linear-gradient(90deg,rgba(255,255,255,0),
+rgba(255,255,255,.45),rgba(255,255,255,0));background-size:200% 100%;
+animation:orFlow 1.8s linear infinite;}
+.or-dot-pulse{animation:orPulse 1.1s ease-in-out infinite;}
+</style>"""
+
+
 def _render_one_room_card(rm):
     """Linear/Stripe-style minimal room card."""
     active = rm['active_case']
@@ -659,10 +679,12 @@ def _render_one_room_card(rm):
             info_left = f'ผ่าไป {elapsed_min} นาที'
             info_right = 'ไม่มี AI ประเมิน'
 
+        # 🎨 demo: แถบมีแสงไหลระหว่างผ่าตัด (production = แถบนิ่งแบบเดิม)
+        _flow_cls = ' class="or-bar-flow"' if _demo_fx() else ''
         bar_html = (
             f'<div style="background:#eef2f6;height:5px;border-radius:3px;'
             f'margin:10px 0;overflow:hidden;">'
-            f'<div style="background:{bar_color};height:100%;'
+            f'<div{_flow_cls} style="background:{bar_color};height:100%;'
             f'width:{bar_pct}%;border-radius:3px;'
             f'transition:width 1s ease;"></div>'
             f'</div>'
@@ -698,6 +720,9 @@ def _render_one_room_card(rm):
         card_bg = '#ffffff'
 
     # ── Card HTML ──
+    # 🎨 demo: จุดสถานะเต้นเฉพาะเคสมีปัญหา (เกินเวลา) — production จุดนิ่งเดิม
+    _dot_cls = (" class='or-dot-pulse'"
+                if (_demo_fx() and status_label == 'เกินเวลา') else '')
     proc_safe = _esc(procedure)   # 🔒 M-01: หนี HTML เต็มรูปแบบ (ไม่ใช่แค่ ")
     card_html = (
         f'<div style="background:{card_bg};border:{card_border};'
@@ -706,7 +731,8 @@ def _render_one_room_card(rm):
         f'{room_title}{closed_badge}</div>'
         f'<div style="display:flex;align-items:center;gap:6px;'
         f'margin-bottom:8px;">'
-        f'<span style="width:8px;height:8px;background:{status_dot};'
+        f'<span{_dot_cls} '
+        f'style="width:8px;height:8px;background:{status_dot};'
         f'border-radius:50%;display:inline-block;"></span>'
         f'<span style="font-size:12px;color:{status_color};'
         f'font-weight:500;">{status_label}</span></div>'
@@ -728,6 +754,8 @@ def _render_one_room_card(rm):
 
 def _render_room_cards(rooms):
     """Adaptive grid — 4 cards per row (Linear-style minimal)"""
+    if _demo_fx():   # 🎨 ฉีด CSS ลูกเล่น demo ครั้งเดียวต่อหน้า
+        st.markdown(_DEMO_FX_CSS, unsafe_allow_html=True)
     n = len(rooms)
     # 1-2 rooms = แสดงเต็มแถว · 3-4+ = 4 cols
     per_row = min(n, 4) if n > 0 else 1
@@ -797,12 +825,21 @@ def _render_alerts(alerts):
         return
 
     from room_config import room_label   # 95 → 'OR6 · NEURO' (ป้ายเดียวกับการ์ดห้อง)
+    # 🎨 demo: จุดเต้นบนการ์ดแจ้งเตือน (เคสมีปัญหา: ผ่าเกิน/รอนาน) — production นิ่งเดิม
+    if _demo_fx():
+        st.markdown(_DEMO_FX_CSS, unsafe_allow_html=True)
     for a in alerts:
         icon = '🔴' if a['severity'] == 'high' else ('🟡' if a['severity'] == 'medium' else '⚪')
+        _pdot = ''
+        if _demo_fx() and a['severity'] in ('high', 'medium'):
+            _pcol = '#e24b4a' if a['severity'] == 'high' else '#e3920b'
+            _pdot = (f"<span class='or-dot-pulse' style='width:9px;height:9px;"
+                     f"background:{_pcol};border-radius:50%;display:inline-block;"
+                     f"margin-right:2px;'></span>")
         css_class = f"alert-{a['severity']}"
         st.markdown(f"""
         <div class="alert-card {css_class}">
-            <span style="font-size:18px;">{icon}</span>
+            {_pdot}<span style="font-size:18px;">{icon}</span>
             <div>
                 <div style="font-size:13px;font-weight:600;">{room_label(a['room_no'])} — {_esc(a['procedure'] or '-')}</div>
                 <div style="font-size:12px;color:#666;">{_esc(a['name'] or '-')} | {_esc(a['message'])}</div>
