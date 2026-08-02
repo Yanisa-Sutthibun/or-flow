@@ -247,3 +247,43 @@ ORDER BY table_name;
 -- override_log    | 12
 -- prediction_log  | 10
 -- room_settings   | 5
+
+
+-- ═══════════════════════════════════════════════════════════════════
+-- TABLE 8: research_case_log — 📊 ตารางวิจัยถาวร (เพิ่ม 2 ส.ค. 2026)
+-- upsert ทุกปุ่มบนบอร์ด: timestamp ทุกขั้น + เวลารอ + ค่าทำนาย/override/actual
+-- ⚠️ บทเรียน: ตารางนี้เคยหายจาก schema (พึ่ง CREATE จากแอปซึ่งล้มเงียบบน cloud)
+--    ตรวจพบจากการทดสอบระบบ 1 ส.ค. 2026 — ตารางใหม่ทุกตัวต้องเพิ่มไฟล์นี้เสมอ
+-- ═══════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS research_case_log (
+    id                  SERIAL PRIMARY KEY,
+    log_date            TEXT NOT NULL,
+    case_ref            TEXT NOT NULL,
+    hn_hash             TEXT,
+    room_no             INTEGER,
+    division            TEXT,
+    procedure_name      TEXT,
+    surgeon_code        TEXT,
+    age                 INTEGER,
+    ward                TEXT,
+    sched_time          TEXT,
+    arrived_holding_at  TEXT,
+    entered_or_at       TEXT,
+    exited_or_at        TEXT,
+    exit_to             TEXT,
+    discharged_at       TEXT,
+    wait_holding_min    INTEGER,
+    wait_post_min       INTEGER,
+    pred_ai_min         INTEGER,
+    pred_lo             INTEGER,
+    pred_hi             INTEGER,
+    pred_confidence     TEXT,
+    pred_proc_n         INTEGER,
+    user_override_min   INTEGER,
+    actual_or_min       INTEGER,
+    actual_source       TEXT,
+    csv_updated_at      TEXT,
+    updated_at          TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_rcl_date_ref ON research_case_log(log_date, case_ref);
+ALTER TABLE research_case_log ENABLE ROW LEVEL SECURITY;
