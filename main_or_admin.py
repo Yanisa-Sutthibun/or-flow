@@ -483,10 +483,18 @@ def _render_demo_controls():
 
     # ---- 🎬 toggle เปิด/ปิด อยู่แถวบนเลย (14 ก.ค. 2026 — เหมือนหน้าตารางผ่าตัด
     #      เดิมซ่อนใน expander ต้องกางก่อนถึงเจอสวิตช์) ----
+    # 🧪 2 ส.ค. 2026: แสดงเฉพาะระบบ DEMO (instance_mode="demo") — production ซ่อนถาวร
+    try:
+        _demo_inst = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        _demo_inst = False
     with col_info:
-        new_active = st.toggle(
-            '🎬 สาธิต', value=state['active'], key='demo_toggle',
-            help='จำลองการทำงาน 1 วัน ภายใน 5 นาที — ไม่บันทึก DB จริง')
+        if not _demo_inst:
+            new_active = bool(state['active'])
+        else:
+            new_active = st.toggle(
+                '🎬 สาธิต', value=state['active'], key='demo_toggle',
+                help='จำลองการทำงาน 1 วัน ภายใน 5 นาที — ไม่บันทึก DB จริง')
         if new_active != state['active']:
             state['active'] = new_active
             if new_active:
