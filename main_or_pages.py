@@ -898,8 +898,15 @@ def _board_fragment():
     # 🚪 โหมดจอประจำห้อง: ไม่มีสวิตช์สาธิต (กันจอห้องเผลอสลับบอร์ดทั้งตึกเป็นสาธิต)
     _room_scope_board = (st.session_state.get('room_scope')
                          if st.session_state.get('role') == 'room' else None)
+    # 🧪 2 ส.ค. 2026 (มุคกี้สั่ง): ปุ่ม 🎬 สาธิต แสดงเฉพาะ "ระบบ DEMO"
+    #    (secrets: instance_mode = "demo") — production ซ่อนถาวร
+    #    การสาธิตเต็มระบบย้ายไปแอป demo แยก schema (login: demo)
+    try:
+        _is_demo_instance = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        _is_demo_instance = False
     with _ctl_l:
-        if _room_scope_board:
+        if _room_scope_board or not _is_demo_instance:
             _demo_on = bool(st.session_state.get('_or_demo'))
         else:
             _demo_on = st.toggle(

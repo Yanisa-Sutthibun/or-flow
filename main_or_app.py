@@ -666,6 +666,13 @@ def _check_password():
                 else:
                     st.error("❌ รหัสผ่านไม่ถูกต้อง")
 
+        # 🧪 แอป demo: บอกผู้เข้าชมชัด ๆ ว่านี่คือระบบสาธิต (รหัสขอจากผู้วิจัย)
+        try:
+            if str(st.secrets.get('instance_mode', '')).lower() == 'demo':
+                st.info("🧪 ระบบสาธิต (DEMO) — ข้อมูลทั้งหมดเป็นข้อมูลจำลอง/"
+                        "สำเนาที่ไม่ระบุตัวตน ไม่ใช่ข้อมูลผู้ป่วยจริง")
+        except Exception:
+            pass
         st.caption("🔑 รหัสผ่านจากเจ้าของระบบ — สำหรับการสาธิตงานวิจัยเท่านั้น")
 
     return False
@@ -762,9 +769,19 @@ def main():
         from datetime import datetime as _dtm, timedelta as _td
         from datetime import timezone as _tzu
         _now_hdr = _dtm.now(_tzu(_td(hours=7))).strftime('%d/%m/%Y')
+        # 🧪 ชิป DEMO คาดหัวทุกหน้า — เฉพาะแอปสาธิต (instance_mode="demo")
+        try:
+            _demo_chip = (('<span class="or-chip" style="background:#fbe9e8;'
+                           'color:#c0392b;font-weight:700;">🧪 DEMO — '
+                           'ข้อมูลสาธิต ไม่ใช่ผู้ป่วยจริง</span>')
+                          if str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+                          else '')
+        except Exception:
+            _demo_chip = ''
         st.markdown(
             '<div class="or-chips" style="margin-top:6px;">'
-            '<span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>'
+            + _demo_chip
+            + '<span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>'
             '<span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>'
             '<span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>'
             f'<span class="or-chip">📅 ปรับล่าสุด {_now_hdr}</span>'
