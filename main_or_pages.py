@@ -507,9 +507,18 @@ def _surgeons_by_specialty():
 def _render_add_case_form(demo_active):
     """ฟอร์มเพิ่มเคส walk-in/แทรก — กรอกเฉพาะข้อมูลที่โมเดลใช้ แล้วทำนายเวลา เข้าบอร์ด"""
     import uuid
-    if demo_active:
+    # 🖥️ 2 ส.ค. 2026 (มุคกี้สั่ง): แอป DEMO เปิด Manual ได้แม้สวิตช์ 🎬 เปิดอยู่ —
+    #    ผู้ทรงพิมพ์เคสแทรกเข้าบอร์ดสาธิตเองได้ (จำลองสถานการณ์ walk-in)
+    try:
+        _demo_inst = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        _demo_inst = False
+    if demo_active and not _demo_inst:
         st.caption("ℹ️ ปิดสวิตช์ 🎬 สาธิต ด้านบนก่อน เพื่อเพิ่มเคสจริง")
         return
+    if demo_active and _demo_inst:
+        st.caption("🖥️ เพิ่มเคสจำลองแทรกเข้าบอร์ดสาธิตได้เลย — "
+                   "ลองสถานการณ์เคส walk-in/เคสแทรก ระบบทำนายเวลาด้วย AI จริง")
     _room_opts = _enabled_room_options()  # เฉพาะห้องที่เปิดใช้ · ชื่อล้วน
     st.caption("กรอกเฉพาะข้อมูลที่จำเป็น — ช่องที่มี 🤖 คือข้อมูลที่ AI ใช้ทำนายเวลา "
                "(ระบบจับคู่ชื่อหัตถการ/แพทย์ใกล้เคียงให้อัตโนมัติ)")
@@ -630,7 +639,10 @@ def _render_add_case_form(demo_active):
         _cur = list(st.session_state.patient_cases)
         _cur.append(case)
         st.session_state.patient_cases = _cur
-        st.session_state['_or_demo'] = False
+        # 🖥️ แอป DEMO ขณะสาธิต: คงธงสาธิตไว้ — ถ้าปิดธง toggle จะโหลดชุดจำลอง
+        #    ใหม่ทับเคสที่เพิ่งพิมพ์เพิ่ม (บั๊กแฝงเดิม) · production พฤติกรรมเดิม
+        if not (_demo_inst and demo_active):
+            st.session_state['_or_demo'] = False
         _mark_board_dirty(case)   # CR-2: เพิ่มเคสใหม่ → ดันขึ้นบอร์ดกลาง
         _rng_txt = (f" · ช่วง 90%: {int(_rng[0])}–{int(_rng[1])} นาที"
                     if (_rngm == 'conformal' and _rng) else "")
