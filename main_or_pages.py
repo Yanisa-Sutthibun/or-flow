@@ -650,6 +650,18 @@ def render_csv_upload():
     PIN ย้ายไปคุมเฉพาะ 🗑️ ล้างกระดาน (ลบได้เฉพาะผู้ดูแล)"""
     _demo_active = bool(st.session_state.get('_or_demo'))
     with st.expander("📤 อัปโหลดตารางผ่าตัดวันนี้ (CSV/Excel)", expanded=False):
+        # 🖥️ ข้อความนำต่างกันตาม instance (มุคกี้สั่ง 2 ส.ค. 2026)
+        try:
+            _demo_inst_up = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+        except Exception:
+            _demo_inst_up = False
+        if _demo_inst_up:
+            st.caption("🖥️ ระบบสาธิต: ปกติไม่ต้องอัปโหลดไฟล์ — เปิดสวิตช์ 🎬 สาธิต "
+                       "จะมีเคสจำลองพร้อมใช้งานทันที · ช่องอัปโหลดนี้เผื่อไว้ทดลอง"
+                       "นำเข้าไฟล์ของตนเองเท่านั้น")
+        else:
+            st.caption("📅 งานประจำทุกเช้า: อัปโหลดตารางผ่าตัดวันนี้จากไฟล์ HIS "
+                       "(แนะนำไฟล์ Excel — กันปัญหาคอลัมน์เลื่อนจาก comma)")
         if _demo_active:
             st.caption("ℹ️ ปิดสวิตช์ 🎬 สาธิต ด้านบนก่อน เพื่ออัปโหลดตารางจริง")
         # 📊 1 ส.ค. 2026: เปิดรับ Excel — แนะนำใช้ .xls/.xlsx จาก HIS แทน CSV
