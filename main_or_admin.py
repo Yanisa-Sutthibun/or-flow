@@ -481,21 +481,12 @@ def _render_demo_controls():
     with col_warn:
         st.markdown("<div style=\x27text-align:right;color:#808495;font-size:13px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
 
-    # ---- 🎬 toggle เปิด/ปิด อยู่แถวบนเลย (14 ก.ค. 2026 — เหมือนหน้าตารางผ่าตัด
-    #      เดิมซ่อนใน expander ต้องกางก่อนถึงเจอสวิตช์) ----
-    # 🧪 2 ส.ค. 2026: แสดงเฉพาะระบบ DEMO (instance_mode="demo") — production ซ่อนถาวร
-    try:
-        _demo_inst = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
-    except Exception:
-        _demo_inst = False
+    # ---- 🎬 สาธิตจำลอง 1 วันของหน้านี้ — 🗑️ ถอดถาวรทุก instance (มุคกี้สั่ง 2 ส.ค. 2026)
+    #      การสาธิตรวมศูนย์ที่ปุ่ม 🎬 หน้าตารางผ่าตัดของแอป DEMO ที่เดียว
+    #      (เคสสาธิตไหลมาหน้านี้เองผ่าน live_link เหมือนเคสจริงทุกอย่าง)
+    #      โค้ด simulation เดิมคงไว้ — คืนได้โดยเปิด toggle กลับ (ดู git history)
     with col_info:
-        if not _demo_inst:
-            # 🔒 production: บังคับปิดสถานะสาธิตเสมอ (กัน session เก่าค้างค่า active)
-            new_active = False
-        else:
-            new_active = st.toggle(
-                '🎬 สาธิต', value=state['active'], key='demo_toggle',
-                help='จำลองการทำงาน 1 วัน ภายใน 5 นาที — ไม่บันทึก DB จริง')
+        new_active = False
         if new_active != state['active']:
             state['active'] = new_active
             if new_active:

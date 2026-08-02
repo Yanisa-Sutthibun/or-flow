@@ -819,6 +819,14 @@ def _board_fragment():
     from main_or_core import init_session_state as _iss
     _iss()
 
+    # 🖥️ instance นี้เป็นแอป DEMO ไหม — ใช้ตัดสินตลอดทั้ง fragment:
+    #    demo instance = โหมดสาธิตซิงก์ขึ้นบอร์ดกลาง (schema demo) เต็มรูปแบบ
+    #    จอญาติ/จอห้อง demo จึงเห็นเคสสาธิตเหมือนใช้งานจริงทุกจอ
+    try:
+        _is_demo_instance = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        _is_demo_instance = False
+
     def _rid(c):
         """หมายเลขห้องจริง (90-97) หรือ None ถ้าไม่ระบุ/placeholder"""
         try:
@@ -841,7 +849,8 @@ def _board_fragment():
     # 🖥️ บอร์ดกลาง (shared ผ่าน DB) + auto-refresh ทุก ~30 วิ
     # ทุกเครื่อง/ผู้บริหารดึงสถานะล่าสุดเมื่อ: เปิดครั้งแรก · กด 🔄 · ครบรอบ refresh
     # ไม่ดึงตอน "เพิ่งกดปุ่มบนเครื่องตัวเอง" (กันทับการเปลี่ยนที่ยังไม่ได้ save)
-    if not st.session_state.get('_or_demo'):
+    # 🖥️ แอป DEMO: ซิงก์บอร์ดกลางแม้เปิดสาธิตอยู่ (หลายจอเห็นชุดเดียวกัน)
+    if _is_demo_instance or not st.session_state.get('_or_demo'):
         # 🕛 M-10: ข้ามเที่ยงคืน → ล้างเคส "เมื่อวาน" + บังคับดึงบอร์ดของ "วันนี้"
         #          (กันเคสเก่าถูกเซฟทับด้วย key วันใหม่ → เช้ามาเห็นเคสเมื่อวานปนบอร์ด)
         _today_iso = _now().date().isoformat()
@@ -905,12 +914,7 @@ def _board_fragment():
     _room_scope_board = (st.session_state.get('room_scope')
                          if st.session_state.get('role') == 'room' else None)
     # 🧪 2 ส.ค. 2026 (มุคกี้สั่ง): ปุ่ม 🎬 สาธิต แสดงเฉพาะ "ระบบ DEMO"
-    #    (secrets: instance_mode = "demo") — production ซ่อนถาวร
-    #    การสาธิตเต็มระบบย้ายไปแอป demo แยก schema (login: demo)
-    try:
-        _is_demo_instance = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
-    except Exception:
-        _is_demo_instance = False
+    #    (_is_demo_instance คำนวณไว้หัว fragment แล้ว) — production ซ่อนถาวร
     with _ctl_l:
         if not _is_demo_instance:
             # 🔒 production: บังคับปิดสาธิตเสมอ (โค้ดถัดไปจะล้างเคสสาธิตค้างให้เอง)
@@ -925,10 +929,27 @@ def _board_fragment():
     if _demo_on and not st.session_state.get('_or_demo'):
         st.session_state.patient_cases = _or_board_demo()
         st.session_state['_or_demo'] = True
+        if _is_demo_instance:
+            # 🖥️ ดันเคสสาธิตขึ้นบอร์ดกลาง (schema demo) ทันที —
+            #    จอญาติ/จอห้อง demo เห็นภายในรอบ refresh ถัดไป
+            st.session_state['_board_dirty_ids'] = set()   # ชุดใหม่ทั้งกระดาน = overlay ทั้งหมด
+            _save_board_snapshot(st.session_state.patient_cases)
         _rerun_board()
     if (not _demo_on) and st.session_state.get('_or_demo'):
         st.session_state.patient_cases = []
         st.session_state['_or_demo'] = False
+        if _is_demo_instance:
+            # 🖥️ ปิดสาธิต = ล้างบอร์ดกลาง demo ด้วย (จอญาติ/จอห้องกลับเป็นว่าง)
+            try:
+                from main_or_db import clear_board_state
+                clear_board_state(_now().date().isoformat())
+            except Exception as _cx:
+                print(f"[demo] ล้างบอร์ดกลางล้มเหลว: {_cx}")
+            try:
+                _os.remove(_SNAPSHOT_PATH)   # กัน fallback ไฟล์ local คืนชีพเคสสาธิต
+            except Exception:
+                pass
+            st.session_state['_board_base_version'] = 0
         _rerun_board()
     if st.session_state.get('_or_demo'):
         # 🎬 โหมดสาธิต: UI เหมือนโหมดจริงทุกอย่าง — เหลือชิปจาง ๆ กันสับสนเท่านั้น
@@ -1190,7 +1211,8 @@ def _board_fragment():
 
     # 💾 บันทึก snapshot บอร์ดปัจจุบัน — เฉพาะตอน "เครื่องนี้เพิ่งแก้จริง" (CR-2)
     #    เลิกเซฟทุก rerun แล้ว → กัน rerun เฉย ๆ (เปิด popover/refresh) เขียนทับเครื่องอื่น
-    if (cases and not st.session_state.get('_or_demo')
+    # 🖥️ แอป DEMO: เซฟขึ้นบอร์ดกลางแม้อยู่โหมดสาธิต (ทุกจอ demo เห็นปุ่มที่กด)
+    if (cases and (_is_demo_instance or not st.session_state.get('_or_demo'))
             and st.session_state.get('_board_dirty')):
         if _save_board_snapshot(cases):
             st.session_state['_board_dirty'] = False   # เซฟสำเร็จ = สะอาด รอบหน้าดึงผลรวมได้
