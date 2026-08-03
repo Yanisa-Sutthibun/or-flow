@@ -104,6 +104,14 @@ def _is_emer(c):
     return ('emer' in t) or ('urg' in t) or ('ฉุกเฉิน' in t) or ('เร่งด่วน' in t)
 
 
+def _demo_fx_tb() -> bool:
+    """🎨 ลูกเล่น UI ทดลอง — เฉพาะแอป DEMO (คู่กับ main_or_admin._demo_fx)"""
+    try:
+        return str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        return False
+
+
 def _esc(v) -> str:
     """🔒 M-01: หนี HTML กันค่าจาก CSV (ชื่อ/หัตถการ/แพทย์) ฝัง <script> หรือทำการ์ดพังใน iframe"""
     return html.escape(str(v)) if v is not None else ''
@@ -424,13 +432,41 @@ def _holding_row_iframe(c, loc, tlabel, now):
     emg_html = _EMG_BADGE if emer else ''
     border_css = ('border:1px solid #f5c6c5;border-left:3px solid #e0312e;'
                   if emer else 'border:1px solid #eef2f6;')
+    # 🎨 demo (มุคกี้สั่ง 3 ส.ค. 2026): คาดสีแถวรอผ่าตัดตามเวลารอ —
+    #    เกิน 45 นาที = เหลือง · เกิน 60 นาที = แดง (ชิปนาฬิกาเปลี่ยนเกณฑ์ตาม)
+    #    เคสฉุกเฉินคงขอบแดง EMG เดิม ไม่ทับ · production JS เดิมเป๊ะ
+    if _demo_fx_tb():
+        _js = (
+            f'<script>var el0={el0:.0f},t0=Date.now(),t=document.getElementById("t"),'
+            f'row=document.getElementById("row"),emer={1 if emer else 0};'
+            'function u(){var el=el0+(Date.now()-t0)/1000,d=Math.floor(el/60),'
+            'sec=Math.floor(el%60),c=d<45?"#22a565":d<60?"#e3920b":"#e24b4a";'
+            'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.background="#e24b4a";return}'
+            't.style.background=c;'
+            'if(!emer){if(d>=60){row.style.background="#fbe9e8";'
+            'row.style.borderLeft="3px solid #e24b4a";}'
+            'else if(d>=45){row.style.background="#fdf3dd";'
+            'row.style.borderLeft="3px solid #e3920b";}}'
+            't.textContent="⏱ รอแล้ว "+d+":"+String(sec).padStart(2,"0")}'
+            'u();setInterval(u,1000)</script>'
+        )
+    else:
+        _js = (
+            f'<script>var el0={el0:.0f},t0=Date.now(),t=document.getElementById("t");'
+            'function u(){var el=el0+(Date.now()-t0)/1000,d=Math.floor(el/60),'
+            'sec=Math.floor(el%60),c=d<30?"#22a565":d<60?"#e3920b":"#e24b4a";'
+            'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.background="#e24b4a";return}'
+            't.style.background=c;'
+            't.textContent="⏱ รอแล้ว "+d+":"+String(sec).padStart(2,"0")}'
+            'u();setInterval(u,1000)</script>'
+        )
     return (
         '<html><head><style>'
         "*{margin:0;padding:0;box-sizing:border-box}"
         "body{font-family:'IBM Plex Sans Thai','Sarabun','Segoe UI',sans-serif;background:transparent}"
         f"{_EMG_CSS}"
         '</style></head><body>'
-        f'<div style="display:flex;align-items:center;gap:10px;{border_css}'
+        f'<div id="row" style="display:flex;align-items:center;gap:10px;{border_css}'
         f'background:#fffcf3;border-radius:10px;padding:9px 12px;">'
         f'<span style="min-width:78px;font-size:14px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
         f'<span style="min-width:46px;font-size:13px;color:#64748b;">{tlabel(c)}</span>'
@@ -446,13 +482,7 @@ def _holding_row_iframe(c, loc, tlabel, now):
         f'border-radius:8px;font-size:13px;font-weight:600;display:inline-block;'
         f'white-space:nowrap;"></span>{ov_badge}</span>'
         f'</div>'
-        f'<script>var el0={el0:.0f},t0=Date.now(),t=document.getElementById("t");'
-        'function u(){var el=el0+(Date.now()-t0)/1000,d=Math.floor(el/60),'
-        'sec=Math.floor(el%60),c=d<30?"#22a565":d<60?"#e3920b":"#e24b4a";'
-        'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.background="#e24b4a";return}'
-        't.style.background=c;'
-        't.textContent="⏱ รอแล้ว "+d+":"+String(sec).padStart(2,"0")}'
-        'u();setInterval(u,1000)</script></body></html>'
+        f'{_js}</body></html>'
     )
 
 
@@ -501,8 +531,11 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
         'else if(rem>0){t.textContent=m+":"+z(ss)+" / "+eff+" น.";'
         't.style.color="#e3920b";b.style.background="#e3920b";}'
         'else{var ov=-rem;'
-        't.textContent=m+":"+z(ss)+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);'
-        't.style.color="#c0392b";b.style.width="100%";b.style.background="#e24b4a";'
+        # 🎨 demo (3 ส.ค. 2026): เกินเวลาแสดงนาทีล้วน ไม่เอา MM:SS · production เดิม
+        + ('t.textContent=m+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+" น.";'
+           if _demo_fx_tb() else
+           't.textContent=m+":"+z(ss)+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);')
+        + 't.style.color="#c0392b";b.style.width="100%";b.style.background="#e24b4a";'
         'ch.textContent="เกินเวลา";ch.style.background="#fbe9e8";ch.style.color="#c0392b";'
         'rw.style.background="#fdf3f3";}}'
         'u();setInterval(u,1000)</script></body></html>'
