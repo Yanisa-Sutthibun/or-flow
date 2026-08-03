@@ -816,19 +816,11 @@ def main():
         from datetime import datetime as _dtm, timedelta as _td
         from datetime import timezone as _tzu
         _now_hdr = _dtm.now(_tzu(_td(hours=7))).strftime('%d/%m/%Y')
-        # 🧪 ชิป DEMO คาดหัวทุกหน้า — เฉพาะแอปสาธิต (instance_mode="demo")
-        try:
-            _demo_chip = (('<span class="or-chip" style="background:#fef9c3;'
-                           'color:#854d0e;font-weight:700;">🖥️ DEMO — '
-                           'ข้อมูลสาธิต ไม่ใช่ผู้ป่วยจริง</span>')
-                          if str(st.secrets.get('instance_mode', '')).lower() == 'demo'
-                          else '')
-        except Exception:
-            _demo_chip = ''
+        # (ชิป DEMO เล็กในแถวนี้ถูกถอด 3 ส.ค. 2026 — แถบเหลืองดำ + หน้า login
+        #  ประกาศชัดอยู่แล้ว ไม่ต้องย้ำซ้ำให้รกหัวจอ)
         st.markdown(
             '<div class="or-chips" style="margin-top:6px;">'
-            + _demo_chip
-            + '<span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>'
+            '<span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>'
             '<span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>'
             '<span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>'
             f'<span class="or-chip">📅 ปรับล่าสุด {_now_hdr}</span>'
