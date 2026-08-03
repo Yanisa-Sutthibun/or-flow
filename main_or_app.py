@@ -856,6 +856,18 @@ def main():
     # 🤖 ผลวิจัย AI ซ่อนจากเมนู 14 ก.ค. 2026 (มุคกี้สั่ง "ซ่อนไปก่อน") —
     #    โค้ดหน้า (page_admin('ai')) + route ด้านล่างยังอยู่ครบ
     #    คืนเมนูเมื่อไร = เติม "🤖 ผลวิจัย AI" กลับใน list นี้บรรทัดเดียวจบ
+    # 🎯 demo (3 ส.ค. 2026): จอห้องผ่าตัดแบบโฟกัส — หน้าเดียว การตัดสินใจเดียว
+    #    (Hick's Law ตาม skill) · production ยังใช้บอร์ด 3 แท็บเดิม
+    try:
+        _room_focus_mode = (st.session_state.get('role') == 'room'
+                            and str(st.secrets.get('instance_mode', '')).lower() == 'demo')
+    except Exception:
+        _room_focus_mode = False
+    if _room_focus_mode:
+        from main_or_pages import page_room_focus
+        page_room_focus(st.session_state.get('room_scope'))
+        st.stop()
+
     _page_options = ["📋 ตารางผ่าตัด", "🗓️ จัดคิว AI", "📊 ภาพรวมวันนี้",
                      "📈 สถิติย้อนหลัง", "📺 จอญาติ", "⚙️ ตั้งค่า"]
     # 🚪 โหมดจอประจำห้อง: เหลือ 3 แท็บ (ทำงาน + รับรู้สถานการณ์ + ดูสถิติ)

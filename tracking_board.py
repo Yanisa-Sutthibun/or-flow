@@ -180,10 +180,30 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     # ---------- เตรียมแถว: กรอง + คำนวณสถานะแสดงผล ----------
     # เรียง ห้อง → ฉุกเฉินก่อนในห้อง → เวลานัด → ลำดับ (ลำดับนิ่ง แถวไม่ขยับเมื่อกดปุ่ม)
     ordered = list(enumerate(cases))
-    ordered.sort(key=lambda t: ((rid(t[1]) or 999),
-                                (0 if _is_emer(t[1]) else 1),
-                                (sched_min(t[1]) or 9999),
-                                t[1].get('ororder') or 999))
+    try:    # 🎨 demo (3 ส.ค. 2026): เคสรอผ่าตัดลอยขึ้นบนสุด รอนานสุดก่อน
+        _demo_float = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        _demo_float = False
+    if _demo_float:
+        def _wait_m(c):
+            _a = c.get('time_arrived_holding')
+            try:
+                return ((now - _a).total_seconds() / 60
+                        if (_a is not None and hasattr(_a, 'hour')) else -1.0)
+            except Exception:
+                return -1.0
+        ordered.sort(key=lambda t: (
+            0 if t[1].get('status') == 'holding_pre' else 1,
+            -_wait_m(t[1]) if t[1].get('status') == 'holding_pre' else 0,
+            (rid(t[1]) or 999),
+            (0 if _is_emer(t[1]) else 1),
+            (sched_min(t[1]) or 9999),
+            t[1].get('ororder') or 999))
+    else:
+        ordered.sort(key=lambda t: ((rid(t[1]) or 999),
+                                    (0 if _is_emer(t[1]) else 1),
+                                    (sched_min(t[1]) or 9999),
+                                    t[1].get('ororder') or 999))
     rows = []
     for idx, c in ordered:
         if c.get('status') == 'removed':
@@ -629,6 +649,11 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                         c['or_room_assigned'] = _new_room
                     if mark_dirty:
                         mark_dirty(c)   # CR-2: ✏️ แก้เวลา/ย้ายห้อง ต้องเซฟขึ้นบอร์ดกลาง
+                    try:    # 🎨 demo: ตอบรับทันที (Doherty)
+                        from main_or_pages import _toast_ok
+                        _toast_ok("บันทึกแล้ว ✓")
+                    except Exception:
+                        pass
                     _rerun_board()
 
                 # 🌙 เคสที่ผ่าไปแล้วก่อนบอร์ดเปิด (เช่นฉุกเฉินกลางคืน) — มุคกี้สั่ง 19 ก.ค. 2026
@@ -697,6 +722,11 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                         print(f"[research_log] ข้าม: {_rx}")
                     if mark_dirty:
                         mark_dirty(c)   # CR-2: จำหน่าย ต้องเซฟขึ้นบอร์ดกลาง
+                    try:    # 🎨 demo: ตอบรับทันที (Doherty)
+                        from main_or_pages import _toast_ok
+                        _toast_ok("จำหน่ายแล้ว ✓")
+                    except Exception:
+                        pass
                 _rerun_board()
 
     with c3:

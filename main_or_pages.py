@@ -134,6 +134,121 @@ def _mask_nurse_name(name):
     return parts[0] if parts else s
 
 
+def _toast_ok(msg="อัปเดตแล้ว ✓"):
+    """🎨 demo (2 ส.ค. 2026): ตอบรับทันทีทุกปุ่ม (Doherty Threshold) —
+    production เงียบตามเดิม รอผลประเมินผู้ทรงก่อนค่อยยกไป"""
+    try:
+        if str(st.secrets.get('instance_mode', '')).lower() == 'demo':
+            st.toast(msg)
+    except Exception:
+        pass
+
+
+def apply_finish(cases, idx, R, dest):
+    """🏁 state machine กลาง: ผ่าเสร็จ → ห้องรับ-ส่ง/พักฟื้น (สกัดจาก _do_finish
+    2 ส.ค. 2026) — จอบอร์ดและจอห้องแบบโฟกัส (demo) เรียกเส้นทางเดียวกัน
+    ไม่ก๊อบ logic ซ้ำ · คืน True เมื่อเปลี่ยนสถานะสำเร็จ (ผู้เรียกจัดการ rerun เอง)"""
+    if cases[idx].get('status') != 'in_or':
+        return False  # กันกดรัว (สถานะแสดงผลอาจเป็น 'เกินเวลา' แต่ค่าจริงคือ in_or)
+    now = _now()
+    cases[idx]['time_exited_or'] = now
+    if cases[idx].get('time_entered_or'):
+        _dur = (now - cases[idx]['time_entered_or']).total_seconds() / 60
+        # กันเวลาติดลบ (เผื่อ clock เครื่องเพี้ยน) — clamp ขั้นต่ำ 1 นาที
+        cases[idx]['actual_duration_min'] = max(int(_dur), 1)
+    cases[idx]['status'] = 'recovery' if dest == 'ห้องพักฟื้น' else 'holding_post'
+    _rk = R if R else 1
+    st.session_state.or_rooms.setdefault(_rk, {}).update(
+        {'status': 'ว่าง', 'current_case': None, 'start_time': None})
+    st.session_state.statistics['completed_cases'] += 1
+    record = {
+        'timestamp': now.isoformat(),
+        'case_id': cases[idx].get('id'),
+        'procedure': cases[idx].get('procedure'),
+        'surgeon': cases[idx].get('surgeon'),
+        'division': cases[idx].get('division', '75'),
+        'age': cases[idx].get('age'),
+        'op_hour': cases[idx].get('op_hour'),
+        'scrub': cases[idx].get('scrub_nurse', ''),
+        'circ': cases[idx].get('circ_nurse', ''),
+        'ai_predicted_min': cases[idx].get('ai_predicted_min', cases[idx].get('predicted_min')),
+        'user_override_min': cases[idx].get('user_override_min'),
+        'actual_duration_min': cases[idx].get('actual_duration_min'),
+        'wait_min': cases[idx].get('wait_min', 0),
+        'room': R if R else 1,
+    }
+    st.session_state.statistics['case_history'].append(record)
+    # 🧪 เคส Demo ไม่บันทึกลงไฟล์สถิติสะสม — กันข้อมูลทดลองปนผลวิจัย
+    if not cases[idx].get('_demo'):
+        try:
+            from main_or_core import append_case_history
+            append_case_history(record)
+        except Exception as ex:
+            st.warning(f"บันทึก history ไม่สำเร็จ: {ex}")
+    # เติมเวลาจริงเข้า override_log (ถ้าเคสนี้เคยถูกแก้เวลา) — เทียบ คน vs AI
+    try:
+        from main_or_db import complete_override
+        complete_override(cases[idx], cases[idx].get('actual_duration_min'))
+    except Exception as _ex:
+        print(f"[override_log] complete_override ล้มเหลว: {_ex}")
+    # 🕶️ shadow: thesis_ML_v2 ทำนายเทียบเงียบ ๆ (fail-safe ในตัว · demo ข้ามเอง)
+    try:
+        from shadow_v2 import log_shadow
+        log_shadow(cases[idx], cases[idx].get('actual_duration_min'))
+    except Exception as _sx:
+        print(f"[shadow_v2] ข้าม: {_sx}")
+    try:    # 📊 ตารางวิจัยถาวร — AI vs actual + override + ปลายทางออก
+        from research_log import log_case_state
+        log_case_state(cases[idx])
+    except Exception as _rx:
+        print(f"[research_log] ข้าม: {_rx}")
+    _mark_board_dirty(cases[idx])   # CR-2
+    return True
+
+
+def apply_undo_finish(cases, idx):
+    """↩️ state machine กลาง: ย้อนผลการกดเสร็จ (holding_post/recovery → in_or)
+    สกัดจาก _do_undo (2 ส.ค. 2026) — บอร์ดและจอโฟกัส (demo) ใช้เส้นทางเดียวกัน
+    ครบทุก side effect: ห้อง/ตัวนับ/history/override_log/research upsert"""
+    c = cases[idx]
+    if c.get('status') not in ('holding_post', 'recovery'):
+        return False
+    c['status'] = 'in_or'
+    c['time_exited_or'] = None
+    c['actual_duration_min'] = None
+    st.session_state.statistics['completed_cases'] = max(
+        st.session_state.statistics['completed_cases'] - 1, 0)
+    _rk = c.get('or_room_assigned') or 1
+    st.session_state.or_rooms.setdefault(_rk, {}).update(
+        {'status': 'กำลังผ่าตัด', 'current_case': c,
+         'start_time': c.get('time_entered_or')})
+    _hist = st.session_state.statistics.get('case_history', [])
+    for _i in range(len(_hist) - 1, -1, -1):
+        if (_hist[_i].get('case_id') == c.get('id')
+                and _hist[_i].get('procedure') == c.get('procedure')):
+            _hist.pop(_i)
+            break
+    # ลบแถวที่เพิ่งบันทึกออกจากไฟล์ CSV history ด้วย (สถิติ Top-N ไม่เพี้ยน)
+    try:
+        from main_or_core import remove_last_case_history
+        remove_last_case_history(c.get('id'), c.get('procedure'))
+    except Exception as _ex:
+        print(f"[history] remove_last_case_history ล้มเหลว: {_ex}")
+    # ล้างเวลาจริงใน override_log ด้วย — เคสกลับไปกำลังผ่า
+    try:
+        from main_or_db import reset_override_actual
+        reset_override_actual(c)
+    except Exception as _ex:
+        print(f"[override_log] reset_override_actual ล้มเหลว: {_ex}")
+    try:    # 📊 research upsert — สถานะ/เวลาย้อนกลับให้ตรงจริง
+        from research_log import log_case_state
+        log_case_state(c)
+    except Exception as _rx:
+        print(f"[research_log] ข้าม: {_rx}")
+    _mark_board_dirty(c)
+    return True
+
+
 def _save_board_snapshot(cases):
     """บันทึกบอร์ดปัจจุบันลง DB กลาง + ไฟล์ local — ไม่ throw
     🔒 mask ชื่อ/HN **เสมอ ไม่มีข้อยกเว้น** (นโยบาย 11 มิ.ย. 2026 · มาตรา 3.6.4):
@@ -938,6 +1053,8 @@ def _board_fragment():
         if _pull and not st.session_state.get('_board_dirty'):
             _shared = _load_board_snapshot()
             st.session_state['_board_last_pull'] = _tmod.monotonic()
+            # 🎨 demo: เวลานาฬิกาสำหรับป้าย "อัปเดตล่าสุด HH:MM:SS" (Doherty)
+            st.session_state['_board_last_pull_wall'] = _now().strftime('%H:%M:%S')
             if _shared is not None:
                 st.session_state.patient_cases = _shared
                 cases = _shared
@@ -961,6 +1078,12 @@ def _board_fragment():
             _rerun_board()
     with _ctl_warn:
         st.markdown("<div style=\x27text-align:right;color:#808495;font-size:13px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
+        # 🎨 demo: บอกเวลาซิงก์ล่าสุด — ช่องว่าง 30 วิ จะไม่ถูกอ่านว่า "ค้าง"
+        if _is_demo_instance and st.session_state.get('_board_last_pull_wall'):
+            st.markdown(
+                f"<div style='text-align:right;color:#b6c2cf;font-size:11px;'>"
+                f"อัปเดตล่าสุด {st.session_state['_board_last_pull_wall']}</div>",
+                unsafe_allow_html=True)
     # 🚪 โหมดจอประจำห้อง: ไม่มีสวิตช์สาธิต (กันจอห้องเผลอสลับบอร์ดทั้งตึกเป็นสาธิต)
     _room_scope_board = (st.session_state.get('room_scope')
                          if st.session_state.get('role') == 'room' else None)
@@ -1113,6 +1236,7 @@ def _board_fragment():
         cases[idx]['time_arrived_holding'] = _now()
         _rlog(cases[idx])               # 📊 จุดเริ่มนาฬิกา waiting time
         _mark_board_dirty(cases[idx])   # CR-2: เครื่องนี้แก้จริง → ค่อยเซฟ + กันถูกดึงทับ
+        _toast_ok("รับเข้าแล้ว ✓")
         _rerun_board()
 
     def _do_enter(idx, R):
@@ -1145,61 +1269,13 @@ def _board_fragment():
         st.session_state.statistics['total_cases'] += 1
         _rlog(cases[idx])               # 📊 ปิดนาฬิกา waiting time (ได้ wait_holding_min)
         _mark_board_dirty(cases[idx])   # CR-2
+        _toast_ok("เข้าห้องแล้ว ✓")
         _rerun_board()
 
     def _do_finish(idx, R, dest):
-        if cases[idx].get('status') != 'in_or':
-            return  # กันกดรัว (สถานะแสดงผลอาจเป็น 'เกินเวลา' แต่ค่าจริงคือ in_or)
-        now = _now()
-        cases[idx]['time_exited_or'] = now
-        if cases[idx].get('time_entered_or'):
-            _dur = (now - cases[idx]['time_entered_or']).total_seconds() / 60
-            # กันเวลาติดลบ (เผื่อ clock เครื่องเพี้ยน) — clamp ขั้นต่ำ 1 นาที
-            cases[idx]['actual_duration_min'] = max(int(_dur), 1)
-        cases[idx]['status'] = 'recovery' if dest == 'ห้องพักฟื้น' else 'holding_post'
-        _rk = R if R else 1
-        st.session_state.or_rooms.setdefault(_rk, {}).update(
-            {'status': 'ว่าง', 'current_case': None, 'start_time': None})
-        st.session_state.statistics['completed_cases'] += 1
-        record = {
-            'timestamp': now.isoformat(),
-            'case_id': cases[idx].get('id'),
-            'procedure': cases[idx].get('procedure'),
-            'surgeon': cases[idx].get('surgeon'),
-            'division': cases[idx].get('division', '75'),
-            'age': cases[idx].get('age'),
-            'op_hour': cases[idx].get('op_hour'),
-            'scrub': cases[idx].get('scrub_nurse', ''),
-            'circ': cases[idx].get('circ_nurse', ''),
-            'ai_predicted_min': cases[idx].get('ai_predicted_min', cases[idx].get('predicted_min')),
-            'user_override_min': cases[idx].get('user_override_min'),
-            'actual_duration_min': cases[idx].get('actual_duration_min'),
-            'wait_min': cases[idx].get('wait_min', 0),
-            'room': R if R else 1,
-        }
-        st.session_state.statistics['case_history'].append(record)
-        # 🧪 เคส Demo ไม่บันทึกลงไฟล์สถิติสะสม — กันข้อมูลทดลองปนผลวิจัย
-        if not cases[idx].get('_demo'):
-            try:
-                from main_or_core import append_case_history
-                append_case_history(record)
-            except Exception as ex:
-                st.warning(f"บันทึก history ไม่สำเร็จ: {ex}")
-        # เติมเวลาจริงเข้า override_log (ถ้าเคสนี้เคยถูกแก้เวลา) — เทียบ คน vs AI
-        try:
-            from main_or_db import complete_override
-            complete_override(cases[idx], cases[idx].get('actual_duration_min'))
-        except Exception as _ex:
-            print(f"[override_log] complete_override ล้มเหลว: {_ex}")
-        # 🕶️ shadow: thesis_ML_v2 (13 features) ทำนายเทียบเงียบ ๆ — ไม่แสดงบนบอร์ด
-        #    ไม่กระทบ flow (fail-safe ในตัว) · เคส demo ถูกข้ามใน log_shadow เอง
-        try:
-            from shadow_v2 import log_shadow
-            log_shadow(cases[idx], cases[idx].get('actual_duration_min'))
-        except Exception as _sx:
-            print(f"[shadow_v2] ข้าม: {_sx}")
-        _rlog(cases[idx])               # 📊 บันทึก AI vs actual + override + ปลายทางออก
-        _mark_board_dirty(cases[idx])   # CR-2
+        # 🏁 logic กลางย้ายไป apply_finish (2 ส.ค. 2026) — จอโฟกัส demo ใช้ร่วม
+        if apply_finish(cases, idx, R, dest):
+            _toast_ok("ผ่าเสร็จ ✓")
         _rerun_board()
 
     def _do_undo(idx):
@@ -1218,39 +1294,15 @@ def _board_fragment():
             st.session_state.statistics['total_cases'] = max(
                 st.session_state.statistics['total_cases'] - 1, 0)
         elif s in ('holding_post', 'recovery'):
-            c['status'] = 'in_or'
-            c['time_exited_or'] = None
-            c['actual_duration_min'] = None
-            st.session_state.statistics['completed_cases'] = max(
-                st.session_state.statistics['completed_cases'] - 1, 0)
-            _rk = c.get('or_room_assigned') or 1
-            st.session_state.or_rooms.setdefault(_rk, {}).update(
-                {'status': 'กำลังผ่าตัด', 'current_case': c,
-                 'start_time': c.get('time_entered_or')})
-            _hist = st.session_state.statistics.get('case_history', [])
-            for _i in range(len(_hist) - 1, -1, -1):
-                if (_hist[_i].get('case_id') == c.get('id')
-                        and _hist[_i].get('procedure') == c.get('procedure')):
-                    _hist.pop(_i)
-                    break
-            # ลบแถวที่เพิ่งบันทึกออกจากไฟล์ CSV history ด้วย (สถิติ Top-N ไม่เพี้ยน)
-            try:
-                from main_or_core import remove_last_case_history
-                remove_last_case_history(c.get('id'), c.get('procedure'))
-            except Exception as _ex:
-                print(f"[history] remove_last_case_history ล้มเหลว: {_ex}")
-            # ล้างเวลาจริงใน override_log ด้วย — เคสกลับไปกำลังผ่า
-            # (กัน 'ผ่าเสร็จ' ผิด → undo → เสร็จใหม่ แล้วเวลาเก่าค้างใน log)
-            try:
-                from main_or_db import reset_override_actual
-                reset_override_actual(c)
-            except Exception as _ex:
-                print(f"[override_log] reset_override_actual ล้มเหลว: {_ex}")
+            # 🏁 logic กลางย้ายไป apply_undo_finish (2 ส.ค. 2026) — จอโฟกัสใช้ร่วม
+            #    (rlog/dirty ที่ท้ายฟังก์ชันซ้ำกับใน apply = upsert เดิม ไม่มีผลข้างเคียง)
+            apply_undo_finish(cases, idx)
         elif s == 'discharged':
             c['status'] = 'holding_post'
             c['time_discharged'] = None
         _rlog(c)               # 📊 undo แล้วเขียนสถานะล่าสุดทับ — ตารางวิจัยตรงกับบอร์ดเสมอ
         _mark_board_dirty(c)   # CR-2
+        _toast_ok("ย้อนสถานะแล้ว ↩️")
         _rerun_board()
 
     # ---------- กระดานติดตาม (production tracking board) ----------
@@ -1276,3 +1328,122 @@ def _board_fragment():
 #  สถิติจริงย้ายไปหน้า "📈 สถิติย้อนหลัง" ใน main_or_admin นานแล้ว
 #  ต้องการคืน → ดู git history ก่อน commit "chore: ตัดโค้ดตาย")
 # ============================================================================
+
+# ════════════════════════════════════════════════════════════════════
+# 🚪🎯 จอห้องผ่าตัดแบบโฟกัส — ทดลองในแอป DEMO (มุคกี้เคาะ 3 ส.ค. 2026)
+#    ตาม skill or-patient-tracking-dashboard: "one decision only" —
+#    จอห้องเห็นเคสตัวเอง + ปุ่มปลายทาง 2 ปุ่มใหญ่ (Hick's + Fitts's Law)
+#    production ยังใช้บอร์ด 3 แท็บเดิม · route เลือกที่ main_or_app
+# ════════════════════════════════════════════════════════════════════
+def page_room_focus(room_no):
+    _room_focus_fragment(room_no)
+
+
+@_fragment(run_every=30)
+def _room_focus_fragment(room_no):
+    from room_config import room_label
+    from main_or_db import mask_patient_name
+
+    # ดึงบอร์ดกลางทุกรอบ (จอนี้ไม่มีช่องพิมพ์ — ดึงได้เสมอ เว้นมีงานค้างยังไม่เซฟ)
+    if not st.session_state.get('_board_dirty'):
+        _shared = _load_board_snapshot()
+        if _shared is not None:
+            st.session_state.patient_cases = _shared
+            st.session_state['_board_last_pull_wall'] = _now().strftime('%H:%M:%S')
+    cases = st.session_state.patient_cases
+
+    def _r(c):
+        try:
+            return int(float(c.get('room')))
+        except (TypeError, ValueError):
+            return None
+
+    # Fitts's Law: เป้าใหญ่ กดถนัดแม้สวมถุงมือ
+    st.markdown("""<style>
+    div[data-testid="stButton"] > button {height:76px; font-size:22px; font-weight:700;}
+    </style>""", unsafe_allow_html=True)
+
+    st.markdown(f"### 🚪 {room_label(room_no)}")
+
+    cur = next((i for i, c in enumerate(cases)
+                if c.get('status') == 'in_or' and _r(c) == room_no), None)
+
+    if cur is not None:
+        c = cases[cur]
+        eff = int(c.get('effective_min') or c.get('ai_predicted_min')
+                  or c.get('predicted_min') or 30)
+        ent = c.get('time_entered_or')
+        elapsed = (max(int((_now() - ent).total_seconds() / 60), 0)
+                   if (ent is not None and hasattr(ent, 'hour')) else 0)
+        over = elapsed > eff
+        pct = min(int(elapsed / max(eff, 1) * 100), 100)
+        chip = (('<span style="background:#FBE9E8;color:#A32D2D;border-radius:999px;'
+                 'padding:4px 16px;font-size:16px;font-weight:700;">เกินเวลา</span>')
+                if over else
+                ('<span style="background:#E1F5EE;color:#085041;border-radius:999px;'
+                 'padding:4px 16px;font-size:16px;font-weight:700;">กำลังผ่า</span>'))
+        bar_color = '#A32D2D' if over else '#1D9E75'
+        st.markdown(
+            f'<div style="background:#fff;border:2px solid #1D9E75;border-radius:16px;'
+            f'padding:20px 24px;margin-bottom:14px;">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;">'
+            f'<span style="font-size:26px;font-weight:800;color:#0f172a;">'
+            f'{mask_patient_name(c.get("name") or "-")}</span>{chip}</div>'
+            f'<div style="font-size:18px;color:#475569;margin-top:4px;">'
+            f'{(c.get("procedure") or "-")}</div>'
+            f'<div style="background:#eef2f6;height:12px;border-radius:6px;'
+            f'margin:16px 0 8px;overflow:hidden;">'
+            f'<div style="background:{bar_color};height:100%;width:{pct}%;'
+            f'border-radius:6px;transition:width 1s ease;"></div></div>'
+            f'<div style="display:flex;justify-content:space-between;font-size:16px;'
+            f'color:#475569;"><span>ผ่าไป {elapsed} นาที</span>'
+            f'<span>คาดการณ์ ~{eff} นาที</span></div>'
+            f'</div>', unsafe_allow_html=True)
+        st.markdown("**ผ่าเสร็จ — ส่งผู้ป่วยไปที่:**")
+        b1, b2 = st.columns(2)
+        if b1.button("🚪 ห้องรับ-ส่ง", key="rf_fin_hold", width='stretch',
+                     type='primary'):
+            if apply_finish(cases, cur, room_no, 'ห้องรับ-ส่ง'):
+                _save_board_snapshot(cases)
+                st.session_state['_board_dirty'] = False
+                _toast_ok("ผ่าเสร็จ ✓ → ห้องรับ-ส่ง")
+            _rerun_board()
+        if b2.button("🛏️ ห้องพักฟื้น", key="rf_fin_rec", width='stretch'):
+            if apply_finish(cases, cur, room_no, 'ห้องพักฟื้น'):
+                _save_board_snapshot(cases)
+                st.session_state['_board_dirty'] = False
+                _toast_ok("ผ่าเสร็จ ✓ → ห้องพักฟื้น")
+            _rerun_board()
+    else:
+        nxt = [c for c in cases if _r(c) == room_no
+               and c.get('status') in ('not_arrived', 'holding_pre')]
+        if nxt:
+            n0 = sorted(nxt, key=lambda c: (
+                0 if c.get('status') == 'holding_pre' else 1,
+                c.get('ororder') or 999))[0]
+            _st_txt = ('พร้อมแล้วที่ห้องรับ-ส่ง' if n0.get('status') == 'holding_pre'
+                       else 'ยังไม่มา')
+            st.info(f"ห้องว่าง — คิวถัดไป: **{mask_patient_name(n0.get('name') or '-')}** · "
+                    f"{n0.get('procedure', '-')} ({_st_txt})\n\n"
+                    f"จอรับ-ส่งเป็นผู้กด 'เข้าห้อง' · คิวของห้องนี้เหลือ {len(nxt)} เคส")
+        else:
+            st.success("ห้องว่าง — ไม่มีเคสค้างของห้องนี้แล้ววันนี้ 🎉")
+
+    # ↩️ Forgiveness: เลิกทำการกดเสร็จล่าสุดของห้องนี้ (แก้กดพลาด/เลือกปลายทางผิด)
+    done_last = next((i for i in range(len(cases) - 1, -1, -1)
+                      if _r(cases[i]) == room_no
+                      and cases[i].get('status') in ('holding_post', 'recovery')),
+                     None)
+    if done_last is not None:
+        _cu = cases[done_last]
+        if st.button(f"↩️ เลิกทำ — ดึง {mask_patient_name(_cu.get('name') or '-')} "
+                     f"กลับเป็นกำลังผ่า", key="rf_undo"):
+            if apply_undo_finish(cases, done_last):
+                _save_board_snapshot(cases)
+                st.session_state['_board_dirty'] = False
+                _toast_ok("ย้อนสถานะแล้ว ↩️")
+            _rerun_board()
+
+    if st.session_state.get('_board_last_pull_wall'):
+        st.caption(f"อัปเดตล่าสุด {st.session_state['_board_last_pull_wall']} · "
+                   "ซิงก์อัตโนมัติทุก 30 วินาที")
