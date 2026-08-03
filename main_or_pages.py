@@ -471,10 +471,15 @@ def _or_board_demo():
                      time_discharged=now - timedelta(minutes=10),
                      time_exited_or=now - timedelta(minutes=95),
                      time_entered_or=now - timedelta(minutes=95 + act))
-        # ห้อง 92 เคสที่ 2 → รอผ่าตัดปกติ (เทียบกับ 91 ที่เป็นฉุกเฉิน)
+        # 🎬 เคสสอนเวลารอ (มุคกี้ปรับ 3 ส.ค. 2026):
+        #    ทดสอบ4 (92#2) รอ 40 นาที = ใกล้เกณฑ์ · ทดสอบ5 (92#3) รอ 72 นาที
+        #    = เกิน 60 → เห็นทั้งแจ้งเตือนรอนาน + ลอยขึ้นบนสุดของบอร์ด
         if d['room'] == 92 and d['ororder'] == 2:
             c['status'] = 'holding_pre'
-            c['time_arrived_holding'] = now - timedelta(minutes=6)
+            c['time_arrived_holding'] = now - timedelta(minutes=40)
+        elif d['room'] == 92 and d['ororder'] == 3:
+            c['status'] = 'holding_pre'
+            c['time_arrived_holding'] = now - timedelta(minutes=72)
         cases.append(c)
     return cases
 
@@ -1096,8 +1101,12 @@ def _board_fragment():
         elif _room_scope_board:
             _demo_on = bool(st.session_state.get('_or_demo'))
         else:
+            # 🔧 3 ส.ค. 2026: value= จากธง _or_demo — สลับไปแท็บอื่นแล้วกลับมา
+            #    Streamlit ล้างสถานะสวิตช์ (widget cleanup) ทำให้สาธิตดับเอง
+            #    seed ค่าจากธงจริง = สาธิตรันต่อจนกว่าผู้ใช้กดปิดเองเท่านั้น
             _demo_on = st.toggle(
                 "🎬 สาธิต", key="orboard_demo_toggle",
+                value=bool(st.session_state.get('_or_demo')),
                 help="เปิด: โหลดเคสสาธิตจากตารางผ่าตัดจริง (mask ชื่อเป็น 'ทดสอบ' หมดแล้ว "
                      "— AI ทำนายด้วยโมเดลจริง) · ปิด: ล้างเคสสาธิต")
     if _demo_on and not st.session_state.get('_or_demo'):

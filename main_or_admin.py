@@ -720,9 +720,11 @@ def _render_one_room_card(rm):
         card_bg = '#ffffff'
 
     # ── Card HTML ──
-    # 🎨 demo: จุดสถานะเต้นเฉพาะเคสมีปัญหา (เกินเวลา) — production จุดนิ่งเดิม
-    _dot_cls = (" class='or-dot-pulse'"
-                if (_demo_fx() and status_label == 'เกินเวลา') else '')
+    # 🎨 demo (มุคกี้สั่ง 3 ส.ค. 2026): pulse แดงสงวนให้ emergency เท่านั้น —
+    #    เคสเกินเวลาใช้ไอคอนนาฬิกาแทน · production เดิมทุกอย่าง
+    _dot_cls = ''
+    if _demo_fx() and status_label == 'เกินเวลา':
+        status_label = '⏱ เกินเวลา'
     proc_safe = _esc(procedure)   # 🔒 M-01: หนี HTML เต็มรูปแบบ (ไม่ใช่แค่ ")
     card_html = (
         f'<div style="background:{card_bg};border:{card_border};'
@@ -831,11 +833,10 @@ def _render_alerts(alerts):
     for a in alerts:
         icon = '🔴' if a['severity'] == 'high' else ('🟡' if a['severity'] == 'medium' else '⚪')
         _pdot = ''
-        if _demo_fx() and a['severity'] in ('high', 'medium'):
-            _pcol = '#e24b4a' if a['severity'] == 'high' else '#e3920b'
-            _pdot = (f"<span class='or-dot-pulse' style='width:9px;height:9px;"
-                     f"background:{_pcol};border-radius:50%;display:inline-block;"
-                     f"margin-right:2px;'></span>")
+        # 🎨 demo (3 ส.ค. 2026): เกินเวลาผ่าตัด = ไอคอนนาฬิกา (pulse แดงสงวนให้
+        #    emergency เท่านั้น) · รอนานคงไอคอนระดับความรุนแรงเดิม
+        if _demo_fx() and a.get('type') == 'overrun':
+            icon = '⏱️'
         css_class = f"alert-{a['severity']}"
         st.markdown(f"""
         <div class="alert-card {css_class}">

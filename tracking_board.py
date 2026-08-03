@@ -580,18 +580,17 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             except TypeError:
                 pop = st.popover("✏️")
             with pop:
-                if _is_emer(c):
-                    st.caption("🚨 เคสฉุกเฉิน — อยู่นอกขอบเขตวิจัย: ใช้บอร์ด/AI ได้ปกติ "
-                               "แต่จะไม่ถูกบันทึกเข้าข้อมูลวิจัยใด ๆ")
-                else:
-                    # 🌙 เคสนอกเวลา (elective นัด ≥ 15:30) — นอกขอบเขตเช่นกัน (2 ส.ค. 2026)
+                # 📊 ป้ายขอบเขตวิจัย — ถ้อยคำเดียวทุกกรณี (มุคกี้ปรับ 3 ส.ค. 2026)
+                _out_scope = _is_emer(c)
+                if not _out_scope:
                     try:
                         from research_log import in_research_scope as _irs
-                        if not _irs(c) and not c.get('_demo'):
-                            st.caption("🌙 เคสนอกเวลา — อยู่นอกขอบเขตวิจัย: ใช้บอร์ด/AI "
-                                       "ได้ปกติ แต่จะไม่ถูกบันทึกเข้าข้อมูลวิจัยใด ๆ")
+                        _out_scope = (not _irs(c)) and not c.get('_demo')
                     except Exception:
-                        pass
+                        _out_scope = False
+                if _out_scope:
+                    st.caption('เคสที่ "อยู่นอกขอบเขตวิจัย" '
+                               'จะไม่ถูกเก็บบันทึกเข้าข้อมูลวิจัย')
                 st.caption("เวลาคาดการณ์ใช้ห้องผ่าตัด (นาที) — แก้แทนค่า AI ได้ "
                            "(เวลาใช้ห้องตั้งแต่ room in ถึง room out)")
                 # 🤖 ที่มาของคำทำนาย — หลักฐานช่วยตัดสินใจว่าควรเชื่อ AI แค่ไหน
