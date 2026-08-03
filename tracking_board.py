@@ -193,6 +193,8 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     except Exception:
         _demo_float = False
     if _demo_float:
+        # 🎨 มุคกี้ปรับ 3 ส.ค. 2026 รอบ 2: เด้งขึ้นบนสุด "เฉพาะ" เคสรอเกิน 60 นาที
+        #    (แถวอื่นคงลำดับนิ่งตามหลักเดิมของบอร์ด)
         def _wait_m(c):
             _a = c.get('time_arrived_holding')
             try:
@@ -200,9 +202,11 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
                         if (_a is not None and hasattr(_a, 'hour')) else -1.0)
             except Exception:
                 return -1.0
+        def _crit(c):
+            return c.get('status') == 'holding_pre' and _wait_m(c) > 60
         ordered.sort(key=lambda t: (
-            0 if t[1].get('status') == 'holding_pre' else 1,
-            -_wait_m(t[1]) if t[1].get('status') == 'holding_pre' else 0,
+            0 if _crit(t[1]) else 1,
+            -_wait_m(t[1]) if _crit(t[1]) else 0,
             (rid(t[1]) or 999),
             (0 if _is_emer(t[1]) else 1),
             (sched_min(t[1]) or 9999),
@@ -432,21 +436,19 @@ def _holding_row_iframe(c, loc, tlabel, now):
     emg_html = _EMG_BADGE if emer else ''
     border_css = ('border:1px solid #f5c6c5;border-left:3px solid #e0312e;'
                   if emer else 'border:1px solid #eef2f6;')
-    # 🎨 demo (มุคกี้สั่ง 3 ส.ค. 2026): คาดสีแถวรอผ่าตัดตามเวลารอ —
-    #    เกิน 45 นาที = เหลือง · เกิน 60 นาที = แดง (ชิปนาฬิกาเปลี่ยนเกณฑ์ตาม)
+    # 🎨 demo (มุคกี้ปรับ 3 ส.ค. 2026 รอบ 2): เกณฑ์เดียว = 60 นาที
+    #    รอเกิน 60 → คาดเหลืองครีมทั้งแถว + ชิปโทนเหลือง (แดงสงวนให้เกินเวลาผ่า/EMG)
     #    เคสฉุกเฉินคงขอบแดง EMG เดิม ไม่ทับ · production JS เดิมเป๊ะ
     if _demo_fx_tb():
         _js = (
             f'<script>var el0={el0:.0f},t0=Date.now(),t=document.getElementById("t"),'
             f'row=document.getElementById("row"),emer={1 if emer else 0};'
             'function u(){var el=el0+(Date.now()-t0)/1000,d=Math.floor(el/60),'
-            'sec=Math.floor(el%60),c=d<45?"#22a565":d<60?"#e3920b":"#e24b4a";'
-            'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.background="#e24b4a";return}'
+            'sec=Math.floor(el%60),c=d<60?"#22a565":"#e3920b";'
+            'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.background="#e3920b";return}'
             't.style.background=c;'
-            'if(!emer){if(d>=60){row.style.background="#fbe9e8";'
-            'row.style.borderLeft="3px solid #e24b4a";}'
-            'else if(d>=45){row.style.background="#fdf3dd";'
-            'row.style.borderLeft="3px solid #e3920b";}}'
+            'if(!emer&&d>=60){row.style.background="#fff8e1";'
+            'row.style.borderLeft="3px solid #e3920b";}'
             't.textContent="⏱ รอแล้ว "+d+":"+String(sec).padStart(2,"0")}'
             'u();setInterval(u,1000)</script>'
         )
@@ -528,11 +530,14 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
         'b.style.width=Math.min(el/(eff*60)*100,100)+"%";'
         'if(rem>300){t.textContent=m+" / "+eff+" น.";'
         't.style.color="#1b7f4b";b.style.background="#22a565";}'
-        'else if(rem>0){t.textContent=m+":"+z(ss)+" / "+eff+" น.";'
-        't.style.color="#e3920b";b.style.background="#e3920b";}'
+        # 🎨 demo (มุคกี้ปรับ 3 ส.ค. 2026 รอบ 2): เวลาหลักเป็นนาทีล้วนเสมอ (MM/MM น.)
+        #    ความละเอียด MM:SS โผล่เฉพาะส่วน "เกิน" ตอนเกินเวลาเท่านั้น · production เดิม
+        + ('else if(rem>0){t.textContent=m+" / "+eff+" น.";'
+           if _demo_fx_tb() else
+           'else if(rem>0){t.textContent=m+":"+z(ss)+" / "+eff+" น.";')
+        + 't.style.color="#e3920b";b.style.background="#e3920b";}'
         'else{var ov=-rem;'
-        # 🎨 demo (3 ส.ค. 2026): เกินเวลาแสดงนาทีล้วน ไม่เอา MM:SS · production เดิม
-        + ('t.textContent=m+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+" น.";'
+        + ('t.textContent=m+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);'
            if _demo_fx_tb() else
            't.textContent=m+":"+z(ss)+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);')
         + 't.style.color="#c0392b";b.style.width="100%";b.style.background="#e24b4a";'

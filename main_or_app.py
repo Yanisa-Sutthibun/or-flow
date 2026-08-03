@@ -687,6 +687,9 @@ def _check_password():
                     'padding:3px 16px;border-radius:6px;white-space:nowrap;">'
                     '🖥️ Demonstration mode</span></div>',
                     unsafe_allow_html=True)
+                st.caption("ใช้ Codebase และ Workflow เดียวกับระบบจริงทุกประการ "
+                           "ต่างเพียงชื่อ-นามสกุลผู้ป่วยเป็นข้อมูลสมมติ · หัตถการ "
+                           "เวลา และค่าทำนาย AI คำนวณจากโมเดลจริง (thesis_ML_v2)")
         except Exception:
             pass
         st.caption("🔑 รหัสผ่านจากเจ้าของระบบ — สำหรับบุคลากรที่ได้รับอนุญาตเท่านั้น")
@@ -721,7 +724,8 @@ def main():
             '<span style="background:rgba(0,0,0,0.62);color:#FFFFFF;'
             'font-size:20px;font-weight:800;letter-spacing:.5px;'
             'padding:4px 20px;border-radius:8px;white-space:nowrap;">'
-            '🖥️ ระบบสาธิต OR Flow: ข้อมูลทั้งหมดถูกจำลองขึ้นมาเพื่อทดสอบการใช้งาน</span></div>',
+            '🖥️ DEMO MODE — ระบบเดียวกับ Production 100% | '
+            'ข้อมูลผู้ป่วยเป็นข้อมูลจำลอง</span></div>',
             unsafe_allow_html=True)
 
     # ========================================================================
