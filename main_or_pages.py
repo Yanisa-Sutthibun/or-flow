@@ -1005,6 +1005,11 @@ def _board_fragment():
             st.session_state['_board_force_pull'] = True
             st.session_state['_board_restored'] = False
             st.session_state['_board_was_restored'] = False
+            # 🖥️ demo (3 ส.ค. 2026): ข้ามเที่ยงคืน → ปิดสวิตช์สาธิตให้ด้วย
+            #    จบวงจรเหมือนระบบจริง (บอร์ดว่างรอวันใหม่ ไม่ค้างสวิตช์เปิดกำกวม)
+            if _is_demo_instance and st.session_state.get('_or_demo'):
+                st.session_state['_or_demo'] = False
+                st.session_state['orboard_demo_toggle'] = False
         st.session_state['_board_last_date'] = _today_iso
         if _HAS_FRAGMENT:
             # ⏲️ fragment run_every=30 คือ "tick" ในตัว — ครบ ~25 วิจาก pull ล่าสุด
@@ -1107,8 +1112,8 @@ def _board_fragment():
             _demo_on = st.toggle(
                 "🎬 สาธิต", key="orboard_demo_toggle",
                 value=bool(st.session_state.get('_or_demo')),
-                help="เปิด: โหลดเคสสาธิตจากตารางผ่าตัดจริง (mask ชื่อเป็น 'ทดสอบ' หมดแล้ว "
-                     "— AI ทำนายด้วยโมเดลจริง) · ปิด: ล้างเคสสาธิต")
+                help="เมื่อกดเปิดจะมีเคสสาธิตขึ้นมาให้ สามารถกดใช้งานเหมือนระบบ "
+                     "OR Flow เมื่อกดปิดเคสสาธิตจะหายไป")
     if _demo_on and not st.session_state.get('_or_demo'):
         st.session_state.patient_cases = _or_board_demo()
         st.session_state['_or_demo'] = True
