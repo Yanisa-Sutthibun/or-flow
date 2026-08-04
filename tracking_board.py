@@ -113,20 +113,41 @@ def _demo_fx_tb() -> bool:
 
 
 def _sched_order_html(c, tlabel):
-    """🎨 demo (มุคกี้สั่ง 4 ส.ค. 2026): คอลัมน์ "นัด" แสดงลำดับคิว 🔒 ใต้เวลา
-    เฉพาะเคสที่ถูกจัดลำดับมาจากไฟล์ HIS (ororder จริง — Manual 99 ไม่ติดล็อก)
+    """🎨 demo: คอลัมน์ "นัด" แสดงลำดับคิว 🔒 ใต้เวลา (hover = ล็อคคิว)
+    เงื่อนไขโชว์ล็อก (มุคกี้เคาะ 4 ส.ค. 2026):
+    · เฉพาะเคสที่ลำดับมาจากไฟล์ HIS — เคสเพิ่ม Manual (99) ไม่ติดล็อก
+    · เคส TF ไม่ติดล็อก ขึ้น TF เฉย ๆ (ตามหลังคิว = คิวยังไม่ล็อก)
+    · เลขคิวในห้องเดียวกันซ้ำ (เช่นมา 1 ทั้งห้อง = HIS ยังไม่จัดคิว
+      จะจัดหน้างานวันผ่าจริง) → ซ่อนล็อกทั้งห้อง กันเลขหลอกตา
     production แสดงเวลานัดเดิมล้วน"""
     base = tlabel(c)
-    if not _demo_fx_tb():
+    if not _demo_fx_tb() or c.get('is_tf'):
         return base
     try:
         o = int(c.get('ororder'))
     except (TypeError, ValueError):
         return base
-    if o and o != 99:
-        return (f'{base}<br><span style="font-size:10.5px;color:#94a3b8;'
-                f'white-space:nowrap;">🔒 คิว {o}</span>')
-    return base
+    if not o or o == 99:
+        return base
+    # ลำดับ "มีความหมาย" เมื่อเลขในห้องไม่ซ้ำกัน — O(n) ต่อแถว บอร์ด ≤ ~30 เคส
+    try:
+        orders = []
+        for x in (st.session_state.get('patient_cases') or []):
+            if x.get('room') != c.get('room') or x.get('is_tf'):
+                continue
+            try:
+                xo = int(x.get('ororder'))
+            except (TypeError, ValueError):
+                continue
+            if xo and xo != 99:
+                orders.append(xo)
+        if len(orders) != len(set(orders)):
+            return base
+    except Exception:
+        pass
+    return (f'{base}<br><span title="ล็อคคิว — ลำดับจัดมาจากตารางผ่าตัด" '
+            f'style="font-size:10.5px;color:#94a3b8;'
+            f'white-space:nowrap;cursor:help;">🔒 คิว {o}</span>')
 
 
 def _esc(v) -> str:
