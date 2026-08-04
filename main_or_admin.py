@@ -564,12 +564,11 @@ def _render_demo_controls():
 
 
 def _demo_fx() -> bool:
-    """🎨 ลูกเล่น UI ทดลอง — เปิดเฉพาะแอป DEMO (มุคกี้สั่ง 2 ส.ค. 2026:
-    ทดลองใน demo ก่อน ถูกใจค่อยยกเข้า production — ปลดธงนี้จุดเดียว)"""
-    try:
-        return str(st.secrets.get('instance_mode', '')).lower() == 'demo'
-    except Exception:
-        return False
+    """🎨 ลูกเล่น UI (คู่กับ tracking_board._demo_fx_tb) — ยกเข้า production
+    แล้ว (มุคกี้สั่ง 4 ส.ค. 2026: แถบ progress ไหล · ชิป ⏱ เกินเวลา ·
+    ไอคอนแจ้งเตือน — ใช้เก็บภาพหน้าจอลงเล่มวิจัย) คงฟังก์ชันไว้เป็น
+    สวิตช์จุดเดียว เผื่ออยากแยกพฤติกรรมสองแอปอีกในอนาคต"""
+    return True
 
 
 # CSS ลูกเล่น demo: แถบ progress มีแสงไหล + จุดสถานะเต้นเฉพาะเคสมีปัญหา

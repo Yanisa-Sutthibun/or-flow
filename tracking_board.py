@@ -105,11 +105,11 @@ def _is_emer(c):
 
 
 def _demo_fx_tb() -> bool:
-    """🎨 ลูกเล่น UI ทดลอง — เฉพาะแอป DEMO (คู่กับ main_or_admin._demo_fx)"""
-    try:
-        return str(st.secrets.get('instance_mode', '')).lower() == 'demo'
-    except Exception:
-        return False
+    """🎨 ลูกเล่น UI (คู่กับ main_or_admin._demo_fx) — ยกเข้า production แล้ว
+    (มุคกี้สั่ง 4 ส.ค. 2026 หลังเคาะ UX ครบ: ภาษาสี เหลือง=ปัญหาเวลา
+    แดง=ฉุกเฉิน · ชิปนาฬิกา · 🔒 ล็อคคิว — ใช้เก็บภาพหน้าจอลงเล่มวิจัย)
+    คงฟังก์ชันไว้เป็นสวิตช์จุดเดียว เผื่ออยากแยกพฤติกรรมสองแอปอีกในอนาคต"""
+    return True
 
 
 def _sched_order_html(c, tlabel):
@@ -232,10 +232,9 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     # ---------- เตรียมแถว: กรอง + คำนวณสถานะแสดงผล ----------
     # เรียง ห้อง → ฉุกเฉินก่อนในห้อง → เวลานัด → ลำดับ (ลำดับนิ่ง แถวไม่ขยับเมื่อกดปุ่ม)
     ordered = list(enumerate(cases))
-    try:    # 🎨 demo (3 ส.ค. 2026): เคสรอผ่าตัดลอยขึ้นบนสุด รอนานสุดก่อน
-        _demo_float = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
-    except Exception:
-        _demo_float = False
+    # 🎨 เคสรอเกิน 60 นาทีลอยขึ้นบนสุด — ยกเข้า production แล้ว (4 ส.ค. 2026
+    #    ตาม _demo_fx_tb: function เหมือน demo ทุกจุด)
+    _demo_float = _demo_fx_tb()
     if _demo_float:
         # 🎨 มุคกี้ปรับ 3 ส.ค. 2026 รอบ 2: เด้งขึ้นบนสุด "เฉพาะ" เคสรอเกิน 60 นาที
         #    (แถวอื่นคงลำดับนิ่งตามหลักเดิมของบอร์ด)
