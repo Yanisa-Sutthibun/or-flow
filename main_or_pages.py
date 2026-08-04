@@ -158,7 +158,7 @@ def _flush_toast():
             st.markdown(
                 f'<div class="or-toast">{_html.escape(str(_msg))}</div>'
                 '<style>'
-                '.or-toast{position:fixed;bottom:26px;right:26px;z-index:99999;'
+                '.or-toast{position:fixed;bottom:84px;right:26px;z-index:99999;'
                 'background:#1f2937;color:#fff;padding:10px 22px;'
                 'border-radius:10px;font-size:15px;font-weight:600;'
                 'box-shadow:0 4px 16px rgba(0,0,0,.28);pointer-events:none;'
