@@ -1267,11 +1267,13 @@ def _board_fragment():
     n_done = sum(1 for c in cases if c['status'] == 'discharged')
 
     m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("⬜ ยังไม่มา", n_not)
-    m2.metric("🟡 รอผ่าตัด", n_hold)
-    m3.metric("🔵 ในห้องผ่าตัด", n_inor)
-    m4.metric("🚪 รอจำหน่าย", n_post)
-    m5.metric("✅ จำหน่าย", n_done)
+    # 🎨 มุคกี้สั่ง 4 ส.ค. 2026 (ทั้ง demo และ production): ตัดไอคอนหน้า KPI —
+    #    อีโมจิเรนเดอร์ต่างเครื่องแล้วดูไม่เข้าชุดกัน (โดยเฉพาะ 🚪)
+    m1.metric("ยังไม่มา", n_not)
+    m2.metric("รอผ่าตัด", n_hold)
+    m3.metric("ในห้องผ่าตัด", n_inor)
+    m4.metric("รอจำหน่าย", n_post)
+    m5.metric("จำหน่าย", n_done)
 
     # ---------- action handlers ----------
     # (มี guard กันกดรัว/กดซ้ำ — ถ้าสถานะเปลี่ยนไปแล้วจากคลิกก่อนหน้า ไม่ทำซ้ำ)
