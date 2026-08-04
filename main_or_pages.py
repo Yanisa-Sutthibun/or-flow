@@ -1487,6 +1487,102 @@ def _room_focus_fragment(room_no):
         else:
             st.success("ห้องว่าง — ไม่มีเคสค้างของห้องนี้แล้ววันนี้ 🎉")
 
+    # ── แถวล่าง (มุคกี้เคาะ 4 ส.ค. 2026): ซ้าย ✏️ แก้เวลา · ขวา 🕓 คิวรอของห้อง ──
+    #    ทั้ง demo และ production — บันทึกเวลาแล้วดันขึ้นบอร์ดกลางทันที
+    #    บอร์ดหลัก (หน้าตารางผ่าตัด) เห็นค่าใหม่ในรอบซิงก์ถัดไป (≤30 วิ)
+    st.markdown("---")
+    cl, cr = st.columns([2, 3])
+    with cl:
+        st.markdown("**✏️ แก้เวลาคาดการณ์ใช้ห้อง (นาที)**")
+        if cur is not None:
+            _ce = cases[cur]
+            _eff0 = int(_ce.get('effective_min') or _ce.get('ai_predicted_min')
+                        or _ce.get('predicted_min') or 30)
+            with st.form("rf_ov_form", border=False):
+                _new_t = st.number_input("นาที", min_value=5, max_value=600,
+                                         value=_eff0, key="rf_ov_min",
+                                         label_visibility="collapsed")
+                _sv = st.form_submit_button("💾 บันทึก")
+            if _sv and int(_new_t) != _eff0:
+                # 🔗 ทางเดินเดียวกับ ✏️ บนบอร์ดหลัก: override + log + ขึ้นบอร์ดกลาง
+                _ce['user_override_min'] = int(_new_t)
+                _ce['effective_min'] = int(_new_t)
+                try:
+                    from main_or_db import log_override
+                    log_override(_ce, int(_new_t))
+                except Exception as _ex:
+                    print(f"[override_log] log_override ล้มเหลว: {_ex}")
+                _save_board_snapshot(cases)
+                st.session_state['_board_dirty'] = False
+                _toast_ok("บันทึกเวลาแล้ว ✓")
+                _rerun_board()
+            st.caption("แก้ได้เฉพาะเคสที่กำลังผ่าของห้องนี้ · "
+                       "ย้ายห้อง/ลบเคส เป็นสิทธิ์ของจอรับ-ส่ง")
+        else:
+            st.caption("ยังไม่มีเคสกำลังผ่า — แก้เวลาได้เมื่อเคสเข้าห้อง")
+    with cr:
+        _wait = [c for c in cases if _r(c) == room_no
+                 and c.get('status') in ('not_arrived', 'holding_pre')]
+        st.markdown(f"**🕓 คิวรอของ {room_label(room_no)} ({len(_wait)} เคส)**")
+        if _wait:
+            # 🔒 กติกาเดียวกับบอร์ดหลัก: โชว์ล็อกคิวเมื่อเลขคิวในห้อง "ไม่ซ้ำกัน"
+            _ords = []
+            for _x in cases:
+                if _r(_x) != room_no or _x.get('is_tf'):
+                    continue
+                try:
+                    _xo = int(_x.get('ororder'))
+                except (TypeError, ValueError):
+                    continue
+                if _xo and _xo != 99:
+                    _ords.append(_xo)
+            _lock_ok = len(_ords) == len(set(_ords))
+
+            def _skey(c):
+                try:
+                    _sm = (int(c.get('sched_hour') or 8) * 60
+                           + int(c.get('sched_min') or 0))
+                except (TypeError, ValueError):
+                    _sm = 9999
+                return (0 if c.get('status') == 'holding_pre' else 1,
+                        _sm, c.get('ororder') or 999)
+
+            _rows = []
+            for _w in sorted(_wait, key=_skey):
+                _t = ('TF' if _w.get('is_tf') else
+                      f"{int(_w.get('sched_hour') or 8):02d}:"
+                      f"{int(_w.get('sched_min') or 0):02d}")
+                try:
+                    _o = int(_w.get('ororder'))
+                except (TypeError, ValueError):
+                    _o = None
+                _q = (f'🔒 คิว {_o} · ' if (_lock_ok and _o and _o != 99
+                                            and not _w.get('is_tf')) else '')
+                _ai = int(_w.get('effective_min') or _w.get('predicted_min') or 0)
+                _ai_txt = f' · AI ~{_ai} นาที' if _ai else ''
+                if _w.get('status') == 'holding_pre':
+                    _chip = ('<span style="background:#fdf3dd;color:#9a6700;'
+                             'border-radius:10px;padding:2px 10px;font-size:12.5px;'
+                             'white-space:nowrap;">รอผ่าตัด</span>')
+                else:
+                    _chip = ('<span style="background:#f1f5f9;color:#64748b;'
+                             'border-radius:10px;padding:2px 10px;font-size:12.5px;'
+                             'white-space:nowrap;">ยังไม่มา</span>')
+                _rows.append(
+                    f'<div style="display:flex;align-items:center;gap:10px;'
+                    f'border-top:1px solid #eef2f6;padding:7px 0;font-size:14.5px;">'
+                    f'<span style="color:#94a3b8;white-space:nowrap;">{_q}{_t}</span>'
+                    f'<span style="font-weight:600;color:#0f172a;white-space:nowrap;">'
+                    f'{mask_patient_name(_w.get("name") or "-")}</span>'
+                    f'<span style="color:#64748b;flex:1;min-width:0;overflow:hidden;'
+                    f'text-overflow:ellipsis;white-space:nowrap;">'
+                    f'{(_w.get("procedure") or "-")}{_ai_txt}</span>'
+                    f'{_chip}</div>')
+            st.markdown(''.join(_rows), unsafe_allow_html=True)
+            st.caption("อ่านอย่างเดียว — การรับเข้า/เข้าห้อง กดที่จอรับ-ส่ง")
+        else:
+            st.caption("ไม่มีเคสรอของห้องนี้แล้ววันนี้")
+
     # ↩️ Forgiveness: เลิกทำการกดเสร็จล่าสุดของห้องนี้ (แก้กดพลาด/เลือกปลายทางผิด)
     done_last = next((i for i in range(len(cases) - 1, -1, -1)
                       if _r(cases[i]) == room_no
