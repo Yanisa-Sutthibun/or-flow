@@ -509,6 +509,12 @@ def _or_board_demo():
         elif d['room'] == 92 and d['ororder'] == 3:
             c['status'] = 'holding_pre'
             c['time_arrived_holding'] = now - timedelta(minutes=72)
+        # 🕓 เคส TF — to follow (มุคกี้สั่ง 4 ส.ค. 2026): เพื่อความสมจริงของบอร์ด
+        #    OR4#3 กับ OR8#2 ไม่ระบุเวลานัด → ป้าย "นัด" ขึ้น TF และ placeholder
+        #    23:55 ดันเคสไปท้ายคิวของห้องตัวเองอัตโนมัติ (กลไกเดียวกับ production)
+        if (d['room'], d['ororder']) in ((93, 3), (97, 2)):
+            c['is_tf'] = True
+            c['sched_hour'], c['sched_min'] = 23, 55
         cases.append(c)
     return cases
 

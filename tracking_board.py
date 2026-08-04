@@ -112,6 +112,23 @@ def _demo_fx_tb() -> bool:
         return False
 
 
+def _sched_order_html(c, tlabel):
+    """🎨 demo (มุคกี้สั่ง 4 ส.ค. 2026): คอลัมน์ "นัด" แสดงลำดับคิว 🔒 ใต้เวลา
+    เฉพาะเคสที่ถูกจัดลำดับมาจากไฟล์ HIS (ororder จริง — Manual 99 ไม่ติดล็อก)
+    production แสดงเวลานัดเดิมล้วน"""
+    base = tlabel(c)
+    if not _demo_fx_tb():
+        return base
+    try:
+        o = int(c.get('ororder'))
+    except (TypeError, ValueError):
+        return base
+    if o and o != 99:
+        return (f'{base}<br><span style="font-size:10.5px;color:#94a3b8;'
+                f'white-space:nowrap;">🔒 คิว {o}</span>')
+    return base
+
+
 def _esc(v) -> str:
     """🔒 M-01: หนี HTML กันค่าจาก CSV (ชื่อ/หัตถการ/แพทย์) ฝัง <script> หรือทำการ์ดพังใน iframe"""
     return html.escape(str(v)) if v is not None else ''
@@ -444,12 +461,13 @@ def _holding_row_iframe(c, loc, tlabel, now):
             f'<script>var el0={el0:.0f},t0=Date.now(),t=document.getElementById("t"),'
             f'row=document.getElementById("row"),emer={1 if emer else 0};'
             'function u(){var el=el0+(Date.now()-t0)/1000,d=Math.floor(el/60),'
-            'sec=Math.floor(el%60),c=d<60?"#22a565":"#e24b4a";'
-            'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.background="#e24b4a";return}'
+            'sec=Math.floor(el%60),c=d<60?"#22a565":"#e3920b";'
+            'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.background="#e3920b";return}'
             't.style.background=c;'
+            # 🎨 เคาะ 4 ส.ค. 2026: กรอบครีม = ปัญหาเวลา · กรอบแดงสงวนให้ฉุกเฉิน
             'if(!emer&&d>=60){row.style.background="#fff8e1";'
-            'row.style.border="1px solid #f5c6c5";'
-            'row.style.borderLeft="3px solid #e24b4a";}'
+            'row.style.border="1px solid #f0deb0";'
+            'row.style.borderLeft="3px solid #e3920b";}'
             't.textContent="⏱ รอแล้ว "+d+":"+String(sec).padStart(2,"0")}'
             'u();setInterval(u,1000)</script>'
         )
@@ -472,7 +490,7 @@ def _holding_row_iframe(c, loc, tlabel, now):
         f'<div id="row" style="display:flex;align-items:center;gap:10px;{border_css}'
         f'background:#fffcf3;border-radius:10px;padding:9px 12px;">'
         f'<span style="min-width:78px;font-size:14px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
-        f'<span style="min-width:46px;font-size:13px;color:#64748b;">{tlabel(c)}</span>'
+        f'<span style="min-width:46px;font-size:13px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
         f'{emg_html}'
         f'<span style="font-size:15px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
@@ -507,7 +525,7 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
         f'<div id="rw" style="display:flex;align-items:center;gap:10px;{border_css}'
         f'background:#f4fbf7;border-radius:10px;padding:9px 12px;">'
         f'<span style="min-width:78px;font-size:14px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
-        f'<span style="min-width:46px;font-size:13px;color:#64748b;">{tlabel(c)}</span>'
+        f'<span style="min-width:46px;font-size:13px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
         f'{emg_html}'
         f'<span style="font-size:15px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
@@ -543,7 +561,11 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
            't.textContent=m+":"+z(ss)+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);')
         + 't.style.color="#c0392b";b.style.width="100%";b.style.background="#e24b4a";'
         'ch.textContent="เกินเวลา";ch.style.background="#fbe9e8";ch.style.color="#c0392b";'
-        'rw.style.background="#fdf3f3";}}'
+        'rw.style.background="#fdf3f3";'
+        # 🎨 demo (เคาะ 4 ส.ค. 2026): กรอบครีมบนแถวผ่าเกินเวลา — ภาษาเดียวกับรอนาน
+        + ('rw.style.border="1px solid #f0deb0";'
+           'rw.style.borderLeft="3px solid #e3920b";' if _demo_fx_tb() else '')
+        + '}}'
         'u();setInterval(u,1000)</script></body></html>'
     )
 
@@ -598,7 +620,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 f'{border_css}background:{bg};'
                 f'border-radius:10px;padding:9px 12px;margin:2px 0;">'
                 f'<span style="min-width:78px;font-size:14px;font-weight:600;color:{room_fg};">{loc(c)}</span>'
-                f'<span style="min-width:46px;font-size:13px;color:{sub_fg};">{tlabel(c)}</span>'
+                f'<span style="min-width:46px;font-size:13px;color:{sub_fg};">{_sched_order_html(c, tlabel)}</span>'
                 f'<span style="flex:1;min-width:0;overflow:hidden;">'
                 f'{emg_html}'
                 f'<span style="font-size:15px;font-weight:600;color:{name_fg};">{_pt_name(c)}</span>'
