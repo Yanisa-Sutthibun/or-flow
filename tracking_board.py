@@ -119,9 +119,15 @@ def _sched_order_html(c, tlabel):
     · เคส TF ไม่ติดล็อก ขึ้น TF เฉย ๆ (ตามหลังคิว = คิวยังไม่ล็อก)
     · เลขคิวในห้องเดียวกันซ้ำ (เช่นมา 1 ทั้งห้อง = HIS ยังไม่จัดคิว
       จะจัดหน้างานวันผ่าจริง) → ซ่อนล็อกทั้งห้อง กันเลขหลอกตา
-    production แสดงเวลานัดเดิมล้วน"""
+    production แสดงเวลานัดเดิมล้วน (ยกเว้น hover TF — มีทั้งสองระบบ)"""
     base = tlabel(c)
-    if not _demo_fx_tb() or c.get('is_tf'):
+    if c.get('is_tf'):
+        # 🕓 TF hover (มุคกี้สั่ง 4 ส.ค. 2026): อธิบายความหมายทั้ง demo และ
+        #    production — To Follow = ตามหลัง เริ่มเมื่อเคสก่อนหน้าในห้องเสร็จ
+        return (f'<span title="TF = To Follow (ตามหลัง) — ไม่กำหนดเวลานัด '
+                f'เริ่มผ่าเมื่อเคสก่อนหน้าในห้องเดียวกันเสร็จ" '
+                f'style="cursor:help;">{base}</span>')
+    if not _demo_fx_tb():
         return base
     try:
         o = int(c.get('ororder'))
