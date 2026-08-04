@@ -1045,7 +1045,6 @@ def _board_fragment():
             #    จบวงจรเหมือนระบบจริง (บอร์ดว่างรอวันใหม่ ไม่ค้างสวิตช์เปิดกำกวม)
             if _is_demo_instance and st.session_state.get('_or_demo'):
                 st.session_state['_or_demo'] = False
-                st.session_state['orboard_demo_toggle'] = False
         st.session_state['_board_last_date'] = _today_iso
         if _HAS_FRAGMENT:
             # ⏲️ fragment run_every=30 คือ "tick" ในตัว — ครบ ~25 วิจาก pull ล่าสุด
@@ -1142,14 +1141,20 @@ def _board_fragment():
         elif _room_scope_board:
             _demo_on = bool(st.session_state.get('_or_demo'))
         else:
-            # 🔧 3 ส.ค. 2026: value= จากธง _or_demo — สลับไปแท็บอื่นแล้วกลับมา
-            #    Streamlit ล้างสถานะสวิตช์ (widget cleanup) ทำให้สาธิตดับเอง
-            #    seed ค่าจากธงจริง = สาธิตรันต่อจนกว่าผู้ใช้กดปิดเองเท่านั้น
-            _demo_on = st.toggle(
-                "🎬 สาธิต", key="orboard_demo_toggle",
-                value=bool(st.session_state.get('_or_demo')),
-                help="เมื่อกดเปิดจะมีเคสสาธิตขึ้นมาให้ สามารถกดใช้งานเหมือนระบบ "
-                     "OR Flow เมื่อกดปิดเคสสาธิตจะหายไป")
+            # 🔘 4 ส.ค. 2026 (มุคกี้สั่ง): toggle เคยค้าง (widget-state cleanup
+            #    ข้ามแท็บ ทำให้กดเปิด-ปิดไม่ติด) → เปลี่ยนเป็นปุ่มกดตรง ๆ
+            #    ปุ่ม = stateless สั่งธง _or_demo ทันที ไม่มีสถานะ widget ให้ค้าง
+            #    เห็นทีละปุ่มตามสถานะจริง (Hick's Law: ทางเลือกเดียว กดไม่พลาด)
+            _demo_on = bool(st.session_state.get('_or_demo'))
+            if _demo_on:
+                if st.button("⏹️ ปิดโหมดสาธิต", key="orboard_demo_off",
+                             help="ปิดแล้วเคสสาธิตทั้งหมดจะถูกล้างออกจากบอร์ด"):
+                    _demo_on = False
+            else:
+                if st.button("🎬 เปิดโหมดสาธิต", key="orboard_demo_on",
+                             help="เปิดแล้วจะมีเคสสาธิตพร้อมใช้งาน "
+                                  "กดปุ่มต่าง ๆ ได้เหมือนระบบจริง"):
+                    _demo_on = True
     if _demo_on and not st.session_state.get('_or_demo'):
         st.session_state.patient_cases = _or_board_demo()
         st.session_state['_or_demo'] = True

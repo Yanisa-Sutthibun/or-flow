@@ -453,18 +453,17 @@ def _holding_row_iframe(c, loc, tlabel, now):
     emg_html = _EMG_BADGE if emer else ''
     border_css = ('border:1px solid #f5c6c5;border-left:3px solid #e0312e;'
                   if emer else 'border:1px solid #eef2f6;')
-    # 🎨 demo (มุคกี้ปรับ 3 ส.ค. 2026 รอบ 2): เกณฑ์เดียว = 60 นาที
-    #    รอเกิน 60 → คาดเหลืองครีมทั้งแถว + ชิปโทนเหลือง (แดงสงวนให้เกินเวลาผ่า/EMG)
-    #    เคสฉุกเฉินคงขอบแดง EMG เดิม ไม่ทับ · production JS เดิมเป๊ะ
+    # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026 รอบสุดท้าย): เกณฑ์เดียว = 60 นาที
+    #    รอเกิน 60 → แถบเหลืองครีมทั้งแถว + ชิปนาฬิกาเปลี่ยนเป็นสีแดง
+    #    แถบแดงทั้งแถวสงวนให้เคสฉุกเฉินเท่านั้น · production JS เดิมเป๊ะ
     if _demo_fx_tb():
         _js = (
             f'<script>var el0={el0:.0f},t0=Date.now(),t=document.getElementById("t"),'
             f'row=document.getElementById("row"),emer={1 if emer else 0};'
             'function u(){var el=el0+(Date.now()-t0)/1000,d=Math.floor(el/60),'
-            'sec=Math.floor(el%60),c=d<60?"#22a565":"#e3920b";'
-            'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.background="#e3920b";return}'
+            'sec=Math.floor(el%60),c=d<60?"#22a565":"#e24b4a";'
+            'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.background="#e24b4a";return}'
             't.style.background=c;'
-            # 🎨 เคาะ 4 ส.ค. 2026: กรอบครีม = ปัญหาเวลา · กรอบแดงสงวนให้ฉุกเฉิน
             'if(!emer&&d>=60){row.style.background="#fff8e1";'
             'row.style.border="1px solid #f0deb0";'
             'row.style.borderLeft="3px solid #e3920b";}'
@@ -488,7 +487,8 @@ def _holding_row_iframe(c, loc, tlabel, now):
         f"{_EMG_CSS}"
         '</style></head><body>'
         f'<div id="row" style="display:flex;align-items:center;gap:10px;{border_css}'
-        f'background:#fffcf3;border-radius:10px;padding:9px 12px;">'
+        f'background:{(("#fdeeee" if emer else "#ffffff") if _demo_fx_tb() else "#fffcf3")};'
+        f'border-radius:10px;padding:9px 12px;">'
         f'<span style="min-width:78px;font-size:14px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
         f'<span style="min-width:46px;font-size:13px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
@@ -516,6 +516,10 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
     Date.now() ของเครื่อง — ไม่พึ่ง .timestamp() ที่เพี้ยนข้าม timezone"""
     ent = c.get('time_entered_or')
     el0 = max((now - ent).total_seconds(), 0) if (ent is not None and hasattr(ent, 'hour')) else 0
+    # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026): เอาแถบเขียวออก — แถวปกติพื้นขาว
+    #    แถบสีสงวนไว้สื่อ "ปัญหา" เท่านั้น: เหลือง = เวลา · แดง = ฉุกเฉิน
+    _emer = _is_emer(c)
+    _bg = ('#fdeeee' if _emer else '#ffffff') if _demo_fx_tb() else '#f4fbf7'
     return (
         '<html><head><style>'
         "*{margin:0;padding:0;box-sizing:border-box}"
@@ -523,7 +527,7 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
         f"{_EMG_CSS}"
         '</style></head><body>'
         f'<div id="rw" style="display:flex;align-items:center;gap:10px;{border_css}'
-        f'background:#f4fbf7;border-radius:10px;padding:9px 12px;">'
+        f'background:{_bg};border-radius:10px;padding:9px 12px;">'
         f'<span style="min-width:78px;font-size:14px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
         f'<span style="min-width:46px;font-size:13px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
@@ -540,7 +544,8 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
         f'overflow:hidden;margin-top:3px;"><span id="b" style="display:block;height:100%;'
         f'width:0%;background:#22a565;"></span></span>{callnext_html}</span>'
         f'</div>'
-        f'<script>var el0={el0:.0f},t0=Date.now(),eff={int(eff)};'
+        f'<script>var el0={el0:.0f},t0=Date.now(),eff={int(eff)}'
+        + (f',emer={1 if _emer else 0}' if _demo_fx_tb() else '') + ';'
         'var t=document.getElementById("t"),b=document.getElementById("b"),'
         'ch=document.getElementById("ch"),rw=document.getElementById("rw");'
         'function z(x){return String(x).padStart(2,"0")}'
@@ -561,10 +566,13 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
            't.textContent=m+":"+z(ss)+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);')
         + 't.style.color="#c0392b";b.style.width="100%";b.style.background="#e24b4a";'
         'ch.textContent="เกินเวลา";ch.style.background="#fbe9e8";ch.style.color="#c0392b";'
-        'rw.style.background="#fdf3f3";'
-        # 🎨 demo (เคาะ 4 ส.ค. 2026): กรอบครีมบนแถวผ่าเกินเวลา — ภาษาเดียวกับรอนาน
-        + ('rw.style.border="1px solid #f0deb0";'
-           'rw.style.borderLeft="3px solid #e3920b";' if _demo_fx_tb() else '')
+        # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026): ผ่าเกินเวลา = แถบเหลืองครีม
+        #    (ภาษาเดียวกับรอนาน) · เคสฉุกเฉินคงแถบแดงไว้ ไม่ทับ · production เดิม
+        + ('if(!emer){rw.style.background="#fff8e1";'
+           'rw.style.border="1px solid #f0deb0";'
+           'rw.style.borderLeft="3px solid #e3920b";}'
+           if _demo_fx_tb() else
+           'rw.style.background="#fdf3f3";')
         + '}}'
         'u();setInterval(u,1000)</script></body></html>'
     )
@@ -593,6 +601,12 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     emg_html = _EMG_BADGE if emer else ''
     border_css = ('border:1px solid #f5c6c5;border-left:3px solid #e0312e;'
                   if emer else 'border:1px solid #eef2f6;')
+    # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026): แถบสี = ภาษาปัญหาเท่านั้น
+    #    ฉุกเฉิน = แถบแดงอ่อน · เกินเวลา = แถบเหลืองครีม · แถวปกติพื้นขาว
+    #    (แถบเขียว/ครีมประจำสถานะเอาออก) · จำหน่ายแล้วคงเทาหรี่ · production เดิม
+    if _demo_fx_tb() and not muted:
+        bg = ('#fdeeee' if emer
+              else '#fff8e1' if disp == 'overrun' else '#ffffff')
     room_fg = '#b6c2cf' if muted else '#1565c0'
     name_fg = '#94a3b8' if muted else '#0f172a'
     sub_fg = '#b6c2cf' if muted else '#64748b'
