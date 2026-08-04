@@ -148,11 +148,27 @@ def _toast_ok(msg="อัปเดตแล้ว ✓"):
 
 
 def _flush_toast():
-    """โชว์ toast ที่ฝากไว้ก่อน rerun — เรียกที่ต้นทุก fragment ที่มีปุ่ม"""
+    """โชว์ toast ที่ฝากไว้ก่อน rerun — เรียกที่ต้นทุก fragment ที่มีปุ่ม
+    🐛 3 ส.ค. 2026: st.toast รุ่นใหม่กลายเป็นการ์ดมุมบน+ปุ่มปิด (ดูเป็น popup)
+    → ทำ snackbar เองด้วย CSS: ป้ายเล็กมุมล่างขวา เด้งขึ้น ~3 วิ จางหายเอง"""
     _msg = st.session_state.pop('_pending_toast', None)
     if _msg:
         try:
-            st.toast(_msg)
+            import html as _html
+            st.markdown(
+                f'<div class="or-toast">{_html.escape(str(_msg))}</div>'
+                '<style>'
+                '.or-toast{position:fixed;bottom:26px;right:26px;z-index:99999;'
+                'background:#1f2937;color:#fff;padding:10px 22px;'
+                'border-radius:10px;font-size:15px;font-weight:600;'
+                'box-shadow:0 4px 16px rgba(0,0,0,.28);pointer-events:none;'
+                'animation:orTIn .25s ease, orTOut .5s ease 2.8s forwards;}'
+                '@keyframes orTIn{from{opacity:0;transform:translateY(16px)}'
+                'to{opacity:1;transform:none}}'
+                '@keyframes orTOut{to{opacity:0;transform:translateY(10px);'
+                'visibility:hidden}}'
+                '</style>',
+                unsafe_allow_html=True)
         except Exception:
             pass
 
