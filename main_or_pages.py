@@ -136,12 +136,25 @@ def _mask_nurse_name(name):
 
 def _toast_ok(msg="อัปเดตแล้ว ✓"):
     """🎨 demo (2 ส.ค. 2026): ตอบรับทันทีทุกปุ่ม (Doherty Threshold) —
-    production เงียบตามเดิม รอผลประเมินผู้ทรงก่อนค่อยยกไป"""
+    production เงียบตามเดิม รอผลประเมินผู้ทรงก่อนค่อยยกไป
+    🐛 3 ส.ค. 2026: st.toast ตรง ๆ ถูก rerun_board() บรรทัดถัดไปกลืนทุกครั้ง
+    (rerun ทิ้ง output ของรอบปัจจุบัน) → ฝากข้อความใน session แล้วให้
+    _flush_toast() โชว์ตอนต้นรอบถัดไปแทน — ตายังเห็นเป็น 'ทันที' เหมือนเดิม"""
     try:
         if str(st.secrets.get('instance_mode', '')).lower() == 'demo':
-            st.toast(msg)
+            st.session_state['_pending_toast'] = msg
     except Exception:
         pass
+
+
+def _flush_toast():
+    """โชว์ toast ที่ฝากไว้ก่อน rerun — เรียกที่ต้นทุก fragment ที่มีปุ่ม"""
+    _msg = st.session_state.pop('_pending_toast', None)
+    if _msg:
+        try:
+            st.toast(_msg)
+        except Exception:
+            pass
 
 
 def apply_finish(cases, idx, R, dest):
@@ -960,6 +973,7 @@ def _board_fragment():
     #    (idempotent: มี key แล้ว = ไม่ทำอะไร)
     from main_or_core import init_session_state as _iss
     _iss()
+    _flush_toast()   # 🎨 โชว์ toast ที่ฝากไว้จากปุ่มรอบก่อน (demo)
 
     # 🖥️ instance นี้เป็นแอป DEMO ไหม — ใช้ตัดสินตลอดทั้ง fragment:
     #    demo instance = โหมดสาธิตซิงก์ขึ้นบอร์ดกลาง (schema demo) เต็มรูปแบบ
@@ -1357,6 +1371,7 @@ def page_room_focus(room_no):
 def _room_focus_fragment(room_no):
     from room_config import room_label
     from main_or_db import mask_patient_name
+    _flush_toast()   # 🎨 โชว์ toast ที่ฝากไว้จากปุ่มรอบก่อน (demo)
 
     # ดึงบอร์ดกลางทุกรอบ (จอนี้ไม่มีช่องพิมพ์ — ดึงได้เสมอ เว้นมีงานค้างยังไม่เซฟ)
     if not st.session_state.get('_board_dirty'):
