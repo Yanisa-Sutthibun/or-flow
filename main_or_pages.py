@@ -811,12 +811,16 @@ def _render_add_case_form(demo_active):
         _rerun_board()
 
 
-def render_csv_upload():
+def render_csv_upload(bare=False):
     """📤 อัปโหลดตารางผ่าตัด (CSV+preop) — อยู่บนหน้าตารางผ่าตัด เหนือ ➕ เพิ่มเคส
     🔓 19 ก.ค. 2026 (มุคกี้สั่ง): อัปโหลดเปิดให้พยาบาลทุกคน ไม่ต้องใส่ PIN —
-    PIN ย้ายไปคุมเฉพาะ 🗑️ ล้างกระดาน (ลบได้เฉพาะผู้ดูแล)"""
+    PIN ย้ายไปคุมเฉพาะ 🗑️ ล้างกระดาน (ลบได้เฉพาะผู้ดูแล)
+    bare=True (5 ส.ค. 2026): วาดเนื้อในโดยไม่ห่อ expander — ใช้ในแท็บ 🧰 เครื่องมือ"""
+    import contextlib
     _demo_active = bool(st.session_state.get('_or_demo'))
-    with st.expander("📤 อัปโหลดตารางผ่าตัดวันนี้ (CSV/Excel)", expanded=False):
+    _wrap = (contextlib.nullcontext() if bare else
+             st.expander("📤 อัปโหลดตารางผ่าตัดวันนี้ (CSV/Excel)", expanded=False))
+    with _wrap:
         # 🖥️ ข้อความนำต่างกันตาม instance (มุคกี้สั่ง 2 ส.ค. 2026)
         try:
             _demo_inst_up = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
@@ -1203,7 +1207,7 @@ def _board_fragment():
     _demo_active = bool(st.session_state.get('_or_demo'))
 
     # ❓ วิธีใช้ (UX audit 3 ก.ค. 2026)
-    with st.expander("❓ วิธีใช้บอร์ดตารางผ่าตัด", expanded=False):
+    def _board_help_md():
         st.markdown(
             "แผนการไหลของผู้ป่วย (Patient work flow) เมื่อมารับการผ่าตัด\n\n"
             "1. ผู้ป่วยมาถึงห้องรับ-ส่ง → กด **รับเข้า**\n"
@@ -1230,15 +1234,24 @@ def _board_fragment():
             "พยาบาลสามารถปรับเวลาทับค่าที่ AI ทำนายได้เสมอ (✏️) "
             "และระบบบันทึกทั้งสองค่าไว้เปรียบเทียบ")
 
-    # ---------- 📤 อัปโหลด CSV — ย้ายกลับมาบอร์ด 14 ก.ค. 2026 (เหนือ ➕ เพิ่มเคส)
-    #    🗑️ ล้างกระดานวันนี้ = ตัวเลือกท้าย expander อัปโหลด (คลิกเลือก)
-    #    🚪 โหมดจอประจำห้อง: ซ่อนอัปโหลด/เพิ่มเคส/ล้างกระดาน — งานของจอรับ-ส่ง
+    # ---------- 🧰 เครื่องมือ — มุคกี้สั่ง 5 ส.ค. 2026: ยุบ 3 แถวเหลือแถวเดียว ----------
+    #    (อัปโหลดใช้แค่ตอนเช้า · เพิ่มเคส/วิธีใช้นาน ๆ ครั้ง) คืนพื้นที่ให้ KPI เด่นขึ้น
+    #    🚪 โหมดจอประจำห้อง: เหลือเฉพาะแท็บวิธีใช้ — อัปโหลด/เพิ่มเคส = งานจอรับ-ส่ง
     if not _room_scope_board:
-        render_csv_upload()
-
-        # ---------- ➕ เพิ่มเคส (Manual) — ทุกคนเพิ่มได้ ----------
-        with st.expander("➕ เพิ่มเคส (Manual)", expanded=False):
-            _render_add_case_form(_demo_active)
+        with st.expander("🧰 เครื่องมือ — อัปโหลดตารางวันนี้ · เพิ่มเคส · วิธีใช้บอร์ด",
+                         expanded=False):
+            _tb_up, _tb_add, _tb_help = st.tabs(
+                ["📤 อัปโหลดตารางวันนี้ (CSV/Excel)", "➕ เพิ่มเคส (Manual)",
+                 "❓ วิธีใช้บอร์ด"])
+            with _tb_up:
+                render_csv_upload(bare=True)
+            with _tb_add:
+                _render_add_case_form(_demo_active)
+            with _tb_help:
+                _board_help_md()
+    else:
+        with st.expander("❓ วิธีใช้บอร์ดตารางผ่าตัด", expanded=False):
+            _board_help_md()
 
     # ---------- empty state ----------
     if not cases:
@@ -1248,15 +1261,15 @@ def _board_fragment():
                     "เคสจะขึ้นที่นี่อัตโนมัติ")
         elif _is_demo_instance:
             st.info("ยังไม่มีเคสบนบอร์ดวันนี้\n\n"
-                    "- อยากลองใช้ก่อน → เปิดสวิตช์ **🎬 สาธิต** ด้านบน "
+                    "- อยากลองใช้ก่อน → กดปุ่ม **🎬 เปิดโหมดสาธิต** ด้านบน "
                     "(ข้อมูลตัวอย่าง ไม่บันทึกจริง)\n"
-                    "- หรืออัปโหลดไฟล์ทดสอบที่ **📤 อัปโหลดตารางผ่าตัดวันนี้ "
-                    "(CSV/Excel)** ด้านบน")
+                    "- หรืออัปโหลดไฟล์ทดสอบที่ **🧰 เครื่องมือ** ด้านบน "
+                    "แท็บ 📤 อัปโหลดตารางวันนี้")
         else:
             st.info("ยังไม่มีเคสบนบอร์ดวันนี้\n\n"
-                    "- อัปโหลดตารางจาก HIS ที่ **📤 อัปโหลดตารางผ่าตัดวันนี้ "
-                    "(CSV/Excel)** ด้านบน (แนะนำไฟล์ Excel)\n"
-                    "- หรือเพิ่มเคสเองที่ **➕ เพิ่มเคส (Manual)**")
+                    "- อัปโหลดตารางจาก HIS ที่ **🧰 เครื่องมือ** ด้านบน "
+                    "แท็บ 📤 อัปโหลดตารางวันนี้ (แนะนำไฟล์ Excel)\n"
+                    "- หรือเพิ่มเคสเองที่แท็บ **➕ เพิ่มเคส (Manual)**")
         return
 
     # ---------- counters ----------
@@ -1266,14 +1279,25 @@ def _board_fragment():
     n_post = sum(1 for c in cases if c['status'] in ('holding_post', 'recovery'))
     n_done = sum(1 for c in cases if c['status'] == 'discharged')
 
-    m1, m2, m3, m4, m5 = st.columns(5)
-    # 🎨 มุคกี้สั่ง 4 ส.ค. 2026 (ทั้ง demo และ production): ตัดไอคอนหน้า KPI —
-    #    อีโมจิเรนเดอร์ต่างเครื่องแล้วดูไม่เข้าชุดกัน (โดยเฉพาะ 🚪)
-    m1.metric("ยังไม่มา", n_not)
-    m2.metric("รอผ่าตัด", n_hold)
-    m3.metric("ในห้องผ่าตัด", n_inor)
-    m4.metric("รอจำหน่าย", n_post)
-    m5.metric("จำหน่าย", n_done)
+    # 🎨 KPI การ์ดใหญ่ (มุคกี้สั่ง 5 ส.ค. 2026): เลขเด่น อ่านข้ามห้องได้
+    #    ป้ายสถานะใช้สีชุดเดียวกับชิปบนบอร์ด · ไม่มีไอคอน (เรนเดอร์ไม่เข้าชุด)
+    _KPI = [('ยังไม่มา', n_not, '#64748b', '#f1f5f9'),
+            ('รอผ่าตัด', n_hold, '#9a6700', '#fdf3dd'),
+            ('ในห้องผ่าตัด', n_inor, '#0f6e56', '#e1f5ee'),
+            ('รอจำหน่าย', n_post, '#1565c0', '#e3f0fb'),
+            ('จำหน่าย', n_done, '#475569', '#eceff3')]
+    st.markdown(
+        '<div style="display:flex;gap:12px;margin:6px 0 12px;">'
+        + ''.join(
+            f'<div style="flex:1;background:#ffffff;border:1px solid #eef2f6;'
+            f'border-radius:14px;padding:12px 16px 10px;">'
+            f'<span style="display:inline-block;background:{_bg};color:{_fg};'
+            f'border-radius:9px;padding:2px 10px;font-size:12.5px;'
+            f'font-weight:600;white-space:nowrap;">{_lb}</span>'
+            f'<div style="font-size:32px;font-weight:800;color:#0f172a;'
+            f'line-height:1.15;margin-top:6px;">{_v}</div></div>'
+            for _lb, _v, _fg, _bg in _KPI)
+        + '</div>', unsafe_allow_html=True)
 
     # ---------- action handlers ----------
     # (มี guard กันกดรัว/กดซ้ำ — ถ้าสถานะเปลี่ยนไปแล้วจากคลิกก่อนหน้า ไม่ทำซ้ำ)
