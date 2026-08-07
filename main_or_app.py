@@ -29,6 +29,18 @@ from main_or_core import (
 from main_or_pages import page_or_board
 from main_or_admin import page_admin
 from main_or_db import init_db, get_db_stats, save_room_settings, load_room_settings
+from room_config import (
+    get_active_rooms, ROOM_INFO as RC_ROOM_INFO, SPECIALTY_FULL, room_label,
+)
+
+# 🎨 ไอคอนประจำสาขาของห้อง — ใช้ทั้งหน้าตั้งค่าและส่วน 🔗 ลิงก์ติดตั้งจอ
+#    (ผูกกับ "สาขา" ไม่ใช่เลขห้อง → ย้ายสาขา/เพิ่มห้อง ไอคอนตามไปเอง)
+SPECIALTY_ICON = {
+    'SCOPE': '🔬', 'EM': '🚨', 'URO': '💧', 'GEN': '🩺', 'VAS': '🩸',
+    'NEURO': '🧠', 'PLASTIC': '✨', 'ENT': '👂', 'GEN&ENT': '⚕️',
+}
+# คำบรรยายห้องที่เขียนเฉพาะตัว (นอกนั้นสร้างจาก SPECIALTY_FULL อัตโนมัติ)
+ROOM_DESC = {91: 'ห้องรับเคสฉุกเฉิน 24 ชม.'}
 
 # ────────────────────────────────────────────────────────────────────
 # ดึงรายชื่อพยาบาลจริง จาก intraopปี69.xls (nursurgnm + nurcircunm)
@@ -250,31 +262,143 @@ def render_system_status():
         )
 
 
+def _app_base_url() -> str:
+    """URL ของ "แอปที่กำลังรันอยู่" สำหรับประกอบลิงก์ติดตั้งจอ
+
+    ลำดับที่ลอง: secrets app_base_url (ตั้งเองได้ ชนะเสมอ) → Origin/Host header
+    ที่เบราว์เซอร์ส่งมา → '' (คืนค่าว่าง = ผู้เรียกไปใช้ลิงก์สัมพัทธ์แทน)
+
+    ⚠️ ตั้งใจไม่ hardcode URL ไว้ในโค้ด — แอปจริงกับแอปสาธิตใช้โค้ดชุดเดียวกัน
+    (push เดียวอัปเดต 2 แอป) ถ้า hardcode แอปสาธิตจะโชว์ลิงก์ของระบบจริง
+    """
+    try:
+        _u = str(st.secrets.get('app_base_url', '') or '').strip()
+    except Exception:
+        _u = ''
+    if _u.startswith('http'):
+        return _u.rstrip('/')
+    try:
+        _h = {str(k).lower(): str(v) for k, v in dict(st.context.headers or {}).items()}
+    except Exception:
+        _h = {}
+    _origin = str(_h.get('origin', '') or '').strip()
+    if _origin.startswith('http'):
+        return _origin.rstrip('/')
+    _host = str(_h.get('host', '') or '').strip()
+    if _host:
+        _scheme = 'http' if _host.startswith(('localhost', '127.0.0.1')) else 'https'
+        return f"{_scheme}://{_host}"
+    return ''
+
+
+def render_screen_links(room_info: dict):
+    """🔗 ลิงก์ติดตั้งจอ (one stop service — มุคกี้สั่ง 7 ส.ค. 2026)
+
+    รวมลิงก์ที่ต้องเอาไปทำ shortcut ไว้ที่เดียว: 📺 จอญาติ + 🚪 จอประจำห้องทุกห้อง
+    · กุญแจอ่านสดจาก st.secrets ของแอปที่รันอยู่ → แอปจริงได้ชุดจริง แอปสาธิต
+      ได้ชุดสาธิต ไม่ปนกัน และไม่มี token ค้างในโค้ด (PDPA — กันหลุดขึ้น git)
+    · ห้องที่ยังไม่ได้ตั้งกุญแจ = ขึ้นเตือนให้เห็น ไม่ปล่อยหายเงียบ
+      (บทเรียน OR9 ที่ตกหล่นจนจอเปิดไม่ได้)
+    · สิทธิ์: หน้านี้เข้าด้วยรหัสหน่วยงานซึ่งสูงกว่าสิทธิ์จอห้องอยู่แล้ว
+      จอประจำห้องเองเข้าหน้านี้ไม่ได้ (เด้งเข้าหน้าโฟกัสห้องเสมอ)
+    """
+    st.markdown("---")
+    st.markdown("### 🔗 ลิงก์ติดตั้งจอ")
+
+    _is_demo = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    st.caption(
+        ("ชุดลิงก์ของ **ระบบสาธิต**" if _is_demo else "ชุดลิงก์ของ **ระบบจริง**")
+        + " : คัดลอกไปสร้าง shortcut บนเครื่องของห้องนั้นครั้งเดียวจบ "
+          "· อย่าแชร์ลิงก์ข้ามห้อง")
+
+    _base = _app_base_url()
+    if not _base:
+        st.info("อ่าน URL ของแอปไม่ได้ : ตั้งค่า `app_base_url` ใน Secrets "
+                "เพื่อให้ลิงก์ด้านล่างเป็นลิงก์เต็มที่คัดลอกไปใช้ได้")
+
+    def _link(qs: str) -> str:
+        return f"{_base}/?{qs}" if _base else f"./?{qs}"
+
+    # ── 📺 จอญาติ ──────────────────────────────────────────────────
+    try:
+        _fam = str(st.secrets.get('family_board_token', '') or '')
+    except Exception:
+        _fam = ''
+    st.markdown("**📺 จอญาติ (ทีวีหน้าห้องผ่าตัด)**")
+    if _fam:
+        _fam_url = _link(f"view=family&k={_fam}")
+        _fc1, _fc2 = st.columns([1, 3])
+        with _fc1:
+            st.link_button("🔗 เปิดจอญาติ", _fam_url, use_container_width=True)
+        with _fc2:
+            st.code(_fam_url, language=None)
+    else:
+        st.warning("ยังไม่ได้ตั้ง `family_board_token` ใน Secrets ของแอปนี้")
+
+    # ── 🚪 จอประจำห้องผ่าตัด ───────────────────────────────────────
+    try:
+        _rtoks = {str(k): str(v) for k, v in dict(st.secrets.get('room_tokens', {})).items()}
+    except Exception:
+        _rtoks = {}
+    _rooms = list(room_info.keys())
+    _missing = [rm for rm in _rooms if not _rtoks.get(str(rm))]
+
+    with st.expander(f"🚪 จอประจำห้องผ่าตัด ({len(_rooms)} ห้อง)",
+                     expanded=bool(_missing)):
+        if _missing:
+            st.warning("⚠️ ห้องที่ยังไม่ได้ตั้งกุญแจใน Secrets : "
+                       + ", ".join(str(room_info[rm]['name']) for rm in _missing)
+                       + " (จอห้องนี้จะเปิดไม่ได้จนกว่าจะเพิ่มกุญแจใต้ `[room_tokens]`)")
+        _cols = st.columns(3)
+        for _i, _rm in enumerate(_rooms):
+            _info = room_info[_rm]
+            with _cols[_i % 3]:
+                st.markdown(f"**{_info['icon']} {_info['label']}**")
+                _tok = _rtoks.get(str(_rm), '')
+                if _tok:
+                    _url = _link(f"room={_rm}&k={_tok}")
+                    st.link_button("🔗 เปิดจอ", _url, use_container_width=True)
+                    st.code(_url, language=None)
+                else:
+                    st.caption("🔒 ยังไม่ได้ตั้งกุญแจห้องนี้")
+
+    st.caption("กุญแจหลุดหรือสงสัยว่าหลุด : แจ้งผู้วิจัยเพื่อเปลี่ยนกุญแจเฉพาะห้องนั้น "
+               "ใน Secrets แล้ว reboot แอป (ห้องอื่นไม่กระทบ)")
+
+
 def page_room_settings():
     # 👤 production 19 ก.ค. 2026: เปิด/ปิดห้อง = ทุกคนใช้ได้ (รหัสหน่วยงาน) ·
     #    เฉพาะ 📥 นำเข้าข้อมูลย้อนหลัง ที่กันด้วยบทบาทผู้ดูแล (ดูท้ายฟังก์ชัน)
-    # ห้องผ่าตัดศัลยกรรมตึกใหม่ (1 มี.ค. 69) — 8 ห้อง อ้างตาม OR_mapping_reference
+    # 🩹 7 ส.ค. 2026 (มุคกี้แจ้ง): เดิมหน้านี้ copy ลิสต์ห้องมาเขียนเองแค่ 8 ห้อง
+    #    → ตกหล่น OR9 (98) ทั้งหน้า = เปิด/ปิดห้อง OR9 ไม่ได้เลย
+    #    เป็นบั๊กพันธุ์เดียวกับ main_or_utilization ที่เคยลืม OR9 มาแล้ว
+    #    → เลิก copy ถาวร ดึงจาก room_config เป็น single source of truth จุดเดียว
     ROOM_INFO = {
-        90: {'label': 'OR1 — ส่องกล้อง (SCOPE)',        'desc': 'ห้องผ่าตัดส่องกล้อง'},
-        91: {'label': 'OR2 — ฉุกเฉิน (EM) 🚨',          'desc': 'ห้องรับเคสฉุกเฉิน 24 ชม.'},
-        92: {'label': 'OR3 — ทางเดินปัสสาวะ (URO)',     'desc': 'ห้องผ่าตัดระบบทางเดินปัสสาวะ'},
-        93: {'label': 'OR4 — ศัลย์ทั่วไป (GEN)',        'desc': 'ห้องผ่าตัดศัลยกรรมทั่วไป'},
-        94: {'label': 'OR5 — หลอดเลือด (VAS)',          'desc': 'ห้องผ่าตัดหลอดเลือด'},
-        95: {'label': 'OR6 — ประสาท/สมอง (NEURO)',     'desc': 'ห้องผ่าตัดประสาทศัลยศาสตร์'},
-        96: {'label': 'OR7 — ตกแต่ง (PLASTIC)',         'desc': 'ห้องศัลยกรรมตกแต่ง'},
-        97: {'label': 'OR8 — หู คอ จมูก (ENT)',         'desc': 'ห้องผ่าตัด ENT'},
+        _rm: {
+            'name': RC_ROOM_INFO[_rm][0],
+            'icon': SPECIALTY_ICON.get(RC_ROOM_INFO[_rm][1], '🚪'),
+            'label': (f"{RC_ROOM_INFO[_rm][0]} · "
+                      f"{SPECIALTY_FULL.get(RC_ROOM_INFO[_rm][1], RC_ROOM_INFO[_rm][1])} "
+                      f"({RC_ROOM_INFO[_rm][1]})"),
+            'desc': ROOM_DESC.get(_rm,
+                                  'ห้องผ่าตัด' + SPECIALTY_FULL.get(
+                                      RC_ROOM_INFO[_rm][1], RC_ROOM_INFO[_rm][1])),
+        }
+        for _rm in get_active_rooms() if _rm in RC_ROOM_INFO
     }
+    # ★ ผูก ROOM_LIST กับ ROOM_INFO เสมอ — ถ้าใครเพิ่มห้องใน room_config
+    #   แต่ลืมใส่ ROOM_INFO ห้องนั้นจะถูกข้ามเงียบ ๆ ดีกว่าหน้าพังทั้งหน้า
     ROOM_LIST = list(ROOM_INFO.keys())
 
     # page header — slim
-    st.caption('เปิด/ปิด ห้องผ่าตัดที่ใช้งานวันนี้ — ห้องที่ปิดจะไม่แสดงบนบอร์ด')
+    st.caption('เปิด/ปิด ห้องผ่าตัดที่ใช้งานวันนี้ : ห้องที่ปิดจะไม่แสดงบนบอร์ด')
 
     # ⚠️ 1 ส.ค. 2026: คำเตือนหลังบันทึก (เก็บใน session ให้รอด st.rerun) —
     #    ปิดห้องที่ยังมีเคสกำลังผ่า: ทำได้ แต่ต้องรู้ตัว
     _warn_rooms = st.session_state.pop('_room_close_warn', None)
     if _warn_rooms:
         st.warning("⚠️ ปิดห้องที่ยังมีเคสกำลังผ่าอยู่: " + ", ".join(_warn_rooms)
-                   + " — เคสเดิมดำเนินต่อได้จนจบ แต่ห้องจะไม่รับเคสใหม่ "
+                   + " : เคสเดิมดำเนินต่อได้จนจบ แต่ห้องจะไม่รับเคสใหม่ "
                      "(การ์ดภาพรวมวันนี้แสดงป้าย 🔒 ปิดรับเคสใหม่)")
 
     all_inputs = {}
@@ -284,7 +408,7 @@ def page_room_settings():
         # Ensure room exists in session state
         if rm not in st.session_state.room_settings:
             st.session_state.room_settings[rm] = {
-                'enabled': True, 'name': info['label'].split(' — ')[0],
+                'enabled': True, 'name': info['name'],
                 'specialty': info['desc'], 'scrub': ['', ''], 'circ': ['', '', '', ''],
                 'nurses': [],
             }
@@ -294,14 +418,15 @@ def page_room_settings():
                 'status': 'ว่าง', 'current_case': None, 'start_time': None,
                 'predicted_time': None, 'override_time': None, 'is_emergency': False,
                 'staff': {'scrub': '', 'circulating': ''},
-                'name': info['label'].split(' — ')[0], 'specialty': info['desc'],
+                'name': info['name'], 'specialty': info['desc'],
             }
 
         _c1, _c2 = st.columns([4, 1])
         with _c1:
             st.markdown(
                 f'<div style="background:#f8f9fa;padding:10px 16px;border-radius:10px;'
-                f'border-left:4px solid #3498db;"><b>{info["label"]}</b><br>'
+                f'border-left:4px solid #3498db;">'
+                f'<b>{info["icon"]} {info["label"]}</b><br>'
                 f'<span style="color:#7f8c8d;font-size:12px;">{info["desc"]}</span></div>',
                 unsafe_allow_html=True)
         with _c2:
@@ -333,7 +458,7 @@ def page_room_settings():
                     _active_room_nos.add(int(float(_r)))
                 except (TypeError, ValueError):
                     pass
-        _closed_active = [ROOM_INFO[_rm]['label'].split(' — ')[0]
+        _closed_active = [ROOM_INFO[_rm]['name']
                           for _rm, _ri in all_inputs.items()
                           if not _ri['enabled'] and _rm in _active_room_nos]
         if _closed_active:
@@ -344,6 +469,9 @@ def page_room_settings():
     #    แล้ว (14 ก.ค. 2026 — render_csv_upload บนบอร์ด เหนือ ➕ เพิ่มเคส ·
     #    🗑️ ล้างกระดาน = ตัวเลือกใน expander อัปโหลด)
 
+    # 🔗 ลิงก์ติดตั้งจอ (มุคกี้สั่ง 7 ส.ค. 2026 — one stop service)
+    render_screen_links(ROOM_INFO)
+
     st.markdown("---")
     st.markdown("### 🤖 โมเดล AI + สถานะระบบ")
     render_system_status()
@@ -353,12 +481,12 @@ def page_room_settings():
     #    ปลอดภัยเรื่องจริยธรรม: ส่วน fine-tune ถูกถอดจาก process_panel ถาวรแล้ว
     #    (ethics lock) — เหลือเฉพาะ นำเข้าเคส + เติมเวลาจริง + mask ชื่อ
     st.markdown("---")
-    with st.expander("📥 นำเข้าข้อมูลย้อนหลังเข้าฐานสถิติ (เฉพาะผู้ดูแล) 🔒",
+    with st.expander("📥 นำเข้าข้อมูลย้อนหลังเข้าฐานสถิติ (เฉพาะผู้วิจัย) 🔒",
                      expanded=False):
         # 👤 เฉพาะบทบาทผู้ดูแล (login ด้วยรหัสผู้ดูแล) — ไม่ถามรหัสซ้ำ
         if st.session_state.get('role') != 'admin':
-            st.info("🔒 ส่วนนี้สำหรับผู้ดูแลระบบ — ออกจากระบบแล้วเข้าใหม่"
-                    "ด้วยรหัสผู้ดูแล")
+            st.info("🔒 ส่วนนี้สำหรับผู้วิจัย : ออกจากระบบแล้วเข้าใหม่"
+                    "ด้วยรหัสผู้ดูแลระบบ")
         else:
             try:
                 from process_panel import render_process_panel
@@ -599,8 +727,8 @@ def _check_password():
             _is_pg = False
         if _is_pg:
             st.error(
-                "⛔ ระบบยังไม่ได้ตั้งรหัสผ่าน (app_password) — ปิดการเข้าถึงไว้ก่อนเพื่อความปลอดภัย\n\n"
-                "ผู้ดูแล: ไปที่ Streamlit Cloud → App settings → Secrets แล้วเพิ่ม\n"
+                "⛔ ระบบยังไม่ได้ตั้งรหัสผ่าน (app_password) : ปิดการเข้าถึงไว้ก่อนเพื่อความปลอดภัย\n\n"
+                "ผู้วิจัย: ไปที่ Streamlit Cloud → App settings → Secrets แล้วเพิ่ม\n"
                 "`app_password = \"รหัสที่ต้องการ\"` จากนั้น reboot แอป")
             return False
         # local dev (SQLite) — allow access · ถือเป็นผู้ดูแล (เครื่องพัฒนา)
@@ -747,7 +875,7 @@ def main():
             from family_board import render_family_board
             render_family_board()
         else:
-            st.error("📺 จอสถานะไม่พร้อมใช้งาน — กรุณาติดต่อเจ้าหน้าที่")
+            st.error("📺 จอสถานะไม่พร้อมใช้งาน : กรุณาติดต่อเจ้าหน้าที่")
         st.stop()   # ⛔ จบที่นี่เสมอ — ไม่มีทางไปถึงเมนู/หน้าอื่น
 
     # ========================================================================
@@ -779,7 +907,7 @@ def main():
             st.session_state['role'] = 'room'
             st.session_state['room_scope'] = _rn
         else:   # 🔒 fail-closed: ไม่ตั้ง token / token ผิด = เข้าไม่ได้
-            st.error("🚪 จอประจำห้องไม่พร้อมใช้งาน — กรุณาติดต่อผู้ดูแลระบบ (Mukky)")
+            st.error("🚪 จอประจำห้องไม่พร้อมใช้งาน : กรุณาติดต่อผู้วิจัย (Mukky)")
             st.stop()
 
     # 🔒 Password gate ก่อนทุก action
@@ -802,9 +930,9 @@ def main():
     except Exception as _db_err:
         st.error(
             "⛔ เชื่อมต่อฐานข้อมูลไม่สำเร็จ\n\n"
-            "ลองกดรีเฟรชหน้า (F5) อีกครั้งใน 1 นาที — ถ้ายังไม่หาย "
-            "แจ้งผู้ดูแลระบบ (Mukky) พร้อมภาพหน้าจอนี้")
-        with st.expander("รายละเอียดทางเทคนิค (สำหรับผู้ดูแล)"):
+            "ลองกดรีเฟรชหน้า (F5) อีกครั้งใน 1 นาที : ถ้ายังไม่หาย "
+            "แจ้งผู้วิจัย (Mukky) พร้อมภาพหน้าจอนี้")
+        with st.expander("รายละเอียดทางเทคนิค (สำหรับผู้วิจัย)"):
             st.code(str(_db_err)[:600])
         st.stop()
 
@@ -825,7 +953,7 @@ def main():
             '<span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>'
             f'<span class="or-chip">📅 ปรับล่าสุด {_now_hdr}</span>'
             + ('<span class="or-chip" style="background:#fff3e0;color:#e65100;">'
-               '👤 ผู้ดูแลระบบ</span>'
+               '👤 ผู้วิจัย</span>'
                if st.session_state.get('role') == 'admin' else '')
             + (('<span class="or-chip" style="background:#e3f0fb;color:#1565c0;">'
                 f'🚪 จอประจำห้อง {__import__("room_config").room_label(st.session_state.get("room_scope"))}'

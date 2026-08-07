@@ -65,7 +65,7 @@ OLD_HIS_ROOM_INFO = {
     15: "ENT",   16: "PLASTIC", 17: "VAS",
 }
 
-# division code → specialty (ยืนยันจากข้อมูลปี 69: ห้องใหม่ 90–97 + division ที่พบบ่อย)
+# division code → specialty (ยืนยันจากข้อมูลปี 69: ห้องใหม่ 90–98 + division ที่พบบ่อย)
 DIVISION_SPECIALTY = {
     1: "GEN", 2: "NEURO", 3: "ENT", 4: "PLASTIC",
     5: "URO", 6: "GEN", 7: "VAS", 9: "GEN",
@@ -73,14 +73,14 @@ DIVISION_SPECIALTY = {
 
 
 def room_specialty(orroom) -> str:
-    """specialty ของห้อง — ครอบทั้งตึกใหม่ (90–97) และตึกเก่า HIS (11–17)
+    """specialty ของห้อง — ครอบทั้งตึกใหม่ (90–98) และตึกเก่า HIS (11–17)
     ใช้เป็น feature ข้ามตึกได้ ถ้าไม่รู้จักคืน 'UNKNOWN'"""
     try:
         r = int(float(orroom))
     except (TypeError, ValueError):
         return "UNKNOWN"
     if r in ROOM_INFO:
-        return ROOM_INFO[r][1]          # ตึกใหม่ 90–97
+        return ROOM_INFO[r][1]          # ตึกใหม่ 90–98
     if r in OLD_HIS_ROOM_INFO:
         return OLD_HIS_ROOM_INFO[r]     # ตึกเก่า 11–17
     return "UNKNOWN"
