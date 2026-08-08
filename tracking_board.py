@@ -170,11 +170,16 @@ def _pt_name(c) -> str:
 
 
 def _pt_meta(c) -> str:
-    """ข้อมูลระบุตัวรอง: HN — แสดง 4 ตัวท้ายเสมอ (มาตรา 3.6.4) · ไม่แสดงอายุ"""
+    """ข้อมูลระบุตัวรอง: HN — แสดง 4 ตัวท้ายเสมอ (มาตรา 3.6.4) · ไม่แสดงอายุ
+    + รหัสผู้รับบริการ (fam_code) ที่จอญาติใช้ — ให้เจ้าหน้าที่บอกญาติได้"""
     hn = c.get('hn') or ''
     from main_or_db import mask_hn
     _h = mask_hn(hn)
-    return f"HN {_esc(_h)}" if _h else ''
+    meta = f"HN {_esc(_h)}" if _h else ''
+    code = c.get('fam_code')
+    if code:
+        meta = f"{meta} · รหัสญาติ {_esc(code)}" if meta else f"รหัสญาติ {_esc(code)}"
+    return meta
 
 
 def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,

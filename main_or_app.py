@@ -655,8 +655,10 @@ def parse_schedule_csv_to_cases(uploaded_file):
         _seed = (f"{get('hn') or ''}|{get('name') or ''}|{sched_date}|"
                  f"{(get('procedure') or '').strip().upper()}|"
                  f"{sched_h}:{sched_m}|{order_val}")
+        from fam_code import gen_fam_code
+        _case_id = "CSV_" + _hl.md5(_seed.encode('utf-8')).hexdigest()[:10]
         case = {
-            'id': "CSV_" + _hl.md5(_seed.encode('utf-8')).hexdigest()[:10],
+            'id': _case_id, 'fam_code': gen_fam_code(_case_id),
             'hn': get('hn') or '', 'name': get('name') or 'ไม่ระบุ',
             'age': age_val, 'diagnosis': get('diagnosis') or '-',
             'procedure': (get('procedure') or 'UNKNOWN').strip().upper(),

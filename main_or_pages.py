@@ -452,7 +452,10 @@ def _or_board_demo():
             except Exception as _px:
                 print(f"[demo] ทำนายไม่ได้ ใช้ 60 นาที: {_px}")
         _emg = d.get('optype', 'Elective') != 'Elective'
+        from fam_code import gen_fam_code
+        _demo_seed = f"{d['hn']}|{d['room']}|{d['ororder']}"
         c = {'status': 'not_arrived', 'ororder': d['ororder'],
+             'fam_code': gen_fam_code(_demo_seed),
              'sched_hour': d['sched_h'], 'sched_min': d['sched_m'],
              'name': d['name'], 'hn': d['hn'], 'age': d['age'],
              'procedure': d['procedure'], 'diagnosis': d.get('diagnosis') or d['procedure'],
@@ -768,8 +771,10 @@ def _render_add_case_form(demo_active):
         except Exception as _ex:
             print(f"[add_case] predict ล้มเหลว: {_ex}")
             _pm, _conf, _pn, _rng, _rngm = 60, 'ต่ำ', 0, None, None
+        from fam_code import gen_fam_code
+        _manual_id = f"MANUAL_{uuid.uuid4().hex[:8]}"
         case = {
-            'id': f"MANUAL_{uuid.uuid4().hex[:8]}",
+            'id': _manual_id, 'fam_code': gen_fam_code(_manual_id),
             'hn': '', 'name': (name or '').strip() or 'ไม่ระบุ',
             'age': int(age), 'diagnosis': (diag or '').strip() or '-',
             'procedure': proc.strip().upper(), 'anesthesia': '-',

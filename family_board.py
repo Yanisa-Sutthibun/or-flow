@@ -10,8 +10,10 @@ family_board.py — 📺 จอสถานะสำหรับญาติผ�
   - แถวเรียงตามลำดับบนบอร์ดพยาบาล (ไม่สลับที่เมื่อสถานะเปลี่ยน — ญาติหาเจอง่าย)
   - refresh อัตโนมัติทุก 30 วิ (streamlit-autorefresh · fallback = JS reload)
   - 🎨 โหมดทีวี: แบนเนอร์ gradient + นาฬิกาสด + การ์ด fade-in + จุดสถานะเต้น + ECG
-  - 🛗 auto-scroll: เคสเยอะจนล้นจอ → เลื่อนขึ้น-ลงเองช้า ๆ (ทีวีไม่มีเมาส์)
-    เปิดเฉพาะ kiosk (?view=family) — แท็บพรีวิวในแอปพยาบาลไม่เลื่อนเอง
+  - 🔀 flip-board: เคสเยอะจนล้นจอ → พับหน้าสลับชุดการ์ดแบบป้ายสนามบิน (split-flap)
+    แทนการเลื่อนต่อเนื่อง (เปลี่ยน 8 ส.ค. 2026 ตามคำสั่งมุกกี้)
+    เปิดเฉพาะ kiosk (?view=family) — แท็บพรีวิวในแอปพยาบาลไม่พับเอง · ปิดได้ด้วย &scroll=0
+  - 🔢 รหัสผู้รับบริการ (fam_code): แทน HN บนจอนี้ทั้งหมด — สุ่มต่อเคส ไม่โยงกับ HN จริง
 """
 import html
 import json
@@ -69,7 +71,13 @@ _CSS = """
 
 /* ── การ์ดผู้ป่วย ── */
 .fam-grid {display:grid; grid-template-columns:repeat(auto-fill, minmax(500px, 1fr));
-           gap:14px; margin-top:.7rem;}
+           gap:14px; margin-top:.7rem; perspective:1400px;}
+
+/* 🔀 flip-board: พับหน้าเปลี่ยนชุดการ์ด (เหมือนป้ายสนามบิน split-flap) */
+.fam-flip-out {animation:famFlipOut .6s ease forwards; transform-origin:50% 0%;}
+.fam-flip-in  {animation:famFlipIn .6s ease forwards; transform-origin:50% 0%;}
+@keyframes famFlipOut {0%{transform:rotateX(0deg); opacity:1} 100%{transform:rotateX(-90deg); opacity:0}}
+@keyframes famFlipIn  {0%{transform:rotateX(90deg); opacity:0} 100%{transform:rotateX(0deg); opacity:1}}
 .fam-card {background:#fff; border:1px solid #e2e8f0; border-radius:18px;
            padding:18px 22px; box-shadow:0 2px 6px rgba(15,23,42,.06);
            animation:famUp .45s ease both;}
@@ -127,59 +135,53 @@ _ECG_SVG = """
 </svg>
 """
 
-# 🛗 auto-scroll (เฉพาะจอทีวี): พัก 6 วิบนสุด → เลื่อนลงช้า ๆ → พัก 6 วิล่างสุด →
-#    เลื่อนกลับขึ้น → วนซ้ำ · ถ้าเนื้อหาไม่ล้นจอ = ไม่เลื่อนเลย
-#    (รันใน iframe ของ components.html → คุม scroll ของหน้าแม่ผ่าน window.parent)
-_AUTOSCROLL_JS = """
+# 🔀 flip-board (เฉพาะจอทีวี): เคสเยอะจนล้นจอ → แบ่งเป็นหน้า ๆ ละ PAGE_SIZE ใบ
+#    โชว์หน้าแรกก่อน แล้วทุก HOLD_MS วิ "พับ" การ์ดหน้าปัจจุบันหาย (rotateX -90°)
+#    แล้วพับการ์ดหน้าถัดไปขึ้นมา (rotateX 90°→0°) วนซ้ำ — ถ้าการ์ดพอดีจอ = ไม่พับเลย
+#    (รันใน iframe ของ components.html → หา .fam-grid ของหน้าแม่ผ่าน window.parent)
+_FLIPBOARD_JS = """
 <script>
 (function () {
-  var SPEED = 0.9;          // px ต่อเฟรม (~54px/วินาที) — ช้าพออ่านทัน
-  var PAUSE_MS = 6000;      // หยุดพักบน/ล่างสุด
-  var dir = 1, pauseUntil = Date.now() + PAUSE_MS, cached = null;
+  var PAGE_SIZE = 9;     // การ์ดต่อหน้า
+  var HOLD_MS = 7000;    // เวลาดูแต่ละหน้าก่อนพับ
+  var FLIP_MS = 600;     // ระยะเวลาแอนิเมชันพับ (ต้องตรงกับ CSS keyframes)
 
-  // ทดสอบ "ดันจริง": เลื่อนได้จริงไหม (กัน element ที่ overflow แต่ scroll ไม่ขยับ)
-  function canScroll(el) {
-    if (!el || el.scrollHeight <= el.clientHeight + 60) return false;
-    var b = el.scrollTop;
-    el.scrollTop = b + 2;
-    var ok = el.scrollTop !== b;
-    el.scrollTop = b;
-    return ok;
-  }
+  function run() {
+    var P = window.parent.document;
+    var grid = P.querySelector('.fam-grid');
+    if (!grid) { setTimeout(run, 500); return; }
+    var cards = Array.prototype.slice.call(grid.children);
+    if (cards.length <= PAGE_SIZE) return;   // การ์ดพอดีจอ ไม่ต้องพับ
 
-  // หากล่อง scroll ของ Streamlit — ชื่อ element ต่างกันตามรุ่น จึงลองหลาย selector
-  // แล้วปิดท้ายด้วยการไล่สแกน section/div ทั้งหน้า (ครอบคลุมรุ่นอนาคต)
-  function find() {
-    try {
-      var P = window.parent.document;
-      var sels = ['[data-testid="stMain"]', 'section.stMain', 'section.main',
-                  '[data-testid="stAppViewContainer"]'];
-      for (var i = 0; i < sels.length; i++) {
-        var e = P.querySelector(sels[i]);
-        if (canScroll(e)) return e;
-      }
-      var se = P.scrollingElement || P.documentElement;
-      if (canScroll(se)) return se;
-      var all = P.querySelectorAll('section,div');
-      for (var j = 0; j < all.length; j++) { if (canScroll(all[j])) return all[j]; }
-    } catch (err) {}
-    return null;
-  }
-
-  function tick() {
-    if (!cached || !cached.isConnected) cached = find();
-    var el = cached;
-    if (el && Date.now() > pauseUntil) {
-      el.scrollTop += SPEED * dir;
-      if (dir === 1 && el.scrollTop + el.clientHeight >= el.scrollHeight - 4) {
-        dir = -1; pauseUntil = Date.now() + PAUSE_MS;
-      } else if (dir === -1 && el.scrollTop <= 2) {
-        dir = 1; pauseUntil = Date.now() + PAUSE_MS;
-      }
+    var pages = [];
+    for (var i = 0; i < cards.length; i += PAGE_SIZE) {
+      pages.push(cards.slice(i, i + PAGE_SIZE));
     }
-    requestAnimationFrame(tick);
+    var cur = 0;
+    pages.forEach(function (pg, idx) {
+      pg.forEach(function (c) { c.style.display = idx === 0 ? '' : 'none'; });
+    });
+
+    function flipTo(next) {
+      var outPage = pages[cur], inPage = pages[next];
+      outPage.forEach(function (c) { c.classList.add('fam-flip-out'); });
+      setTimeout(function () {
+        outPage.forEach(function (c) {
+          c.style.display = 'none'; c.classList.remove('fam-flip-out');
+        });
+        inPage.forEach(function (c) {
+          c.style.display = ''; c.classList.add('fam-flip-in');
+        });
+        setTimeout(function () {
+          inPage.forEach(function (c) { c.classList.remove('fam-flip-in'); });
+        }, FLIP_MS);
+        cur = next;
+      }, FLIP_MS);
+    }
+
+    setInterval(function () { flipTo((cur + 1) % pages.length); }, HOLD_MS + FLIP_MS);
   }
-  requestAnimationFrame(tick);
+  run();
 })();
 </script>
 """
@@ -242,17 +244,18 @@ def _track(step: int) -> str:
 
 
 def _card(c) -> str:
-    """HTML การ์ด 1 เคส — ใช้เฉพาะ name/hn/status (mask มาแล้วจากต้นทาง)"""
+    """HTML การ์ด 1 เคส — ใช้เฉพาะ name/fam_code/status (mask มาแล้วจากต้นทาง)
+    รหัสผู้รับบริการ (fam_code) แทน HN เดิม — สุ่มต่อเคส เดา HN จริงไม่ได้"""
     label, fg, bg, step, icon = _FAMILY_STATUS.get(c.get('status'),
                                                    _FAMILY_STATUS['not_arrived'])
     name = html.escape(str(c.get('name') or 'ไม่ระบุชื่อ'))
-    hn = html.escape(str(c.get('hn') or ''))
+    code = html.escape(str(c.get('fam_code') or ''))
     operating = c.get('status') in ('in_or', 'overrun')
     dot = '<span class="fam-chipdot"></span>' if operating else ''
     card_cls = 'fam-card active' if operating else 'fam-card'
     return (f'<div class="{card_cls}">'
             f'<div class="fam-row1"><span class="fam-name">{name}</span>'
-            f'<span class="fam-hn">HN {hn}</span></div>'
+            f'<span class="fam-hn">รหัส {code}</span></div>'
             f'<span class="fam-chip" style="color:{fg};background:{bg};">'
             f'{dot}{icon} {label}</span>'
             f'{_track(step)}'
@@ -326,18 +329,19 @@ def render_family_board():
                 unsafe_allow_html=True)
     st.markdown(
         '<p class="fam-foot">ข้อมูลอัปเดตอัตโนมัติทุก 30 วินาที · '
-        '🛗 รายการยาวเกินจอ หน้าจอจะเลื่อนขึ้น-ลงให้อัตโนมัติ '
-        '(หยุดพักให้อ่านช่วงบน-ล่าง 6 วินาที) · '
-        'แสดงชื่อย่อและเลข HN 4 ตัวท้ายเพื่อคุ้มครองข้อมูลส่วนบุคคล · '
+        '🔀 รายการยาวเกินจอ หน้าจอจะพับสลับหน้าให้อัตโนมัติ '
+        '(ดูแต่ละหน้าได้ 7 วินาทีก่อนพับหน้าถัดไป) · '
+        'แสดงชื่อย่อและรหัสผู้รับบริการ (สุ่ม ไม่ใช่ HN จริง) เพื่อคุ้มครองข้อมูลส่วนบุคคล · '
         'มีข้อสงสัยกรุณาติดต่อเจ้าหน้าที่หน้าห้องผ่าตัด</p>',
         unsafe_allow_html=True)
 
-    # 🛗 auto-scroll เฉพาะโหมดทีวี (?view=family) — แท็บพรีวิวในแอปไม่เลื่อนเอง
-    #    ปิดชั่วคราวได้ด้วย &scroll=0 (เช่น เปิดตรวจงานบน notebook)
+    # 🔀 flip-board เฉพาะโหมดทีวี (?view=family) — แท็บพรีวิวในแอปไม่พับเอง
+    #    ปิดชั่วคราวได้ด้วย &scroll=0 (เช่น เปิดตรวจงานบน notebook — ชื่อพารามิเตอร์เดิม
+    #    คงไว้ตามลิงก์/QR ที่พิมพ์แจกไปแล้ว แม้พฤติกรรมเปลี่ยนจากเลื่อนเป็นพับ)
     try:
         _is_kiosk = st.query_params.get('view', '') == 'family'
-        _no_scroll = st.query_params.get('scroll', '') == '0'
+        _no_flip = st.query_params.get('scroll', '') == '0'
     except Exception:
-        _is_kiosk, _no_scroll = False, False
-    if _is_kiosk and not _no_scroll:
-        components.html(_AUTOSCROLL_JS, height=0)
+        _is_kiosk, _no_flip = False, False
+    if _is_kiosk and not _no_flip:
+        components.html(_FLIPBOARD_JS, height=0)
