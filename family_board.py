@@ -248,14 +248,15 @@ def _card(c) -> str:
     รหัสผู้รับบริการ (fam_code) แทน HN เดิม — สุ่มต่อเคส เดา HN จริงไม่ได้"""
     label, fg, bg, step, icon = _FAMILY_STATUS.get(c.get('status'),
                                                    _FAMILY_STATUS['not_arrived'])
-    name = html.escape(str(c.get('name') or 'ไม่ระบุชื่อ'))
-    code = html.escape(str(c.get('fam_code') or ''))
+    # 🔒 PDPA (มุคกี้สั่ง 8 ส.ค. 2026): จอญาติไม่แสดงชื่อผู้ป่วยอีกต่อไป
+    #    ใช้ "รหัสผู้รับบริการ" แทนทั้งหมด — เจ้าหน้าที่เป็นผู้แจ้งรหัสให้ญาติที่จุดรับ-ส่ง
+    #    ถ้าเคสไหนยังไม่มีรหัส (ข้อมูลเก่า) แสดง "รอรับรหัส" แทน ไม่ตกไปโชว์ชื่อ
+    code = html.escape(str(c.get('fam_code') or '').strip()) or 'รอรับรหัส'
     operating = c.get('status') in ('in_or', 'overrun')
     dot = '<span class="fam-chipdot"></span>' if operating else ''
     card_cls = 'fam-card active' if operating else 'fam-card'
     return (f'<div class="{card_cls}">'
-            f'<div class="fam-row1"><span class="fam-name">{name}</span>'
-            f'<span class="fam-hn">รหัส {code}</span></div>'
+            f'<div class="fam-row1"><span class="fam-name">รหัส {code}</span></div>'
             f'<span class="fam-chip" style="color:{fg};background:{bg};">'
             f'{dot}{icon} {label}</span>'
             f'{_track(step)}'
