@@ -302,14 +302,21 @@ def render_screen_links(room_info: dict):
     · สิทธิ์: หน้านี้เข้าด้วยรหัสหน่วยงานซึ่งสูงกว่าสิทธิ์จอห้องอยู่แล้ว
       จอประจำห้องเองเข้าหน้านี้ไม่ได้ (เด้งเข้าหน้าโฟกัสห้องเสมอ)
     """
-    st.markdown("---")
-    st.markdown("### 🔗 ลิงก์ติดตั้งจอ")
-
     _is_demo = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
-    st.caption(
-        ("ชุดลิงก์ของ **ระบบสาธิต**" if _is_demo else "ชุดลิงก์ของ **ระบบจริง**")
-        + " : คัดลอกไปสร้าง shortcut บนเครื่องของห้องนั้นครั้งเดียวจบ "
-          "· อย่าแชร์ลิงก์ข้ามห้อง")
+    _sys = "ระบบสาธิต" if _is_demo else "ระบบจริง"
+    _sys_bg, _sys_fg = ('#fef3c7', '#92400e') if _is_demo else ('#e1f5ee', '#065f46')
+
+    # 🎨 หัวข้อการ์ดเดียว: ชื่อหัวข้อ + ป้ายบอกระบบ + คำอธิบาย (มุคกี้สั่ง 8 ส.ค. 2026)
+    st.markdown("---")
+    st.markdown(
+        f'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+        f'<span style="font-size:22px;font-weight:700;color:#0f172a;">🔗 ลิงก์ติดตั้งจอ</span>'
+        f'<span style="background:{_sys_bg};color:{_sys_fg};border-radius:999px;'
+        f'padding:3px 14px;font-size:14px;font-weight:700;">{_sys}</span></div>'
+        f'<div style="color:#64748b;font-size:14px;margin:6px 0 14px;">'
+        f'คัดลอกลิงก์ไปสร้าง shortcut บนเครื่องของห้องนั้นครั้งเดียวจบ '
+        f'· อย่าแชร์ลิงก์ข้ามห้อง</div>',
+        unsafe_allow_html=True)
 
     _base = _app_base_url()
     if not _base:
@@ -319,19 +326,29 @@ def render_screen_links(room_info: dict):
     def _link(qs: str) -> str:
         return f"{_base}/?{qs}" if _base else f"./?{qs}"
 
+    def _screen_row(icon: str, title: str, sub: str, url: str):
+        """หนึ่งแถว = การ์ดมีกรอบ · ซ้ายชื่อจอ · กลางลิงก์ (มีปุ่มคัดลอกในตัว) · ขวาปุ่มเปิด"""
+        with st.container(border=True):
+            _c1, _c2, _c3 = st.columns([3.2, 6, 1.6], vertical_alignment="center")
+            with _c1:
+                st.markdown(
+                    f'<div style="font-size:16px;font-weight:700;color:#0f172a;'
+                    f'line-height:1.35;">{icon} {title}</div>'
+                    f'<div style="font-size:12.5px;color:#64748b;">{sub}</div>',
+                    unsafe_allow_html=True)
+            with _c2:
+                st.code(url, language=None)
+            with _c3:
+                st.link_button("เปิดจอ ↗", url, use_container_width=True)
+
     # ── 📺 จอญาติ ──────────────────────────────────────────────────
     try:
         _fam = str(st.secrets.get('family_board_token', '') or '')
     except Exception:
         _fam = ''
-    st.markdown("**📺 จอญาติ (ทีวีหน้าห้องผ่าตัด)**")
     if _fam:
-        _fam_url = _link(f"view=family&k={_fam}")
-        _fc1, _fc2 = st.columns([1, 3])
-        with _fc1:
-            st.link_button("🔗 เปิดจอญาติ", _fam_url, use_container_width=True)
-        with _fc2:
-            st.code(_fam_url, language=None)
+        _screen_row('📺', 'จอญาติ', 'ทีวีหน้าห้องผ่าตัด · อ่านอย่างเดียว',
+                    _link(f"view=family&k={_fam}"))
     else:
         st.warning("ยังไม่ได้ตั้ง `family_board_token` ใน Secrets ของแอปนี้")
 
@@ -342,25 +359,28 @@ def render_screen_links(room_info: dict):
         _rtoks = {}
     _rooms = list(room_info.keys())
     _missing = [rm for rm in _rooms if not _rtoks.get(str(rm))]
+    _ready = len(_rooms) - len(_missing)
 
-    with st.expander(f"🚪 จอประจำห้องผ่าตัด ({len(_rooms)} ห้อง)",
+    with st.expander(f"🚪 จอประจำห้องผ่าตัด · พร้อมใช้ {_ready} จาก {len(_rooms)} ห้อง",
                      expanded=bool(_missing)):
         if _missing:
             st.warning("⚠️ ห้องที่ยังไม่ได้ตั้งกุญแจใน Secrets : "
                        + ", ".join(str(room_info[rm]['name']) for rm in _missing)
                        + " (จอห้องนี้จะเปิดไม่ได้จนกว่าจะเพิ่มกุญแจใต้ `[room_tokens]`)")
-        _cols = st.columns(3)
-        for _i, _rm in enumerate(_rooms):
+        for _rm in _rooms:
             _info = room_info[_rm]
-            with _cols[_i % 3]:
-                st.markdown(f"**{_info['icon']} {_info['label']}**")
-                _tok = _rtoks.get(str(_rm), '')
-                if _tok:
-                    _url = _link(f"room={_rm}&k={_tok}")
-                    st.link_button("🔗 เปิดจอ", _url, use_container_width=True)
-                    st.code(_url, language=None)
-                else:
-                    st.caption("🔒 ยังไม่ได้ตั้งกุญแจห้องนี้")
+            _tok = _rtoks.get(str(_rm), '')
+            if _tok:
+                _screen_row(_info['icon'], _info['name'], _info['desc'],
+                            _link(f"room={_rm}&k={_tok}"))
+            else:
+                with st.container(border=True):
+                    st.markdown(
+                        f'<div style="font-size:16px;font-weight:700;color:#94a3b8;">'
+                        f'{_info["icon"]} {_info["name"]}</div>'
+                        f'<div style="font-size:12.5px;color:#94a3b8;">'
+                        f'🔒 ยังไม่ได้ตั้งกุญแจห้องนี้ใน Secrets</div>',
+                        unsafe_allow_html=True)
 
     st.caption("กุญแจหลุดหรือสงสัยว่าหลุด : แจ้งผู้วิจัยเพื่อเปลี่ยนกุญแจเฉพาะห้องนั้น "
                "ใน Secrets แล้ว reboot แอป (ห้องอื่นไม่กระทบ)")

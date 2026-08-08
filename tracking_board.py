@@ -178,7 +178,8 @@ def _pt_meta(c) -> str:
     meta = f"HN {_esc(_h)}" if _h else ''
     code = c.get('fam_code')
     if code:
-        meta = f"{meta} · รหัสญาติ {_esc(code)}" if meta else f"รหัสญาติ {_esc(code)}"
+        meta = (f"{meta} · รหัสผู้รับบริการ {_esc(code)}" if meta
+                else f"รหัสผู้รับบริการ {_esc(code)}")
     return meta
 
 
