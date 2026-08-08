@@ -326,20 +326,32 @@ def render_screen_links(room_info: dict):
     def _link(qs: str) -> str:
         return f"{_base}/?{qs}" if _base else f"./?{qs}"
 
+    def _screen_head(icon: str, title: str, sub: str, dim: bool = False):
+        _c = '#94a3b8' if dim else '#0f172a'
+        st.markdown(
+            f'<div style="font-size:16px;font-weight:700;color:{_c};line-height:1.35;">'
+            f'{icon} {title}</div>'
+            f'<div style="font-size:12.5px;color:#94a3b8;">{sub}</div>',
+            unsafe_allow_html=True)
+
     def _screen_row(icon: str, title: str, sub: str, url: str):
-        """หนึ่งแถว = การ์ดมีกรอบ · ซ้ายชื่อจอ · กลางลิงก์ (มีปุ่มคัดลอกในตัว) · ขวาปุ่มเปิด"""
+        """การ์ดจอญาติ (เต็มความกว้าง) · ซ้ายชื่อจอ · กลางลิงก์ · ขวาปุ่มเปิด"""
         with st.container(border=True):
             _c1, _c2, _c3 = st.columns([3.2, 6, 1.6], vertical_alignment="center")
             with _c1:
-                st.markdown(
-                    f'<div style="font-size:16px;font-weight:700;color:#0f172a;'
-                    f'line-height:1.35;">{icon} {title}</div>'
-                    f'<div style="font-size:12.5px;color:#64748b;">{sub}</div>',
-                    unsafe_allow_html=True)
+                _screen_head(icon, title, sub)
             with _c2:
                 st.code(url, language=None)
             with _c3:
                 st.link_button("เปิดจอ ↗", url, use_container_width=True)
+
+    def _screen_tile(icon: str, title: str, sub: str, url: str):
+        """การ์ดในตาราง 3 ช่อง (มุคกี้เคาะ 8 ส.ค. 2026) — เรียงลง: ชื่อ → ลิงก์ → ปุ่ม
+        ลิงก์ใช้ st.code เพื่อให้มีปุ่มคัดลอกในตัว (ช่องแคบจึงมีแถบเลื่อนแนวนอน ยอมรับได้)"""
+        with st.container(border=True):
+            _screen_head(icon, title, sub)
+            st.code(url, language=None)
+            st.link_button("เปิดจอ ↗", url, use_container_width=True)
 
     # ── 📺 จอญาติ ──────────────────────────────────────────────────
     try:
@@ -361,26 +373,26 @@ def render_screen_links(room_info: dict):
     _missing = [rm for rm in _rooms if not _rtoks.get(str(rm))]
     _ready = len(_rooms) - len(_missing)
 
-    with st.expander(f"🚪 จอประจำห้องผ่าตัด · พร้อมใช้ {_ready} จาก {len(_rooms)} ห้อง",
+    with st.expander(f"**🖥️ จอประจำห้องผ่าตัด · พร้อมใช้ {_ready} จาก {len(_rooms)} ห้อง**",
                      expanded=bool(_missing)):
         if _missing:
             st.warning("⚠️ ห้องที่ยังไม่ได้ตั้งกุญแจใน Secrets : "
                        + ", ".join(str(room_info[rm]['name']) for rm in _missing)
                        + " (จอห้องนี้จะเปิดไม่ได้จนกว่าจะเพิ่มกุญแจใต้ `[room_tokens]`)")
-        for _rm in _rooms:
-            _info = room_info[_rm]
-            _tok = _rtoks.get(str(_rm), '')
-            if _tok:
-                _screen_row(_info['icon'], _info['name'], _info['desc'],
-                            _link(f"room={_rm}&k={_tok}"))
-            else:
-                with st.container(border=True):
-                    st.markdown(
-                        f'<div style="font-size:16px;font-weight:700;color:#94a3b8;">'
-                        f'{_info["icon"]} {_info["name"]}</div>'
-                        f'<div style="font-size:12.5px;color:#94a3b8;">'
-                        f'🔒 ยังไม่ได้ตั้งกุญแจห้องนี้ใน Secrets</div>',
-                        unsafe_allow_html=True)
+        # ตาราง 3 ช่องต่อแถว — สร้าง columns ใหม่ทุกแถวเพื่อให้การ์ดสูงเท่ากันในแถวเดียวกัน
+        for _start in range(0, len(_rooms), 3):
+            _cols = st.columns(3)
+            for _col, _rm in zip(_cols, _rooms[_start:_start + 3]):
+                _info = room_info[_rm]
+                _tok = _rtoks.get(str(_rm), '')
+                with _col:
+                    if _tok:
+                        _screen_tile(_info['icon'], _info['name'], _info['desc'],
+                                     _link(f"room={_rm}&k={_tok}"))
+                    else:
+                        with st.container(border=True):
+                            _screen_head(_info['icon'], _info['name'],
+                                         '🔒 ยังไม่ได้ตั้งกุญแจห้องนี้ใน Secrets', dim=True)
 
     st.caption("กุญแจหลุดหรือสงสัยว่าหลุด : แจ้งผู้วิจัยเพื่อเปลี่ยนกุญแจเฉพาะห้องนั้น "
                "ใน Secrets แล้ว reboot แอป (ห้องอื่นไม่กระทบ)")
