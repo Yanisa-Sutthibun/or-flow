@@ -676,8 +676,9 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
         't=document.getElementById("t"),ch=document.getElementById("ch"),'
         'row=document.getElementById("row"),late=0;'
         'function u(){var d=Math.floor((el0+(Date.now()-t0)/1000)/60);'
-        'if(d>=1440){t.textContent="รอนานมาก";t.style.color="#c0392b";return}'
-        't.textContent="รอ "+d+" นาที";'
+        # ⏱ ไอคอนนาฬิกาจับเวลา — บอกว่าเลขนี้ "เดินเอง" ไม่ใช่ค่านิ่ง
+        'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.color="#c0392b";return}'
+        't.textContent="⏱ รอ "+d+" นาที";'
         'if(d>=60&&!late){late=1;t.style.color="#c0392b";t.style.fontWeight="700";'
         'ch.textContent="รอเกินเวลา";ch.style.background="#fdf3dd";ch.style.color="#9a6700";'
         + ('if(!emer){row.style.background="#fffdf5";'
