@@ -1509,14 +1509,25 @@ def _room_focus_fragment(room_no):
     #    ของแอป ต้องกำหนดเองที่นี่ตรง ๆ
     # 💜 ปุ่ม ห้องพักฟื้น: สีม่วงอ่อนคู่เดียวกับชิปสถานะบนบอร์ดวันนี้
     #    (_STATUS_META['recovery'] ใน tracking_board.py = #6b21a8 บนพื้น #edd2ff)
+    # ⚠️ font-size ที่ตัว <button> ไม่มีผลกับข้อความบนปุ่ม — Streamlit ห่อ label
+    #    ไว้ใน <p>/<div> ข้างใน ซึ่งมี font-size ของตัวเองทับอยู่ ต้องระบุที่ลูก
+    #    ด้วยเสมอ (เดิมตั้ง 22px ที่ button แล้วตัวหนังสือไม่ขยับ)
     st.markdown("""<style>
-    div[data-testid="stButton"] > button {height:76px; font-size:22px; font-weight:700;}
+    div[data-testid="stButton"] > button {height:76px; font-weight:700;}
+    div[data-testid="stButton"] > button p,
+    div[data-testid="stButton"] > button div,
+    div[data-testid="stButton"] > button span,
+    div[data-testid="stFormSubmitButton"] button p,
+    div[data-testid="stFormSubmitButton"] button div,
+    div[data-testid="stFormSubmitButton"] button span {
+        font-size:20px !important; font-weight:700 !important;
+    }
     .st-key-rf_fin_rec button {
         background-color:#edd2ff !important; color:#6b21a8 !important;
         border-color:#edd2ff !important;
     }
-    div[data-testid="stNumberInput"] input {font-size:18px !important;}
-    div[data-testid="stFormSubmitButton"] button {font-size:18px !important; height:56px;}
+    div[data-testid="stNumberInput"] input {font-size:20px !important;}
+    div[data-testid="stFormSubmitButton"] button {height:56px;}
     </style>""", unsafe_allow_html=True)
 
     st.markdown(f"### 🚪 {room_label(room_no)}")
@@ -1575,8 +1586,14 @@ def _room_focus_fragment(room_no):
                 with st.form("rf_ov_form", border=False):
                     _fcol1, _fcol2 = st.columns([3, 2])
                     with _fcol1:
+                        # 🔑 key ต้องแยกตามเคส (เหมือนบอร์ดหลักที่ใช้ tb_ov_<idx>)
+                        #    ถ้าใช้ key เดียวทุกเคส Streamlit จะจำค่าเดิมไว้ แล้ว
+                        #    "ไม่สนใจ" ค่า value= ที่ส่งเข้าไป → เคสถัดไปที่เข้าห้อง
+                        #    จะเห็นตัวเลขของเคสก่อนหน้าค้างอยู่ กดบันทึกพลาดได้
+                        #    และค่าผิดจะไหลลง override_log ซึ่งเป็นข้อมูลวิจัย
                         _new_t = st.number_input("นาที", min_value=5, max_value=600,
-                                                 value=_eff0, key="rf_ov_min",
+                                                 value=_eff0,
+                                                 key=f"rf_ov_{_ce.get('id') or cur}",
                                                  label_visibility="collapsed")
                     with _fcol2:
                         _sv = st.form_submit_button("💾 บันทึก", width='stretch')
