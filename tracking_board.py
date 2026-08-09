@@ -151,8 +151,9 @@ def _sched_order_html(c, tlabel):
             return base
     except Exception:
         pass
+    # 14px: บรรทัดล่างของคอลัมน์นัด เป็นข้อมูลรอง — ขนาดเดียวกับ HN ใต้ชื่อผู้ป่วย
     return (f'{base}<br><span title="ล็อคคิว — ลำดับจัดมาจากตารางผ่าตัด" '
-            f'style="font-size:18px;color:#94a3b8;'
+            f'style="font-size:14px;color:#94a3b8;'
             f'white-space:nowrap;cursor:help;">🔒 คิว {o}</span>')
 
 
@@ -178,8 +179,11 @@ def _pt_meta(c) -> str:
     meta = f"HN {_esc(_h)}" if _h else ''
     code = c.get('fam_code')
     if code:
-        meta = (f"{meta} · รหัสรับบริการ {_esc(code)}" if meta
-                else f"รหัสรับบริการ {_esc(code)}")
+        # 📐 9 ส.ค. 2026: ย่อคำเป็น "รหัส" + tooltip — คอลัมน์ผู้ป่วยในบอร์ดตาราง
+        #    กว้างจำกัด คำเต็มทำให้รหัสจริงโดนตัดหาย ซึ่งเป็นตัวที่ต้องอ่านออก
+        _c = (f'<span title="รหัสผู้รับบริการ — ใช้บอกญาติ ตรงกับที่ขึ้นจอสถานะ" '
+              f'style="cursor:help;">รหัส {_esc(code)}</span>')
+        meta = f"{meta} · {_c}" if meta else _c
     return meta
 
 
@@ -255,15 +259,22 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     dup_badges = _dup_name_badges(cases, loc)
 
     # ---------- หัวตาราง ----------
-    st.markdown(
-        '<div style="display:flex;align-items:center;gap:10px;padding:6px 12px 8px;'
-        'font-size:18px;font-weight:500;color:#64748b;">'
-        '<span style="min-width:96px;">ห้อง</span>'
-        '<span style="min-width:64px;">นัด</span>'
-        '<span style="flex:1;">ผู้ป่วย · หัตถการ</span>'
-        '<span style="min-width:104px;">สถานะ</span>'
-        '<span style="min-width:150px;">เวลา</span></div>',
-        unsafe_allow_html=True)
+    # 📐 ต้องวางใน st.columns สัดส่วนเดียวกับแถว ([8, .8, 1.5, .8] ใน _render_row)
+    #    ไม่งั้นหัวคอลัมน์จะเหลื่อมกับข้อมูลข้างล่าง (เดิมวาดเต็มความกว้าง = เหลื่อมอยู่)
+    _hc0, _hc1, _hc2, _hc3 = st.columns([8, 0.8, 1.5, 0.8])
+    with _hc0:
+        st.markdown(
+            '<div style="display:flex;align-items:center;gap:10px;padding:2px 12px 7px;'
+            'font-size:13px;font-weight:700;color:#94a3b8;letter-spacing:.7px;'
+            'border-bottom:2px solid #e2e8f0;margin-bottom:4px;">'
+            f'<span style="width:{_COL_RM}px;flex:none;">ห้อง</span>'
+            f'<span style="width:{_COL_Q}px;flex:none;">นัด</span>'
+            f'<span style="width:{_COL_NM}px;flex:none;">ผู้ป่วย</span>'
+            '<span style="flex:1;min-width:0;">หัตถการ / ศัลยแพทย์</span>'
+            f'<span style="width:{_COL_ST}px;flex:none;text-align:center;">สถานะ</span>'
+            f'<span style="width:{_COL_TM}px;flex:none;text-align:right;">เวลา</span>'
+            '</div>',
+            unsafe_allow_html=True)
 
     # ---------- เตรียมแถว: กรอง + คำนวณสถานะแสดงผล ----------
     # เรียง ห้อง → ฉุกเฉินก่อนในห้อง → เวลานัด → ลำดับ (ลำดับนิ่ง แถวไม่ขยับเมื่อกดปุ่ม)
@@ -508,6 +519,165 @@ def _time_cell(c, disp, eff, elapsed, now):
             + (_dur_str(ai0) if ai0 else '? น.') + _ev)
 
 
+# ════════════════════════════════════════════════════════════════════════════
+# 📐 บอร์ดแบบตาราง (มุคกี้เคาะ 9 ส.ค. 2026 — ดู docs/wireframe_board_table.html)
+# ════════════════════════════════════════════════════════════════════════════
+# ปัญหาเดิม: แต่ละแถวจัดวางอิสระ ชื่อผู้ป่วย/หัตถการ/ชิป ไหลตามความยาวข้อความ
+# ไม่ตรงกันสักแถว ตาต้องอ่านใหม่ทีละแถว = เกะกะ · แนวทางบอร์ด OR จริง (Epic
+# OpTime status board, LiveData) คือ "คอลัมน์ตรงกันทุกแถว + สถานะบอกด้วยสี"
+#
+# กติกา:
+#   · ทุกคอลัมน์ตรึงความกว้าง ยกเว้น "หัตถการ/ศัลยแพทย์" ที่ยืดได้คอลัมน์เดียว
+#   · หัตถการล็อกบรรทัดเดียว ยาวเกินตัด "…" (ชี้ค้างเห็นเต็ม) → ทุกแถวสูงเท่ากัน
+#     = บอกความสูง iframe ล่วงหน้าได้แม่น ไม่มีเนื้อหาโดนกรอบตัดทิ้งเงียบ ๆ
+#   · แก้ความกว้างที่ค่าคงที่ด้านล่างที่เดียว — หัวตารางกับแถวใช้ชุดเดียวกัน
+#     ถ้าแก้ไม่ครบ คอลัมน์จะเหลื่อมทันที
+_COL_RM, _COL_Q, _COL_NM, _COL_ST, _COL_TM = 96, 62, 172, 112, 150
+_ROW_H = 70                 # ความสูงแถว (px) — iframe ต้องสูงกว่านี้เล็กน้อย
+_ROW_IFRAME_H = _ROW_H + 8
+
+
+def _cell_room(c, loc, fg='#1565c0'):
+    """ห้อง: ชื่อห้องบรรทัดบน · สาขาบรรทัดล่าง — เดิม 'OR7 · PLASTIC' บรรทัดเดียว
+    ยาวจนล้นไปชนคอลัมน์ถัดไป"""
+    head, _, sub = str(loc(c) or '').partition(' · ')
+    _sub = (f'<span style="display:block;font-size:14px;font-weight:500;color:#94a3b8;'
+            f'line-height:1.2;letter-spacing:.3px;white-space:nowrap;overflow:hidden;'
+            f'text-overflow:ellipsis;">{_esc(sub)}</span>') if sub else ''
+    return (f'<span style="width:{_COL_RM}px;flex:none;overflow:hidden;">'
+            f'<span style="display:block;font-size:20px;font-weight:600;color:{fg};'
+            f'line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+            f'{_esc(head)}</span>{_sub}</span>')
+
+
+def _cell_q(c, tlabel, emer=False):
+    """นัด/คิว — เคสฉุกเฉินแทนที่ด้วยป้ายฉุกเฉิน (ย้ายมาจากคอลัมน์ผู้ป่วย ซึ่งเดิม
+    ป้ายกว้างจนเบียดชื่อ) · เหตุผลที่อยู่นอกขอบเขตวิจัยย้ายไปเป็น tooltip"""
+    if emer:
+        return (f'<span style="width:{_COL_Q}px;flex:none;font-size:15px;color:#c0392b;'
+                f'font-weight:600;white-space:nowrap;overflow:hidden;cursor:help;" '
+                f'title="เคสฉุกเฉิน — อยู่นอกขอบเขตวิจัย (เก็บเฉพาะ elective ในเวลา)">'
+                f'<span class="emg-dot"></span>ฉุกเฉิน</span>')
+    return (f'<span style="width:{_COL_Q}px;flex:none;font-size:16px;color:#64748b;'
+            f'line-height:1.25;white-space:nowrap;overflow:hidden;">'
+            f'{_sched_order_html(c, tlabel)}</span>')
+
+
+def _cell_patient(c, dup_badge='', fg='#0f172a'):
+    """ผู้ป่วย: ชื่อ (mask แล้ว) บรรทัดบน · HN + รหัสรับบริการ บรรทัดล่าง"""
+    return (f'<span style="width:{_COL_NM}px;flex:none;overflow:hidden;">'
+            f'<span style="display:block;font-size:18px;font-weight:600;color:{fg};'
+            f'line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+            f'{_pt_name(c)}{dup_badge}</span>'
+            f'<span style="display:block;font-size:14px;color:#94a3b8;line-height:1.2;'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+            f'{_pt_meta(c)}</span></span>')
+
+
+def _cell_op(c, fg='#334155'):
+    """หัตถการ/ศัลยแพทย์ — คอลัมน์เดียวของตารางที่ยืดได้ (กินพื้นที่ที่เหลือทั้งหมด)"""
+    _p = _esc(c.get('procedure') or '-')
+    _d = _esc(c.get('surgeon') or '-')
+    return (f'<span style="flex:1;min-width:0;overflow:hidden;">'
+            f'<span title="{_p}" style="display:block;font-size:18px;color:{fg};'
+            f'line-height:1.32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+            f'cursor:help;">{_p}</span>'
+            f'<span style="display:block;font-size:16px;color:#94a3b8;line-height:1.3;'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{_d}</span>'
+            f'</span>')
+
+
+def _cell_chip(label, fg, bg, el_id=''):
+    """ชิปสถานะ — ความกว้างเท่ากันทุกแถวเสมอ (จุดที่ทำให้ตากวาดลงเป็นแนวได้)"""
+    _id = f' id="{el_id}"' if el_id else ''
+    return (f'<span style="width:{_COL_ST}px;flex:none;">'
+            f'<span{_id} style="display:block;background:{bg};color:{fg};border-radius:999px;'
+            f'padding:5px 10px;font-size:16px;font-weight:600;white-space:nowrap;'
+            f'text-align:center;overflow:hidden;text-overflow:ellipsis;">{label}</span></span>')
+
+
+def _cell_time(inner, title=''):
+    """เวลา — ชิดขวา + ตัวเลขความกว้างเท่ากัน (tabular-nums) หลักจึงตรงกันทุกแถว
+    เทียบ 'ใครรอนานสุด' ได้ด้วยการกวาดตาลงคอลัมน์เดียว"""
+    _t = f' title="{title}" style="cursor:help;' if title else ' style="'
+    return (f'<span{_t}width:{_COL_TM}px;flex:none;text-align:right;overflow:hidden;'
+            f'font-size:18px;color:#475569;white-space:nowrap;'
+            f'font-variant-numeric:tabular-nums;">{inner}</span>')
+
+
+def _row_prog(pct, color, el_id=''):
+    """แถบความคืบหน้า = ขอบล่างของแถวเอง — บอกว่าผ่าไปกี่ % โดยไม่กินบรรทัดเพิ่ม"""
+    _id = f' id="{el_id}"' if el_id else ''
+    return (f'<span{_id} style="position:absolute;left:0;bottom:0;height:3px;'
+            f'width:{pct}%;background:{color};"></span>')
+
+
+def _row_shell(inner, bg, border_css, row_id='row', prog=''):
+    return (f'<div id="{row_id}" style="display:flex;align-items:center;gap:10px;'
+            f'{border_css}background:{bg};border-radius:10px;padding:8px 12px;'
+            f'height:{_ROW_H}px;position:relative;overflow:hidden;">{prog}{inner}</div>')
+
+
+def _iframe_doc(body):
+    return ('<html><head><style>'
+            '*{margin:0;padding:0;box-sizing:border-box}'
+            "body{font-family:'Sarabun','IBM Plex Sans Thai','Segoe UI',sans-serif;"
+            'background:transparent}'
+            f'{_EMG_CSS}</style></head><body>{body}</body></html>')
+
+
+def _callnext_text(c, eff, tov_map):
+    """ข้อความล้วนของ '🚪 ออกห้อง ~ · ⏰ เรียกเคสถัดไป' — แถวสูงคงที่แล้วไม่มีที่วาง
+    บรรทัดนี้ จึงย้ายไปเป็น tooltip ของคอลัมน์เวลา (ข้อมูลไม่หาย)"""
+    ent = c.get('time_entered_or')
+    if ent is None or not hasattr(ent, 'hour'):
+        return ''
+    from datetime import timedelta as _td
+    try:
+        rm = int(float(c.get('room')))
+    except (TypeError, ValueError):
+        rm = None
+    tov = (tov_map or {}).get(rm) or (tov_map or {}).get('_global') or 15
+    _hw = _band_halfwidth(eff)
+    lo = (ent + _td(minutes=max(int(eff) - _hw, 5))).strftime('%H:%M')
+    hi = (ent + _td(minutes=int(eff) + _hw)).strftime('%H:%M')
+    cn = (ent + _td(minutes=int(eff) + float(tov) - _CALL_LEAD_MIN)).strftime('%H:%M')
+    return (f'ออกห้อง ~{lo}-{hi} น. (ช่วง ±{_hw} นาที ครอบราว 5-6 ใน 10 เคส) '
+            f'· เรียกเคสถัดไป ~{cn} น. · ช่วงมั่นใจ 90% ดูในปุ่มแก้เวลา')
+
+
+def _time_static(c, disp, eff, elapsed, now):
+    """เนื้อหาคอลัมน์เวลาสำหรับแถวที่ไม่มีนาฬิกาเดินสด — คืน (html, tooltip)
+    บรรทัดเดียวเสมอ · หลักฐาน AI (จำนวนเคสอ้างอิง + ช่วง 90%) ที่เดิมเป็นบรรทัด
+    ที่สองย้ายไปเป็น tooltip เพื่อให้ทุกแถวสูงเท่ากัน"""
+    ai0 = c.get('ai_predicted_min') or c.get('predicted_min')
+    ov = c.get('user_override_min')
+    if disp in ('holding_post', 'recovery'):
+        ex = c.get('time_exited_or')
+        return (f'เสร็จ {ex.strftime("%H:%M")} น.'
+                if (ex is not None and hasattr(ex, 'hour')) else '—'), ''
+    if disp == 'discharged':
+        dc = c.get('time_discharged')
+        return (f'จำหน่าย {dc.strftime("%H:%M")} น.'
+                if (dc is not None and hasattr(dc, 'hour')) else '—'), ''
+    if disp in ('in_or', 'overrun'):
+        _col = '#c0392b' if disp == 'overrun' else '#1b7f4b'
+        return (f'<b style="color:{_col};font-weight:700;">{elapsed}</b> / {eff} น.'), ''
+    # not_arrived — เวลาที่คาดว่าจะใช้ห้อง
+    _bits = []
+    _n = c.get('proc_n')
+    if _n is not None:
+        _bits.append(f'อ้างอิงจาก {int(_n)} เคสใกล้เคียง' if _n else 'ไม่มีเคสใกล้เคียง')
+    _rng = c.get('predicted_range')
+    if c.get('range_method') == 'conformal' and _rng:
+        _bits.append(f'ช่วง 90% = {int(_rng[0])}-{int(_rng[1])} น. '
+                     '(เคสลักษณะนี้ราว 9 ใน 10 ใช้เวลาอยู่ในช่วงนี้)')
+    if ov:
+        _bits.insert(0, f'AI ทำนาย {_dur_str(ai0) if ai0 else "?"} · พยาบาลแก้เป็น {_dur_str(eff)}')
+        return (f'<b style="font-weight:700;color:#0f172a;">{_dur_str(eff)}</b>'), ' · '.join(_bits)
+    return f'AI ~{_dur_str(ai0) if ai0 else "? น."}', ' · '.join(_bits)
+
+
 def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
     """แถวรอผ่าตัดทั้งแถวเป็น HTML สด — นาฬิกานับเดินหน้าฝังในช่องเวลา (ไม่กินบรรทัดเพิ่ม)."""
     arr = c.get('time_arrived_holding')
@@ -520,62 +690,39 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
                 'padding:3px 12px;font-size:18px;margin-left:6px;">ปรับแล้ว</span>'
                 if ov else '')
     emer = _is_emer(c)
-    emg_html = _EMG_BADGE if emer else ''
-    border_css = ('border:1px solid #f5c6c5;border-left:3px solid #e0312e;'
-                  if emer else 'border:1px solid #eef2f6;')
+    # แถบสีซ้าย 5px = สถานะแบบเห็นจากไกล (เทา=รอ · แดง=ฉุกเฉิน · เหลือง=รอเกินเวลา ใส่ทีหลังด้วย JS)
+    border_css = ('border:1px solid #f5c6c5;border-left:5px solid #e0312e;'
+                  if emer else 'border:1px solid #eef2f6;border-left:5px solid #cbd5e1;')
     # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026 รอบสุดท้าย): เกณฑ์เดียว = 60 นาที
     #    รอเกิน 60 → แถบเหลืองครีมทั้งแถว + ชิปนาฬิกาเปลี่ยนเป็นสีแดง
     #    แถบแดงทั้งแถวสงวนให้เคสฉุกเฉินเท่านั้น · production JS เดิมเป๊ะ
-    if _demo_fx_tb():
-        _js = (
-            f'<script>var el0={el0:.0f},t0=Date.now(),t=document.getElementById("t"),'
-            f'row=document.getElementById("row"),emer={1 if emer else 0};'
-            'function u(){var el=el0+(Date.now()-t0)/1000,d=Math.floor(el/60),'
-            'sec=Math.floor(el%60),c=d<60?"#22a565":"#e24b4a";'
-            'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.background="#e24b4a";return}'
-            't.style.background=c;'
-            'if(!emer&&d>=60){row.style.background="#fff8e1";'
-            'row.style.border="1px solid #f0deb0";'
-            'row.style.borderLeft="3px solid #e3920b";}'
-            't.textContent="⏱ รอแล้ว "+d+":"+String(sec).padStart(2,"0")}'
-            'u();setInterval(u,1000)</script>'
-        )
-    else:
-        _js = (
-            f'<script>var el0={el0:.0f},t0=Date.now(),t=document.getElementById("t");'
-            'function u(){var el=el0+(Date.now()-t0)/1000,d=Math.floor(el/60),'
-            'sec=Math.floor(el%60),c=d<30?"#22a565":d<60?"#e3920b":"#e24b4a";'
-            'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.background="#e24b4a";return}'
-            't.style.background=c;'
-            't.textContent="⏱ รอแล้ว "+d+":"+String(sec).padStart(2,"0")}'
-            'u();setInterval(u,1000)</script>'
-        )
-    return (
-        '<html><head><style>'
-        "*{margin:0;padding:0;box-sizing:border-box}"
-        "body{font-family:'IBM Plex Sans Thai','Sarabun','Segoe UI',sans-serif;background:transparent}"
-        f"{_EMG_CSS}"
-        '</style></head><body>'
-        f'<div id="row" style="display:flex;align-items:center;gap:10px;{border_css}'
-        f'background:{(("#fdeeee" if emer else "#ffffff") if _demo_fx_tb() else "#fffcf3")};'
-        f'border-radius:10px;padding:9px 12px;">'
-        f'<span style="min-width:104px;font-size:20px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
-        f'<span style="min-width:64px;font-size:16px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
-        f'<span style="flex:1;min-width:0;overflow:hidden;">'
-        f'{emg_html}'
-        f'<span style="font-size:20px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
-        f'{dup_badge}'
-        f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
-        f'<span style="font-size:18px;color:#64748b;white-space:nowrap;">'
-        f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
-        f'<span style="min-width:104px;"><span style="background:#fdf3dd;color:#9a6700;'
-        f'border-radius:10px;padding:5px 16px;font-size:18px;font-weight:500;white-space:nowrap;">รอผ่าตัด</span></span>'
-        f'<span style="min-width:132px;"><span id="t" style="color:#fff;padding:3px 11px;'
-        f'border-radius:8px;font-size:18px;font-weight:600;display:inline-block;'
-        f'white-space:nowrap;"></span>{ov_badge}</span>'
-        f'</div>'
-        f'{_js}</body></html>'
+    # ⏱ เวลารออยู่คอลัมน์เวลา (ข้อความชิดขวา) ไม่ใช่ชิปสีลอย ๆ เหมือนเดิม —
+    #    ชิปสถานะมีคอลัมน์ของตัวเองแล้ว · เกิน 60 นาที = เหลือง (ภาษาสีเดิม:
+    #    เหลือง = ปัญหาเวลา · แดงสงวนให้ฉุกเฉิน) ทั้งชิป เวลา และแถบซ้าย
+    _js = (
+        f'<script>var el0={el0:.0f},t0=Date.now(),emer={1 if emer else 0},'
+        't=document.getElementById("t"),ch=document.getElementById("ch"),'
+        'row=document.getElementById("row"),late=0;'
+        'function u(){var d=Math.floor((el0+(Date.now()-t0)/1000)/60);'
+        'if(d>=1440){t.textContent="รอนานมาก";t.style.color="#c0392b";return}'
+        't.textContent="รอ "+d+" นาที";'
+        'if(d>=60&&!late){late=1;t.style.color="#c0392b";t.style.fontWeight="700";'
+        'ch.textContent="รอเกินเวลา";ch.style.background="#fdf3dd";ch.style.color="#9a6700";'
+        + ('if(!emer){row.style.background="#fffdf5";'
+           'row.style.borderLeft="5px solid #e3920b";}' if _demo_fx_tb() else '')
+        + '}}u();setInterval(u,1000)</script>'
     )
+    return _iframe_doc(
+        _row_shell(
+            _cell_room(c, loc)
+            + _cell_q(c, tlabel, emer)
+            + _cell_patient(c, dup_badge)
+            + _cell_op(c)
+            + _cell_chip('รอผ่าตัด', '#64748b', '#f1f5f9', el_id='ch')
+            + _cell_time('<span id="t"></span>' + ov_badge),
+            bg=('#fdeeee' if emer else '#ffffff'),
+            border_css=border_css)
+        + _js)
 
 
 def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
@@ -593,31 +740,19 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
     _emer = _is_emer(c)
     _bg = ('#fdeeee' if _emer else '#ffffff') if _demo_fx_tb() else '#f4fbf7'
     return (
-        '<html><head><style>'
-        "*{margin:0;padding:0;box-sizing:border-box}"
-        "body{font-family:'IBM Plex Sans Thai','Sarabun','Segoe UI',sans-serif;background:transparent}"
-        f"{_EMG_CSS}"
-        '</style></head><body>'
-        f'<div id="rw" style="display:flex;align-items:center;gap:10px;{border_css}'
-        f'background:{_bg};border-radius:10px;padding:9px 12px;">'
-        f'<span style="min-width:104px;font-size:20px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
-        f'<span style="min-width:64px;font-size:16px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
-        f'<span style="flex:1;min-width:0;overflow:hidden;">'
-        f'{emg_html}'
-        f'<span style="font-size:20px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
-        f'{dup_badge}'
-        f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
-        f'<span style="font-size:18px;color:#64748b;white-space:nowrap;">'
-        f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
-        f'<span style="min-width:104px;"><span id="ch" style="background:#e6f6ec;color:#1b7f4b;'
-        f'border-radius:10px;padding:5px 16px;font-size:18px;font-weight:500;white-space:nowrap;">กำลังผ่า</span></span>'
-        f'<span style="min-width:230px;font-size:18px;">'
-        f'<span id="t" style="color:#1b7f4b;font-weight:600;"></span>{ov_badge}'
-        f'<span style="display:block;height:4px;background:#eef2f6;border-radius:2px;'
-        f'overflow:hidden;margin-top:3px;"><span id="b" style="display:block;height:100%;'
-        f'width:0%;background:#22a565;"></span></span>{callnext_html}</span>'
-        f'</div>'
-        f'<script>var el0={el0:.0f},t0=Date.now(),eff={int(eff)}'
+        _iframe_doc(
+            _row_shell(
+                _cell_room(c, loc)
+                + _cell_q(c, tlabel, _emer)
+                + _cell_patient(c, dup_badge)
+                + _cell_op(c)
+                + _cell_chip('กำลังผ่า', '#1b7f4b', '#e6f6ec', el_id='ch')
+                + _cell_time('<span id="t" style="font-weight:600;color:#1b7f4b;"></span>'
+                             + ov_badge, title=callnext_html),
+                bg=_bg, border_css=border_css, row_id='rw',
+                prog=_row_prog(0, '#22a565', el_id='b'))
+        ).replace('</body></html>', '')
+        + f'<script>var el0={el0:.0f},t0=Date.now(),eff={int(eff)}'
         + (f',emer={1 if _emer else 0}' if _demo_fx_tb() else '') + ';'
         'var t=document.getElementById("t"),b=document.getElementById("b"),'
         'ch=document.getElementById("ch"),rw=document.getElementById("rw");'
@@ -673,8 +808,12 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     muted = (disp == 'discharged')
     emer = _is_emer(c) and not muted
     emg_html = _EMG_BADGE if emer else ''
-    border_css = ('border:1px solid #f5c6c5;border-left:3px solid #e0312e;'
-                  if emer else 'border:1px solid #eef2f6;')
+    # แถบสีซ้าย 5px = สถานะแบบเห็นจากไกล (คู่กับชิปในคอลัมน์สถานะ)
+    _bar = {'holding_pre': '#cbd5e1', 'in_or': '#22a565', 'overrun': '#e3920b',
+            'holding_post': '#1565c0', 'recovery': '#a855f7',
+            'discharged': '#e2e8f0'}.get(disp, '#cbd5e1')
+    border_css = ('border:1px solid #f5c6c5;border-left:5px solid #e0312e;'
+                  if emer else f'border:1px solid #eef2f6;border-left:5px solid {_bar};')
     # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026): แถบสี = ภาษาปัญหาเท่านั้น
     #    ฉุกเฉิน = แถบแดงอ่อน · เกินเวลา = แถบเหลืองครีม · แถวปกติพื้นขาว
     #    (แถบเขียว/ครีมประจำสถานะเอาออก) · จำหน่ายแล้วคงเทาหรี่ · production เดิม
@@ -691,7 +830,8 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
 
     with c0:
         if disp == 'holding_pre':
-            components.html(_holding_row_iframe(c, loc, tlabel, now, dup_badge), height=60)
+            components.html(_holding_row_iframe(c, loc, tlabel, now, dup_badge),
+                            height=_ROW_IFRAME_H)
         elif (disp in ('in_or', 'overrun')
               and c.get('time_entered_or') is not None
               and hasattr(c.get('time_entered_or'), 'timestamp')):
@@ -699,28 +839,23 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             components.html(
                 _inroom_row_iframe(c, loc, tlabel, max(int(eff), 5),
                                    emg_html, border_css, ov_badge, now,
-                                   _callnext_html(c, eff, tov_map), dup_badge),
-                height=78)
+                                   _callnext_text(c, eff, tov_map), dup_badge),
+                height=_ROW_IFRAME_H)
         else:
-            time_html = _time_cell(c, disp, eff, elapsed, now)
+            _tm_html, _tm_tip = _time_static(c, disp, eff, elapsed, now)
+            _prog = ''
+            if disp in ('in_or', 'overrun') and eff:
+                _pct = min(int(elapsed / eff * 100), 100)
+                _prog = _row_prog(_pct, '#e3920b' if disp == 'overrun' else '#22a565')
             st.markdown(
-                f'<div style="display:flex;align-items:center;gap:10px;'
-                f'{border_css}background:{bg};'
-                f'border-radius:10px;padding:9px 12px;margin:2px 0;">'
-                f'<span style="min-width:104px;font-size:20px;font-weight:600;color:{room_fg};">{loc(c)}</span>'
-                f'<span style="min-width:64px;font-size:16px;color:{sub_fg};">{_sched_order_html(c, tlabel)}</span>'
-                f'<span style="flex:1;min-width:0;overflow:hidden;">'
-                f'{emg_html}'
-                f'<span style="font-size:20px;font-weight:600;color:{name_fg};">{_pt_name(c)}</span>'
-                f'{dup_badge if not muted else ""}'
-                f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
-                f'<span style="font-size:18px;color:{sub_fg};white-space:nowrap;overflow:hidden;'
-                f'text-overflow:ellipsis;display:inline-block;max-width:100%;">'
-                f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
-                f'<span style="min-width:104px;"><span style="background:{chipbg};color:{fg};'
-                f'border-radius:10px;padding:5px 16px;font-size:18px;font-weight:500;white-space:nowrap;">{label}</span></span>'
-                f'<span style="min-width:150px;font-size:18px;color:{time_fg};">{time_html}{ov_badge}</span>'
-                f'</div>',
+                _row_shell(
+                    _cell_room(c, loc, fg=room_fg)
+                    + _cell_q(c, tlabel, emer)
+                    + _cell_patient(c, dup_badge if not muted else '', fg=name_fg)
+                    + _cell_op(c, fg=sub_fg)
+                    + _cell_chip(label, fg, chipbg)
+                    + _cell_time(_tm_html + ov_badge, title=_tm_tip),
+                    bg=bg, border_css=border_css) ,
                 unsafe_allow_html=True)
 
     with c1:
