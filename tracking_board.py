@@ -643,8 +643,11 @@ def _time_static(c, disp, eff, elapsed, now, tov_map=None):
             'ช่วงแคบ = ค่อนข้างแน่นอน · ช่วงกว้าง = เวลาแกว่งได้มาก ควรเผื่อเวลา')
     if ov:
         return (f'<b style="font-weight:700;color:#0f172a;">{_dur_str(eff)}</b>',
-                f'พยาบาลแก้ · AI ทำนาย {_dur_str(ai0) if ai0 else "?"}', _tip)
-    return f'AI ~{_dur_str(ai0) if ai0 else "? น."}', ' · '.join(_bits), _tip
+                f'พยาบาลแก้ · 🤖 ทำนาย {_dur_str(ai0) if ai0 else "?"}', _tip)
+    # 🤖 = ค่าที่มาจากโมเดล (ไม่ใช่คนกรอก) · "ใช้ห้อง" ระบุชัดว่าเป็นเวลาครองห้อง
+    #     room-in ถึง room-out ไม่ใช่เวลาลงมีด — คนละตัวกัน ทีมเคยสับสน
+    return (f'🤖 ใช้ห้อง ~{_dur_str(ai0) if ai0 else "? น."}',
+            ' · '.join(_bits), _tip)
 
 
 def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
@@ -690,7 +693,10 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
             + _cell_chip('รอผ่าตัด', '#64748b', '#f1f5f9', el_id='ch')
             # บรรทัดล่าง = เวลาที่ AI ทำนายว่าจะใช้ห้อง (เห็นก่อนเข้าห้องจริง)
             + _cell_time('<span id="t"></span>' + ov_badge,
-                         sub=(f'AI ~{_dur_str(c.get("ai_predicted_min") or c.get("predicted_min"))}'
+                         # 15px (ใหญ่กว่าบรรทัดล่างมาตรฐาน 13px): ข้อความสั้น มีที่เหลือ
+                         # และไอคอน 🤖 ที่ 13px จะเละเป็นก้อนสี อ่านไม่ออก
+                         sub=(f'<span style="font-size:15px;">🤖 ใช้ห้อง '
+                              f'~{_dur_str(c.get("ai_predicted_min") or c.get("predicted_min"))}</span>'
                               if (c.get('ai_predicted_min') or c.get('predicted_min')) else '')),
             bg=('#fdeeee' if emer else '#ffffff'),
             border_css=border_css)
