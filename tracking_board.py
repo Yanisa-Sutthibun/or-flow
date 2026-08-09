@@ -60,14 +60,14 @@ _EMG_CSS = (
     ".emg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;"
     "background:#e0312e;margin-right:5px;vertical-align:1px;"
     "animation:emgPulse 1.4s ease-out infinite}"
-    ".emg-tag{color:#c0392b;background:#fbe9e8;border-radius:8px;padding:1px 8px;"
-    "font-size:11.5px;font-weight:600;letter-spacing:.3px;margin-right:6px;"
+    ".emg-tag{color:#c0392b;background:#fbe9e8;border-radius:10px;padding:4px 14px;"
+    "font-size:18px;font-weight:600;letter-spacing:.3px;margin-right:8px;"
     "white-space:nowrap;display:inline-block;vertical-align:1px}"
 )
 _EMG_BADGE = ('<span class="emg-dot"></span><span class="emg-tag">ฉุกเฉิน</span>'
               # 🚪 เคสฉุกเฉินอยู่นอกขอบเขตวิจัย (elective เท่านั้น) — ชิปเทาแจ้งจาง ๆ
               '<span style="color:#6b7280;background:#f3f4f6;border:1px solid #e5e7eb;'
-              'border-radius:8px;padding:1px 7px;font-size:10.5px;margin-right:6px;'
+              'border-radius:10px;padding:4px 14px;font-size:18px;margin-right:8px;'
               'white-space:nowrap;display:inline-block;vertical-align:1px;">'
               'นอกขอบเขตวิจัย</span>')
 
@@ -152,7 +152,7 @@ def _sched_order_html(c, tlabel):
     except Exception:
         pass
     return (f'{base}<br><span title="ล็อคคิว — ลำดับจัดมาจากตารางผ่าตัด" '
-            f'style="font-size:10.5px;color:#94a3b8;'
+            f'style="font-size:18px;color:#94a3b8;'
             f'white-space:nowrap;cursor:help;">🔒 คิว {o}</span>')
 
 
@@ -207,7 +207,7 @@ def _dup_name_badges(cases, loc) -> dict:
                 f'<span title="ชื่อซ้ำกับอีกเคสวันนี้{(" · " + rooms_txt) if rooms_txt else ""}'
                 f' · ตรวจ HN ก่อนดำเนินการ" style="display:inline-flex;align-items:center;'
                 f'gap:6px;background:#fdf3dd;color:#9a6700;border-radius:999px;'
-                f'padding:3px 12px;font-size:16px;font-weight:600;margin-left:7px;'
+                f'padding:4px 14px;font-size:18px;font-weight:600;margin-left:7px;'
                 f'white-space:nowrap;">👥 ชื่อซ้ำ{(" · " + rooms_txt) if rooms_txt else ""}</span>')
     return badges
 
@@ -256,13 +256,13 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
 
     # ---------- หัวตาราง ----------
     st.markdown(
-        '<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 6px;'
-        'font-size:12.5px;font-weight:500;color:#64748b;">'
-        '<span style="min-width:78px;">ห้อง</span>'
-        '<span style="min-width:46px;">นัด</span>'
+        '<div style="display:flex;align-items:center;gap:10px;padding:6px 12px 8px;'
+        'font-size:18px;font-weight:500;color:#64748b;">'
+        '<span style="min-width:96px;">ห้อง</span>'
+        '<span style="min-width:64px;">นัด</span>'
         '<span style="flex:1;">ผู้ป่วย · หัตถการ</span>'
-        '<span style="min-width:80px;">สถานะ</span>'
-        '<span style="min-width:110px;">เวลา</span></div>',
+        '<span style="min-width:104px;">สถานะ</span>'
+        '<span style="min-width:150px;">เวลา</span></div>',
         unsafe_allow_html=True)
 
     # ---------- เตรียมแถว: กรอง + คำนวณสถานะแสดงผล ----------
@@ -335,15 +335,15 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
 
     def _zone_head(title, n, color):
         st.markdown(
-            f'<div style="display:flex;align-items:center;gap:8px;margin:14px 0 2px;'
-            f'padding:6px 12px;background:#f8fafc;border-left:4px solid {color};'
-            f'border-radius:0;font-size:14px;font-weight:700;color:#334155;">{title}'
-            f'<span style="font-size:11.5px;font-weight:500;color:#94a3b8;">'
+            f'<div style="display:flex;align-items:center;gap:10px;margin:14px 0 2px;'
+            f'padding:8px 14px;background:#f8fafc;border-left:4px solid {color};'
+            f'border-radius:0;font-size:18px;font-weight:700;color:#334155;">{title}'
+            f'<span style="font-size:18px;font-weight:500;color:#94a3b8;">'
             f'{n} เคส</span></div>',
             unsafe_allow_html=True)
 
     def _sub_head(txt):
-        st.markdown(f'<div style="font-size:12px;color:#94a3b8;margin:6px 0 0 4px;">'
+        st.markdown(f'<div style="font-size:18px;color:#94a3b8;margin:6px 0 0 4px;">'
                     f'{txt}</div>', unsafe_allow_html=True)
 
     def _rows(rs):
@@ -384,7 +384,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
             _names = ' · '.join(lbl for _, lbl in _free)
             st.markdown(
                 f'<div style="border:1px dashed #e2e8f0;border-radius:10px;'
-                f'padding:8px 12px;margin:4px 0;font-size:12.5px;color:#94a3b8;">'
+                f'padding:10px 16px;margin:4px 0;font-size:18px;color:#94a3b8;">'
                 f'ห้องว่าง: {_names}</div>', unsafe_allow_html=True)
     elif not z_or:
         st.caption("ไม่มีเคสกำลังผ่าตัด")
@@ -445,7 +445,7 @@ def _callnext_html(c, eff, tov_map):
     lo_dt = ent + _td(minutes=max(int(eff) - _hw, 5))
     hi_dt = ent + _td(minutes=int(eff) + _hw)
     call_dt = ent + _td(minutes=int(eff) + float(tov) - _CALL_LEAD_MIN)
-    return ('<div style="font-size:11px;color:#8a96a3;margin-top:2px;white-space:nowrap;" '
+    return ('<div style="font-size:18px;color:#8a96a3;margin-top:4px;white-space:nowrap;" '
             f'title="ช่วงคาดการณ์ ±{_hw} นาที (กว้างตามความยาวเคส — คาลิเบรตจากเคสจริงปี 2567 '
             'ครอบราว 5-6 ใน 10 เคส) · ช่วงมั่นใจ 90% ของเคสนี้ดูในปุ่ม ✏️">'
             '🚪 ออกห้อง ~' + lo_dt.strftime('%H:%M') + '–' + hi_dt.strftime('%H:%M')
@@ -480,7 +480,7 @@ def _time_cell(c, disp, eff, elapsed, now):
     if ov:
         return (f'<b style="font-weight:600;">{_dur_str(eff)}</b> '
                 f'<span style="text-decoration:line-through;color:#94a3b8;'
-                f'font-size:12px;">AI {_dur_str(ai0) if ai0 else "?"}</span>')
+                f'font-size:18px;">AI {_dur_str(ai0) if ai0 else "?"}</span>')
     # 🤖 หลักฐานบนแถว — จำนวนเคสอ้างอิง + ช่วง 90% (28 ก.ค. 2026: ตัดป้าย
     #    "มั่นใจ" heuristic ออก — ให้ช่วง conformal สื่อความไม่แน่นอนแทน
     #    เพราะมีการันตีเชิงสถิติ อธิบายที่มาในเล่มได้)
@@ -492,7 +492,7 @@ def _time_cell(c, disp, eff, elapsed, now):
         if c.get('range_method') == 'conformal' and _rng:
             _bits2.append(f'ช่วง {int(_rng[0])}–{int(_rng[1])} น.')
         _clr = '#27ae60' if _n else '#e74c3c'
-        _ev = (f'<br><span style="font-size:11px;color:{_clr};white-space:nowrap;" '
+        _ev = (f'<br><span style="font-size:18px;color:{_clr};white-space:nowrap;" '
                f'title="ช่วง 90% = เคสลักษณะนี้ราว 9 ใน 10 ใช้เวลาอยู่ในช่วงนี้ · '
                f'ช่วงแคบ = ค่อนข้างแน่นอน · ช่วงกว้าง = เวลาแกว่งได้มาก '
                f'ควรเผื่อเวลา/ปรับด้วย ✏️">{" · ".join(_bits2)}</span>')
@@ -509,7 +509,7 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
     el0 = max((now - arr).total_seconds(), 0) if (arr is not None and hasattr(arr, 'hour')) else 0
     ov = c.get('user_override_min')
     ov_badge = ('<span style="background:#e3f0fb;color:#1565c0;border-radius:8px;'
-                'padding:2px 10px;font-size:16px;margin-left:6px;">ปรับแล้ว</span>'
+                'padding:3px 12px;font-size:18px;margin-left:6px;">ปรับแล้ว</span>'
                 if ov else '')
     emer = _is_emer(c)
     emg_html = _EMG_BADGE if emer else ''
@@ -552,18 +552,18 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
         f'background:{(("#fdeeee" if emer else "#ffffff") if _demo_fx_tb() else "#fffcf3")};'
         f'border-radius:10px;padding:9px 12px;">'
         f'<span style="min-width:96px;font-size:18px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
-        f'<span style="min-width:56px;font-size:16px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
+        f'<span style="min-width:64px;font-size:18px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
         f'{emg_html}'
         f'<span style="font-size:20px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
         f'{dup_badge}'
-        f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
-        f'<span style="font-size:16px;color:#64748b;white-space:nowrap;">'
+        f'<span style="font-size:18px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
+        f'<span style="font-size:18px;color:#64748b;white-space:nowrap;">'
         f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
         f'<span style="min-width:104px;"><span style="background:#fdf3dd;color:#9a6700;'
-        f'border-radius:10px;padding:4px 14px;font-size:16px;font-weight:500;white-space:nowrap;">รอผ่าตัด</span></span>'
+        f'border-radius:10px;padding:5px 16px;font-size:18px;font-weight:500;white-space:nowrap;">รอผ่าตัด</span></span>'
         f'<span style="min-width:132px;"><span id="t" style="color:#fff;padding:3px 11px;'
-        f'border-radius:8px;font-size:16px;font-weight:600;display:inline-block;'
+        f'border-radius:8px;font-size:18px;font-weight:600;display:inline-block;'
         f'white-space:nowrap;"></span>{ov_badge}</span>'
         f'</div>'
         f'{_js}</body></html>'
@@ -593,17 +593,17 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
         f'<div id="rw" style="display:flex;align-items:center;gap:10px;{border_css}'
         f'background:{_bg};border-radius:10px;padding:9px 12px;">'
         f'<span style="min-width:96px;font-size:18px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
-        f'<span style="min-width:56px;font-size:16px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
+        f'<span style="min-width:64px;font-size:18px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
         f'{emg_html}'
         f'<span style="font-size:20px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
         f'{dup_badge}'
-        f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
-        f'<span style="font-size:16px;color:#64748b;white-space:nowrap;">'
+        f'<span style="font-size:18px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
+        f'<span style="font-size:18px;color:#64748b;white-space:nowrap;">'
         f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
         f'<span style="min-width:104px;"><span id="ch" style="background:#e6f6ec;color:#1b7f4b;'
-        f'border-radius:10px;padding:4px 14px;font-size:16px;font-weight:500;white-space:nowrap;">กำลังผ่า</span></span>'
-        f'<span style="min-width:180px;font-size:16px;">'
+        f'border-radius:10px;padding:5px 16px;font-size:18px;font-weight:500;white-space:nowrap;">กำลังผ่า</span></span>'
+        f'<span style="min-width:230px;font-size:18px;">'
         f'<span id="t" style="color:#1b7f4b;font-weight:600;"></span>{ov_badge}'
         f'<span style="display:block;height:4px;background:#eef2f6;border-radius:2px;'
         f'overflow:hidden;margin-top:3px;"><span id="b" style="display:block;height:100%;'
@@ -659,7 +659,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     bg = rowbg if rowbg else '#ffffff'
     ov = c.get('user_override_min')
     ov_badge = ('<span style="background:#e3f0fb;color:#1565c0;border-radius:8px;'
-                'padding:2px 10px;font-size:16px;margin-left:6px;">ปรับแล้ว</span>'
+                'padding:3px 12px;font-size:18px;margin-left:6px;">ปรับแล้ว</span>'
                 if ov else '')
     # จำหน่ายแล้ว → แถบเทาจาง ทุกอย่างหรี่ลง (ไฟฉุกเฉินดับด้วย — เคสจบแล้ว ไม่รกตา)
     muted = (disp == 'discharged')
@@ -700,18 +700,18 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 f'{border_css}background:{bg};'
                 f'border-radius:10px;padding:9px 12px;margin:2px 0;">'
                 f'<span style="min-width:96px;font-size:18px;font-weight:600;color:{room_fg};">{loc(c)}</span>'
-                f'<span style="min-width:56px;font-size:16px;color:{sub_fg};">{_sched_order_html(c, tlabel)}</span>'
+                f'<span style="min-width:64px;font-size:18px;color:{sub_fg};">{_sched_order_html(c, tlabel)}</span>'
                 f'<span style="flex:1;min-width:0;overflow:hidden;">'
                 f'{emg_html}'
                 f'<span style="font-size:20px;font-weight:600;color:{name_fg};">{_pt_name(c)}</span>'
                 f'{dup_badge if not muted else ""}'
-                f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
-                f'<span style="font-size:16px;color:{sub_fg};white-space:nowrap;overflow:hidden;'
+                f'<span style="font-size:18px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
+                f'<span style="font-size:18px;color:{sub_fg};white-space:nowrap;overflow:hidden;'
                 f'text-overflow:ellipsis;display:inline-block;max-width:100%;">'
                 f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
                 f'<span style="min-width:104px;"><span style="background:{chipbg};color:{fg};'
-                f'border-radius:10px;padding:4px 14px;font-size:16px;font-weight:500;white-space:nowrap;">{label}</span></span>'
-                f'<span style="min-width:132px;font-size:16px;color:{time_fg};">{time_html}{ov_badge}</span>'
+                f'border-radius:10px;padding:5px 16px;font-size:18px;font-weight:500;white-space:nowrap;">{label}</span></span>'
+                f'<span style="min-width:150px;font-size:18px;color:{time_fg};">{time_html}{ov_badge}</span>'
                 f'</div>',
                 unsafe_allow_html=True)
 
@@ -839,6 +839,13 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                          help=("ห้องนี้มีเคสกำลังผ่าอยู่ — ต้องกด 'ผ่าเสร็จ' "
                                "เคสแรกก่อนจึงเข้าห้องได้" if _busy else None)):
                 if R in busy_rooms:
+                    # 🔇 หมายเหตุ: กิ่งนี้ปกติกดไม่ถึง เพราะปุ่มถูก disabled=_busy
+                    # ไว้แล้วด้านบน — คงไว้เป็น defense-in-depth เผื่อ guard เปลี่ยน
+                    try:
+                        from main_or_pages import _toast_err_sound
+                        _toast_err_sound()
+                    except Exception:
+                        pass
                     st.warning("ห้องนี้มีเคสกำลังผ่าอยู่")
                 else:
                     do_enter(idx, R)

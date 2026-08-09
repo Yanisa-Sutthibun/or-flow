@@ -241,7 +241,7 @@ def build_ideal(cases_by_room, rooms_enabled, tov_map, risk: str,
 
 _RISK_DEFAULT = 'p80'
 
-_TD = 'padding:7px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle;'
+_TD = 'padding:10px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle;'
 
 
 def _dur_txt(mins):
@@ -258,11 +258,11 @@ def _sect_html(no, title, tag, n_handover):
             f'<span style="color:#c0392b;font-weight:700;">⚠️ คาดรับเวร '
             f'{n_handover} เคส</span>')
     return (f'<div style="display:flex;justify-content:space-between;'
-            f'align-items:baseline;margin:18px 0 2px;">'
-            f'<span style="font-size:16px;font-weight:700;color:#0d47a1;">'
-            f'{no} {title} <span style="font-size:11.5px;color:#64748b;'
-            f'font-weight:400;">— {tag}</span></span>'
-            f'<span style="font-size:13.5px;">{chip}</span></div>')
+            f'align-items:baseline;flex-wrap:wrap;gap:6px;margin:20px 0 6px;">'
+            f'<span style="font-size:20px;font-weight:700;color:#0d47a1;">'
+            f'{no} {title} <span style="font-size:18px;color:#64748b;'
+            f'font-weight:400;">· {tag}</span></span>'
+            f'<span style="font-size:18px;">{chip}</span></div>')
 
 
 def _queue_table_html(rooms_entries, room_label_fn, locked_ids,
@@ -272,15 +272,15 @@ def _queue_table_html(rooms_entries, room_label_fn, locked_ids,
     กำลังผ่า 🔵 ของแต่ละห้อง แสดงก่อนคิวที่เหลือ · เลขคิวต่อเนื่อง"""
     notes = notes or {}
     flow_by_room = flow_by_room or {}
-    th = ('<th style="background:#eef4fb;color:#0d47a1;font-size:12.5px;'
-          'text-align:left;padding:7px 10px;border-bottom:2px solid #d7e3f4;'
+    th = ('<th style="background:#eef4fb;color:#0d47a1;font-size:18px;'
+          'text-align:left;padding:9px 12px;border-bottom:2px solid #d7e3f4;'
           '{w}">{t}</th>')
     rows = ['<table style="width:100%;border-collapse:collapse;'
-            'font-size:13.5px;margin:4px 0 10px;">',
-            '<tr>' + th.format(w='width:52px;', t='คิวที่')
+            'font-size:18px;margin:4px 0 10px;">',
+            '<tr>' + th.format(w='width:66px;', t='คิวที่')
             + th.format(w='', t='หัตถการ · แพทย์')
-            + th.format(w='width:130px;', t='เวลา')
-            + th.format(w='width:150px;', t='หมายเหตุ') + '</tr>']
+            + th.format(w='width:190px;', t='เวลา')
+            + th.format(w='width:180px;', t='หมายเหตุ') + '</tr>']
     for rm in sorted(set(rooms_entries) | set(flow_by_room)):
         es = rooms_entries.get(rm) or []
         fl = flow_by_room.get(rm) or []
@@ -288,10 +288,10 @@ def _queue_table_html(rooms_entries, room_label_fn, locked_ids,
             continue
         _nd = sum(1 for f in fl if f['kind'] == 'done')
         _nr = len(fl) - _nd
-        _summ = (f' — เสร็จ {_nd} · กำลังผ่า {_nr} · รอ {len(es)}'
+        _summ = (f' · เสร็จ {_nd} · กำลังผ่า {_nr} · รอ {len(es)}'
                  if fl else f' ({len(es)} เคส)')
         rows.append(f'<tr><td colspan="4" style="{_TD}background:#f6f9fc;'
-                    f'font-weight:700;color:#334155;font-size:13px;">'
+                    f'font-weight:700;color:#334155;font-size:18px;">'
                     f'🏥 {room_label_fn(rm)}{_summ}</td></tr>')
         for i, f in enumerate(fl, start=1):
             if f['kind'] == 'done':
@@ -301,42 +301,42 @@ def _queue_table_html(rooms_entries, room_label_fn, locked_ids,
                       'font-weight:700;">✓</span>')
                 _bg = 'background:#fbfdfb;color:#94a3b8;'
                 _tm = (f'<span style="color:#2e7d32;font-weight:600;'
-                       f'font-size:12.5px;">{f["time_txt"]}</span>')
+                       f'font-size:18px;">{f["time_txt"]}</span>')
             else:
-                _q = ('<span style="display:inline-block;min-width:22px;height:22px;'
+                _q = ('<span style="display:inline-block;min-width:32px;height:32px;'
                       'border-radius:50%;background:#1565c0;color:#fff;'
-                      'text-align:center;line-height:22px;font-size:12px;'
+                      'text-align:center;line-height:32px;font-size:18px;'
                       f'font-weight:700;box-shadow:0 0 0 3px #bbdefb;">{i}</span>')
                 _bg = 'background:#eef6ff;'
                 _tm = (f'<span style="color:#1565c0;font-weight:700;'
-                       f'font-size:12.5px;white-space:nowrap;">🔵 {f["time_txt"]}</span>')
+                       f'font-size:18px;white-space:nowrap;">🔵 {f["time_txt"]}</span>')
             rows.append(
                 f'<tr><td style="{_TD}{_bg}">{_q}</td>'
                 f'<td style="{_TD}{_bg}">{f["proc"]}<br>'
-                f'<span style="color:#94a3b8;font-size:12px;">{f["surg"]}</span></td>'
+                f'<span style="color:#94a3b8;font-size:18px;">{f["surg"]}</span></td>'
                 f'<td style="{_TD}{_bg}">{_tm}</td>'
-                f'<td style="{_TD}{_bg}"><span style="font-size:11px;'
+                f'<td style="{_TD}{_bg}"><span style="font-size:18px;'
                 f'color:#94a3b8;">{f["note_txt"]}</span></td></tr>')
         for seq, e in enumerate(es, start=len(fl) + 1):
             c = e['case']
             cid = str(c.get('id'))
             locked = cid in locked_ids
-            q = ('<span style="display:inline-block;min-width:22px;height:22px;'
+            q = ('<span style="display:inline-block;min-width:32px;height:32px;'
                  'border-radius:50%;background:{bg};color:#fff;text-align:center;'
-                 'line-height:22px;font-size:12px;font-weight:700;">{s}</span>'
+                 'line-height:32px;font-size:18px;font-weight:700;">{s}</span>'
                  ).format(bg='#607d8b' if locked else '#1565c0',
                           s='🔒' if locked else seq)
             if e['handover']:
                 note = ('<span style="color:#c0392b;font-weight:700;'
-                        'font-size:12.5px;">⚠️ เสี่ยงรับเวร</span>')
+                        'font-size:18px;">⚠️ เสี่ยงรับเวร</span>')
             elif locked:
-                note = '<span style="color:#94a3b8;font-size:12.5px;">คิวเดิม</span>'
+                note = '<span style="color:#94a3b8;font-size:18px;">คิวเดิม</span>'
             elif cid in notes:
                 note = ('<span style="background:#ede7f6;color:#5e35b1;'
-                        'border-radius:999px;padding:1px 9px;font-size:11.5px;'
+                        'border-radius:999px;padding:3px 12px;font-size:18px;'
                         f'font-weight:600;">{notes[cid]}</span>')
             else:
-                note = (f'<span style="color:#94a3b8;font-size:12.5px;">'
+                note = (f'<span style="color:#94a3b8;font-size:18px;">'
                         f'{default_note}</span>')
             bg = 'background:#fff5f5;' if e['handover'] else ''
             proc = str(c.get('procedure') or '-')[:40]
@@ -344,7 +344,7 @@ def _queue_table_html(rooms_entries, room_label_fn, locked_ids,
             rows.append(
                 f'<tr><td style="{_TD}{bg}">{q}</td>'
                 f'<td style="{_TD}{bg}">{proc}<br>'
-                f'<span style="color:#64748b;font-size:12px;">{surg}</span></td>'
+                f'<span style="color:#64748b;font-size:18px;">{surg}</span></td>'
                 f'<td style="{_TD}{bg}">{_dur_txt(_p50(c))}</td>'
                 f'<td style="{_TD}{bg}">{note}</td></tr>')
     rows.append('</table>')

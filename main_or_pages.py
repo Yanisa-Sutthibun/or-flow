@@ -139,7 +139,10 @@ def _toast_ok(msg="อัปเดตแล้ว ✓"):
     production เงียบตามเดิม รอผลประเมินผู้ทรงก่อนค่อยยกไป
     🐛 3 ส.ค. 2026: st.toast ตรง ๆ ถูก rerun_board() บรรทัดถัดไปกลืนทุกครั้ง
     (rerun ทิ้ง output ของรอบปัจจุบัน) → ฝากข้อความใน session แล้วให้
-    _flush_toast() โชว์ตอนต้นรอบถัดไปแทน — ตายังเห็นเป็น 'ทันที' เหมือนเดิม"""
+    _flush_toast() โชว์ตอนต้นรอบถัดไปแทน — ตายังเห็นเป็น 'ทันที' เหมือนเดิม
+    🔊 9 ส.ค. 2026 (มุคกี้สั่ง): เสียง "กดสำเร็จ" ผูกกับจุดนี้ด้วย — ต่างจาก toast
+    ข้อความ (demo เท่านั้น) เสียงเล่นทุก instance ทั้ง demo และ production"""
+    _queue_sound('ok')
     try:
         if str(st.secrets.get('instance_mode', '')).lower() == 'demo':
             st.session_state['_pending_toast'] = msg
@@ -159,8 +162,8 @@ def _flush_toast():
                 f'<div class="or-toast">{_html.escape(str(_msg))}</div>'
                 '<style>'
                 '.or-toast{position:fixed;bottom:84px;right:26px;z-index:99999;'
-                'background:#1f2937;color:#fff;padding:10px 22px;'
-                'border-radius:10px;font-size:15px;font-weight:600;'
+                'background:#1f2937;color:#fff;padding:11px 24px;'
+                'border-radius:10px;font-size:18px;font-weight:600;'
                 'box-shadow:0 4px 16px rgba(0,0,0,.28);pointer-events:none;'
                 'animation:orTIn .25s ease, orTOut .5s ease 2.8s forwards;}'
                 '@keyframes orTIn{from{opacity:0;transform:translateY(16px)}'
@@ -171,6 +174,55 @@ def _flush_toast():
                 unsafe_allow_html=True)
         except Exception:
             pass
+
+
+def _toast_err_sound():
+    """🔊 9 ส.ค. 2026 (มุคกี้สั่ง): เสียง "กดไม่สำเร็จ" — ผูกเฉพาะจุดที่มี
+    st.warning ติดปุ่มบนบอร์ดอยู่แล้ว (ห้องปิด/ห้องไม่ว่าง) ไม่แตะ silent-fail
+    ของ background save (research_log/override_log ฯลฯ) ซึ่งตั้งใจให้เงียบ
+    เล่นทันที (ไม่ queue) เพราะจุดพวกนี้ return ก่อนถึง _rerun_board() —
+    ไม่มีรอบถัดไปให้ _flush_sound() มาเล่นแทน"""
+    _play_sound_now('err')
+
+
+def _queue_sound(kind):
+    """ฝากคิวเสียงไว้เล่นตอนต้นรอบถัดไป (เหมือน _pending_toast) — เล่นทุก
+    instance ไม่ผูกกับ instance_mode ต่างจาก toast ข้อความ"""
+    st.session_state['_pending_sound'] = kind
+
+
+def _flush_sound():
+    """เล่นเสียงที่ฝากไว้ก่อน rerun (คู่กับ _flush_toast) — เรียกที่ต้นทุก
+    fragment ที่มีปุ่ม"""
+    _kind = st.session_state.pop('_pending_sound', None)
+    if _kind in ('ok', 'err'):
+        _play_sound_now(_kind)
+
+
+def _play_sound_now(kind):
+    """เล่นเสียงจริงผ่าน Web Audio (ไม่ใช้ไฟล์เสียง) — ok = ไล่ขึ้น 2 โน้ตนุ่ม ·
+    err = ไล่ลง 2 โน้ตทึบกว่า สไตล์คลาสสิก ตั้งใจให้สั้น/เบากว่าเสียง alarm
+    เครื่องมอนิเตอร์ในห้องผ่าตัดจริง (ซึ่งมักเป็นบี๊บรัว 3 ครั้ง) กันสับสน"""
+    _tones = [660, 880] if kind == 'ok' else [392, 261.6]
+    _wave = 'sine' if kind == 'ok' else 'triangle'
+    _step = 0.09 if kind == 'ok' else 0.13
+    try:
+        components.html(
+            "<script>try{"
+            "var ctx=new (window.AudioContext||window.webkitAudioContext)();"
+            f"var now=ctx.currentTime,tones={_tones},wave='{_wave}',step={_step};"
+            "tones.forEach(function(f,i){"
+            "var o=ctx.createOscillator(),g=ctx.createGain();"
+            "o.type=wave;o.frequency.value=f;"
+            "g.gain.setValueAtTime(0, now+i*step);"
+            "g.gain.linearRampToValueAtTime(0.18, now+i*step+0.01);"
+            "g.gain.exponentialRampToValueAtTime(0.001, now+i*step+0.2);"
+            "o.connect(g);g.connect(ctx.destination);"
+            "o.start(now+i*step);o.stop(now+i*step+0.24);});"
+            "}catch(e){}</script>",
+            height=0)
+    except Exception:
+        pass
 
 
 def apply_finish(cases, idx, R, dest):
@@ -1006,6 +1058,7 @@ def _board_fragment():
     from main_or_core import init_session_state as _iss
     _iss()
     _flush_toast()   # 🎨 โชว์ toast ที่ฝากไว้จากปุ่มรอบก่อน (demo)
+    _flush_sound()   # 🔊 เล่นเสียงที่ฝากไว้จากปุ่มรอบก่อน (demo+production)
 
     # 🖥️ instance นี้เป็นแอป DEMO ไหม — ใช้ตัดสินตลอดทั้ง fragment:
     #    demo instance = โหมดสาธิตซิงก์ขึ้นบอร์ดกลาง (schema demo) เต็มรูปแบบ
@@ -1132,11 +1185,11 @@ def _board_fragment():
             st.session_state['_board_user_pull'] = True    # ✋ คนสั่งเอง — ห้ามถูกเลื่อน
             _rerun_board()
     with _ctl_warn:
-        st.markdown("<div style=\x27text-align:right;color:#808495;font-size:13px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
+        st.markdown("<div style=\x27text-align:right;color:#808495;font-size:18px;line-height:1.3;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
         # 🎨 demo: บอกเวลาซิงก์ล่าสุด — ช่องว่าง 30 วิ จะไม่ถูกอ่านว่า "ค้าง"
         if _is_demo_instance and st.session_state.get('_board_last_pull_wall'):
             st.markdown(
-                f"<div style='text-align:right;color:#b6c2cf;font-size:11px;'>"
+                f"<div style='text-align:right;color:#b6c2cf;font-size:18px;'>"
                 f"อัปเดตล่าสุด {st.session_state['_board_last_pull_wall']}</div>",
                 unsafe_allow_html=True)
     # 🚪 โหมดจอประจำห้อง: ไม่มีสวิตช์สาธิต (กันจอห้องเผลอสลับบอร์ดทั้งตึกเป็นสาธิต)
@@ -1194,8 +1247,8 @@ def _board_fragment():
         # 🎬 โหมดสาธิต: UI เหมือนโหมดจริงทุกอย่าง — เหลือชิปจาง ๆ กันสับสนเท่านั้น
         st.markdown(
             '<div style="text-align:right;margin:-4px 0 2px;">'
-            '<span style="font-size:11px;color:#b6c2cf;border:1px solid #eef2f6;'
-            'border-radius:999px;padding:1px 9px;">สาธิต · ไม่บันทึกจริง</span></div>',
+            '<span style="font-size:18px;color:#b6c2cf;border:1px solid #eef2f6;'
+            'border-radius:999px;padding:4px 14px;">สาธิต · ไม่บันทึกจริง</span></div>',
             unsafe_allow_html=True)
     else:
         # 🧪 มีเคสทดสอบ (อัปโหลดแบบติ๊กโหมดทดสอบ) ปนบนบอร์ด — เตือนจาง ๆ
@@ -1204,8 +1257,8 @@ def _board_fragment():
         if _n_test:
             st.markdown(
                 f'<div style="text-align:right;margin:-4px 0 2px;">'
-                f'<span style="font-size:11px;color:#9a6700;border:1px solid #fdf3dd;'
-                f'background:#fffcf3;border-radius:999px;padding:1px 9px;">'
+                f'<span style="font-size:18px;color:#9a6700;border:1px solid #fdf3dd;'
+                f'background:#fffcf3;border-radius:999px;padding:4px 14px;">'
                 f'🧪 เคสทดสอบ {_n_test} เคสบนบอร์ด · ไม่บันทึกจริง · '
                 f'ลบที่ ⚙️ ล้างกระดาน</span></div>',
                 unsafe_allow_html=True)
@@ -1296,9 +1349,9 @@ def _board_fragment():
         '<div style="display:flex;gap:12px;margin:6px 0 12px;">'
         + ''.join(
             f'<div style="flex:1;background:#ffffff;border:1px solid #eef2f6;'
-            f'border-radius:14px;padding:12px 16px 10px;">'
+            f'border-radius:14px;padding:14px 16px 12px;">'
             f'<span style="display:inline-block;background:{_bg};color:{_fg};'
-            f'border-radius:9px;padding:2px 10px;font-size:12.5px;'
+            f'border-radius:10px;padding:4px 12px;font-size:18px;'
             f'font-weight:600;white-space:nowrap;">{_lb}</span>'
             f'<div style="font-size:32px;font-weight:800;color:#0f172a;'
             f'line-height:1.15;margin-top:6px;">{_v}</div></div>'
@@ -1331,12 +1384,14 @@ def _board_fragment():
             return  # กันกดรัว
         # 🚫 กันเข้าห้องที่ถูก "ปิด" ในหน้าตั้งค่า — เคสที่ schedule ผูกห้องปิดมา ก็เข้าไม่ได้
         if R and R not in {_r for _r, _ in _enabled_room_options()}:
+            _toast_err_sound()
             st.warning(f"ห้อง {_loc(cases[idx])} ถูกปิดอยู่ (ตั้งค่า) — "
                        f"เปิดใช้งานห้องในหน้า ⚙️ ตั้งค่า ก่อน หรือเลือกห้องอื่น")
             return
         # 🚫 defense-in-depth: กันห้องซ้ำแม้ปุ่มจะ guard อยู่แล้ว (เผื่อเรียกตรง)
         if R and any(_c.get('status') == 'in_or' and _rid(_c) == R
                      for _c in cases):
+            _toast_err_sound()
             st.warning(f"ห้อง {_loc(cases[idx])} มีเคสกำลังผ่าอยู่ — เข้าห้องไม่ได้")
             return
         now = _now()
@@ -1431,6 +1486,7 @@ def _room_focus_fragment(room_no):
     from room_config import room_label
     from main_or_db import mask_patient_name
     _flush_toast()   # 🎨 โชว์ toast ที่ฝากไว้จากปุ่มรอบก่อน (demo)
+    _flush_sound()   # 🔊 เล่นเสียงที่ฝากไว้จากปุ่มรอบก่อน (demo+production)
 
     # ดึงบอร์ดกลางทุกรอบ (จอนี้ไม่มีช่องพิมพ์ — ดึงได้เสมอ เว้นมีงานค้างยังไม่เซฟ)
     if not st.session_state.get('_board_dirty'):
@@ -1466,10 +1522,10 @@ def _room_focus_fragment(room_no):
         over = elapsed > eff
         pct = min(int(elapsed / max(eff, 1) * 100), 100)
         chip = (('<span style="background:#FBE9E8;color:#A32D2D;border-radius:999px;'
-                 'padding:4px 16px;font-size:16px;font-weight:700;">เกินเวลา</span>')
+                 'padding:5px 18px;font-size:18px;font-weight:700;">เกินเวลา</span>')
                 if over else
                 ('<span style="background:#E1F5EE;color:#085041;border-radius:999px;'
-                 'padding:4px 16px;font-size:16px;font-weight:700;">กำลังผ่า</span>'))
+                 'padding:5px 18px;font-size:18px;font-weight:700;">กำลังผ่า</span>'))
         bar_color = '#A32D2D' if over else '#1D9E75'
         st.markdown(
             f'<div style="background:#fff;border:2px solid #1D9E75;border-radius:16px;'
@@ -1483,7 +1539,7 @@ def _room_focus_fragment(room_no):
             f'margin:16px 0 8px;overflow:hidden;">'
             f'<div style="background:{bar_color};height:100%;width:{pct}%;'
             f'border-radius:6px;transition:width 1s ease;"></div></div>'
-            f'<div style="display:flex;justify-content:space-between;font-size:16px;'
+            f'<div style="display:flex;justify-content:space-between;font-size:18px;'
             f'color:#475569;"><span>ผ่าไป {elapsed} นาที</span>'
             f'<span>คาดการณ์ ~{eff} นาที</span></div>'
             f'</div>', unsafe_allow_html=True)
@@ -1592,15 +1648,15 @@ def _room_focus_fragment(room_no):
                 _ai_txt = f' · AI ~{_ai} นาที' if _ai else ''
                 if _w.get('status') == 'holding_pre':
                     _chip = ('<span style="background:#fdf3dd;color:#9a6700;'
-                             'border-radius:10px;padding:2px 10px;font-size:12.5px;'
+                             'border-radius:10px;padding:4px 14px;font-size:18px;'
                              'white-space:nowrap;">รอผ่าตัด</span>')
                 else:
                     _chip = ('<span style="background:#f1f5f9;color:#64748b;'
-                             'border-radius:10px;padding:2px 10px;font-size:12.5px;'
+                             'border-radius:10px;padding:4px 14px;font-size:18px;'
                              'white-space:nowrap;">ยังไม่มา</span>')
                 _rows.append(
                     f'<div style="display:flex;align-items:center;gap:10px;'
-                    f'border-top:1px solid #eef2f6;padding:7px 0;font-size:14.5px;">'
+                    f'border-top:1px solid #eef2f6;padding:9px 0;font-size:18px;">'
                     f'<span style="color:#94a3b8;white-space:nowrap;">{_q}{_t}</span>'
                     f'<span style="font-weight:600;color:#0f172a;white-space:nowrap;">'
                     f'{mask_patient_name(_w.get("name") or "-")}</span>'

@@ -156,7 +156,7 @@ _ADMIN_CSS = """
     margin-bottom: 14px;
 }
 .admin-header h1 { margin: 0; font-size: 23px; font-weight: 600; color: #0f172a; }
-.admin-header p { margin: 5px 0 0; font-size: 13.5px; color: #64748b; }
+.admin-header p { margin: 5px 0 0; font-size: 18px; color: #64748b; }
 
 .room-card {
     border-radius: 12px; padding: 16px; text-align: center;
@@ -168,10 +168,10 @@ _ADMIN_CSS = """
 
 .kpi-card {
     background: white; border-radius: 12px; padding: 16px; text-align: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,.06); min-height: 100px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.06); min-height: 116px;
 }
 .kpi-value { font-size: 32px; font-weight: 700; margin: 4px 0; }
-.kpi-label { font-size: 13px; color: #757575; }
+.kpi-label { font-size: 18px; color: #757575; }
 
 /* CSS hover tooltip — popup ลอยขึ้นเมื่อ hover ⓘ icon */
 .cw-tip { position: relative; display: inline-block; cursor: help;
@@ -180,10 +180,10 @@ _ADMIN_CSS = """
     visibility: hidden; opacity: 0; transition: opacity .15s;
     position: absolute; z-index: 999;
     bottom: 125%; left: 50%; transform: translateX(-50%);
-    width: 280px; background: #263238; color: #eceff1;
-    text-align: left; padding: 12px 14px; border-radius: 8px;
+    width: 320px; background: #263238; color: #eceff1;
+    text-align: left; padding: 14px 16px; border-radius: 8px;
     box-shadow: 0 6px 24px rgba(0,0,0,.25);
-    font-size: 12px; line-height: 1.55; font-weight: 400;
+    font-size: 18px; line-height: 1.55; font-weight: 400;
     white-space: normal;
 }
 .cw-tip .cw-tip-body::after {
@@ -193,10 +193,10 @@ _ADMIN_CSS = """
 }
 .cw-tip:hover .cw-tip-body { visibility: visible; opacity: 1; }
 .cw-tip-title { font-weight: 600; color: #4fc3f7; margin-bottom: 6px;
-                font-size: 12.5px; }
+                font-size: 18px; }
 
 .alert-card {
-    border-radius: 10px; padding: 12px 16px; margin: 6px 0;
+    border-radius: 10px; padding: 14px 18px; margin: 6px 0;
     display: flex; align-items: center; gap: 10px;
 }
 .alert-high   { background: #ffebee; border-left: 4px solid #d32f2f; }
@@ -204,7 +204,7 @@ _ADMIN_CSS = """
 .alert-info   { background: #f5f5f5; border-left: 4px solid #9e9e9e; }
 
 .section-title {
-    font-size: 16px; font-weight: 700; color: #37474f;
+    font-size: 18px; font-weight: 700; color: #37474f;
     margin: 20px 0 10px; padding-bottom: 6px;
     border-bottom: 2px solid #e0e0e0;
 }
@@ -224,7 +224,7 @@ _ADMIN_CSS = """
 .group-header.indigo  { color: #1a237e; background: linear-gradient(135deg,#e8eaf6 0%,#f5f6fc 100%); border-left-color: #283593; }
 /* Subsection (level 2): clear divider with accent line */
 .sub-title {
-    font-size: 16px; font-weight: 600; color: #37474f;
+    font-size: 18px; font-weight: 600; color: #37474f;
     margin: 22px 0 10px; padding: 8px 12px;
     background: #fafafa;
     border-left: 4px solid #90a4ae; border-radius: 4px;
@@ -479,7 +479,7 @@ def _render_demo_controls():
             st.session_state['_stats_cache_ver'] = _stats_ver() + 1  # ล้าง cache สถิติ → ดึง cloud ใหม่
             st.rerun()
     with col_warn:
-        st.markdown("<div style=\x27text-align:right;color:#808495;font-size:13px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
+        st.markdown("<div style=\x27text-align:right;color:#808495;font-size:18px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
 
     # ---- 🎬 สาธิตจำลอง 1 วันของหน้านี้ — 🗑️ ถอดถาวรทุก instance (มุคกี้สั่ง 2 ส.ค. 2026)
     #      การสาธิตรวมศูนย์ที่ปุ่ม 🎬 หน้าตารางผ่าตัดของแอป DEMO ที่เดียว
@@ -514,9 +514,9 @@ def _render_demo_controls():
             sim_hour = 8 + sim_min / 60
             sim_time_str = f'{int(sim_hour):02d}:{int((sim_hour % 1) * 60):02d}'
             st.markdown(
-                f'<div style="margin-top:2px;"><span style="font-size:11.5px;'
+                f'<div style="margin-top:2px;"><span style="font-size:18px;'
                 f'color:#b6c2cf;border:1px solid #eef2f6;border-radius:999px;'
-                f'padding:2px 10px;">🕐 {sim_time_str} · สาธิต</span></div>',
+                f'padding:4px 14px;">🕐 {sim_time_str} · สาธิต</span></div>',
                 unsafe_allow_html=True)
 
     # ---- ปุ่มเล่น/หยุด/ความเร็ว พับเก็บ — โผล่เฉพาะตอนเปิดสาธิต (หน้าจริงสะอาด) ----
@@ -595,15 +595,15 @@ def _render_one_room_card(rm):
     if (_closed and not active and not rm.get('waiting') and not rm.get('done')):
         st.markdown(
             f'<div style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:12px;'
-            f'padding:18px 16px;text-align:center;min-height:110px;display:flex;'
+            f'padding:18px 16px;text-align:center;min-height:126px;display:flex;'
             f'flex-direction:column;justify-content:center;">'
-            f'<div style="font-size:14px;font-weight:600;color:#64748b;">{room_title}</div>'
-            f'<div style="font-size:13px;margin-top:6px;color:#94a3b8;">🔒 ปิดให้บริการ</div>'
+            f'<div style="font-size:18px;font-weight:600;color:#64748b;">{room_title}</div>'
+            f'<div style="font-size:18px;margin-top:6px;color:#94a3b8;">🔒 ปิดให้บริการ</div>'
             f'</div>', unsafe_allow_html=True)
         return
     closed_badge = ('<span style="background:#f1f5f9;color:#64748b;'
-                    'border:1px solid #cbd5e1;border-radius:8px;padding:0 6px;'
-                    'font-size:10.5px;margin-left:6px;white-space:nowrap;">'
+                    'border:1px solid #cbd5e1;border-radius:8px;padding:2px 8px;'
+                    'font-size:18px;margin-left:6px;white-space:nowrap;">'
                     '🔒 ปิดรับเคสใหม่</span>') if _closed else ''
 
     # 🤖 บรรทัด "คาดเสร็จ" (ใช้ room_forecast เดียวกับ section ไทม์ไลน์ → ตรงกันเสมอ)
@@ -692,7 +692,7 @@ def _render_one_room_card(rm):
         surg = (active.get('surgeon_name') or '').strip()
         if surg:
             surg_clean = _normalize_nurse_name(surg) or surg
-            sub_html = (f'<div style="font-size:11px;color:#94a3b8;'
+            sub_html = (f'<div style="font-size:18px;color:#94a3b8;'
                         f'margin-top:-2px;white-space:nowrap;overflow:hidden;'
                         f'text-overflow:ellipsis;">👨‍⚕️ {_esc(surg_clean)}</div>')
 
@@ -727,24 +727,24 @@ def _render_one_room_card(rm):
     proc_safe = _esc(procedure)   # 🔒 M-01: หนี HTML เต็มรูปแบบ (ไม่ใช่แค่ ")
     card_html = (
         f'<div style="background:{card_bg};border:{card_border};'
-        f'border-radius:12px;padding:13px 15px;">'
-        f'<div style="font-size:12px;color:#1565c0;font-weight:500;margin-bottom:5px;">'
+        f'border-radius:12px;padding:15px 17px;">'
+        f'<div style="font-size:18px;color:#1565c0;font-weight:500;margin-bottom:5px;">'
         f'{room_title}{closed_badge}</div>'
         f'<div style="display:flex;align-items:center;gap:6px;'
         f'margin-bottom:8px;">'
         f'<span{_dot_cls} '
         f'style="width:8px;height:8px;background:{status_dot};'
         f'border-radius:50%;display:inline-block;"></span>'
-        f'<span style="font-size:12px;color:{status_color};'
+        f'<span style="font-size:18px;color:{status_color};'
         f'font-weight:500;">{status_label}</span></div>'
-        f'<div style="font-size:14px;font-weight:500;color:{procedure_color};'
-        f'line-height:1.3;min-height:38px;overflow:hidden;'
+        f'<div style="font-size:18px;font-weight:500;color:{procedure_color};'
+        f'line-height:1.3;min-height:48px;overflow:hidden;'
         f'text-overflow:ellipsis;white-space:nowrap;" title="{proc_safe}">'
         f'{proc_safe}</div>'
         f'{sub_html}'
         f'{bar_html}'
         f'<div style="display:flex;justify-content:space-between;'
-        f'font-size:11px;color:#64748b;">'
+        f'font-size:18px;color:#64748b;">'
         f'<span>{info_left}</span>'
         f'<span style="color:{info_right_color};">{info_right}</span></div>'
         f'{_fc_html}'
@@ -802,11 +802,11 @@ def _render_kpi(kpi):
         # โชว์ "—" (เดิมโชว์ 0 นาที อ่านเหมือนเทิร์นห้องเร็วมากทั้งที่แค่ไม่มีข้อมูล)
         _n_to = kpi.get('n_turnovers')
         if _n_to == 0:
-            _to_html = ('—<span style="font-size:13px;color:#94a3b8;"> '
+            _to_html = ('—<span style="font-size:18px;color:#94a3b8;"> '
                         'รอเคส</span>')
         else:
             _to_html = (f"{kpi['avg_turnover']:.0f}"
-                        f'<span style="font-size:14px;"> นาที</span>')
+                        f'<span style="font-size:18px;"> นาที</span>')
         st.markdown(f"""
         <div class="kpi-card">
             <div class="kpi-label">Turnover เฉลี่ย (วันนี้)</div>
@@ -820,7 +820,7 @@ def _render_alerts(alerts):
         st.markdown("""
         <div style="background:#e8f5e9;padding:16px;border-radius:10px;text-align:center;">
             <span style="font-size:20px;">✅</span>
-            <span style="font-size:14px;color:#2e7d32;font-weight:600;"> ไม่มีปัญหา — ทุกอย่างปกติ</span>
+            <span style="font-size:18px;color:#2e7d32;font-weight:600;"> ไม่มีปัญหา — ทุกอย่างปกติ</span>
         </div>
         """, unsafe_allow_html=True)
         return
@@ -841,8 +841,8 @@ def _render_alerts(alerts):
         <div class="alert-card {css_class}">
             {_pdot}<span style="font-size:18px;">{icon}</span>
             <div>
-                <div style="font-size:13px;font-weight:600;">{room_label(a['room_no'])} — {_esc(a['procedure'] or '-')}</div>
-                <div style="font-size:12px;color:#666;">{_esc(a['name'] or '-')} | {_esc(a['message'])}</div>
+                <div style="font-size:18px;font-weight:600;">{room_label(a['room_no'])} — {_esc(a['procedure'] or '-')}</div>
+                <div style="font-size:18px;color:#666;">{_esc(a['name'] or '-')} | {_esc(a['message'])}</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -862,8 +862,8 @@ def _render_workload(wl):
                 pct = int(n_done / n_total * 100) if n_total > 0 else 0
                 bar_color = '#4caf50' if pct == 100 else '#42a5f5'
                 st.markdown(f"""
-                <div style="margin:6px 0;">
-                    <div style="display:flex;justify-content:space-between;font-size:13px;">
+                <div style="margin:8px 0;">
+                    <div style="display:flex;justify-content:space-between;font-size:18px;">
                         <span><b>{_esc(row['surgeon_name'])}</b></span>
                         <span style="color:#666;">{n_done}/{n_total} เคส</span>
                     </div>
@@ -897,15 +897,15 @@ def _render_workload(wl):
     st.markdown('<div class="section-title">📊 ประเภทเคส</div>', unsafe_allow_html=True)
     badges_html = f"""
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
-        <div style="background:#e0f2f1;padding:8px 16px;border-radius:20px;font-size:13px;">
+        <div style="background:#e0f2f1;padding:10px 18px;border-radius:20px;font-size:18px;">
             📋 SET <b>{wl['n_set']}</b></div>
-        <div style="background:#e3f2fd;padding:8px 16px;border-radius:20px;font-size:13px;">
+        <div style="background:#e3f2fd;padding:10px 18px;border-radius:20px;font-size:18px;">
             🚶 Walk-in <b>{wl['n_walkin']}</b></div>
-        <div style="background:#e0f7fa;padding:8px 16px;border-radius:20px;font-size:13px;">
+        <div style="background:#e0f7fa;padding:10px 18px;border-radius:20px;font-size:18px;">
             🏥 OPD <b>{wl['n_opd']}</b></div>
-        <div style="background:#fff3e0;padding:8px 16px;border-radius:20px;font-size:13px;">
+        <div style="background:#fff3e0;padding:10px 18px;border-radius:20px;font-size:18px;">
             🛏️ IPD <b>{wl['n_ipd']}</b></div>
-        <div style="background:#fce4ec;padding:8px 16px;border-radius:20px;font-size:13px;">
+        <div style="background:#fce4ec;padding:10px 18px;border-radius:20px;font-size:18px;">
             🌙 นอกเวลา <b>{wl['n_after']}</b></div>
     </div>
     """
@@ -936,8 +936,8 @@ def _render_ai_research_tab():
         pass
     _n1, _n2, _n3, _n4 = st.columns(4)
     _card = ('<div style="background:#f0f9f4;border:1px solid #d3ead9;border-radius:10px;'
-             'padding:10px 12px;min-height:96px;"><div style="font-size:12.5px;'
-             'color:#4b5f52;">{t}</div><div style="font-size:17px;font-weight:700;'
+             'padding:12px 14px;min-height:128px;"><div style="font-size:18px;'
+             'color:#4b5f52;">{t}</div><div style="font-size:20px;font-weight:700;'
              'color:#1b5e33;margin-top:4px;line-height:1.35;">{v}</div></div>')
     _n1.markdown(_card.format(t='แม่นแค่ไหน?',
                               v=f'ครึ่งหนึ่งของเคส คลาดไม่เกิน ~{_med} นาที'),
@@ -953,8 +953,8 @@ def _render_ai_research_tab():
                  unsafe_allow_html=True)
     st.markdown(
         '<div style="background:#ffffff;border:1px solid #eef2f6;border-left:4px solid '
-        '#2e7d32;border-radius:0 10px 10px 0;padding:10px 14px;margin:10px 0;'
-        'font-size:13.5px;line-height:1.7;color:#334155;">'
+        '#2e7d32;border-radius:0 10px 10px 0;padding:12px 16px;margin:10px 0;'
+        'font-size:18px;line-height:1.7;color:#334155;">'
         '<b>ใช้ยังไงหน้างาน (3 ข้อพอ):</b><br>'
         '1️⃣ ใช้ตัวเลข AI เป็น "ตัวช่วยกะเวลา" เรียกเคสถัดไป/แจ้งวอร์ด — ไม่ใช่คำสัญญา '
         'บอร์ดจึงแสดงเป็นช่วงเวลาเสมอ<br>'
@@ -1097,15 +1097,15 @@ def _render_ai_research_tab():
     def _render_year_block(num, year_be, title, plain, accent, bg, stat, empty_note=None):
         st.markdown(
             f'<div style="border-left:3px solid {accent};padding-left:12px;margin:16px 0 6px;">'
-            f'<div style="font-size:15px;font-weight:600;color:#222;">{num} ปี {year_be} — {title}</div>'
-            f'<div style="font-size:12px;color:#777;margin-top:1px;">{plain}</div></div>',
+            f'<div style="font-size:18px;font-weight:600;color:#222;">{num} ปี {year_be} — {title}</div>'
+            f'<div style="font-size:18px;color:#777;margin-top:1px;">{plain}</div></div>',
             unsafe_allow_html=True)
         if stat is None:
             _en = empty_note or ('ยังไม่มีเคสที่ผ่าเสร็จในปีนี้ — '
                                  'ระบบจะแสดงตัวเลขเมื่อมีข้อมูลมากพอ')
             st.markdown(
-                f'<div style="background:{bg};border-radius:10px;padding:12px 14px;'
-                f'font-size:13px;color:#888;line-height:1.5;">{_en}</div>',
+                f'<div style="background:{bg};border-radius:10px;padding:14px 16px;'
+                f'font-size:18px;color:#888;line-height:1.5;">{_en}</div>',
                 unsafe_allow_html=True)
             return
         c1, c2, c3 = st.columns(3)
@@ -1113,19 +1113,19 @@ def _render_ai_research_tab():
             f'<div class="kpi-card" style="background:{bg};">'
             f'<div class="kpi-label">ทำนายพลาด (เคสทั่วไป)</div>'
             f'<div class="kpi-value" style="color:{accent};">±{stat["med"]:.0f}</div>'
-            f'<div style="font-size:11px;color:#999;">นาที · โดยทั่วไปทำนายห่างจากเวลาจริงประมาณนี้ '
+            f'<div style="font-size:18px;color:#999;">นาที · โดยทั่วไปทำนายห่างจากเวลาจริงประมาณนี้ '
             f'(เฉลี่ย ±{stat["mae"]:.0f})</div></div>', unsafe_allow_html=True)
         c2.markdown(
             f'<div class="kpi-card" style="background:{bg};">'
             f'<div class="kpi-label">ทำนายแม่น (±15 นาที)</div>'
             f'<div class="kpi-value" style="color:{accent};">{stat["pct15"]}%</div>'
-            f'<div style="font-size:11px;color:#999;">ทำนายห่างไม่เกิน 15 นาที '
+            f'<div style="font-size:18px;color:#999;">ทำนายห่างไม่เกิน 15 นาที '
             f'({stat["w15"]:,}/{stat["n"]:,} เคส)</div></div>', unsafe_allow_html=True)
         c3.markdown(
             f'<div class="kpi-card" style="background:{bg};">'
             f'<div class="kpi-label">จำนวนเคส</div>'
             f'<div class="kpi-value" style="color:{accent};">{stat["n"]:,}</div>'
-            f'<div style="font-size:11px;color:#999;">เคสที่ใช้ประเมิน</div></div>',
+            f'<div style="font-size:18px;color:#999;">เคสที่ใช้ประเมิน</div></div>',
             unsafe_allow_html=True)
 
     _render_year_block(
@@ -1170,7 +1170,7 @@ def _render_ai_research_tab():
         _cov_color = '#43a047' if _cov >= 85 else ('#fb8c00' if _cov >= 75 else '#e53935')
         st.markdown(
             f'<div style="background:#f0f9ff;border-left:4px solid #0284c7;'
-            f'border-radius:8px;padding:10px 14px;margin:10px 0;font-size:13px;">'
+            f'border-radius:8px;padding:12px 16px;margin:10px 0;font-size:18px;">'
             f'📏 <b>ช่วงทำนาย 90% (split conformal):</b> ±{_q90:.0f} นาที — '
             f'ครอบคลุมเวลาจริง <b style="color:{_cov_color};">{_cov:.1f}%</b> '
             f'ของเคสที่ประเมิน (เป้า ~90%) · {_cov_note}</div>',
@@ -1229,8 +1229,8 @@ def _render_ai_research_tab():
         _s1630 = round(_p1630 / _pn * 100)
         _sover = max(0, 100 - _s15 - _s1630)
         st.markdown(
-            f'<div style="display:flex;height:34px;border-radius:8px;'
-            f'overflow:hidden;font-size:12px;color:white;font-weight:600;">'
+            f'<div style="display:flex;height:42px;border-radius:8px;'
+            f'overflow:hidden;font-size:18px;color:white;font-weight:600;">'
             f'<div style="width:{_s15}%;background:#43a047;display:flex;'
             f'align-items:center;justify-content:center;min-width:0;">{_s15}%</div>'
             f'<div style="width:{_s1630}%;background:#fb8c00;display:flex;'
@@ -1239,7 +1239,7 @@ def _render_ai_research_tab():
             f'align-items:center;justify-content:center;min-width:0;">{_sover}%</div>'
             f'</div>'
             f'<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:8px;'
-            f'font-size:12px;color:#666;">'
+            f'font-size:18px;color:#666;">'
             f'<span>🟢 ภายใน ±15 นาที ({_pw15:,} เคส)</span>'
             f'<span>🟡 ±16–30 นาที ({_p1630:,} เคส)</span>'
             f'<span>🔴 เกิน 30 นาที ({_pover:,} เคส)</span></div>',
@@ -1264,21 +1264,21 @@ def _render_ai_research_tab():
             _mm = float(_r['mae'])
             _cc = '#43a047' if _mm <= 15 else ('#fb8c00' if _mm <= 30 else '#e53935')
             _rows += (f'<div style="display:flex;justify-content:space-between;'
-                      f'align-items:center;padding:6px 2px;'
+                      f'align-items:center;padding:8px 4px;'
                       f'border-bottom:0.5px solid #f0f0f0;">'
-                      f'<span style="font-size:13px;color:#333;">{_r["_p"]}</span>'
-                      f'<span style="font-size:13px;font-weight:600;color:{_cc};">'
+                      f'<span style="font-size:18px;color:#333;">{_r["_p"]}</span>'
+                      f'<span style="font-size:18px;font-weight:600;color:{_cc};">'
                       f'±{_mm:.0f} นาที <span style="color:#bbb;font-weight:400;">'
                       f'· {int(_r["n"])} เคส</span></span></div>')
         st.markdown(f'<div style="background:white;border:0.5px solid #e0e0e0;'
-                    f'border-radius:10px;padding:6px 14px;">{_rows}</div>',
+                    f'border-radius:10px;padding:8px 16px;">{_rows}</div>',
                     unsafe_allow_html=True)
         st.caption("💡 หัตถการที่ทำบ่อย + มีแบบแผน AI แม่นระดับใช้งานจริงได้ · "
                    "ค่าเฉลี่ยรวมสูงเพราะหัตถการที่เวลาแปรปรวนสูง (เดายากโดยธรรมชาติ)")
 
     st.markdown("---")
     st.markdown('<div class="section-title">🔬 สำหรับวิทยานิพนธ์ '
-                '<span style="font-size:13px;font-weight:400;color:#9e9e9e;">'
+                '<span style="font-size:18px;font-weight:400;color:#9e9e9e;">'
                 '— ตัวชี้วัดเชิงสถิติ + กราฟวิเคราะห์</span></div>',
                 unsafe_allow_html=True)
 
@@ -1354,31 +1354,31 @@ def _render_ai_research_tab():
         <div class="kpi-card">
             <div class="kpi-label">เคสที่ใช้ประเมิน</div>
             <div class="kpi-value" style="color:#1565c0;">{n}</div>
-            <div style="font-size:11px;color:#999;">เคส</div>
+            <div style="font-size:18px;color:#999;">เคส</div>
         </div>""", unsafe_allow_html=True)
     k2.markdown(f"""
         <div class="kpi-card">
             <div class="kpi-label">ผิดพลาดเฉลี่ย (MAE)</div>
             <div class="kpi-value" style="color:{mae_color};">±{mae:.1f}</div>
-            <div style="font-size:11px;color:#999;">นาที • {mae_label}</div>
+            <div style="font-size:18px;color:#999;">นาที • {mae_label}</div>
         </div>""", unsafe_allow_html=True)
     k3.markdown(f"""
         <div class="kpi-card">
             <div class="kpi-label">ผิดค่ากลาง (Median)</div>
             <div class="kpi-value" style="color:#1565c0;">±{med_ae:.0f}</div>
-            <div style="font-size:11px;color:#999;">นาที • ครึ่งหนึ่งของเคสผิดไม่เกินนี้</div>
+            <div style="font-size:18px;color:#999;">นาที • ครึ่งหนึ่งของเคสผิดไม่เกินนี้</div>
         </div>""", unsafe_allow_html=True)
     k4.markdown(f"""
         <div class="kpi-card">
             <div class="kpi-label">ทำนายแม่น (±15 นาที)</div>
             <div class="kpi-value" style="color:{pct_color};">{pct_within_15:.0f}%</div>
-            <div style="font-size:11px;color:#999;">{within_15}/{n} เคส • {pct_label}</div>
+            <div style="font-size:18px;color:#999;">{within_15}/{n} เคส • {pct_label}</div>
         </div>""", unsafe_allow_html=True)
     k5.markdown(f"""
         <div class="kpi-card">
             <div class="kpi-label">R² Score</div>
             <div class="kpi-value" style="color:{r2_color};">{r2:.2f}</div>
-            <div style="font-size:11px;color:#999;">model fit • {r2_label}</div>
+            <div style="font-size:18px;color:#999;">model fit • {r2_label}</div>
         </div>""", unsafe_allow_html=True)
 
     st.caption(
@@ -1729,7 +1729,7 @@ def _render_nurse_progress_history(date_from: str, date_to: str):
             '<div style="background:#f5f5f5;border-radius:10px;padding:16px;'
             'text-align:center;margin:8px 0;">'
             '<span style="font-size:24px;">🔒</span><br>'
-            '<span style="font-size:14px;color:#616161;font-weight:600;">'
+            '<span style="font-size:18px;color:#616161;font-weight:600;">'
             'Progress รายบุคคล — ใส่รหัสเพื่อดู (ป้องกันข้อมูลส่วนตัว)</span></div>',
             unsafe_allow_html=True,
         )
@@ -1787,29 +1787,29 @@ def _render_nurse_progress_history(date_from: str, date_to: str):
     k1, k2, k3 = st.columns(3)
     with k1:
         st.markdown(
-            f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-            f'<div style="font-size:12px;color:#757575;">📊 รวม</div>'
+            f'<div style="background:#f5f5f5;border-radius:8px;padding:16px;">'
+            f'<div style="font-size:18px;color:#757575;">📊 รวม</div>'
             f'<div style="font-size:28px;font-weight:500;color:#1565c0;">{total}</div>'
-            f'<div style="font-size:11px;color:#9e9e9e;">เคสทั้งหมด</div>'
+            f'<div style="font-size:18px;color:#9e9e9e;">เคสทั้งหมด</div>'
             f'</div>', unsafe_allow_html=True)
     with k2:
         st.markdown(
-            f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-            f'<div style="font-size:12px;color:#757575;">🧤 Scrub</div>'
+            f'<div style="background:#f5f5f5;border-radius:8px;padding:16px;">'
+            f'<div style="font-size:18px;color:#757575;">🧤 Scrub</div>'
             f'<div style="font-size:28px;font-weight:500;color:#2e7d32;">{n_scrub}</div>'
-            f'<div style="font-size:11px;color:#9e9e9e;">{pct_scrub:.1f}% ของงาน</div>'
+            f'<div style="font-size:18px;color:#9e9e9e;">{pct_scrub:.1f}% ของงาน</div>'
             f'</div>', unsafe_allow_html=True)
     with k3:
         st.markdown(
-            f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-            f'<div style="font-size:12px;color:#757575;">🔁 Circulate</div>'
+            f'<div style="background:#f5f5f5;border-radius:8px;padding:16px;">'
+            f'<div style="font-size:18px;color:#757575;">🔁 Circulate</div>'
             f'<div style="font-size:28px;font-weight:500;color:#e65100;">{n_circ}</div>'
-            f'<div style="font-size:11px;color:#9e9e9e;">{pct_circ:.1f}% ของงาน</div>'
+            f'<div style="font-size:18px;color:#9e9e9e;">{pct_circ:.1f}% ของงาน</div>'
             f'</div>', unsafe_allow_html=True)
 
     # ── Top 10 หัตถการ (fuzzy grouped + แยก scrub/circ) ──
     st.markdown(
-        '<div style="font-size:13px;color:#666;margin:18px 0 6px;font-weight:500;">'
+        '<div style="font-size:18px;color:#666;margin:18px 0 6px;font-weight:500;">'
         '🔬 หัตถการที่ทำ (Top 10 · รวมหัตถการคล้ายกัน)</div>',
         unsafe_allow_html=True)
 
@@ -1845,7 +1845,7 @@ def _render_nurse_progress(op_date: str):
             '<div style="background:#f5f5f5;border-radius:10px;padding:16px;'
             'text-align:center;margin:8px 0;">'
             '<span style="font-size:24px;">🔒</span><br>'
-            '<span style="font-size:14px;color:#616161;font-weight:600;">'
+            '<span style="font-size:18px;color:#616161;font-weight:600;">'
             'Nurse Progress — ต้องใส่รหัสเพื่อดู</span></div>',
             unsafe_allow_html=True,
         )
@@ -1975,10 +1975,10 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
         // 🔽 TOC แบบเต็ม
         const TOC_HTML = `
         <div id="hist-toc" style="
-            position: fixed; right: 20px; top: 120px; width: 220px;
+            position: fixed; right: 20px; top: 120px; width: 270px;
             background: white; border: 0.5px solid #e0e0e0;
-            border-radius: 10px; padding: 14px 12px;
-            font-family: 'Sarabun', sans-serif; font-size: 13px;
+            border-radius: 10px; padding: 16px 14px;
+            font-family: 'Sarabun', sans-serif; font-size: 18px;
             z-index: 999; max-height: 75vh; overflow-y: auto;
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             display: ${isCollapsed ? 'none' : 'block'};">
@@ -1989,17 +1989,17 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
             <span id="toc-minimize" title="ย่อหน้าต่าง" onclick="window.__toc_minimize && window.__toc_minimize()" style="cursor:pointer;color:#9e9e9e;font-size:16px;line-height:1;padding:2px 6px;border-radius:4px;user-select:none;">−</span>
           </div>
           <div style="display:flex;flex-direction:column;gap:2px;">
-            <a class="toc-item" data-target="sec-overview" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">1</span>📊 ภาพรวมทั้งหมด</a>
-            <a class="toc-item" data-target="sec-room" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">2</span>🏥 สถิติรายห้อง</a>
-            <a class="toc-item" data-target="sec-trend" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">3</span>📈 กราฟจำนวนเคสรายเดือน</a>
-            <a class="toc-item" data-target="sec-rank" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">4</span>🏆 อันดับยอดนิยม</a>
-            <a class="toc-item" data-target="sec-eff" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">5</span>⏱️ ประสิทธิภาพ</a>
-            <a class="toc-item" data-target="sec-night" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">6</span>🌙 นอกเวลา</a>
-            <a class="toc-item" data-target="sec-nurse" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">7</span>👥 Progress (PIN)</a>
-            <a class="toc-item" data-target="sec-export" style="display:block;font-size:13px;padding:6px 10px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">8</span>💾 Export</a>
+            <a class="toc-item" data-target="sec-overview" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">1</span>📊 ภาพรวมทั้งหมด</a>
+            <a class="toc-item" data-target="sec-room" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">2</span>🏥 สถิติรายห้อง</a>
+            <a class="toc-item" data-target="sec-trend" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">3</span>📈 กราฟจำนวนเคสรายเดือน</a>
+            <a class="toc-item" data-target="sec-rank" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">4</span>🏆 อันดับยอดนิยม</a>
+            <a class="toc-item" data-target="sec-eff" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">5</span>⏱️ ประสิทธิภาพ</a>
+            <a class="toc-item" data-target="sec-night" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">6</span>🌙 นอกเวลา</a>
+            <a class="toc-item" data-target="sec-nurse" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">7</span>👥 Progress (PIN)</a>
+            <a class="toc-item" data-target="sec-export" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">8</span>💾 Export</a>
           </div>
           <div style="border-top:0.5px solid #eceff1;margin-top:10px;padding-top:10px;">
-            <a id="toc-top" style="display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;border-radius:6px;color:#1976d2;text-decoration:none;cursor:pointer;">⬆ กลับด้านบน</a>
+            <a id="toc-top" style="display:flex;align-items:center;gap:6px;font-size:18px;padding:8px 12px;border-radius:6px;color:#1976d2;text-decoration:none;cursor:pointer;">⬆ กลับด้านบน</a>
           </div>
         </div>`;
 
@@ -2217,10 +2217,10 @@ def _hist_sec_overview(date_from, date_to, data=None):
     def _stat_card(label, value, sub_text, value_color='#212121',
                    value_size='26px'):
         return (
-            f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-            f'<div style="font-size:12px;color:#757575;margin-bottom:4px;">{label}</div>'
+            f'<div style="background:#f5f5f5;border-radius:8px;padding:16px;">'
+            f'<div style="font-size:18px;color:#757575;margin-bottom:4px;">{label}</div>'
             f'<div style="font-size:{value_size};font-weight:500;line-height:1.1;color:{value_color};">{value}</div>'
-            f'<div style="font-size:11px;color:#9e9e9e;margin-top:4px;">{sub_text}</div>'
+            f'<div style="font-size:18px;color:#9e9e9e;margin-top:4px;">{sub_text}</div>'
             f'</div>'
         )
 
@@ -2254,7 +2254,7 @@ def _hist_sec_overview(date_from, date_to, data=None):
             "🏷️ สาขาเยอะสุด", (data or {}).get('top_div_name', '—'),
             f"{(data or {}).get('top_div_count', 0)} เคส "
             f"({(data or {}).get('top_div_pct', 0)}%)",
-            value_color='#6a1b9a', value_size='17px'),
+            value_color='#6a1b9a', value_size='18px'),
             unsafe_allow_html=True)
 
     # ⚠️ ระดับความเร่งด่วน — Elective (มี breakdown นัดหมาย/Walk-in) / Urgent / Emergency
@@ -2289,9 +2289,9 @@ def _hist_sec_overview(date_from, date_to, data=None):
         with _urg_cols[0]:
             st.markdown(
                 f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
-                f'<div style="font-size:13px;color:#666;margin-bottom:4px;">📋 Elective</div>'
+                f'<div style="font-size:18px;color:#666;margin-bottom:4px;">📋 Elective</div>'
                 f'<div style="font-size:28px;font-weight:500;line-height:1.1;margin-bottom:8px;">{n_elec}</div>'
-                f'<div style="font-size:12px;color:#888;display:flex;gap:10px;">'
+                f'<div style="font-size:18px;color:#888;display:flex;gap:10px;">'
                 f'<span>นัดหมาย <b style="color:#444;font-weight:500;">{n_elec_set}</b></span>'
                 f'<span style="color:#ccc;">|</span>'
                 f'<span>Walk-in <b style="color:#444;font-weight:500;">{n_elec_walkin}</b></span>'
@@ -2301,14 +2301,14 @@ def _hist_sec_overview(date_from, date_to, data=None):
             with _urg_cols[1]:
                 st.markdown(
                     f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
-                    f'<div style="font-size:13px;color:#666;margin-bottom:4px;">⚡ Urgent</div>'
+                    f'<div style="font-size:18px;color:#666;margin-bottom:4px;">⚡ Urgent</div>'
                     f'<div style="font-size:28px;font-weight:500;line-height:1.1;">{n_urg}</div>'
                     f'</div>',
                     unsafe_allow_html=True)
         with _urg_cols[-1]:
             st.markdown(
                 f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
-                f'<div style="font-size:13px;color:#666;margin-bottom:4px;">🚨 Emergency</div>'
+                f'<div style="font-size:18px;color:#666;margin-bottom:4px;">🚨 Emergency</div>'
                 f'<div style="font-size:28px;font-weight:500;line-height:1.1;">{n_emer}</div>'
                 f'</div>',
                 unsafe_allow_html=True)
@@ -2352,10 +2352,10 @@ def _hist_sec_room(date_from, date_to, data=None):
     from main_or_db import get_room_turnover_map
     tov = get_room_turnover_map(_from, str(date_to)) or {}
 
-    _td = 'padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:center;'
-    _th = ('<th style="background:#eef4fb;color:#0d47a1;font-size:12.5px;'
-           'padding:7px 10px;text-align:center;">{}</th>')
-    rows_html = ['<table style="width:100%;border-collapse:collapse;font-size:13.5px;">',
+    _td = 'padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;'
+    _th = ('<th style="background:#eef4fb;color:#0d47a1;font-size:18px;'
+           'padding:9px 12px;text-align:center;">{}</th>')
+    rows_html = ['<table style="width:100%;border-collapse:collapse;font-size:18px;">',
                  '<tr>' + ''.join(_th.format(h) for h in
                                   ('ห้อง', 'เคสสะสม', 'วันที่มีเคส',
                                    'เฉลี่ย (เคส/วัน)', 'Turnover เฉลี่ย')) + '</tr>']
@@ -2458,31 +2458,31 @@ def _hist_sec_trend(date_from, date_to, data=None):
             st.markdown(
                 f'<div style="background:#e3f2fd;border-radius:10px;'
                 f'padding:14px 16px;border-left:5px solid #1976d2;">'
-                f'<div style="font-size:12px;color:#1565c0;">รวมทั้งช่วง</div>'
+                f'<div style="font-size:18px;color:#1565c0;">รวมทั้งช่วง</div>'
                 f'<div style="font-size:32px;font-weight:600;color:#0d47a1;'
                 f'line-height:1;margin:4px 0;">{_total_all:,}</div>'
-                f'<div style="font-size:11px;color:#1565c0;">เคส</div>'
+                f'<div style="font-size:18px;color:#1565c0;">เคส</div>'
                 f'</div>', unsafe_allow_html=True)
         with k2:
             st.markdown(
                 f'<div style="background:#ffebee;border-radius:10px;'
                 f'padding:14px 16px;border-left:5px solid #c62828;">'
-                f'<div style="font-size:12px;color:#b71c1c;">เดือนเยอะสุด</div>'
+                f'<div style="font-size:18px;color:#b71c1c;">เดือนเยอะสุด</div>'
                 f'<div style="font-size:32px;font-weight:600;color:#c62828;'
                 f'line-height:1;margin:4px 0;">{_peak_month}</div>'
-                f'<div style="font-size:11px;color:#b71c1c;">'
+                f'<div style="font-size:18px;color:#b71c1c;">'
                 f'{_peak_count} เคส</div>'
                 f'</div>', unsafe_allow_html=True)
         with k3:
             st.markdown(
                 f'<div style="background:{_trend_bg};border-radius:10px;'
                 f'padding:14px 16px;border-left:5px solid {_trend_color};">'
-                f'<div style="font-size:12px;color:{_trend_text_color};">'
+                f'<div style="font-size:18px;color:{_trend_text_color};">'
                 f'แนวโน้มล่าสุด</div>'
                 f'<div style="font-size:32px;font-weight:600;'
                 f'color:{_trend_color};line-height:1;margin:4px 0;">'
                 f'{_trend_label}</div>'
-                f'<div style="font-size:11px;color:{_trend_text_color};">'
+                f'<div style="font-size:18px;color:{_trend_text_color};">'
                 f'{_trend_sub}</div>'
                 f'</div>', unsafe_allow_html=True)
 
@@ -2607,9 +2607,9 @@ def _hist_sec_trend(date_from, date_to, data=None):
             # Summary card
             st.markdown(
                 f'<div style="background:#fff3e0;border-radius:10px;'
-                f'padding:10px 14px;border-left:4px solid #c62828;'
+                f'padding:12px 16px;border-left:4px solid #c62828;'
                 f'margin-top:10px;">'
-                f'<span style="font-size:13px;color:#bf360c;">'
+                f'<span style="font-size:18px;color:#bf360c;">'
                 f'<b>📈 วันที่เคสเยอะสุด:</b> {_max_n_d} เคส · '
                 f'วันที่ {_max_date_th_d} · '
                 f'เฉลี่ย/วัน {_avg_per_day_d} เคส</span></div>',
@@ -2674,8 +2674,8 @@ def _hist_sec_trend(date_from, date_to, data=None):
             _pct_heavier_s = round((_max_dow_s / _min_dow_s - 1) * 100)
             st.markdown(
                 f'<div style="background:#ffebee;border-left:3px solid #c62828;'
-                f'padding:8px 12px;border-radius:0 6px 6px 0;'
-                f'font-size:12px;color:#b71c1c;margin-top:6px;">'
+                f'padding:10px 14px;border-radius:0 6px 6px 0;'
+                f'font-size:18px;color:#b71c1c;margin-top:6px;">'
                 f'<b>วัน{_max_dow_name_s}</b> หนักสุด เฉลี่ย {_max_dow_s} เคส/วัน · '
                 f'หนักกว่าวันที่น้อยที่สุด {_pct_heavier_s}%</div>',
                 unsafe_allow_html=True)
@@ -2780,8 +2780,8 @@ def _hist_sec_trend(date_from, date_to, data=None):
             quiet_idx = quiet_nonzero.idxmin() if not quiet_nonzero.empty else None
 
             insight_html = """
-<div style="background:#f5f5f5;border-radius:8px;padding:12px 14px;
-            margin-top:8px;font-size:14px;line-height:1.8;">
+<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;
+            margin-top:8px;font-size:18px;line-height:1.8;">
   <div style="font-weight:700;color:#333;margin-bottom:6px;">
     📊 สรุปภาพรวม
   </div>
@@ -3086,9 +3086,9 @@ def _hist_sec_rank(date_from, date_to, data=None):
             # ชื่อแพทย์
             st.markdown(
                 f'<div style="background:linear-gradient(135deg,#fafafa,white);'
-                f'border-radius:10px;padding:10px 14px;margin:8px 0;'
+                f'border-radius:10px;padding:12px 16px;margin:8px 0;'
                 f'border:0.5px solid #e0e0e0;">'
-                f'<div style="font-size:16px;font-weight:600;color:#4a148c;">'
+                f'<div style="font-size:18px;font-weight:600;color:#4a148c;">'
                 f'👨‍⚕️ {_esc(_selected_surgeon)}</div></div>',
                 unsafe_allow_html=True)
 
@@ -3097,36 +3097,36 @@ def _hist_sec_rank(date_from, date_to, data=None):
             with kc1:
                 st.markdown(
                     f'<div style="background:#e3f2fd;border-left:5px solid #1976d2;'
-                    f'border-radius:10px;padding:12px;">'
-                    f'<div style="font-size:11px;color:#1565c0;">📋 เคสที่ set ผ่าตัดทั้งหมด</div>'
+                    f'border-radius:10px;padding:16px;">'
+                    f'<div style="font-size:18px;color:#1565c0;">📋 เคสที่ set ผ่าตัดทั้งหมด</div>'
                     f'<div style="font-size:30px;font-weight:600;color:#0d47a1;'
                     f'line-height:1.1;margin:4px 0;">{_detail["n_scheduled"]}</div>'
-                    f'<div style="font-size:11px;color:#1565c0;">เคส</div>'
+                    f'<div style="font-size:18px;color:#1565c0;">เคส</div>'
                     f'</div>', unsafe_allow_html=True)
             with kc2:
                 st.markdown(
                     f'<div style="background:#e8f5e9;border-left:5px solid #2e7d32;'
-                    f'border-radius:10px;padding:12px;">'
-                    f'<div style="font-size:11px;color:#1b5e20;">🩺 เคสที่ผ่าตัด</div>'
+                    f'border-radius:10px;padding:16px;">'
+                    f'<div style="font-size:18px;color:#1b5e20;">🩺 เคสที่ผ่าตัด</div>'
                     f'<div style="font-size:30px;font-weight:600;color:#1b5e20;'
                     f'line-height:1.1;margin:4px 0;">{_detail["n_actual"]}</div>'
-                    f'<div style="font-size:11px;color:#1b5e20;">เคส</div>'
+                    f'<div style="font-size:18px;color:#1b5e20;">เคส</div>'
                     f'</div>', unsafe_allow_html=True)
             with kc3:
                 st.markdown(
                     f'<div style="background:#fff3e0;border-left:5px solid #ef6c00;'
-                    f'border-radius:10px;padding:12px;">'
-                    f'<div style="font-size:11px;color:#bf360c;">🤝 มอบหมายให้ resident</div>'
+                    f'border-radius:10px;padding:16px;">'
+                    f'<div style="font-size:18px;color:#bf360c;">🤝 มอบหมายให้ resident</div>'
                     f'<div style="font-size:30px;font-weight:600;color:#bf360c;'
                     f'line-height:1.1;margin:4px 0;">{_detail["n_delegated"]}</div>'
-                    f'<div style="font-size:11px;color:#bf360c;">เคส</div>'
+                    f'<div style="font-size:18px;color:#bf360c;">เคส</div>'
                     f'</div>', unsafe_allow_html=True)
 
             # Top procedures (จากที่ทำจริง)
             _top_proc = _detail['top_procedures']
             if not _top_proc.empty:
                 st.markdown(
-                    '<div style="font-size:13px;color:#37474f;margin:14px 0 6px;'
+                    '<div style="font-size:18px;color:#37474f;margin:14px 0 6px;'
                     'font-weight:500;">🔬 หัตถการที่ทำ (Top 5)</div>',
                     unsafe_allow_html=True)
                 _x_max_p = max(int(_top_proc['n_cases'].max()) * 1.15, 5)
@@ -3218,7 +3218,7 @@ def _hist_sec_eff(date_from, date_to, data=None):
                 lambda n: 'peak' if n == max_n and n > 0 else 'normal')
 
             st.markdown(
-                '<div style="font-size:12px;color:#666;margin:10px 0 4px;'
+                '<div style="font-size:18px;color:#666;margin:10px 0 4px;'
                 'font-weight:500;border-left:3px solid #ef6c00;padding-left:8px;">'
                 '🗓️ <b>A.</b> รับเวรตามวันในสัปดาห์ '
                 '<span style="color:#999;font-weight:400;">(สีส้ม)</span></div>',
@@ -3252,7 +3252,7 @@ def _hist_sec_eff(date_from, date_to, data=None):
                 '<div style="border-top:1px dashed #cfd8dc;margin:14px 0 0;"></div>',
                 unsafe_allow_html=True)
             st.markdown(
-                '<div style="font-size:12px;color:#666;margin:10px 0 4px;'
+                '<div style="font-size:18px;color:#666;margin:10px 0 4px;'
                 'font-weight:500;border-left:3px solid #1565c0;padding-left:8px;">'
                 '📈 <b>B.</b> เคสรับเวรรายเดือน '
                 '<span style="color:#999;font-weight:400;">(สีน้ำเงิน)</span></div>',
@@ -3373,42 +3373,42 @@ def _hist_sec_night(date_from, date_to, data=None):
         with a1:
             st.markdown(
                 f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-                f'<div style="font-size:12px;color:#757575;margin-bottom:4px;">'
+                f'<div style="font-size:18px;color:#757575;margin-bottom:4px;">'
                 f'🌙 เคสนอกเวลาทั้งหมด</div>'
                 f'<div style="font-size:26px;font-weight:600;line-height:1;color:#5e35b1;">'
                 f'{_n_total_aft}</div>'
-                f'<div style="font-size:11px;color:#9e9e9e;margin-top:4px;">เคส</div>'
+                f'<div style="font-size:18px;color:#9e9e9e;margin-top:4px;">เคส</div>'
                 f'</div>', unsafe_allow_html=True)
         with a2:
             st.markdown(
                 f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-                f'<div style="font-size:12px;color:#757575;margin-bottom:4px;">'
+                f'<div style="font-size:18px;color:#757575;margin-bottom:4px;">'
                 f'✅ ผ่าตัดเสร็จ</div>'
                 f'<div style="font-size:26px;font-weight:600;line-height:1;color:#2e7d32;">'
                 f'{_n_done_aft}</div>'
-                f'<div style="font-size:11px;color:#9e9e9e;margin-top:4px;">'
+                f'<div style="font-size:18px;color:#9e9e9e;margin-top:4px;">'
                 f'คิดเป็น {_done_rate}% ของเคสนอกเวลา</div>'
                 f'</div>', unsafe_allow_html=True)
         with a3:
             st.markdown(
                 f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-                f'<div style="font-size:12px;color:#757575;margin-bottom:4px;">'
+                f'<div style="font-size:18px;color:#757575;margin-bottom:4px;">'
                 f'🏥 สาขาที่มีเคสมากสุด</div>'
                 f'<div style="font-size:18px;font-weight:600;line-height:1.2;color:#6a1b9a;'
                 f'margin-top:4px;min-height:36px;">'
                 f'{_div_top_name}</div>'
-                f'<div style="font-size:11px;color:#9e9e9e;margin-top:4px;">'
+                f'<div style="font-size:18px;color:#9e9e9e;margin-top:4px;">'
                 f'{_div_top_count} เคส ({_div_top_pct}%)</div>'
                 f'</div>', unsafe_allow_html=True)
         with a4:
             st.markdown(
                 f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-                f'<div style="font-size:12px;color:#757575;margin-bottom:4px;">'
+                f'<div style="font-size:18px;color:#757575;margin-bottom:4px;">'
                 f'📅 วันที่มีเคสบ่อยสุด</div>'
                 f'<div style="font-size:18px;font-weight:600;line-height:1.2;color:#c62828;'
                 f'margin-top:4px;min-height:36px;">'
                 f'{_peak_day_label}</div>'
-                f'<div style="font-size:11px;color:#9e9e9e;margin-top:4px;">'
+                f'<div style="font-size:18px;color:#9e9e9e;margin-top:4px;">'
                 f'{_peak_day_count} เคสรวมทั้งช่วง</div>'
                 f'</div>', unsafe_allow_html=True)
 
@@ -3420,7 +3420,7 @@ def _hist_sec_night(date_from, date_to, data=None):
         if not _aft_wd2.empty:
             st.markdown(
                 '<div class="sub-title">📊 เฉลี่ยเคสนอกเวลาตามวันในสัปดาห์ '
-                '<span style="font-size:12px;color:#999;font-weight:400;">'
+                '<span style="font-size:18px;color:#999;font-weight:400;">'
                 '(วันไหนงานหนักสุด · จ.-อา.)</span></div>',
                 unsafe_allow_html=True)
             _aft_wd2['dow'] = _aft_wd2['_dt'].dt.dayofweek
@@ -3467,8 +3467,8 @@ def _hist_sec_night(date_from, date_to, data=None):
                 _pct_heavier_aft = round((_max_dow_aft / _min_dow_aft - 1) * 100)
                 st.markdown(
                     f'<div style="background:#ede7f6;border-left:3px solid #5e35b1;'
-                    f'padding:8px 12px;border-radius:0 6px 6px 0;'
-                    f'font-size:12px;color:#311b92;margin-top:6px;">'
+                    f'padding:10px 14px;border-radius:0 6px 6px 0;'
+                    f'font-size:18px;color:#311b92;margin-top:6px;">'
                     f'<b>วัน{_max_dow_name_aft}</b> เคสนอกเวลาหนักสุด '
                     f'เฉลี่ย {_max_dow_aft} เคส/วัน · '
                     f'หนักกว่าวันที่น้อยที่สุด {_pct_heavier_aft}%</div>',
@@ -3658,7 +3658,7 @@ def _render_daily_summary():
         # 🔢 2 ส.ค. 2026: คอลัมน์แรกเปลี่ยนจาก ororder (คิวในห้อง — คนอ่านเข้าใจผิด
         #    ว่าเป็นจำนวน เอาไปบวกกันแล้วไม่ตรง KPI) → ลำดับรายการ 1..n ตรง KPI เสมอ
         for _col, _lbl in zip(_hh, ["ลำดับ", "Diagnosis", "Operation"]):
-            _col.markdown(f"<span style='font-size:12px;color:#607d8b;font-weight:600;'>{_lbl}</span>",
+            _col.markdown(f"<span style='font-size:18px;color:#607d8b;font-weight:600;'>{_lbl}</span>",
                           unsafe_allow_html=True)
         for _i, c in enumerate(_handover, start=1):
             _r = st.columns(_hcols)
@@ -3805,9 +3805,9 @@ def page_admin(section='today'):
                     # 🎬 UI เหมือนโหมดจริง — เหลือชิปจางกันสับสนเท่านั้น
                     st.markdown(
                         '<div style="text-align:right;margin:-4px 0 2px;">'
-                        '<span style="font-size:11px;color:#b6c2cf;'
+                        '<span style="font-size:18px;color:#b6c2cf;'
                         'border:1px solid #eef2f6;border-radius:999px;'
-                        'padding:1px 9px;">สาธิต · ไม่บันทึกจริง</span></div>',
+                        'padding:3px 12px;">สาธิต · ไม่บันทึกจริง</span></div>',
                         unsafe_allow_html=True)
             else:
                 rooms = get_room_status(op_date)
@@ -3830,7 +3830,7 @@ def page_admin(section='today'):
             progress_top = kpi['done'] / kpi['total']
             st.markdown(f"""
             <div style="margin:12px 0 4px;">
-                <div style="display:flex;justify-content:space-between;font-size:13px;color:#333;font-weight:700;">
+                <div style="display:flex;justify-content:space-between;font-size:18px;color:#333;font-weight:700;">
                     <span>ความคืบหน้า{'จำลอง' if demo_active else 'วันนี้'}</span>
                     <span>{kpi['done']}/{kpi['total']} เคส ({progress_top:.0%})</span>
                 </div>
@@ -3880,7 +3880,7 @@ def page_admin(section='today'):
                                 padding:10px 14px;border-radius:6px;margin-bottom:8px;">
                         <span style="font-weight:700;color:#c62828;">
                             ⏱️ {_n_over} เคส</span>
-                        <span style="color:#666;font-size:13px;">
+                        <span style="color:#666;font-size:18px;">
                             รอเกิน 60 นาที — เฉลี่ยรอ {int(sum(_waits)/len(_waits))} นาที,
                             นานสุด {max(_waits)} นาที</span>
                     </div>""", unsafe_allow_html=True)
@@ -3895,7 +3895,7 @@ def page_admin(section='today'):
                                 padding:10px 14px;border-radius:6px;margin-bottom:8px;">
                         <span style="font-weight:700;color:#c62828;">
                             ⏱️ {wt_today['over_60']} เคส</span>
-                        <span style="color:#666;font-size:13px;">
+                        <span style="color:#666;font-size:18px;">
                             รอเกิน 60 นาที — เฉลี่ยรอ {wt_today['avg_all']} นาที,
                             นานสุด {wt_today['max_all']} นาที</span>
                     </div>""", unsafe_allow_html=True)
@@ -3967,7 +3967,7 @@ def page_admin(section='today'):
                 _waiting_show = _waiting.head(8)
                 for i, (_, row) in enumerate(_waiting_show.iterrows(), 1):
                     _room = row.get('room_no')
-                    _room_html = (f'<span style="font-size:13px;color:#455a64;'
+                    _room_html = (f'<span style="font-size:18px;color:#455a64;'
                                   f'font-weight:600;">→ {_room_label(_room)}</span>'
                                   if _room is not None and str(_room).strip() != '' else '')
                     _status = row.get('status')
@@ -3989,21 +3989,21 @@ def page_admin(section='today'):
 
                     st.markdown(
                         f'<div style="background:white;border:0.5px solid #e0e0e0;'
-                        f'border-radius:8px;padding:10px 14px;margin-bottom:6px;'
+                        f'border-radius:8px;padding:12px 16px;margin-bottom:6px;'
                         f'display:flex;align-items:center;gap:14px;">'
-                        f'<div style="font-size:13px;color:#90a4ae;'
-                        f'min-width:18px;">{i}</div>'
+                        f'<div style="font-size:18px;color:#90a4ae;'
+                        f'min-width:26px;">{i}</div>'
                         f'<div style="flex:1;min-width:0;">'
-                        f'<div style="font-size:13px;color:#263238;'
+                        f'<div style="font-size:18px;color:#263238;'
                         f'font-weight:500;">{_name}</div>'
-                        f'<div style="font-size:12px;color:#607d8b;'
+                        f'<div style="font-size:18px;color:#607d8b;'
                         f'overflow:hidden;text-overflow:ellipsis;'
                         f'white-space:nowrap;">{_proc}</div></div>'
-                        f'<div style="text-align:right;min-width:140px;">'
+                        f'<div style="text-align:right;min-width:160px;">'
                         f'{_room_html}</div>'
                         f'<div style="background:{_badge_bg};color:{_badge_c};'
-                        f'font-size:11px;padding:3px 12px;border-radius:12px;'
-                        f'font-weight:500;min-width:60px;text-align:center;">'
+                        f'font-size:18px;padding:5px 14px;border-radius:12px;'
+                        f'font-weight:500;min-width:74px;text-align:center;">'
                         f'{_badge_t}</div></div>',
                         unsafe_allow_html=True)
                 if len(_waiting) > 8:
@@ -4012,7 +4012,7 @@ def page_admin(section='today'):
                 st.markdown(
                     '<div style="background:#fafafa;border:0.5px dashed #e0e0e0;'
                     'border-radius:10px;padding:14px;text-align:center;'
-                    'margin:18px 0 12px;font-size:13px;color:#90a4ae;">'
+                    'margin:18px 0 12px;font-size:18px;color:#90a4ae;">'
                     '🕐 ไม่มีเคสรอเข้าห้อง</div>',
                     unsafe_allow_html=True)
 
@@ -4077,8 +4077,8 @@ def page_admin(section='today'):
             #    — UI เหมือนโหมดจริง: ป้ายจาง ๆ พอ ไม่มีกล่องฟ้าใหญ่กลางหน้า
             st.markdown(
                 '<div style="text-align:right;margin:4px 0 2px;">'
-                '<span style="font-size:11px;color:#b6c2cf;border:1px solid #eef2f6;'
-                'border-radius:999px;padding:1px 9px;">สาธิต · ส่วนแจ้งเตือน/ภาระงาน'
+                '<span style="font-size:18px;color:#b6c2cf;border:1px solid #eef2f6;'
+                'border-radius:999px;padding:3px 12px;">สาธิต · ส่วนแจ้งเตือน/ภาระงาน'
                 'แสดงเมื่อใช้ข้อมูลจริง</span></div>',
                 unsafe_allow_html=True)
             return
@@ -4139,7 +4139,7 @@ def page_admin(section='today'):
                             padding:10px 14px;border-radius:6px;margin-bottom:8px;">
                     <span style="font-weight:700;color:#e65100;">
                         {ho_today['n_handover']} เคส</span>
-                    <span style="color:#666;font-size:13px;">
+                    <span style="color:#666;font-size:18px;">
                         จากทั้งหมด {ho_today['total']} เคส
                         ({ho_today['pct']}%) — ยังไม่ discharge ก่อน 15:30 น.</span>
                 </div>""", unsafe_allow_html=True)
@@ -4153,8 +4153,8 @@ def page_admin(section='today'):
                         lbl = f"สถานะ: {r['status']}"
                     st.markdown(f"""
                     <div style="background:var(--bg-secondary-color,#f5f5f5);
-                                border-radius:6px;padding:8px 12px;margin:4px 0;
-                                font-size:13px;border:1px solid var(--border-color,#e0e0e0);">
+                                border-radius:6px;padding:10px 14px;margin:4px 0;
+                                font-size:18px;border:1px solid var(--border-color,#e0e0e0);">
                         <b>{_esc(_admin_mask_nm(r.get('name')))}</b> — {_esc(r.get('procedure_name',''))}
                         <span style="float:right;color:#ef6c00;font-weight:600;">{_esc(lbl)}</span>
                     </div>""", unsafe_allow_html=True)
@@ -4171,8 +4171,8 @@ def page_admin(section='today'):
         st.markdown(
             '<div style="background:#ffffff;border:1px solid #eef2f6;'
             'border-left:4px solid #c62828;'
-            'border-radius:10px;padding:11px 16px;margin:12px 0 8px;">'
-            '<span style="font-size:17px;font-weight:600;color:#b71c1c;">'
+            'border-radius:10px;padding:12px 18px;margin:12px 0 8px;">'
+            '<span style="font-size:18px;font-weight:600;color:#b71c1c;">'
             '🌙 เคสนอกเวลา</span></div>',
             unsafe_allow_html=True,
         )

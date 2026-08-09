@@ -159,8 +159,8 @@ def forecast_caption_html(fc):
     col = '#c0392b' if over else '#1565c0'
     bg = '#fbe9e8' if over else '#e3f0fb'
     return (f'<div style="display:flex;justify-content:space-between;align-items:center;'
-            f'background:{bg};color:{col};border-radius:8px;padding:5px 9px;'
-            f'font-size:11px;margin-top:8px;">'
+            f'background:{bg};color:{col};border-radius:8px;padding:7px 12px;'
+            f'font-size:18px;margin-top:8px;">'
             f'<span>เหลือ {fc["waiting_n"]} เคส</span>'
             f'<span>🤖 เคสสุดท้ายของวัน <b>{fin}</b></span></div>')
 
@@ -188,7 +188,7 @@ def render_room_timeline(rooms, now=None):
 
     ticks = list(range(((day_start + 59) // 60) * 60, day_end + 1, 120))
     axis = ''.join(
-        f'<span style="position:absolute;left:{pos(t):.1f}%;font-size:11px;'
+        f'<span style="position:absolute;left:{pos(t):.1f}%;font-size:18px;'
         f'color:#94a3b8;transform:translateX(-50%);">{t // 60:02d}:00</span>'
         for t in ticks)
 
@@ -203,8 +203,8 @@ def render_room_timeline(rooms, now=None):
     def _blk(l, w, sty, txt, tip):
         _t = txt if w > 6 else ''
         return (f'<div title="{tip}" style="position:absolute;left:{l:.1f}%;'
-                f'width:{max(w, 0.8):.1f}%;height:20px;border-radius:4px;{sty}'
-                f'font-size:10.5px;line-height:20px;padding:0 4px;overflow:hidden;'
+                f'width:{max(w, 0.8):.1f}%;height:32px;border-radius:4px;{sty}'
+                f'font-size:18px;line-height:32px;padding:0 6px;overflow:hidden;'
                 f'white-space:nowrap;box-sizing:border-box;">{_t}</div>')
 
     rows = ''
@@ -258,7 +258,7 @@ def render_room_timeline(rooms, now=None):
                             f'{proc} · คิวถัดไป · AI ~{ai} น.')
                 cur += ai + fc['turnover_min']
         bar += (f'<div style="position:absolute;left:{pos(now_min):.1f}%;top:-2px;'
-                f'width:2px;height:24px;background:#0f172a;"></div>')
+                f'width:2px;height:36px;background:#0f172a;"></div>')
         f_min = _mins(fc['finish']) if fc['finish'] else now_min
         if fc['has_future']:
             bar += (f'<div style="position:absolute;left:{pos(f_min):.1f}%;top:0;'
@@ -267,15 +267,15 @@ def render_room_timeline(rooms, now=None):
         right = (f'เหลือ {fc["waiting_n"]} · เสร็จ <b style="color:{lblc};">{fin_txt}</b>'
                  if fc['has_future'] else 'เสร็จงานแล้ว')
         rows += (
-            f'<div style="margin-bottom:11px;">'
-            f'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">'
+            f'<div style="margin-bottom:13px;">'
+            f'<div style="display:flex;justify-content:space-between;font-size:18px;margin-bottom:4px;">'
             f'<span style="font-weight:500;color:#1565c0;">{label}</span>'
             f'<span style="color:#64748b;">{right}</span></div>'
-            f'<div style="position:relative;height:20px;background:#f1f5f9;border-radius:4px;">{bar}</div>'
+            f'<div style="position:relative;height:32px;background:#f1f5f9;border-radius:4px;">{bar}</div>'
             f'</div>')
 
     legend = (
-        '<div style="display:flex;flex-wrap:wrap;gap:13px;margin-top:6px;font-size:11px;color:#64748b;">'
+        '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:8px;font-size:18px;color:#64748b;">'
         '<span><span style="display:inline-block;width:15px;height:8px;background:#f8faf8;'
         'border:1px solid #cfd8d1;border-radius:2px;vertical-align:middle;'
         'box-sizing:border-box;"></span> ✓ เสร็จแล้ว</span>'
@@ -291,7 +291,7 @@ def render_room_timeline(rooms, now=None):
         '<span><b style="color:#0f172a;">|</b> ตอนนี้ &middot; ◆ เคสสุดท้ายของวัน</span></div>')
 
     st.markdown(
-        f'<div style="position:relative;height:16px;margin-bottom:4px;">{axis}</div>'
+        f'<div style="position:relative;height:24px;margin-bottom:6px;">{axis}</div>'
         f'{rows}{legend}',
         unsafe_allow_html=True,
     )
