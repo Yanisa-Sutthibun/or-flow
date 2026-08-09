@@ -1503,8 +1503,20 @@ def _room_focus_fragment(room_no):
             return None
 
     # Fitts's Law: เป้าใหญ่ กดถนัดแม้สวมถุงมือ
+    # 🔤 9 ส.ค. 2026 (มุคกี้สั่ง): จอนี้ออกด่านเร็ว (?room=) ก่อนถึง main_or_app
+    #    จะ inject_theme() ปกติ — การ์ด ✏️ แก้เวลา ใช้ widget เนทีฟ Streamlit
+    #    (markdown/caption/number_input/form_submit_button) เลยหลุด floor 18px
+    #    ของแอป ต้องกำหนดเองที่นี่ตรง ๆ
+    # 💜 ปุ่ม ห้องพักฟื้น: สีม่วงอ่อนคู่เดียวกับชิปสถานะบนบอร์ดวันนี้
+    #    (_STATUS_META['recovery'] ใน tracking_board.py = #6b21a8 บนพื้น #edd2ff)
     st.markdown("""<style>
     div[data-testid="stButton"] > button {height:76px; font-size:22px; font-weight:700;}
+    .st-key-rf_fin_rec button {
+        background-color:#edd2ff !important; color:#6b21a8 !important;
+        border-color:#edd2ff !important;
+    }
+    div[data-testid="stNumberInput"] input {font-size:18px !important;}
+    div[data-testid="stFormSubmitButton"] button {font-size:18px !important; height:56px;}
     </style>""", unsafe_allow_html=True)
 
     st.markdown(f"### 🚪 {room_label(room_no)}")
@@ -1553,8 +1565,12 @@ def _room_focus_fragment(room_no):
         with st.container(border=True):
             _ecol1, _ecol2 = st.columns([3, 2])
             with _ecol1:
-                st.markdown("✏️ **แก้เวลาคาดการณ์ใช้ห้อง**")
-                st.caption("แก้ได้เฉพาะเคสที่กำลังผ่าของห้องนี้")
+                st.markdown('<span style="font-size:18px;font-weight:600;'
+                             'color:#0f172a;">✏️ แก้เวลาคาดการณ์ใช้ห้อง</span>',
+                             unsafe_allow_html=True)
+                st.markdown('<span style="font-size:18px;color:#64748b;">'
+                             'แก้ได้เฉพาะเคสที่กำลังผ่าของห้องนี้</span>',
+                             unsafe_allow_html=True)
             with _ecol2:
                 with st.form("rf_ov_form", border=False):
                     _fcol1, _fcol2 = st.columns([3, 2])
@@ -1578,7 +1594,10 @@ def _room_focus_fragment(room_no):
             _toast_ok("บันทึกเวลาแล้ว ✓")
             _rerun_board()
 
-        st.markdown("**ผ่าเสร็จ — ส่งผู้ป่วยไปที่:**")
+        # 🔤 9 ส.ค. 2026: font-size:18px ตรง ๆ (จอนี้ไม่ผ่าน inject_theme())
+        #    + แก้ em dash → ":" ตามกติกา UI (นร 0106 ไม่เกี่ยว แต่กติกาแอปเอง)
+        st.markdown('<span style="font-size:18px;font-weight:600;color:#0f172a;">'
+                     'ผ่าเสร็จ : ส่งผู้ป่วยไปที่</span>', unsafe_allow_html=True)
         b1, b2 = st.columns(2)
         if b1.button("🚪 ห้องรับ-ส่ง", key="rf_fin_hold", width='stretch',
                      type='primary'):
@@ -1613,7 +1632,9 @@ def _room_focus_fragment(room_no):
     st.markdown("---")
     _wait = [c for c in cases if _r(c) == room_no
              and c.get('status') in ('not_arrived', 'holding_pre')]
-    st.markdown(f"**🕓 คิวรอของ {room_label(room_no)} ({len(_wait)} เคส)**")
+    st.markdown(f'<span style="font-size:18px;font-weight:600;color:#0f172a;">'
+                f'🕓 คิวรอของ {room_label(room_no)} ({len(_wait)} เคส)</span>',
+                unsafe_allow_html=True)
     if _wait:
         # 🔒 กติกาเดียวกับบอร์ดหลัก: โชว์ล็อกคิวเมื่อเลขคิวในห้อง "ไม่ซ้ำกัน"
         _ords = []
@@ -1669,9 +1690,12 @@ def _room_focus_fragment(room_no):
                 f'{(_w.get("procedure") or "-")}{_ai_txt}</span>'
                 f'{_chip}</div>')
         st.markdown(''.join(_rows), unsafe_allow_html=True)
-        st.caption("อ่านอย่างเดียว — การรับเข้า/เข้าห้อง กดที่จอรับ-ส่ง")
+        st.markdown('<span style="font-size:18px;color:#94a3b8;">'
+                     'อ่านอย่างเดียว : การรับเข้า/เข้าห้อง กดที่จอรับ-ส่ง</span>',
+                     unsafe_allow_html=True)
     else:
-        st.caption("ไม่มีเคสรอของห้องนี้แล้ววันนี้")
+        st.markdown('<span style="font-size:18px;color:#64748b;">'
+                     'ไม่มีเคสรอของห้องนี้แล้ววันนี้</span>', unsafe_allow_html=True)
 
     # ↩️ Forgiveness: เลิกทำการกดเสร็จล่าสุดของห้องนี้ (แก้กดพลาด/เลือกปลายทางผิด)
     done_last = next((i for i in range(len(cases) - 1, -1, -1)
