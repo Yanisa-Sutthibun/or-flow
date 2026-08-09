@@ -1,0 +1,41 @@
+# .gitattributes — คุมตัวจบบรรทัด (สร้าง 9 ส.ค. 2026)
+#
+# ปัญหาที่แก้: ไฟล์ที่ไม่ได้แตะเลยขึ้นใน git status ว่า "แก้แล้ว" เพราะเปิด-เซฟ
+# ด้วยโปรแกรมคนละตัว (VS Code / Notepad / สคริปต์ Python) แล้วตัวจบบรรทัดเปลี่ยน
+# ผลคือ git add -u ลากไฟล์ที่ไม่เกี่ยวเข้ามาเป็นสิบ ๆ ไฟล์ และ diff บวมจนอ่านไม่รู้เรื่อง
+# (commit c415ef2 แก้จริง 45/27 บรรทัด แต่ diff ขึ้น 1038/1020)
+#
+# วิธีทำงาน: เก็บใน repo เป็น LF เสมอ ส่วนในเครื่องจะเป็นอะไรก็ได้ git แปลงให้เอง
+
+* text=auto eol=lf
+
+# ── ระบุชัดเจนสำหรับไฟล์ที่ใช้ประจำ ──
+*.py     text eol=lf
+*.md     text eol=lf
+*.txt    text eol=lf
+*.toml   text eol=lf
+*.json   text eol=lf
+*.csv    text eol=lf
+*.sql    text eol=lf
+*.html   text eol=lf
+*.example text eol=lf
+
+# ── สคริปต์ Windows ต้องเป็น CRLF เท่านั้น ไม่งั้นรันไม่ผ่าน ──
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+*.ps1    text eol=crlf
+
+# ── ไฟล์ไบนารี ห้าม git ไปยุ่งกับเนื้อใน ──
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.pkl    binary
+*.db     binary
+*.xls    binary
+*.xlsx   binary
+*.docx   binary
+*.pptx   binary
+*.zip    binary
