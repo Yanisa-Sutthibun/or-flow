@@ -434,36 +434,42 @@ def page_room_settings():
 
     all_inputs = {}
 
-    for rm in ROOM_LIST:
-        info = ROOM_INFO[rm]
-        # Ensure room exists in session state
-        if rm not in st.session_state.room_settings:
-            st.session_state.room_settings[rm] = {
-                'enabled': True, 'name': info['name'],
-                'specialty': info['desc'], 'scrub': ['', ''], 'circ': ['', '', '', ''],
-                'nurses': [],
-            }
-        settings = st.session_state.room_settings[rm]
-        if rm not in st.session_state.or_rooms:
-            st.session_state.or_rooms[rm] = {
-                'status': 'ว่าง', 'current_case': None, 'start_time': None,
-                'predicted_time': None, 'override_time': None, 'is_emergency': False,
-                'staff': {'scrub': '', 'circulating': ''},
-                'name': info['name'], 'specialty': info['desc'],
-            }
-
-        _c1, _c2 = st.columns([4, 1])
-        with _c1:
-            st.markdown(
-                f'<div style="background:#f8f9fa;padding:12px 16px;border-radius:10px;'
-                f'border-left:4px solid #3498db;">'
-                f'<b>{info["icon"]} {info["label"]}</b><br>'
-                f'<span style="color:#7f8c8d;font-size:var(--fs-meta);">{info["desc"]}</span></div>',
-                unsafe_allow_html=True)
-        with _c2:
-            enabled = st.toggle("เปิดใช้งาน", value=settings.get('enabled', True),
-                                key=f"toggle_room_{rm}")
-        all_inputs[rm] = {'enabled': enabled}
+    # 📐 9 ส.ค. 2026 (มุคกี้สั่ง): เรียง 2 ช่องต่อแถว จากเดิมเต็มความกว้างห้องละแถว
+    #    9 ห้อง = 9 แถว ต้องเลื่อนจอถึงจะเห็นปุ่มบันทึก · แบบใหม่เหลือ 5 แถว เห็นครบในจอเดียว
+    #    สร้าง st.columns ใหม่ทุกแถวเพื่อให้การ์ดในแถวเดียวกันสูงเท่ากัน
+    for _start in range(0, len(ROOM_LIST), 2):
+        _cols = st.columns(2)
+        for _col, rm in zip(_cols, ROOM_LIST[_start:_start + 2]):
+            info = ROOM_INFO[rm]
+            # Ensure room exists in session state
+            if rm not in st.session_state.room_settings:
+                st.session_state.room_settings[rm] = {
+                    'enabled': True, 'name': info['name'],
+                    'specialty': info['desc'], 'scrub': ['', ''], 'circ': ['', '', '', ''],
+                    'nurses': [],
+                }
+            settings = st.session_state.room_settings[rm]
+            if rm not in st.session_state.or_rooms:
+                st.session_state.or_rooms[rm] = {
+                    'status': 'ว่าง', 'current_case': None, 'start_time': None,
+                    'predicted_time': None, 'override_time': None, 'is_emergency': False,
+                    'staff': {'scrub': '', 'circulating': ''},
+                    'name': info['name'], 'specialty': info['desc'],
+                }
+            with _col:
+                _c1, _c2 = st.columns([3, 1.15], vertical_alignment="center")
+                with _c1:
+                    st.markdown(
+                        f'<div style="background:#f8f9fa;padding:12px 16px;'
+                        f'border-radius:10px;border-left:4px solid #3498db;">'
+                        f'<b>{info["icon"]} {info["label"]}</b><br>'
+                        f'<span style="color:#7f8c8d;font-size:var(--fs-meta);">'
+                        f'{info["desc"]}</span></div>',
+                        unsafe_allow_html=True)
+                with _c2:
+                    enabled = st.toggle("เปิดใช้งาน", value=settings.get('enabled', True),
+                                        key=f"toggle_room_{rm}")
+            all_inputs[rm] = {'enabled': enabled}
 
     if st.button("💾 บันทึกการตั้งค่า", type="primary", use_container_width=True):
         for rm, room_inputs in all_inputs.items():
