@@ -6,7 +6,8 @@ Inject ครั้งเดียวต่อ page → consistent styling ท�
 
 Design: flat clinical SaaS
 - Palette: slate ink + clinical blue + clean semantic colors
-- Typography: Inter (Latin) + IBM Plex Sans Thai
+- Typography: Sarabun (ตัวนำทั้งแอป) + IBM Plex Sans Thai (สำรอง)
+- Type scale: ตัวแปร --fs-* ใน :root = แหล่งเดียวของขนาดตัวอักษร (ดู render_section)
 - Components: flat refined buttons, metrics, cards, tabs, sidebar (เงาบางมาก ไม่มี gradient)
 
 NOTE: CSS ต้องเป็น string block ต่อเนื่อง — ห้ามมี blank line ภายใน string literal
@@ -18,7 +19,7 @@ import streamlit as st
 
 THEME_CSS = (
     '<link href="https://fonts.googleapis.com/css2?'
-    'family=Inter:wght@400;500;600;700&'
+    'family=Sarabun:wght@400;500;600;700&'
     'family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">'
     '<style>'
     ':root{'
@@ -34,39 +35,78 @@ THEME_CSS = (
     '--info-700:#1565c0;--info-500:#1e88e5;--info-100:#e3f0fb;'
     '--shadow-sm:0 1px 2px rgba(15,23,42,.05);'
     '--shadow-md:0 2px 8px rgba(15,23,42,.07);'
+    # 📐 Type scale (9 ส.ค. 2026) — แหล่งเดียวของขนาดตัวอักษรทั้งแอป
+    #    หลักคิด: จอห้องผ่าตัดอ่านจากระยะไกล → "เนื้อหา 18px คือพื้น ไม่ลดต่ำกว่านี้"
+    #    สร้างลำดับด้วยการดันหัวข้อขึ้น ไม่ใช่ย่อเนื้อหาลง
+    #    ⚠️ ใช้ var() ได้เฉพาะ HTML ที่อยู่ในหน้าเดียวกัน — แถวบอร์ดใน
+    #    tracking_board วาดใน components.html (iframe) ตัวแปรข้ามไปไม่ถึง ต้องใช้ px ตรง
+    '--fs-page:30px;'      # ชื่อหน้า
+    '--fs-section:24px;'   # หัวข้อ section
+    '--fs-card:20px;'      # ชื่อการ์ด/ห้อง
+    '--fs-body:18px;'      # เนื้อหา ข้อมูล ปุ่ม ช่องกรอก
+    '--fs-meta:16px;'      # คำอธิบาย ชิป caption
+    '--fs-num:34px;'       # ตัวเลข KPI
     '}'
     # Global typography
     'html,body,[class*="css"],.stApp{'
-    "font-family:'Inter','IBM Plex Sans Thai','Sarabun','Segoe UI',sans-serif !important;"
+    # 🔤 9 ส.ค. 2026: ใช้ Sarabun เป็นตัวนำทั้งแอป — เดิมที่นี่นำด้วย Inter แต่
+    #    main_or_app.CUSTOM_CSS มี `* {font-family:Sarabun}` ทับอยู่ ผลคือหัวข้อ/ตัวเลข
+    #    ออกเป็น Inter ส่วนเนื้อหาเป็น Sarabun = ฟอนต์ไม่สม่ำเสมอทั้งจอ
+    "font-family:'Sarabun','IBM Plex Sans Thai','Segoe UI',sans-serif !important;"
     '-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;'
-    'color:var(--ink-700);}'
+    'color:var(--ink-700);font-size:var(--fs-body);}'
     '.stApp{background:var(--canvas)}'
     '.main .block-container{padding-top:1.4rem;padding-bottom:3rem;max-width:1280px}'
     'h1,h2,h3,h4,h5,h6,.stMarkdown h1,.stMarkdown h2,.stMarkdown h3{'
     'color:var(--ink-900) !important;font-weight:600 !important;letter-spacing:-0.2px;'
-    "font-family:'Inter','IBM Plex Sans Thai',sans-serif !important;}"
+    "font-family:'Sarabun','IBM Plex Sans Thai',sans-serif !important;}"
+    # 🐛 เดิมไม่ได้กำหนดขนาด h1-h6 เลย → ใช้ค่า default ของ Streamlit ซึ่ง h5/h6
+    #    เล็กกว่าเนื้อหา 18px (ลำดับกลับหัว: หัวข้อจมกว่าข้อความ) · ล็อกให้ครบทุกระดับ
+    #    และไม่มีระดับไหนเล็กกว่า --fs-body
+    'h1,.stMarkdown h1{font-size:var(--fs-page) !important;font-weight:700 !important;'
+    'letter-spacing:-0.6px;}'
+    'h2,.stMarkdown h2{font-size:26px !important;font-weight:700 !important;'
+    'letter-spacing:-0.5px;}'
+    'h3,.stMarkdown h3{font-size:var(--fs-section) !important;font-weight:700 !important;'
+    'letter-spacing:-0.4px;}'
+    'h4,.stMarkdown h4,h5,.stMarkdown h5{font-size:var(--fs-card) !important;'
+    'font-weight:600 !important;letter-spacing:-0.2px;}'
+    'h6,.stMarkdown h6{font-size:var(--fs-body) !important;font-weight:600 !important;}'
     # Page header (flat + accent bar)
     '.admin-header,.page-header{'
     'background:var(--surface);border:1px solid var(--ink-100);'
     'border-left:5px solid var(--brand-700);border-radius:12px;'
     'padding:16px 22px;margin-bottom:18px;box-shadow:var(--shadow-sm);}'
     '.admin-header h1,.page-header h1,.page-header h2{'
-    'margin:0 !important;font-size:23px !important;font-weight:600 !important;'
-    'color:var(--ink-900) !important;letter-spacing:-0.3px;}'
+    'margin:0 !important;font-size:var(--fs-page) !important;font-weight:700 !important;'
+    'color:var(--ink-900) !important;letter-spacing:-0.6px;line-height:1.2;}'
     '.admin-header p,.page-header p{'
-    'margin:6px 0 0 !important;font-size:18px !important;'
+    'margin:7px 0 0 !important;font-size:var(--fs-meta) !important;'
     'color:var(--ink-500) !important;font-weight:400;}'
     # Legacy header classes → flatten
-    '.header-title{color:var(--ink-900) !important;font-size:23px !important;'
-    'font-weight:600 !important;letter-spacing:-0.3px;margin-bottom:14px !important;}'
-    '.subheader,.sub-title{color:var(--ink-800) !important;font-size:19px !important;'
-    'font-weight:600 !important;margin-top:18px !important;margin-bottom:10px !important;}'
+    '.header-title{color:var(--ink-900) !important;font-size:var(--fs-page) !important;'
+    'font-weight:700 !important;letter-spacing:-0.6px;margin-bottom:14px !important;}'
+    '.subheader,.sub-title{color:var(--ink-900) !important;font-size:var(--fs-section) !important;'
+    'font-weight:700 !important;letter-spacing:-0.4px;'
+    'margin-top:22px !important;margin-bottom:10px !important;}'
+    # 🔷 หัวข้อ section (แบบ A — เคาะ 9 ส.ค. 2026): แถบสีตั้งข้างหน้า + เส้นคาดใต้เต็มความกว้าง
+    #    ใช้ผ่าน ui_theme.render_section() · ตัวนับด้านขวาเป็น meta (ไม่แย่งความสนใจ)
+    '.or-sec{display:flex;align-items:baseline;justify-content:space-between;gap:12px;'
+    'border-bottom:2px solid var(--ink-200);padding:0 2px 9px;margin:26px 0 12px;}'
+    '.or-sec .t{position:relative;padding-left:15px;font-size:var(--fs-section);'
+    'font-weight:700;color:var(--ink-900);letter-spacing:-0.4px;}'
+    '.or-sec .t::before{content:"";position:absolute;left:0;top:.18em;bottom:.18em;'
+    'width:5px;border-radius:3px;background:var(--brand-700);}'
+    '.or-sec .c{font-size:var(--fs-meta);color:var(--ink-500);font-weight:500;'
+    'white-space:nowrap;}'
+    '.or-sec.warn .t::before{background:var(--warning-500);}'
+    '.or-sec.danger .t::before{background:var(--danger-500);}'
     # Buttons (flat)
     '.stButton > button{'
     'border-radius:9px !important;border:1px solid var(--ink-200) !important;'
     'background:var(--surface) !important;color:var(--ink-800) !important;'
-    'font-weight:500 !important;font-size:18px !important;padding:10px 20px !important;'
-    'min-height:48px !important;'
+    'font-weight:600 !important;font-size:var(--fs-body) !important;'
+    'padding:10px 20px !important;min-height:48px !important;'
     'box-shadow:none !important;transition:background .12s,border-color .12s;}'
     '.stButton > button:hover{'
     'border-color:var(--brand-400) !important;background:var(--brand-50) !important;}'
@@ -92,17 +132,20 @@ THEME_CSS = (
     'background:var(--surface);border:1px solid var(--ink-100);border-radius:10px;'
     'padding:15px 16px !important;box-shadow:none;}'
     '[data-testid="stMetricLabel"],[data-testid="stMetricLabel"] > div{'
-    'font-size:18px !important;color:var(--ink-500) !important;font-weight:500 !important;}'
+    'font-size:var(--fs-meta) !important;color:var(--ink-500) !important;'
+    'font-weight:500 !important;}'
     '[data-testid="stMetricValue"]{'
-    "font-family:'Inter',sans-serif !important;font-size:26px !important;"
-    'font-weight:600 !important;color:var(--ink-900) !important;letter-spacing:-0.5px;}'
-    '[data-testid="stMetricDelta"]{font-size:18px !important;font-weight:500 !important;}'
+    "font-family:'Sarabun',sans-serif !important;font-size:var(--fs-num) !important;"
+    'font-weight:700 !important;color:var(--ink-900) !important;letter-spacing:-1px;}'
+    '[data-testid="stMetricDelta"]{font-size:var(--fs-meta) !important;'
+    'font-weight:500 !important;}'
     # Tabs
     '.stTabs [data-baseweb="tab-list"]{'
     'gap:2px;background:transparent;border-bottom:1px solid var(--ink-100);padding:0 2px;}'
     '.stTabs [data-baseweb="tab"]{'
     'background:transparent !important;color:var(--ink-500) !important;'
-    'font-weight:500 !important;font-size:18px !important;padding:11px 18px !important;'
+    'font-weight:500 !important;font-size:var(--fs-body) !important;'
+    'padding:11px 18px !important;'
     'border-radius:0 !important;border-bottom:2px solid transparent !important;}'
     '.stTabs [data-baseweb="tab"]:hover{color:var(--ink-800) !important;}'
     '.stTabs [aria-selected="true"]{'
@@ -112,7 +155,8 @@ THEME_CSS = (
     '.stTextInput input,.stNumberInput input,.stDateInput input,'
     '.stTextArea textarea,.stSelectbox [data-baseweb="select"] > div{'
     'border:1px solid var(--ink-200) !important;border-radius:8px !important;'
-    'background:var(--surface) !important;font-size:18px !important;color:var(--ink-900) !important;}'
+    'background:var(--surface) !important;font-size:var(--fs-body) !important;'
+    'color:var(--ink-900) !important;}'
     '.stTextInput input:focus,.stNumberInput input:focus,'
     '.stDateInput input:focus,.stTextArea textarea:focus{'
     'border-color:var(--brand-500) !important;'
@@ -134,14 +178,16 @@ THEME_CSS = (
     '[data-testid="stDataFrame"]{border:1px solid var(--ink-100);'
     'border-radius:10px;overflow:hidden;}'
     'div[data-testid="stVerticalBlockBorderWrapper"]{border-radius:12px !important;}'
-    '.stCheckbox label,.stRadio label{font-size:18px !important;color:var(--ink-700) !important}'
+    '.stCheckbox label,.stRadio label{font-size:var(--fs-body) !important;'
+    'color:var(--ink-700) !important}'
     'hr{border-color:var(--ink-100) !important;opacity:1 !important}'
     # Section title chip
     '.section-mega-title{'
     'display:flex;align-items:center;gap:10px;background:var(--surface);'
     'border:1px solid var(--ink-100);border-left:4px solid var(--brand-700);'
     'padding:14px 18px;border-radius:8px;margin:22px 0 13px;'
-    'font-size:19px;font-weight:600;color:var(--ink-900);box-shadow:var(--shadow-sm);}'
+    'font-size:var(--fs-section);font-weight:700;letter-spacing:-0.4px;'
+    'color:var(--ink-900);box-shadow:var(--shadow-sm);}'
     # Legacy gradient cards → flatten
     '.card{background:var(--surface) !important;border:1px solid var(--ink-100) !important;'
     'border-left:4px solid var(--brand-700) !important;border-radius:12px !important;'
@@ -163,16 +209,17 @@ THEME_CSS = (
     'border:1px solid var(--ink-100) !important;padding:15px 16px !important;'
     'box-shadow:none !important;}'
     '.metric-num,.stat-value{'
-    "font-family:'Inter',sans-serif !important;font-size:26px !important;"
-    'font-weight:600 !important;color:var(--ink-900) !important;letter-spacing:-0.5px;}'
+    "font-family:'Sarabun',sans-serif !important;font-size:var(--fs-num) !important;"
+    'font-weight:700 !important;color:var(--ink-900) !important;letter-spacing:-1px;}'
     '.metric-lbl,.stat-title{'
-    'font-size:18px !important;color:var(--ink-500) !important;font-weight:500 !important;}'
+    'font-size:var(--fs-meta) !important;color:var(--ink-500) !important;'
+    'font-weight:500 !important;}'
     '.timer{font-family:"Courier New",monospace;color:var(--danger-500) !important;}'
-    '.pill{display:inline-block;font-size:18px;font-weight:500;'
+    '.pill{display:inline-block;font-size:var(--fs-meta);font-weight:600;'
     'padding:5px 15px;border-radius:14px;letter-spacing:0.2px;}'
     # Status chips กลาง (สี = ความหมาย) — ใช้แทน inline color ในหน้าต่างๆ ได้
-    '.or-chip{display:inline-flex;align-items:center;gap:4px;font-size:18px;'
-    'font-weight:500;padding:4px 14px;border-radius:999px;white-space:nowrap;}'
+    '.or-chip{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-meta);'
+    'font-weight:600;padding:4px 14px;border-radius:999px;white-space:nowrap;}'
     '.or-chip.wait{background:var(--ink-100);color:var(--ink-500);}'
     '.or-chip.hold{background:var(--warning-100);color:var(--warning-700);}'
     '.or-chip.inor{background:var(--success-100);color:var(--success-700);}'
@@ -180,7 +227,7 @@ THEME_CSS = (
     '.or-chip.post{background:var(--info-100);color:var(--info-700);}'
     '.or-chip.done{background:var(--ink-50);color:var(--ink-400);}'
     '.stCaption,[data-testid="stCaptionContainer"]{'
-    'color:var(--ink-500) !important;font-size:18px !important;}'
+    'color:var(--ink-500) !important;font-size:var(--fs-meta) !important;}'
     '.stProgress > div > div{background:var(--brand-700) !important}'
     '.stProgress > div{background:var(--ink-100) !important}'
     # Sidebar brand block
@@ -189,8 +236,9 @@ THEME_CSS = (
     '.or-brand .mark{display:inline-flex;align-items:center;justify-content:center;'
     'width:32px;height:32px;border-radius:9px;background:var(--brand-100);'
     'color:var(--brand-700);font-size:18px;}'
-    '.or-brand .nm{font-size:18px;font-weight:600;color:var(--ink-900);line-height:1.15;}'
-    '.or-brand .sub{font-size:18px;color:var(--ink-500);}'
+    '.or-brand .nm{font-size:var(--fs-card);font-weight:600;color:var(--ink-900);'
+    'line-height:1.15;}'
+    '.or-brand .sub{font-size:var(--fs-meta);color:var(--ink-500);}'
     # เลิกใช้ sidebar แล้ว (เปลี่ยนเป็นแท็บบนสุด) — ซ่อน sidebar + header bar + ลดช่องว่างด้านบน
     '[data-testid="stSidebar"],[data-testid="stSidebarCollapsedControl"],'
     '[data-testid="collapsedControl"]{display:none !important;}'
@@ -206,7 +254,7 @@ THEME_CSS = (
     'border-radius:8px 8px 0 0;cursor:pointer;transition:background .15s;}'
     '.st-key-_main_page div[role="radiogroup"]>label:hover{background:var(--brand-50) !important;}'
     '.st-key-_main_page div[role="radiogroup"]>label>div:first-child{display:none !important;}'
-    '.st-key-_main_page div[role="radiogroup"]>label p{font-size:18px !important;'
+    '.st-key-_main_page div[role="radiogroup"]>label p{font-size:var(--fs-body) !important;'
     'color:var(--ink-500) !important;font-weight:600 !important;margin:0 !important;}'
     '.st-key-_main_page div[role="radiogroup"]>label:has(input:checked){'
     'border-bottom-color:var(--brand-700) !important;}'
@@ -214,8 +262,8 @@ THEME_CSS = (
     'color:var(--brand-700) !important;}'
     # 🟢 ชิปสถานะบนหัว (header status chips)
     '.or-chips{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 8px;}'
-    '.or-chip{display:inline-flex;align-items:center;gap:5px;font-size:18px;'
-    'color:var(--ink-500);background:var(--brand-50);padding:6px 14px;'
+    '.or-chip{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-meta);'
+    'color:var(--ink-500);background:var(--brand-50);padding:5px 13px;'
     'border-radius:8px;border:1px solid var(--ink-100);}'
     '.or-chip .dot{width:7px;height:7px;border-radius:50%;background:#10b981;'
     'display:inline-block;}'
@@ -240,6 +288,25 @@ def render_page_header(emoji: str, title: str, subtitle: str = "") -> None:
     sub_html = f"<p>{subtitle}</p>" if subtitle else ""
     st.markdown(
         f'<div class="page-header"><h2>{emoji} {title}</h2>{sub_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_section(title: str, meta: str = "", tone: str = "") -> None:
+    """หัวข้อ section มาตรฐาน (แบบ A — เคาะ 9 ส.ค. 2026)
+
+    title : ชื่อกลุ่ม เช่น "กำลังผ่าตัด"
+    meta  : ข้อความขวามือ เช่น "6 เคส : 3 ห้องว่าง" (ไม่ใส่ = ไม่แสดง)
+    tone  : '' (น้ำเงิน) · 'warn' (เหลือง) · 'danger' (แดง) — เปลี่ยนสีแถบหน้าหัวข้อ
+
+    ใช้แทน st.markdown("##### ...") ทุกจุด : มาร์กดาวน์ระดับ h5 ของ Streamlit
+    ได้ตัวเล็กกว่าเนื้อหา ทำให้หัวข้อจมหาย (ปัญหาที่แก้รอบนี้)
+    """
+    import html as _html
+    _cls = f"or-sec {tone}".strip()
+    _meta = f'<span class="c">{_html.escape(meta)}</span>' if meta else ''
+    st.markdown(
+        f'<div class="{_cls}"><span class="t">{_html.escape(title)}</span>{_meta}</div>',
         unsafe_allow_html=True,
     )
 

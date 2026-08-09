@@ -3648,8 +3648,9 @@ def _render_daily_summary():
     k3.metric("🌙 นอกเวลา", len(_after))
     k4.metric("⏱️ รับเวร", len(_handover))
 
-    st.markdown("##### ⏱️ เคสรับเวร — ผู้ป่วยมาแล้ว/กำลังผ่า ยังไม่จบเมื่อเลย 15:30 น.")
-    st.caption("รายการที่ต้องส่งต่อเวรถัดไป")
+    from ui_theme import render_section as _sec
+    _sec("⏱️ เคสรับเวร", f"{len(_handover)} เคส : ต้องส่งต่อเวรถัดไป", tone='warn')
+    st.caption("ผู้ป่วยมาแล้ว/กำลังผ่า ยังไม่จบเมื่อเลย 15:30 น.")
     if not _handover:
         st.info("ไม่มีเคสรับเวรวันนี้")
     else:
@@ -3667,7 +3668,7 @@ def _render_daily_summary():
             _r[2].write(c.get('procedure') or '-')
 
     if _after:
-        st.markdown("##### 🌙 เคสนอกเวลา (นัด ≥ 15:30 หรือระบุนอกเวลา)")
+        _sec("🌙 เคสนอกเวลา", f"{len(_after)} เคส : นัด ≥ 15:30 หรือระบุนอกเวลา")
         # 🔒 mask ชื่อเสมอ (เครื่องอัปโหลด session ถือชื่อเต็ม — มาตรา 3.6.4)
         from main_or_db import mask_patient_name as _mpn_ds
         for c in _after:

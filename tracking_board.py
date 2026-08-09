@@ -334,17 +334,25 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         return [r for r in rows if r[2] in statuses]
 
     def _zone_head(title, n, color):
+        """หัวข้อกลุ่มบนบอร์ด — แบบ A (เคาะ 9 ส.ค. 2026): แถบสีตั้งหน้าหัวข้อ
+        + เส้นคาดใต้เต็มความกว้าง · เดิม 18px เท่าเนื้อหาพอดี หัวข้อเลยจมหาย
+        (ชุดเดียวกับ ui_theme.render_section แต่รับสีประจำโซนมาจากผู้เรียก
+        จึงเขียน inline — inline style ทำ ::before ไม่ได้ ใช้ span ซ้อนแทน)"""
         st.markdown(
-            f'<div style="display:flex;align-items:center;gap:10px;margin:14px 0 2px;'
-            f'padding:8px 14px;background:#f8fafc;border-left:4px solid {color};'
-            f'border-radius:0;font-size:18px;font-weight:700;color:#334155;">{title}'
-            f'<span style="font-size:18px;font-weight:500;color:#94a3b8;">'
-            f'{n} เคส</span></div>',
+            f'<div style="display:flex;align-items:baseline;justify-content:space-between;'
+            f'gap:12px;border-bottom:2px solid #e2e8f0;padding:0 2px 9px;margin:26px 0 12px;">'
+            f'<span style="position:relative;padding-left:15px;'
+            f'font-size:var(--fs-section);font-weight:700;color:#0f172a;'
+            f'letter-spacing:-.4px;">'
+            f'<span style="position:absolute;left:0;top:.18em;bottom:.18em;width:5px;'
+            f'border-radius:3px;background:{color};"></span>{title}</span>'
+            f'<span style="font-size:var(--fs-meta);font-weight:500;color:#64748b;'
+            f'white-space:nowrap;">{n} เคส</span></div>',
             unsafe_allow_html=True)
 
     def _sub_head(txt):
-        st.markdown(f'<div style="font-size:18px;color:#94a3b8;margin:6px 0 0 4px;">'
-                    f'{txt}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:var(--fs-meta);color:#94a3b8;'
+                    f'margin:6px 0 0 4px;">{txt}</div>', unsafe_allow_html=True)
 
     def _rows(rs):
         for idx, c, disp, eff, elapsed in rs:
@@ -551,13 +559,13 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
         f'<div id="row" style="display:flex;align-items:center;gap:10px;{border_css}'
         f'background:{(("#fdeeee" if emer else "#ffffff") if _demo_fx_tb() else "#fffcf3")};'
         f'border-radius:10px;padding:9px 12px;">'
-        f'<span style="min-width:96px;font-size:18px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
-        f'<span style="min-width:64px;font-size:18px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
+        f'<span style="min-width:104px;font-size:20px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
+        f'<span style="min-width:64px;font-size:16px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
         f'{emg_html}'
         f'<span style="font-size:20px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
         f'{dup_badge}'
-        f'<span style="font-size:18px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
+        f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
         f'<span style="font-size:18px;color:#64748b;white-space:nowrap;">'
         f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
         f'<span style="min-width:104px;"><span style="background:#fdf3dd;color:#9a6700;'
@@ -592,13 +600,13 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
         '</style></head><body>'
         f'<div id="rw" style="display:flex;align-items:center;gap:10px;{border_css}'
         f'background:{_bg};border-radius:10px;padding:9px 12px;">'
-        f'<span style="min-width:96px;font-size:18px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
-        f'<span style="min-width:64px;font-size:18px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
+        f'<span style="min-width:104px;font-size:20px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
+        f'<span style="min-width:64px;font-size:16px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
         f'{emg_html}'
         f'<span style="font-size:20px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
         f'{dup_badge}'
-        f'<span style="font-size:18px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
+        f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
         f'<span style="font-size:18px;color:#64748b;white-space:nowrap;">'
         f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
         f'<span style="min-width:104px;"><span id="ch" style="background:#e6f6ec;color:#1b7f4b;'
@@ -699,13 +707,13 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 f'<div style="display:flex;align-items:center;gap:10px;'
                 f'{border_css}background:{bg};'
                 f'border-radius:10px;padding:9px 12px;margin:2px 0;">'
-                f'<span style="min-width:96px;font-size:18px;font-weight:600;color:{room_fg};">{loc(c)}</span>'
-                f'<span style="min-width:64px;font-size:18px;color:{sub_fg};">{_sched_order_html(c, tlabel)}</span>'
+                f'<span style="min-width:104px;font-size:20px;font-weight:600;color:{room_fg};">{loc(c)}</span>'
+                f'<span style="min-width:64px;font-size:16px;color:{sub_fg};">{_sched_order_html(c, tlabel)}</span>'
                 f'<span style="flex:1;min-width:0;overflow:hidden;">'
                 f'{emg_html}'
                 f'<span style="font-size:20px;font-weight:600;color:{name_fg};">{_pt_name(c)}</span>'
                 f'{dup_badge if not muted else ""}'
-                f'<span style="font-size:18px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
+                f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
                 f'<span style="font-size:18px;color:{sub_fg};white-space:nowrap;overflow:hidden;'
                 f'text-overflow:ellipsis;display:inline-block;max-width:100%;">'
                 f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'

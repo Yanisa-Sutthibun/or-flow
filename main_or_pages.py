@@ -1185,11 +1185,11 @@ def _board_fragment():
             st.session_state['_board_user_pull'] = True    # ✋ คนสั่งเอง — ห้ามถูกเลื่อน
             _rerun_board()
     with _ctl_warn:
-        st.markdown("<div style=\x27text-align:right;color:#808495;font-size:18px;line-height:1.3;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
+        st.markdown("<div style=\x27text-align:right;color:#808495;font-size:var(--fs-meta);line-height:1.3;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
         # 🎨 demo: บอกเวลาซิงก์ล่าสุด — ช่องว่าง 30 วิ จะไม่ถูกอ่านว่า "ค้าง"
         if _is_demo_instance and st.session_state.get('_board_last_pull_wall'):
             st.markdown(
-                f"<div style='text-align:right;color:#b6c2cf;font-size:18px;'>"
+                f"<div style='text-align:right;color:#b6c2cf;font-size:var(--fs-meta);'>"
                 f"อัปเดตล่าสุด {st.session_state['_board_last_pull_wall']}</div>",
                 unsafe_allow_html=True)
     # 🚪 โหมดจอประจำห้อง: ไม่มีสวิตช์สาธิต (กันจอห้องเผลอสลับบอร์ดทั้งตึกเป็นสาธิต)
@@ -1247,7 +1247,7 @@ def _board_fragment():
         # 🎬 โหมดสาธิต: UI เหมือนโหมดจริงทุกอย่าง — เหลือชิปจาง ๆ กันสับสนเท่านั้น
         st.markdown(
             '<div style="text-align:right;margin:-4px 0 2px;">'
-            '<span style="font-size:18px;color:#b6c2cf;border:1px solid #eef2f6;'
+            '<span style="font-size:var(--fs-meta);color:#b6c2cf;border:1px solid #eef2f6;'
             'border-radius:999px;padding:4px 14px;">สาธิต · ไม่บันทึกจริง</span></div>',
             unsafe_allow_html=True)
     else:
@@ -1257,7 +1257,7 @@ def _board_fragment():
         if _n_test:
             st.markdown(
                 f'<div style="text-align:right;margin:-4px 0 2px;">'
-                f'<span style="font-size:18px;color:#9a6700;border:1px solid #fdf3dd;'
+                f'<span style="font-size:var(--fs-meta);color:#9a6700;border:1px solid #fdf3dd;'
                 f'background:#fffcf3;border-radius:999px;padding:4px 14px;">'
                 f'🧪 เคสทดสอบ {_n_test} เคสบนบอร์ด · ไม่บันทึกจริง · '
                 f'ลบที่ ⚙️ ล้างกระดาน</span></div>',
@@ -1351,7 +1351,7 @@ def _board_fragment():
             f'<div style="flex:1;background:#ffffff;border:1px solid #eef2f6;'
             f'border-radius:14px;padding:14px 16px 12px;">'
             f'<span style="display:inline-block;background:{_bg};color:{_fg};'
-            f'border-radius:10px;padding:4px 12px;font-size:18px;'
+            f'border-radius:10px;padding:4px 12px;font-size:var(--fs-meta);'
             f'font-weight:600;white-space:nowrap;">{_lb}</span>'
             f'<div style="font-size:32px;font-weight:800;color:#0f172a;'
             f'line-height:1.15;margin-top:6px;">{_v}</div></div>'

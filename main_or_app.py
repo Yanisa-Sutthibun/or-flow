@@ -155,10 +155,9 @@ CUSTOM_CSS = """
     .or-room-active { border-top-color: #2196f3; background: linear-gradient(135deg, #e3f2fd 0%, #e1f5fe 100%); }
     .timer { font-size: 32px; font-weight: bold; color: #e74c3c; font-family: 'Courier New', monospace; }
     .metric-box { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
-    .stat-title { color: #7f8c8d; font-size: 18px; font-weight: 600; margin-bottom: 10px; }
-    .stat-value { color: #2c3e50; font-size: 32px; font-weight: bold; }
-    .header-title { color: #2c3e50; font-size: 28px; font-weight: 700; margin-bottom: 20px; }
-    .subheader { color: #34495e; font-size: 18px; font-weight: 600; margin-top: 20px; margin-bottom: 15px; }
+    /* 📐 9 ส.ค. 2026: ขนาดของ .stat-title/.stat-value/.header-title/.subheader
+       ถูกย้ายไป ui_theme.py (type scale กลาง) แล้ว — เดิมประกาศซ้ำที่นี่ด้วย
+       ทำให้ตัวเลขไม่ตรงกันระหว่างหน้า แก้ทีต้องไล่ 2 ที่ */
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -213,7 +212,7 @@ def render_system_status():
             _mt = _m2.get('metrics_test67') or {}
             st.markdown(
                 f'<div style="background:#e8f5e9;padding:10px;border-radius:8px;text-align:center;">'
-                f'<p style="margin:0;font-size:18px;color:#2e7d32;">'
+                f'<p style="margin:0;font-size:var(--fs-meta);color:#2e7d32;">'
                 f'🤖 <b>AI Model: thesis_ML_v2</b> — โมเดลวิทยานิพนธ์ 13 features '
                 f'(ตัวที่ทำนายบนบอร์ด · เริ่ม 7 ก.ค. 2569)<br>'
                 f'General XGBoost + Target Encoding · เทรน {_m2.get("n_train", "—"):,} เคส '
@@ -242,7 +241,7 @@ def render_system_status():
                     if _q90 else 'ช่วงทำนาย: ยังไม่คาลิเบรต')
         st.markdown(
             f'<div style="background:#e8f5e9;padding:10px;border-radius:8px;text-align:center;">'
-            f'<p style="margin:0;font-size:18px;color:#2e7d32;">'
+            f'<p style="margin:0;font-size:var(--fs-meta);color:#2e7d32;">'
             f'🤖 <b>AI Model: thesis_ML</b> (ตัวที่ทำนายบนบอร์ด)<br>'
             f'มัธยฐานลำดับชั้น + XGBoost residual<br>'
             f'เทรน {_ntr} เคส (พ.ศ. 2564–2567)<br>'
@@ -254,7 +253,7 @@ def render_system_status():
     else:
         st.markdown(
             '<div style="background:#ffebee;padding:10px;border-radius:8px;text-align:center;">'
-            '<p style="margin:0;font-size:18px;color:#c62828;">'
+            '<p style="margin:0;font-size:var(--fs-meta);color:#c62828;">'
             '⚠️ <b>ไม่พบโมเดล thesis_ML</b><br>'
             'ตรวจ models/thesis_ML/ (hier_*.json + resid_*.pkl)<br>'
             'ระบบจะ fallback เป็นค่ามัธยฐานจากฐานข้อมูล</p></div>',
@@ -312,8 +311,8 @@ def render_screen_links(room_info: dict):
         f'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
         f'<span style="font-size:22px;font-weight:700;color:#0f172a;">🔗 ลิงก์ติดตั้งจอ</span>'
         f'<span style="background:{_sys_bg};color:{_sys_fg};border-radius:999px;'
-        f'padding:5px 16px;font-size:18px;font-weight:700;">{_sys}</span></div>'
-        f'<div style="color:#64748b;font-size:18px;margin:6px 0 14px;">'
+        f'padding:5px 16px;font-size:var(--fs-meta);font-weight:700;">{_sys}</span></div>'
+        f'<div style="color:#64748b;font-size:var(--fs-meta);margin:6px 0 14px;">'
         f'คัดลอกลิงก์ไปสร้าง shortcut บนเครื่องของห้องนั้นครั้งเดียวจบ '
         f'· อย่าแชร์ลิงก์ข้ามห้อง</div>',
         unsafe_allow_html=True)
@@ -329,9 +328,9 @@ def render_screen_links(room_info: dict):
     def _screen_head(icon: str, title: str, sub: str, dim: bool = False):
         _c = '#94a3b8' if dim else '#0f172a'
         st.markdown(
-            f'<div style="font-size:18px;font-weight:700;color:{_c};line-height:1.35;">'
+            f'<div style="font-size:var(--fs-card);font-weight:700;color:{_c};line-height:1.35;">'
             f'{icon} {title}</div>'
-            f'<div style="font-size:18px;color:#94a3b8;">{sub}</div>',
+            f'<div style="font-size:var(--fs-meta);color:#94a3b8;">{sub}</div>',
             unsafe_allow_html=True)
 
     def _screen_row(icon: str, title: str, sub: str, url: str):
@@ -459,7 +458,7 @@ def page_room_settings():
                 f'<div style="background:#f8f9fa;padding:12px 16px;border-radius:10px;'
                 f'border-left:4px solid #3498db;">'
                 f'<b>{info["icon"]} {info["label"]}</b><br>'
-                f'<span style="color:#7f8c8d;font-size:18px;">{info["desc"]}</span></div>',
+                f'<span style="color:#7f8c8d;font-size:var(--fs-meta);">{info["desc"]}</span></div>',
                 unsafe_allow_html=True)
         with _c2:
             enabled = st.toggle("เปิดใช้งาน", value=settings.get('enabled', True),
@@ -793,14 +792,14 @@ def _check_password():
             '<div style="text-align:center;margin:60px 0 24px;">'
             '<div style="font-size:48px;">🔐</div>'
             '<div style="display:inline-block;margin:12px 0 4px;background:#eef4ff;'
-            'color:#2563eb;font-size:18px;font-weight:600;padding:6px 16px;'
+            'color:#2563eb;font-size:var(--fs-meta);font-weight:600;padding:6px 16px;'
             'border-radius:999px;border:1px solid #d6e4ff;">🎓 ส่วนหนึ่งของงานวิจัย</div>'
             '<div style="font-size:24px;font-weight:700;color:#1f2937;'
             'margin-top:4px;">OR Flow</div>'
             '<div style="font-size:18px;color:#5b6b7b;margin-top:5px;'
             'line-height:1.5;">ระบบบริหารห้องผ่าตัดและทำนายเวลาผ่าตัดด้วย '
             'Machine Learning</div>'
-            '<div style="font-size:18px;color:#90a0ae;margin-top:7px;'
+            '<div style="font-size:var(--fs-meta);color:#90a0ae;margin-top:7px;'
             'line-height:1.5;">วิทยานิพนธ์ หลักสูตรพยาบาลศาสตรมหาบัณฑิต '
             'สาขาการบริหารการพยาบาล<br>ห้องผ่าตัดศัลยกรรมทั่วไป · '
             'โรงพยาบาลตำรวจ</div></div>',

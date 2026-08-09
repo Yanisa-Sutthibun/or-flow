@@ -160,7 +160,7 @@ def forecast_caption_html(fc):
     bg = '#fbe9e8' if over else '#e3f0fb'
     return (f'<div style="display:flex;justify-content:space-between;align-items:center;'
             f'background:{bg};color:{col};border-radius:8px;padding:7px 12px;'
-            f'font-size:18px;margin-top:8px;">'
+            f'font-size:var(--fs-meta);margin-top:8px;">'
             f'<span>เหลือ {fc["waiting_n"]} เคส</span>'
             f'<span>🤖 เคสสุดท้ายของวัน <b>{fin}</b></span></div>')
 
@@ -188,7 +188,7 @@ def render_room_timeline(rooms, now=None):
 
     ticks = list(range(((day_start + 59) // 60) * 60, day_end + 1, 120))
     axis = ''.join(
-        f'<span style="position:absolute;left:{pos(t):.1f}%;font-size:18px;'
+        f'<span style="position:absolute;left:{pos(t):.1f}%;font-size:var(--fs-meta);'
         f'color:#94a3b8;transform:translateX(-50%);">{t // 60:02d}:00</span>'
         for t in ticks)
 
@@ -204,7 +204,7 @@ def render_room_timeline(rooms, now=None):
         _t = txt if w > 6 else ''
         return (f'<div title="{tip}" style="position:absolute;left:{l:.1f}%;'
                 f'width:{max(w, 0.8):.1f}%;height:32px;border-radius:4px;{sty}'
-                f'font-size:18px;line-height:32px;padding:0 6px;overflow:hidden;'
+                f'font-size:var(--fs-meta);line-height:32px;padding:0 6px;overflow:hidden;'
                 f'white-space:nowrap;box-sizing:border-box;">{_t}</div>')
 
     rows = ''
@@ -268,14 +268,14 @@ def render_room_timeline(rooms, now=None):
                  if fc['has_future'] else 'เสร็จงานแล้ว')
         rows += (
             f'<div style="margin-bottom:13px;">'
-            f'<div style="display:flex;justify-content:space-between;font-size:18px;margin-bottom:4px;">'
-            f'<span style="font-weight:500;color:#1565c0;">{label}</span>'
+            f'<div style="display:flex;justify-content:space-between;font-size:var(--fs-meta);margin-bottom:4px;">'
+            f'<span style="font-size:var(--fs-card);font-weight:600;color:#1565c0;">{label}</span>'
             f'<span style="color:#64748b;">{right}</span></div>'
             f'<div style="position:relative;height:32px;background:#f1f5f9;border-radius:4px;">{bar}</div>'
             f'</div>')
 
     legend = (
-        '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:8px;font-size:18px;color:#64748b;">'
+        '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:8px;font-size:var(--fs-meta);color:#64748b;">'
         '<span><span style="display:inline-block;width:15px;height:8px;background:#f8faf8;'
         'border:1px solid #cfd8d1;border-radius:2px;vertical-align:middle;'
         'box-sizing:border-box;"></span> ✓ เสร็จแล้ว</span>'
