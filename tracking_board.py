@@ -587,11 +587,26 @@ def _callnext_short(c, eff, tov_map):
     return short, full
 
 
-def _row_prog(pct, color, el_id=''):
-    """แถบความคืบหน้า = ขอบล่างของแถวเอง — บอกว่าผ่าไปกี่ % โดยไม่กินบรรทัดเพิ่ม"""
-    _id = f' id="{el_id}"' if el_id else ''
-    return (f'<span{_id} style="position:absolute;left:0;bottom:0;height:3px;'
-            f'width:{pct}%;background:{color};"></span>')
+
+def _progress_bar(pct, label, color='#22a565', wrap_id='', fill_id='', label_id=''):
+    """แถบความคืบหน้า + ตัวเลข (มุคกี้สั่ง 9 ส.ค. 2026) — เคสกำลังผ่าอ่าน
+    'ไปถึงไหนแล้ว' จากสัดส่วนได้ทันที ไม่ต้องเอาเลขสองตัวมาหารในหัว
+
+    ตัวเลขอยู่ "ข้างแถบ" ไม่ใช่ "ในแถบ": ถ้าวางในแถบ ตัวเลขจะคาบเส้นระหว่าง
+    พื้นที่เต็มกับพื้นที่ว่าง contrast เปลี่ยนไปตามความคืบหน้าของแต่ละเคส
+    (ตรวจด้วยภาพจริงแล้ว อ่านยากจริง) · วางแถบไว้ซ้าย เลขชิดขวา เลขจึงยัง
+    ตรงแนวกับทุกแถวในคอลัมน์เหมือนเดิม
+    ⚠️ พอเกินเวลาแล้วสัดส่วนหมดความหมาย (เต็มไปแล้ว) → ผู้เรียกสลับเป็นตัวเลขนาที"""
+    _w = f' id="{wrap_id}"' if wrap_id else ''
+    _f = f' id="{fill_id}"' if fill_id else ''
+    _l = f' id="{label_id}"' if label_id else ''
+    return (f'<span{_w} style="display:flex;align-items:center;gap:9px;">'
+            f'<span style="flex:1;min-width:36px;height:12px;border-radius:6px;'
+            f'background:#eef2f6;overflow:hidden;">'
+            f'<span{_f} style="display:block;height:100%;width:{pct}%;'
+            f'background:{color};border-radius:6px;"></span></span>'
+            f'<span{_l} style="font-size:18px;font-weight:700;color:#0f172a;'
+            f'white-space:nowrap;">{label}</span></span>')
 
 
 def _row_shell(inner, bg, border_css, row_id='row', prog=''):
@@ -626,11 +641,15 @@ def _time_static(c, disp, eff, elapsed, now, tov_map=None):
               if (dc is not None and hasattr(dc, 'hour')) else '—')
         return _m, f'ใช้ห้องจริง {_dur_str(elapsed)}' if elapsed else '', ''
     if disp in ('in_or', 'overrun'):
-        _col = '#c0392b' if disp == 'overrun' else '#1b7f4b'
-        _over = (f' · เกิน {elapsed - eff} น.' if disp == 'overrun' and elapsed > eff else '')
         _short, _full = _callnext_short(c, eff, tov_map)
-        return (f'<b style="color:{_col};font-weight:700;">{elapsed}</b> / {eff} น.'
-                f'<span style="color:{_col};">{_over}</span>'), _short, _full
+        if disp == 'overrun':
+            # เกินเวลา = ตัวเลขนาที (สัดส่วนเต็มไปแล้ว บอกอะไรต่อไม่ได้)
+            _over = f' · เกิน {elapsed - eff} น.' if elapsed > eff else ''
+            return (f'<span style="color:#c0392b;font-weight:700;">'
+                    f'{elapsed} / {eff} น.{_over}</span>'), _short, _full
+        _pct = min(int(elapsed / eff * 100), 100) if eff else 0
+        _col = '#e3920b' if (eff and (eff - elapsed) <= 5) else '#22a565'
+        return _progress_bar(_pct, f'{elapsed} / {eff} น.', color=_col), _short, _full
     # ยังไม่มา — เวลาที่ AI คาดว่าจะใช้ห้อง + หลักฐานที่ใช้ทำนาย
     _bits = []
     _n = c.get('proc_n')
@@ -734,35 +753,36 @@ def _inroom_row_iframe(c, loc, tlabel, eff, border_css, ov_badge, now,
                 + _cell_chip('กำลังผ่า', '#1b7f4b', '#e6f6ec', el_id='ch')
                 # callnext_html = คู่ (สั้น, เต็ม) จาก _callnext_short — บรรทัดล่างคือ
                 # ผลลัพธ์ AI ที่ทีมใช้ตัดสินใจจริง ต้องเห็นบนแถว ไม่ใช่ซ่อนใน tooltip
-                + _cell_time('<span id="t" style="font-weight:600;color:#1b7f4b;"></span>'
-                             + ov_badge,
+                # ปกติ = แถบความคืบหน้าพร้อมตัวเลขในตัว · เกินเวลา = สลับเป็นตัวเลข
+                # นาทีล้วน (JS สลับ display ให้) เพราะสัดส่วนหมดความหมายเมื่อเต็มแล้ว
+                + _cell_time(_progress_bar(0, '', wrap_id='pw', fill_id='b',
+                                           label_id='pl')
+                             + '<span id="t" style="display:none;font-weight:700;'
+                               'color:#c0392b;font-size:18px;"></span>' + ov_badge,
                              sub=(callnext[0] if callnext else ''),
                              title=(callnext[1] if callnext else '')),
-                bg=_bg, border_css=border_css, row_id='rw',
-                prog=_row_prog(0, '#22a565', el_id='b'))
+                bg=_bg, border_css=border_css, row_id='rw')
         ).replace('</body></html>', '')
         + f'<script>var el0={el0:.0f},t0=Date.now(),eff={int(eff)}'
         + (f',emer={1 if _emer else 0}' if _demo_fx_tb() else '') + ';'
         'var t=document.getElementById("t"),b=document.getElementById("b"),'
+        'pw=document.getElementById("pw"),pl=document.getElementById("pl"),'
         'ch=document.getElementById("ch"),rw=document.getElementById("rw");'
         'function z(x){return String(x).padStart(2,"0")}'
         'function u(){var el=Math.floor(el0+(Date.now()-t0)/1000),'
         'm=Math.floor(el/60),ss=el%60,rem=eff*60-el;'
         'b.style.width=Math.min(el/(eff*60)*100,100)+"%";'
-        'if(rem>300){t.textContent=m+" / "+eff+" น.";'
-        't.style.color="#1b7f4b";b.style.background="#22a565";}'
-        # 🎨 demo (มุคกี้ปรับ 3 ส.ค. 2026 รอบ 2): เวลาหลักเป็นนาทีล้วนเสมอ (MM/MM น.)
-        #    ความละเอียด MM:SS โผล่เฉพาะส่วน "เกิน" ตอนเกินเวลาเท่านั้น · production เดิม
-        + ('else if(rem>0){t.textContent=m+" / "+eff+" น.";'
-           if _demo_fx_tb() else
-           'else if(rem>0){t.textContent=m+":"+z(ss)+" / "+eff+" น.";')
-        + 't.style.color="#e3920b";b.style.background="#e3920b";}'
+        # 📊 9 ส.ค. 2026 (มุคกี้สั่ง): ยังไม่เกินเวลา = อ่านจากแถบ (เลขอยู่ในแถบ)
+        #    · เกินเวลาแล้ว = สลับเป็นตัวเลขนาที เพราะสัดส่วนเต็มไปแล้ว ไม่บอกอะไรต่อ
+        'pl.textContent=m+" / "+eff+" น.";'
+        'if(rem>300){b.style.background="#22a565";}'
+        + 'else if(rem>0){b.style.background="#e3920b";}'
         'else{var ov=-rem;'
+        'pw.style.display="none";t.style.display="block";'
         + ('t.textContent=m+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);'
            if _demo_fx_tb() else
            't.textContent=m+":"+z(ss)+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);')
-        + 't.style.color="#c0392b";b.style.width="100%";b.style.background="#e24b4a";'
-        'ch.textContent="เกินเวลา";ch.style.background="#fbe9e8";ch.style.color="#c0392b";'
+        + 'ch.textContent="เกินเวลา";ch.style.background="#fbe9e8";ch.style.color="#c0392b";'
         # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026): ผ่าเกินเวลา = แถบเหลืองครีม
         #    (ภาษาเดียวกับรอนาน) · เคสฉุกเฉินคงแถบแดงไว้ ไม่ทับ · production เดิม
         + ('if(!emer){rw.style.background="#fff8e1";'
@@ -832,11 +852,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                                    _callnext_short(c, eff, tov_map), dup_badge),
                 height=_ROW_IFRAME_H)
         else:
+            # ความคืบหน้าอยู่ในแถบของคอลัมน์เวลาแล้ว (_progress_bar) ไม่ต้องมีแถบ
+            # ที่ขอบล่างแถวซ้ำอีก — สองแถบบอกเรื่องเดียวกันคือความรก
             _tm_html, _tm_sub, _tm_tip = _time_static(c, disp, eff, elapsed, now, tov_map)
-            _prog = ''
-            if disp in ('in_or', 'overrun') and eff:
-                _pct = min(int(elapsed / eff * 100), 100)
-                _prog = _row_prog(_pct, '#e3920b' if disp == 'overrun' else '#22a565')
             st.markdown(
                 _row_shell(
                     _cell_room(c, loc, fg=room_fg)
