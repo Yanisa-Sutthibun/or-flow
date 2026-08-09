@@ -600,13 +600,17 @@ def _progress_bar(pct, label, color='#22a565', wrap_id='', fill_id='', label_id=
     _w = f' id="{wrap_id}"' if wrap_id else ''
     _f = f' id="{fill_id}"' if fill_id else ''
     _l = f' id="{label_id}"' if label_id else ''
+    # แถบตรึงความกว้าง 88px ไม่ใช่ flex — ถ้าปล่อยให้ยืดตามที่เหลือ แถบของเคส
+    # เกินเวลา (ป้ายยาวกว่า) จะสั้นกว่าเคสปกติ ทั้งที่เต็ม 100% กลายเป็นอ่านผิด
+    # ว่าคืบหน้าน้อยกว่า · ป้ายชิดขวาเสมอ เลขจึงตรงแนวกับทุกแถวในคอลัมน์
     return (f'<span{_w} style="display:flex;align-items:center;gap:9px;">'
-            f'<span style="flex:1;min-width:36px;height:12px;border-radius:6px;'
+            f'<span style="width:88px;flex:none;height:12px;border-radius:6px;'
             f'background:#eef2f6;overflow:hidden;">'
             f'<span{_f} style="display:block;height:100%;width:{pct}%;'
             f'background:{color};border-radius:6px;"></span></span>'
-            f'<span{_l} style="font-size:18px;font-weight:700;color:#0f172a;'
-            f'white-space:nowrap;">{label}</span></span>')
+            f'<span{_l} style="flex:1;min-width:0;text-align:right;font-size:18px;'
+            f'font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;'
+            f'text-overflow:ellipsis;">{label}</span></span>')
 
 
 def _row_shell(inner, bg, border_css, row_id='row', prog=''):
@@ -643,10 +647,11 @@ def _time_static(c, disp, eff, elapsed, now, tov_map=None):
     if disp in ('in_or', 'overrun'):
         _short, _full = _callnext_short(c, eff, tov_map)
         if disp == 'overrun':
-            # เกินเวลา = ตัวเลขนาที (สัดส่วนเต็มไปแล้ว บอกอะไรต่อไม่ได้)
+            # 🔴 เกินเวลา = แถบแดงเต็ม + ตัวเลขบอกว่าเกินไปเท่าไร (มุคกี้สั่ง 9 ส.ค. 2026)
             _over = f' · เกิน {elapsed - eff} น.' if elapsed > eff else ''
-            return (f'<span style="color:#c0392b;font-weight:700;">'
-                    f'{elapsed} / {eff} น.{_over}</span>'), _short, _full
+            return (_progress_bar(100, f'<span style="color:#c0392b;">'
+                                       f'{elapsed} / {eff} น.{_over}</span>',
+                                  color='#e24b4a'), _short, _full)
         _pct = min(int(elapsed / eff * 100), 100) if eff else 0
         _col = '#e3920b' if (eff and (eff - elapsed) <= 5) else '#22a565'
         return _progress_bar(_pct, f'{elapsed} / {eff} น.', color=_col), _short, _full
@@ -756,17 +761,14 @@ def _inroom_row_iframe(c, loc, tlabel, eff, border_css, ov_badge, now,
                 # ปกติ = แถบความคืบหน้าพร้อมตัวเลขในตัว · เกินเวลา = สลับเป็นตัวเลข
                 # นาทีล้วน (JS สลับ display ให้) เพราะสัดส่วนหมดความหมายเมื่อเต็มแล้ว
                 + _cell_time(_progress_bar(0, '', wrap_id='pw', fill_id='b',
-                                           label_id='pl')
-                             + '<span id="t" style="display:none;font-weight:700;'
-                               'color:#c0392b;font-size:18px;"></span>' + ov_badge,
+                                           label_id='pl') + ov_badge,
                              sub=(callnext[0] if callnext else ''),
                              title=(callnext[1] if callnext else '')),
                 bg=_bg, border_css=border_css, row_id='rw')
         ).replace('</body></html>', '')
         + f'<script>var el0={el0:.0f},t0=Date.now(),eff={int(eff)}'
         + (f',emer={1 if _emer else 0}' if _demo_fx_tb() else '') + ';'
-        'var t=document.getElementById("t"),b=document.getElementById("b"),'
-        'pw=document.getElementById("pw"),pl=document.getElementById("pl"),'
+        'var b=document.getElementById("b"),pl=document.getElementById("pl"),'
         'ch=document.getElementById("ch"),rw=document.getElementById("rw");'
         'function z(x){return String(x).padStart(2,"0")}'
         'function u(){var el=Math.floor(el0+(Date.now()-t0)/1000),'
@@ -777,11 +779,13 @@ def _inroom_row_iframe(c, loc, tlabel, eff, border_css, ov_badge, now,
         'pl.textContent=m+" / "+eff+" น.";'
         'if(rem>300){b.style.background="#22a565";}'
         + 'else if(rem>0){b.style.background="#e3920b";}'
+        # 🔴 เกินเวลา (มุคกี้สั่ง 9 ส.ค. 2026): ยังเป็นแถบเหมือนเดิม แต่แดงเต็มแถบ
+        #    — เห็นจากไกลว่าห้องนี้ล้นแล้ว · ตัวเลขข้างแถบบอกว่าเกินไปเท่าไร
         'else{var ov=-rem;'
-        'pw.style.display="none";t.style.display="block";'
-        + ('t.textContent=m+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);'
+        'b.style.width="100%";b.style.background="#e24b4a";pl.style.color="#c0392b";'
+        + ('pl.textContent=m+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);'
            if _demo_fx_tb() else
-           't.textContent=m+":"+z(ss)+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);')
+           'pl.textContent=m+":"+z(ss)+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);')
         + 'ch.textContent="เกินเวลา";ch.style.background="#fbe9e8";ch.style.color="#c0392b";'
         # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026): ผ่าเกินเวลา = แถบเหลืองครีม
         #    (ภาษาเดียวกับรอนาน) · เคสฉุกเฉินคงแถบแดงไว้ ไม่ทับ · production เดิม
