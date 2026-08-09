@@ -171,15 +171,15 @@ def _pt_name(c) -> str:
 
 def _pt_meta(c) -> str:
     """ข้อมูลระบุตัวรอง: HN — แสดง 4 ตัวท้ายเสมอ (มาตรา 3.6.4) · ไม่แสดงอายุ
-    + รหัสผู้รับบริการ (fam_code) ที่จอญาติใช้ — ให้เจ้าหน้าที่บอกญาติได้"""
+    + รหัสรับบริการ (fam_code) ที่จอญาติใช้ — ให้เจ้าหน้าที่บอกญาติได้"""
     hn = c.get('hn') or ''
     from main_or_db import mask_hn
     _h = mask_hn(hn)
     meta = f"HN {_esc(_h)}" if _h else ''
     code = c.get('fam_code')
     if code:
-        meta = (f"{meta} · รหัสผู้รับบริการ {_esc(code)}" if meta
-                else f"รหัสผู้รับบริการ {_esc(code)}")
+        meta = (f"{meta} · รหัสรับบริการ {_esc(code)}" if meta
+                else f"รหัสรับบริการ {_esc(code)}")
     return meta
 
 
@@ -206,8 +206,8 @@ def _dup_name_badges(cases, loc) -> dict:
             badges[id(c)] = (
                 f'<span title="ชื่อซ้ำกับอีกเคสวันนี้{(" · " + rooms_txt) if rooms_txt else ""}'
                 f' · ตรวจ HN ก่อนดำเนินการ" style="display:inline-flex;align-items:center;'
-                f'gap:3px;background:#fdf3dd;color:#9a6700;border-radius:999px;'
-                f'padding:1px 8px;font-size:11px;font-weight:600;margin-left:6px;'
+                f'gap:6px;background:#fdf3dd;color:#9a6700;border-radius:999px;'
+                f'padding:3px 12px;font-size:16px;font-weight:600;margin-left:7px;'
                 f'white-space:nowrap;">👥 ชื่อซ้ำ{(" · " + rooms_txt) if rooms_txt else ""}</span>')
     return badges
 
@@ -509,7 +509,7 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
     el0 = max((now - arr).total_seconds(), 0) if (arr is not None and hasattr(arr, 'hour')) else 0
     ov = c.get('user_override_min')
     ov_badge = ('<span style="background:#e3f0fb;color:#1565c0;border-radius:8px;'
-                'padding:0 6px;font-size:11.5px;margin-left:4px;">ปรับแล้ว</span>'
+                'padding:2px 10px;font-size:16px;margin-left:6px;">ปรับแล้ว</span>'
                 if ov else '')
     emer = _is_emer(c)
     emg_html = _EMG_BADGE if emer else ''
@@ -551,19 +551,19 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
         f'<div id="row" style="display:flex;align-items:center;gap:10px;{border_css}'
         f'background:{(("#fdeeee" if emer else "#ffffff") if _demo_fx_tb() else "#fffcf3")};'
         f'border-radius:10px;padding:9px 12px;">'
-        f'<span style="min-width:78px;font-size:14px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
-        f'<span style="min-width:46px;font-size:13px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
+        f'<span style="min-width:96px;font-size:18px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
+        f'<span style="min-width:56px;font-size:16px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
         f'{emg_html}'
-        f'<span style="font-size:15px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
+        f'<span style="font-size:20px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
         f'{dup_badge}'
-        f'<span style="font-size:12px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
-        f'<span style="font-size:13px;color:#64748b;white-space:nowrap;">'
+        f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
+        f'<span style="font-size:16px;color:#64748b;white-space:nowrap;">'
         f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
-        f'<span style="min-width:80px;"><span style="background:#fdf3dd;color:#9a6700;'
-        f'border-radius:10px;padding:2px 10px;font-size:12.5px;font-weight:500;white-space:nowrap;">รอผ่าตัด</span></span>'
-        f'<span style="min-width:110px;"><span id="t" style="color:#fff;padding:2px 9px;'
-        f'border-radius:8px;font-size:13px;font-weight:600;display:inline-block;'
+        f'<span style="min-width:104px;"><span style="background:#fdf3dd;color:#9a6700;'
+        f'border-radius:10px;padding:4px 14px;font-size:16px;font-weight:500;white-space:nowrap;">รอผ่าตัด</span></span>'
+        f'<span style="min-width:132px;"><span id="t" style="color:#fff;padding:3px 11px;'
+        f'border-radius:8px;font-size:16px;font-weight:600;display:inline-block;'
         f'white-space:nowrap;"></span>{ov_badge}</span>'
         f'</div>'
         f'{_js}</body></html>'
@@ -592,18 +592,18 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
         '</style></head><body>'
         f'<div id="rw" style="display:flex;align-items:center;gap:10px;{border_css}'
         f'background:{_bg};border-radius:10px;padding:9px 12px;">'
-        f'<span style="min-width:78px;font-size:14px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
-        f'<span style="min-width:46px;font-size:13px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
+        f'<span style="min-width:96px;font-size:18px;font-weight:600;color:#1565c0;">{loc(c)}</span>'
+        f'<span style="min-width:56px;font-size:16px;color:#64748b;">{_sched_order_html(c, tlabel)}</span>'
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
         f'{emg_html}'
-        f'<span style="font-size:15px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
+        f'<span style="font-size:20px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
         f'{dup_badge}'
-        f'<span style="font-size:12px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
-        f'<span style="font-size:13px;color:#64748b;white-space:nowrap;">'
+        f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
+        f'<span style="font-size:16px;color:#64748b;white-space:nowrap;">'
         f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
-        f'<span style="min-width:80px;"><span id="ch" style="background:#e6f6ec;color:#1b7f4b;'
-        f'border-radius:10px;padding:2px 10px;font-size:12.5px;font-weight:500;white-space:nowrap;">กำลังผ่า</span></span>'
-        f'<span style="min-width:150px;font-size:13px;">'
+        f'<span style="min-width:104px;"><span id="ch" style="background:#e6f6ec;color:#1b7f4b;'
+        f'border-radius:10px;padding:4px 14px;font-size:16px;font-weight:500;white-space:nowrap;">กำลังผ่า</span></span>'
+        f'<span style="min-width:180px;font-size:16px;">'
         f'<span id="t" style="color:#1b7f4b;font-weight:600;"></span>{ov_badge}'
         f'<span style="display:block;height:4px;background:#eef2f6;border-radius:2px;'
         f'overflow:hidden;margin-top:3px;"><span id="b" style="display:block;height:100%;'
@@ -659,7 +659,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     bg = rowbg if rowbg else '#ffffff'
     ov = c.get('user_override_min')
     ov_badge = ('<span style="background:#e3f0fb;color:#1565c0;border-radius:8px;'
-                'padding:1px 7px;font-size:11.5px;margin-left:4px;">ปรับแล้ว</span>'
+                'padding:2px 10px;font-size:16px;margin-left:6px;">ปรับแล้ว</span>'
                 if ov else '')
     # จำหน่ายแล้ว → แถบเทาจาง ทุกอย่างหรี่ลง (ไฟฉุกเฉินดับด้วย — เคสจบแล้ว ไม่รกตา)
     muted = (disp == 'discharged')
@@ -699,19 +699,19 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 f'<div style="display:flex;align-items:center;gap:10px;'
                 f'{border_css}background:{bg};'
                 f'border-radius:10px;padding:9px 12px;margin:2px 0;">'
-                f'<span style="min-width:78px;font-size:14px;font-weight:600;color:{room_fg};">{loc(c)}</span>'
-                f'<span style="min-width:46px;font-size:13px;color:{sub_fg};">{_sched_order_html(c, tlabel)}</span>'
+                f'<span style="min-width:96px;font-size:18px;font-weight:600;color:{room_fg};">{loc(c)}</span>'
+                f'<span style="min-width:56px;font-size:16px;color:{sub_fg};">{_sched_order_html(c, tlabel)}</span>'
                 f'<span style="flex:1;min-width:0;overflow:hidden;">'
                 f'{emg_html}'
-                f'<span style="font-size:15px;font-weight:600;color:{name_fg};">{_pt_name(c)}</span>'
+                f'<span style="font-size:20px;font-weight:600;color:{name_fg};">{_pt_name(c)}</span>'
                 f'{dup_badge if not muted else ""}'
-                f'<span style="font-size:12px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
-                f'<span style="font-size:13px;color:{sub_fg};white-space:nowrap;overflow:hidden;'
+                f'<span style="font-size:16px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
+                f'<span style="font-size:16px;color:{sub_fg};white-space:nowrap;overflow:hidden;'
                 f'text-overflow:ellipsis;display:inline-block;max-width:100%;">'
                 f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
-                f'<span style="min-width:80px;"><span style="background:{chipbg};color:{fg};'
-                f'border-radius:10px;padding:2px 10px;font-size:12.5px;font-weight:500;white-space:nowrap;">{label}</span></span>'
-                f'<span style="min-width:110px;font-size:13px;color:{time_fg};">{time_html}{ov_badge}</span>'
+                f'<span style="min-width:104px;"><span style="background:{chipbg};color:{fg};'
+                f'border-radius:10px;padding:4px 14px;font-size:16px;font-weight:500;white-space:nowrap;">{label}</span></span>'
+                f'<span style="min-width:132px;font-size:16px;color:{time_fg};">{time_html}{ov_badge}</span>'
                 f'</div>',
                 unsafe_allow_html=True)
 
