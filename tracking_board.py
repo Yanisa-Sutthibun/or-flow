@@ -675,10 +675,16 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
         f'<script>var el0={el0:.0f},t0=Date.now(),emer={1 if emer else 0},'
         't=document.getElementById("t"),ch=document.getElementById("ch"),'
         'row=document.getElementById("row"),late=0;'
-        'function u(){var d=Math.floor((el0+(Date.now()-t0)/1000)/60);'
+        'function u(){var el=el0+(Date.now()-t0)/1000,d=Math.floor(el/60),'
+        'ss=Math.floor(el%60);'
         # ⏱ ไอคอนนาฬิกาจับเวลา — บอกว่าเลขนี้ "เดินเอง" ไม่ใช่ค่านิ่ง
         'if(d>=1440){t.textContent="⏱ รอนานมาก";t.style.color="#c0392b";return}'
-        't.textContent="⏱ รอ "+d+" นาที";'
+        # ⏱ วินาทีเดินเฉพาะเคสที่รอเกิน 60 นาที (มุคกี้เคาะ 9 ส.ค. 2026):
+        #   บอร์ดมี 9 แถว ถ้าเลขทุกแถวกระพริบทุกวินาทีจะดึงสายตาตลอดเวลา
+        #   → ปกติเดินทีละนาที · เคสที่ต้องรีบจริงเท่านั้นที่เดินวินาที
+        #   ใช้ padStart กันเลขเปลี่ยนความกว้างทุกวินาที (แถวจะกระตุก)
+        't.textContent=(d>=60?"⏱ รอ "+d+":"+String(ss).padStart(2,"0")+" นาที"'
+        ':"⏱ รอ "+d+" นาที");'
         'if(d>=60&&!late){late=1;t.style.color="#c0392b";t.style.fontWeight="700";'
         'ch.textContent="รอเกินเวลา";ch.style.background="#fdf3dd";ch.style.color="#9a6700";'
         + ('if(!emer){row.style.background="#fffdf5";'
