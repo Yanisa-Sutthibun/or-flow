@@ -647,10 +647,9 @@ def _time_static(c, disp, eff, elapsed, now, tov_map=None):
     if disp in ('in_or', 'overrun'):
         _short, _full = _callnext_short(c, eff, tov_map)
         if disp == 'overrun':
-            # 🔴 เกินเวลา = แถบแดงเต็ม + ตัวเลขบอกว่าเกินไปเท่าไร (มุคกี้สั่ง 9 ส.ค. 2026)
-            _over = f' · เกิน {elapsed - eff} น.' if elapsed > eff else ''
-            return (_progress_bar(100, f'<span style="color:#c0392b;">'
-                                       f'{elapsed} / {eff} น.{_over}</span>',
+            # 🔴 เกินเวลา = แถบแดงเต็ม + "เกินไปเท่าไร" อย่างเดียว (มุคกี้สั่ง 9 ส.ค. 2026)
+            _over = (f'เกิน {_dur_str(elapsed - eff)}' if elapsed > eff else 'เกินเวลา')
+            return (_progress_bar(100, f'<span style="color:#c0392b;">{_over}</span>',
                                   color='#e24b4a'), _short, _full)
         _pct = min(int(elapsed / eff * 100), 100) if eff else 0
         _col = '#e3920b' if (eff and (eff - elapsed) <= 5) else '#22a565'
@@ -783,10 +782,11 @@ def _inroom_row_iframe(c, loc, tlabel, eff, border_css, ov_badge, now,
         #    — เห็นจากไกลว่าห้องนี้ล้นแล้ว · ตัวเลขข้างแถบบอกว่าเกินไปเท่าไร
         'else{var ov=-rem;'
         'b.style.width="100%";b.style.background="#e24b4a";pl.style.color="#c0392b";'
-        + ('pl.textContent=m+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);'
-           if _demo_fx_tb() else
-           'pl.textContent=m+":"+z(ss)+" / "+eff+" น. · เกิน "+Math.floor(ov/60)+":"+z(ov%60);')
-        + 'ch.textContent="เกินเวลา";ch.style.background="#fbe9e8";ch.style.color="#c0392b";'
+        # ป้ายเหลือแค่ "เกิน mm:ss" — ไม่ต้องบอก "128 / 90 น." อีกแล้ว เพราะแถบ
+        # แดงเต็มสื่อว่าเลยเวลาที่ทำนายไว้ไปแล้ว สิ่งที่ต้องรู้ต่อคือเกินไปเท่าไร
+        # (เดิม 2 เวอร์ชัน demo/production ต่างกันแค่ส่วนที่ตัดออกนี้ — ยุบเหลือชุดเดียว)
+        'pl.textContent="เกิน "+Math.floor(ov/60)+":"+z(ov%60);'
+        'ch.textContent="เกินเวลา";ch.style.background="#fbe9e8";ch.style.color="#c0392b";'
         # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026): ผ่าเกินเวลา = แถบเหลืองครีม
         #    (ภาษาเดียวกับรอนาน) · เคสฉุกเฉินคงแถบแดงไว้ ไม่ทับ · production เดิม
         + ('if(!emer){rw.style.background="#fff8e1";'
