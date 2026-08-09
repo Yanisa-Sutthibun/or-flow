@@ -75,6 +75,11 @@ _EMG_BADGE = ('<span class="emg-dot"></span><span class="emg-tag">ฉุกเ�
 #    เลือกด้วย class st-key-tb_f2_* (Streamlit ≥1.37 ใส่ class ตาม key ให้อัตโนมัติ
 #    — รุ่นเก่ากว่านั้นจะเป็นปุ่มขาวปกติ ไม่พัง)
 _PACU_BTN_CSS = (
+    # 📐 9 ส.ค. 2026: ปุ่มบนแถวบอร์ดแคบลง (คืนพื้นที่ให้คอลัมน์เวลา) — ลด padding
+    #    แนวนอนและขนาดตัวอักษรลงเล็กน้อย เพื่อให้ "เสร็จ → รับ-ส่ง" ยังอยู่บรรทัดเดียว
+    #    ไม่ตัดคำ (ถ้าตัดคำ ปุ่มจะสูงขึ้นแล้วหลุดแนวกับแถว)
+    '[class*="st-key-tb_"] button{padding:8px 6px !important;font-size:16px !important;'
+    'white-space:nowrap !important;}'
     '[class*="st-key-tb_f2_"] button{'
     'background:#EDD2FF !important;border:1px solid #D8B4FE !important;'
     'color:#5B2C87 !important;font-weight:600;}'
@@ -261,7 +266,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     # ---------- หัวตาราง ----------
     # 📐 ต้องวางใน st.columns สัดส่วนเดียวกับแถว ([8, .8, 1.5, .8] ใน _render_row)
     #    ไม่งั้นหัวคอลัมน์จะเหลื่อมกับข้อมูลข้างล่าง (เดิมวาดเต็มความกว้าง = เหลื่อมอยู่)
-    _hc0, _hc1, _hc2, _hc3 = st.columns([8, 0.8, 1.5, 0.8])
+    _hc0, _hc1, _hc2, _hc3 = st.columns(_BOARD_COLS)
     with _hc0:
         st.markdown(
             '<div style="display:flex;align-items:center;gap:10px;padding:2px 12px 7px;'
@@ -448,75 +453,6 @@ def _band_halfwidth(eff):
     return 15 if e < 60 else 30 if e < 120 else 45 if e < 240 else 60
 
 
-def _callnext_html(c, eff, tov_map):
-    """บรรทัด '🚪 ออกห้อง ~ช่วงเวลา · ⏰ Call next' — ออกห้องบอกเป็น "ช่วง" ไม่ใช่จุดเดียว
-    ความกว้างช่วงปรับตามความยาวเคส (_band_halfwidth) · ช่วง 90% formal อยู่ในปุ่ม ✏️"""
-    ent = c.get('time_entered_or')
-    if ent is None or not hasattr(ent, 'hour'):
-        return ''
-    from datetime import timedelta as _td
-    try:
-        rm = int(float(c.get('room')))
-    except (TypeError, ValueError):
-        rm = None
-    tov = (tov_map or {}).get(rm) or (tov_map or {}).get('_global') or 15
-    _hw = _band_halfwidth(eff)
-    lo_dt = ent + _td(minutes=max(int(eff) - _hw, 5))
-    hi_dt = ent + _td(minutes=int(eff) + _hw)
-    call_dt = ent + _td(minutes=int(eff) + float(tov) - _CALL_LEAD_MIN)
-    return ('<div style="font-size:18px;color:#8a96a3;margin-top:4px;white-space:nowrap;" '
-            f'title="ช่วงคาดการณ์ ±{_hw} นาที (กว้างตามความยาวเคส — คาลิเบรตจากเคสจริงปี 2567 '
-            'ครอบราว 5-6 ใน 10 เคส) · ช่วงมั่นใจ 90% ของเคสนี้ดูในปุ่ม ✏️">'
-            '🚪 ออกห้อง ~' + lo_dt.strftime('%H:%M') + '–' + hi_dt.strftime('%H:%M')
-            + ' · <span style="color:#2f7d52;font-weight:600;">⏰ เรียกเคสถัดไป ~'
-            + call_dt.strftime('%H:%M') + ' น.</span></div>')
-
-
-def _time_cell(c, disp, eff, elapsed, now):
-    ai0 = c.get('ai_predicted_min') or c.get('predicted_min')
-    ov = c.get('user_override_min')
-    if disp == 'overrun':
-        over = elapsed - eff
-        bar = (f'<span style="display:block;height:4px;background:#eef2f6;border-radius:2px;'
-               f'overflow:hidden;margin-top:3px;"><span style="display:block;height:100%;'
-               f'width:100%;background:#e24b4a;"></span></span>')
-        return f'<span style="color:#c0392b;">{elapsed} / {eff} น. · เกิน {over}</span>{bar}'
-    if disp == 'in_or':
-        pct = min(int(elapsed / eff * 100) if eff else 50, 100)
-        bar = (f'<span style="display:block;height:4px;background:#eef2f6;border-radius:2px;'
-               f'overflow:hidden;margin-top:3px;"><span style="display:block;height:100%;'
-               f'width:{pct}%;background:#22a565;"></span></span>')
-        return f'<span style="color:#1b7f4b;">{elapsed} / {eff} น.</span>{bar}'
-    if disp in ('holding_post', 'recovery'):
-        ex = c.get('time_exited_or')
-        return (f'เสร็จ {ex.strftime("%H:%M")}'
-                if (ex is not None and hasattr(ex, 'hour')) else '—')
-    if disp == 'discharged':
-        dc = c.get('time_discharged')
-        return (f'จำหน่าย {dc.strftime("%H:%M")}'
-                if (dc is not None and hasattr(dc, 'hour')) else '—')
-    # not_arrived
-    if ov:
-        return (f'<b style="font-weight:600;">{_dur_str(eff)}</b> '
-                f'<span style="text-decoration:line-through;color:#94a3b8;'
-                f'font-size:18px;">AI {_dur_str(ai0) if ai0 else "?"}</span>')
-    # 🤖 หลักฐานบนแถว — จำนวนเคสอ้างอิง + ช่วง 90% (28 ก.ค. 2026: ตัดป้าย
-    #    "มั่นใจ" heuristic ออก — ให้ช่วง conformal สื่อความไม่แน่นอนแทน
-    #    เพราะมีการันตีเชิงสถิติ อธิบายที่มาในเล่มได้)
-    _n = c.get('proc_n')
-    _ev = ''
-    if _n is not None:
-        _bits2 = [f'จาก {int(_n)} เคส' if _n else 'ไม่มีเคสใกล้เคียง']
-        _rng = c.get('predicted_range')
-        if c.get('range_method') == 'conformal' and _rng:
-            _bits2.append(f'ช่วง {int(_rng[0])}–{int(_rng[1])} น.')
-        _clr = '#27ae60' if _n else '#e74c3c'
-        _ev = (f'<br><span style="font-size:18px;color:{_clr};white-space:nowrap;" '
-               f'title="ช่วง 90% = เคสลักษณะนี้ราว 9 ใน 10 ใช้เวลาอยู่ในช่วงนี้ · '
-               f'ช่วงแคบ = ค่อนข้างแน่นอน · ช่วงกว้าง = เวลาแกว่งได้มาก '
-               f'ควรเผื่อเวลา/ปรับด้วย ✏️">{" · ".join(_bits2)}</span>')
-    return ('AI ทำนายการใช้ห้อง ~'
-            + (_dur_str(ai0) if ai0 else '? น.') + _ev)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -532,7 +468,15 @@ def _time_cell(c, disp, eff, elapsed, now):
 #     = บอกความสูง iframe ล่วงหน้าได้แม่น ไม่มีเนื้อหาโดนกรอบตัดทิ้งเงียบ ๆ
 #   · แก้ความกว้างที่ค่าคงที่ด้านล่างที่เดียว — หัวตารางกับแถวใช้ชุดเดียวกัน
 #     ถ้าแก้ไม่ครบ คอลัมน์จะเหลื่อมทันที
-_COL_RM, _COL_Q, _COL_NM, _COL_ST, _COL_TM = 96, 62, 172, 112, 150
+#   · คอลัมน์เวลากว้างเป็นพิเศษ เพราะเป็นที่อยู่ของผลลัพธ์ AI ซึ่งเป็นหัวใจของงาน:
+#     บรรทัดบน = เวลาที่ใช้/เกินไปกี่นาที · บรรทัดล่าง = ออกห้อง ~ช่วง + เรียกเคสถัดไป
+#     (9 ส.ค. 2026 มุคกี้ทัก: เคยย้ายสองอย่างนี้ไปเป็น tooltip = หายไปจากสายตา ห้ามทำอีก)
+_COL_RM, _COL_Q, _COL_NM, _COL_ST, _COL_TM = 92, 62, 158, 112, 252
+# สัดส่วนคอลัมน์ Streamlit ต่อแถว: [เนื้อแถว, ✏️, ปุ่มหลัก, ↩️]
+#   9 ส.ค. 2026: หั่นปุ่มลง (8/.8/1.5/.8 -> 10/.7/1.35/.7) คืนพื้นที่ ~6% ให้เนื้อแถว
+#   เพื่อขยายคอลัมน์เวลา — เดิม 'เกินไปกี่นาที' ถูกกรอบตัดหาย
+#   ⚠️ หัวตารางกับแถวต้องใช้ค่านี้ตัวเดียวกัน ไม่งั้นหัวคอลัมน์เหลื่อมกับข้อมูล
+_BOARD_COLS = [10, 0.7, 1.35, 0.7]
 _ROW_H = 70                 # ความสูงแถว (px) — iframe ต้องสูงกว่านี้เล็กน้อย
 _ROW_IFRAME_H = _ROW_H + 8
 
@@ -596,13 +540,49 @@ def _cell_chip(label, fg, bg, el_id=''):
             f'text-align:center;overflow:hidden;text-overflow:ellipsis;">{label}</span></span>')
 
 
-def _cell_time(inner, title=''):
-    """เวลา — ชิดขวา + ตัวเลขความกว้างเท่ากัน (tabular-nums) หลักจึงตรงกันทุกแถว
-    เทียบ 'ใครรอนานสุด' ได้ด้วยการกวาดตาลงคอลัมน์เดียว"""
-    _t = f' title="{title}" style="cursor:help;' if title else ' style="'
-    return (f'<span{_t}width:{_COL_TM}px;flex:none;text-align:right;overflow:hidden;'
-            f'font-size:18px;color:#475569;white-space:nowrap;'
-            f'font-variant-numeric:tabular-nums;">{inner}</span>')
+def _cell_time(main, sub='', title=''):
+    """เวลา 2 บรรทัด ชิดขวา (เข้าชุดกับคอลัมน์อื่นที่เป็น 2 บรรทัดเหมือนกัน)
+      บรรทัดบน = ตัวเลขหลัก (รอกี่นาที / ใช้ไปกี่นาที / เกินไปกี่นาที)
+      บรรทัดล่าง = ผลลัพธ์ AI: ออกห้อง ~ช่วง + เรียกเคสถัดไป (เคสกำลังผ่า)
+                   หรือ หลักฐานที่ AI ใช้ทำนาย (เคสที่ยังไม่เข้าห้อง)
+    tabular-nums = ตัวเลขความกว้างเท่ากัน หลักจึงตรงกันทุกแถว กวาดตาลงคอลัมน์เดียว
+    รู้ทันทีว่าใครรอนานสุด"""
+    _t = f' title="{title}"' if title else ''
+    _sub = (f'<span style="display:block;font-size:13px;color:#8a96a3;line-height:1.3;'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{sub}</span>'
+            ) if sub else ''
+    return (f'<span{_t} style="width:{_COL_TM}px;flex:none;text-align:right;'
+            f'overflow:hidden;font-variant-numeric:tabular-nums;">'
+            f'<span style="display:block;font-size:18px;color:#475569;line-height:1.3;'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{main}</span>'
+            f'{_sub}</span>')
+
+
+def _callnext_short(c, eff, tov_map):
+    """ผลลัพธ์ AI แบบสั้นสำหรับบรรทัดล่างของคอลัมน์เวลา — คืน (สั้น, เต็มไว้ทำ tooltip)
+    🚪 ช่วงเวลาออกห้อง (กว้างตามความยาวเคส) · ⏰ เวลาที่ควรเรียกเคสถัดไปขึ้นมารอ"""
+    ent = c.get('time_entered_or')
+    if ent is None or not hasattr(ent, 'hour'):
+        return '', ''
+    from datetime import timedelta as _td
+    try:
+        rm = int(float(c.get('room')))
+    except (TypeError, ValueError):
+        rm = None
+    tov = (tov_map or {}).get(rm) or (tov_map or {}).get('_global') or 15
+    _hw = _band_halfwidth(eff)
+    lo = (ent + _td(minutes=max(int(eff) - _hw, 5))).strftime('%H:%M')
+    hi = (ent + _td(minutes=int(eff) + _hw)).strftime('%H:%M')
+    cn = (ent + _td(minutes=int(eff) + float(tov) - _CALL_LEAD_MIN)).strftime('%H:%M')
+    # ไม่ใส่อีโมจิในบรรทัดนี้: ที่ 13px มันกลายเป็นก้อนสีมัว ๆ อ่านไม่ออก เพิ่มความรก
+    # เปล่า ๆ — ใช้สีเขียวทำหน้าที่ชี้ว่า "อันนี้คือสิ่งที่ต้องลงมือทำ" แทน
+    short = (f'ออก ~{lo}-{hi} · '
+             f'<span style="color:#2f7d52;font-weight:600;">เรียก ~{cn}</span>')
+    full = (f'ออกห้อง ~{lo}-{hi} น. (ช่วง ±{_hw} นาที กว้างตามความยาวเคส — '
+            f'คาลิเบรตจากเคสจริงปี 2567 ครอบราว 5-6 ใน 10 เคส) · '
+            f'เรียกเคสถัดไปขึ้นมารอ ~{cn} น. (เผื่อเวลาเตรียมห้อง {int(tov)} นาที) · '
+            f'ช่วงมั่นใจ 90% ของเคสนี้ดูในปุ่มแก้เวลา')
+    return short, full
 
 
 def _row_prog(pct, color, el_id=''):
@@ -626,56 +606,43 @@ def _iframe_doc(body):
             f'{_EMG_CSS}</style></head><body>{body}</body></html>')
 
 
-def _callnext_text(c, eff, tov_map):
-    """ข้อความล้วนของ '🚪 ออกห้อง ~ · ⏰ เรียกเคสถัดไป' — แถวสูงคงที่แล้วไม่มีที่วาง
-    บรรทัดนี้ จึงย้ายไปเป็น tooltip ของคอลัมน์เวลา (ข้อมูลไม่หาย)"""
-    ent = c.get('time_entered_or')
-    if ent is None or not hasattr(ent, 'hour'):
-        return ''
-    from datetime import timedelta as _td
-    try:
-        rm = int(float(c.get('room')))
-    except (TypeError, ValueError):
-        rm = None
-    tov = (tov_map or {}).get(rm) or (tov_map or {}).get('_global') or 15
-    _hw = _band_halfwidth(eff)
-    lo = (ent + _td(minutes=max(int(eff) - _hw, 5))).strftime('%H:%M')
-    hi = (ent + _td(minutes=int(eff) + _hw)).strftime('%H:%M')
-    cn = (ent + _td(minutes=int(eff) + float(tov) - _CALL_LEAD_MIN)).strftime('%H:%M')
-    return (f'ออกห้อง ~{lo}-{hi} น. (ช่วง ±{_hw} นาที ครอบราว 5-6 ใน 10 เคส) '
-            f'· เรียกเคสถัดไป ~{cn} น. · ช่วงมั่นใจ 90% ดูในปุ่มแก้เวลา')
 
-
-def _time_static(c, disp, eff, elapsed, now):
-    """เนื้อหาคอลัมน์เวลาสำหรับแถวที่ไม่มีนาฬิกาเดินสด — คืน (html, tooltip)
-    บรรทัดเดียวเสมอ · หลักฐาน AI (จำนวนเคสอ้างอิง + ช่วง 90%) ที่เดิมเป็นบรรทัด
-    ที่สองย้ายไปเป็น tooltip เพื่อให้ทุกแถวสูงเท่ากัน"""
+def _time_static(c, disp, eff, elapsed, now, tov_map=None):
+    """เนื้อหาคอลัมน์เวลาของแถวที่ไม่มีนาฬิกาเดินสด — คืน (บรรทัดบน, บรรทัดล่าง, tooltip)
+    บรรทัดล่างคือผลลัพธ์ AI ที่ทีมใช้ตัดสินใจ (ช่วงออกห้อง/เรียกเคสถัดไป หรือ
+    หลักฐานที่ใช้ทำนาย) — ต้องเห็นบนแถว ห้ามยุบไปเป็น tooltip"""
     ai0 = c.get('ai_predicted_min') or c.get('predicted_min')
     ov = c.get('user_override_min')
     if disp in ('holding_post', 'recovery'):
         ex = c.get('time_exited_or')
-        return (f'เสร็จ {ex.strftime("%H:%M")} น.'
-                if (ex is not None and hasattr(ex, 'hour')) else '—'), ''
+        _m = (f'เสร็จ {ex.strftime("%H:%M")} น.'
+              if (ex is not None and hasattr(ex, 'hour')) else '—')
+        return _m, f'ใช้ห้องจริง {_dur_str(elapsed)}' if elapsed else '', ''
     if disp == 'discharged':
         dc = c.get('time_discharged')
-        return (f'จำหน่าย {dc.strftime("%H:%M")} น.'
-                if (dc is not None and hasattr(dc, 'hour')) else '—'), ''
+        _m = (f'จำหน่าย {dc.strftime("%H:%M")} น.'
+              if (dc is not None and hasattr(dc, 'hour')) else '—')
+        return _m, f'ใช้ห้องจริง {_dur_str(elapsed)}' if elapsed else '', ''
     if disp in ('in_or', 'overrun'):
         _col = '#c0392b' if disp == 'overrun' else '#1b7f4b'
-        return (f'<b style="color:{_col};font-weight:700;">{elapsed}</b> / {eff} น.'), ''
-    # not_arrived — เวลาที่คาดว่าจะใช้ห้อง
+        _over = (f' · เกิน {elapsed - eff} น.' if disp == 'overrun' and elapsed > eff else '')
+        _short, _full = _callnext_short(c, eff, tov_map)
+        return (f'<b style="color:{_col};font-weight:700;">{elapsed}</b> / {eff} น.'
+                f'<span style="color:{_col};">{_over}</span>'), _short, _full
+    # ยังไม่มา — เวลาที่ AI คาดว่าจะใช้ห้อง + หลักฐานที่ใช้ทำนาย
     _bits = []
     _n = c.get('proc_n')
     if _n is not None:
-        _bits.append(f'อ้างอิงจาก {int(_n)} เคสใกล้เคียง' if _n else 'ไม่มีเคสใกล้เคียง')
+        _bits.append(f'จาก {int(_n)} เคส' if _n else 'ไม่มีเคสใกล้เคียง')
     _rng = c.get('predicted_range')
     if c.get('range_method') == 'conformal' and _rng:
-        _bits.append(f'ช่วง 90% = {int(_rng[0])}-{int(_rng[1])} น. '
-                     '(เคสลักษณะนี้ราว 9 ใน 10 ใช้เวลาอยู่ในช่วงนี้)')
+        _bits.append(f'ช่วง {int(_rng[0])}-{int(_rng[1])} น.')
+    _tip = ('ช่วง 90% = เคสลักษณะนี้ราว 9 ใน 10 ใช้เวลาอยู่ในช่วงนี้ · '
+            'ช่วงแคบ = ค่อนข้างแน่นอน · ช่วงกว้าง = เวลาแกว่งได้มาก ควรเผื่อเวลา')
     if ov:
-        _bits.insert(0, f'AI ทำนาย {_dur_str(ai0) if ai0 else "?"} · พยาบาลแก้เป็น {_dur_str(eff)}')
-        return (f'<b style="font-weight:700;color:#0f172a;">{_dur_str(eff)}</b>'), ' · '.join(_bits)
-    return f'AI ~{_dur_str(ai0) if ai0 else "? น."}', ' · '.join(_bits)
+        return (f'<b style="font-weight:700;color:#0f172a;">{_dur_str(eff)}</b>',
+                f'พยาบาลแก้ · AI ทำนาย {_dur_str(ai0) if ai0 else "?"}', _tip)
+    return f'AI ~{_dur_str(ai0) if ai0 else "? น."}', ' · '.join(_bits), _tip
 
 
 def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
@@ -719,14 +686,17 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
             + _cell_patient(c, dup_badge)
             + _cell_op(c)
             + _cell_chip('รอผ่าตัด', '#64748b', '#f1f5f9', el_id='ch')
-            + _cell_time('<span id="t"></span>' + ov_badge),
+            # บรรทัดล่าง = เวลาที่ AI ทำนายว่าจะใช้ห้อง (เห็นก่อนเข้าห้องจริง)
+            + _cell_time('<span id="t"></span>' + ov_badge,
+                         sub=(f'AI ~{_dur_str(c.get("ai_predicted_min") or c.get("predicted_min"))}'
+                              if (c.get('ai_predicted_min') or c.get('predicted_min')) else '')),
             bg=('#fdeeee' if emer else '#ffffff'),
             border_css=border_css)
         + _js)
 
 
-def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
-                       callnext_html='', dup_badge=''):
+def _inroom_row_iframe(c, loc, tlabel, eff, border_css, ov_badge, now,
+                       callnext=None, dup_badge=''):
     """แถวกำลังผ่าแบบสด (ลูกผสม — บอร์ดสงบ เคสมีปัญหาเด่นเอง):
     - ปกติ: โชว์นาทีล้วน '41 / 60 น.' สีเขียว เดินเองทุกนาที
     - ใกล้ครบ (เหลือ ≤5 นาที): สลับเป็น mm:ss สีส้ม
@@ -747,8 +717,12 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
                 + _cell_patient(c, dup_badge)
                 + _cell_op(c)
                 + _cell_chip('กำลังผ่า', '#1b7f4b', '#e6f6ec', el_id='ch')
+                # callnext_html = คู่ (สั้น, เต็ม) จาก _callnext_short — บรรทัดล่างคือ
+                # ผลลัพธ์ AI ที่ทีมใช้ตัดสินใจจริง ต้องเห็นบนแถว ไม่ใช่ซ่อนใน tooltip
                 + _cell_time('<span id="t" style="font-weight:600;color:#1b7f4b;"></span>'
-                             + ov_badge, title=callnext_html),
+                             + ov_badge,
+                             sub=(callnext[0] if callnext else ''),
+                             title=(callnext[1] if callnext else '')),
                 bg=_bg, border_css=border_css, row_id='rw',
                 prog=_row_prog(0, '#22a565', el_id='b'))
         ).replace('</body></html>', '')
@@ -807,8 +781,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     # จำหน่ายแล้ว → แถบเทาจาง ทุกอย่างหรี่ลง (ไฟฉุกเฉินดับด้วย — เคสจบแล้ว ไม่รกตา)
     muted = (disp == 'discharged')
     emer = _is_emer(c) and not muted
-    emg_html = _EMG_BADGE if emer else ''
     # แถบสีซ้าย 5px = สถานะแบบเห็นจากไกล (คู่กับชิปในคอลัมน์สถานะ)
+    # (ป้าย _EMG_BADGE เดิมถูกถอด — ย้ายไปเป็นป้ายในคอลัมน์นัดโดย _cell_q แล้ว
+    #  เพราะป้ายเดิมกว้างจนเบียดชื่อผู้ป่วยจนอ่านไม่ออก)
     _bar = {'holding_pre': '#cbd5e1', 'in_or': '#22a565', 'overrun': '#e3920b',
             'holding_post': '#1565c0', 'recovery': '#a855f7',
             'discharged': '#e2e8f0'}.get(disp, '#cbd5e1')
@@ -826,7 +801,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     time_fg = '#b6c2cf' if muted else '#475569'
 
     # ---------- layout ต่อแถว: [แถว] [✏️] [ปุ่มหลัก] [↩] ----------
-    c0, c1, c2, c3 = st.columns([8, 0.8, 1.5, 0.8])
+    c0, c1, c2, c3 = st.columns(_BOARD_COLS)
 
     with c0:
         if disp == 'holding_pre':
@@ -838,11 +813,11 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             # แถวกำลังผ่าแบบสด — นาฬิกาเดินหน้า + สลับเกินเวลาอัตโนมัติ
             components.html(
                 _inroom_row_iframe(c, loc, tlabel, max(int(eff), 5),
-                                   emg_html, border_css, ov_badge, now,
-                                   _callnext_text(c, eff, tov_map), dup_badge),
+                                   border_css, ov_badge, now,
+                                   _callnext_short(c, eff, tov_map), dup_badge),
                 height=_ROW_IFRAME_H)
         else:
-            _tm_html, _tm_tip = _time_static(c, disp, eff, elapsed, now)
+            _tm_html, _tm_sub, _tm_tip = _time_static(c, disp, eff, elapsed, now, tov_map)
             _prog = ''
             if disp in ('in_or', 'overrun') and eff:
                 _pct = min(int(elapsed / eff * 100), 100)
@@ -854,7 +829,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                     + _cell_patient(c, dup_badge if not muted else '', fg=name_fg)
                     + _cell_op(c, fg=sub_fg)
                     + _cell_chip(label, fg, chipbg)
-                    + _cell_time(_tm_html + ov_badge, title=_tm_tip),
+                    + _cell_time(_tm_html + ov_badge, sub=_tm_sub, title=_tm_tip),
                     bg=bg, border_css=border_css) ,
                 unsafe_allow_html=True)
 
