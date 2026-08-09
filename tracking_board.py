@@ -183,6 +183,35 @@ def _pt_meta(c) -> str:
     return meta
 
 
+def _dup_name_badges(cases, loc) -> dict:
+    """หาเคสที่ 'ชื่อเต็มจริง' (ก่อน mask) ตรงกันเป๊ะกับเคส active อื่นวันนี้
+    (ไม่รวมจำหน่ายแล้ว) — คืน {id(case): badge_html} กันหยิบผิดคนตอนชื่อชนกัน
+    เทียบจากชื่อจริง ไม่ใช่ข้อความที่ mask แล้ว เพราะนามสกุลบนจอย่อเหลือตัวเดียว
+    ชนกันโดยบังเอิญบ่อยมาก (มุคกี้ตัดสินใจ 9 ส.ค. 2026: เช็กแค่ชื่อเต็มตรงกันพอ)"""
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for c in cases:
+        if c.get('status') == 'discharged':
+            continue
+        nm = (c.get('name') or '').strip()
+        if nm and nm != 'ไม่ระบุ':
+            groups[nm].append(c)
+    badges = {}
+    for group in groups.values():
+        if len(group) < 2:
+            continue
+        for c in group:
+            other_rooms = sorted({str(loc(o)) for o in group if o is not c})
+            rooms_txt = _esc(', '.join(other_rooms)) if other_rooms else ''
+            badges[id(c)] = (
+                f'<span title="ชื่อซ้ำกับอีกเคสวันนี้{(" · " + rooms_txt) if rooms_txt else ""}'
+                f' · ตรวจ HN ก่อนดำเนินการ" style="display:inline-flex;align-items:center;'
+                f'gap:3px;background:#fdf3dd;color:#9a6700;border-radius:999px;'
+                f'padding:1px 8px;font-size:11px;font-weight:600;margin-left:6px;'
+                f'white-space:nowrap;">👥 ชื่อซ้ำ{(" · " + rooms_txt) if rooms_txt else ""}</span>')
+    return badges
+
+
 def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
                           loc, rid, tlabel, sched_min, room_opts=None,
                           mark_dirty=None):
@@ -223,6 +252,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     # ห้องที่มีเคสกำลังผ่าอยู่ → ห้ามเข้าห้องซ้ำ
     busy_rooms = {rid(c) for c in cases if c['status'] == 'in_or' and rid(c)}
     tov_map = _turnover_map()
+    dup_badges = _dup_name_badges(cases, loc)
 
     # ---------- หัวตาราง ----------
     st.markdown(
@@ -320,7 +350,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         for idx, c, disp, eff, elapsed in rs:
             _render_row(idx, c, disp, eff, elapsed, now, rid(c), busy_rooms,
                         do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
-                        room_opts, mark_dirty, tov_map)
+                        room_opts, mark_dirty, tov_map, dup_badges)
 
     z_pre = _pick('not_arrived', 'holding_pre')
     z_or = _pick('in_or', 'overrun')
@@ -470,7 +500,7 @@ def _time_cell(c, disp, eff, elapsed, now):
             + (_dur_str(ai0) if ai0 else '? น.') + _ev)
 
 
-def _holding_row_iframe(c, loc, tlabel, now):
+def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
     """แถวรอผ่าตัดทั้งแถวเป็น HTML สด — นาฬิกานับเดินหน้าฝังในช่องเวลา (ไม่กินบรรทัดเพิ่ม)."""
     arr = c.get('time_arrived_holding')
     # ⏱ TZ-proof: คำนวณ "รอแล้วกี่วินาที" ฝั่ง Python (เวลา BKK สม่ำเสมอ)
@@ -526,6 +556,7 @@ def _holding_row_iframe(c, loc, tlabel, now):
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
         f'{emg_html}'
         f'<span style="font-size:15px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
+        f'{dup_badge}'
         f'<span style="font-size:12px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
         f'<span style="font-size:13px;color:#64748b;white-space:nowrap;">'
         f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
@@ -539,7 +570,8 @@ def _holding_row_iframe(c, loc, tlabel, now):
     )
 
 
-def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now, callnext_html=''):
+def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
+                       callnext_html='', dup_badge=''):
     """แถวกำลังผ่าแบบสด (ลูกผสม — บอร์ดสงบ เคสมีปัญหาเด่นเอง):
     - ปกติ: โชว์นาทีล้วน '41 / 60 น.' สีเขียว เดินเองทุกนาที
     - ใกล้ครบ (เหลือ ≤5 นาที): สลับเป็น mm:ss สีส้ม
@@ -565,6 +597,7 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
         f'{emg_html}'
         f'<span style="font-size:15px;font-weight:600;color:#0f172a;">{_pt_name(c)}</span>'
+        f'{dup_badge}'
         f'<span style="font-size:12px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
         f'<span style="font-size:13px;color:#64748b;white-space:nowrap;">'
         f'{_esc(c["procedure"])} · {_esc(c.get("surgeon", "-"))}</span></span>'
@@ -612,8 +645,9 @@ def _inroom_row_iframe(c, loc, tlabel, eff, emg_html, border_css, ov_badge, now,
 
 def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
-                room_opts=None, mark_dirty=None, tov_map=None):
+                room_opts=None, mark_dirty=None, tov_map=None, dup_badges=None):
     room_opts = room_opts or []
+    dup_badge = (dup_badges or {}).get(id(c), '')
     # 🚪 โหมดจอประจำห้อง ("ล็อกที่มือ ไม่ล็อกที่ตา"): เห็นทุกห้อง แต่กดได้เฉพาะ
     #    เคสห้องตัวเองตามเขตหน้าที่ — รับเข้า/เข้าห้อง/จำหน่าย/ย้ายห้อง = จอรับ-ส่ง
     _scope = (st.session_state.get('room_scope')
@@ -649,7 +683,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
 
     with c0:
         if disp == 'holding_pre':
-            components.html(_holding_row_iframe(c, loc, tlabel, now), height=60)
+            components.html(_holding_row_iframe(c, loc, tlabel, now, dup_badge), height=60)
         elif (disp in ('in_or', 'overrun')
               and c.get('time_entered_or') is not None
               and hasattr(c.get('time_entered_or'), 'timestamp')):
@@ -657,7 +691,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             components.html(
                 _inroom_row_iframe(c, loc, tlabel, max(int(eff), 5),
                                    emg_html, border_css, ov_badge, now,
-                                   _callnext_html(c, eff, tov_map)),
+                                   _callnext_html(c, eff, tov_map), dup_badge),
                 height=78)
         else:
             time_html = _time_cell(c, disp, eff, elapsed, now)
@@ -670,6 +704,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 f'<span style="flex:1;min-width:0;overflow:hidden;">'
                 f'{emg_html}'
                 f'<span style="font-size:15px;font-weight:600;color:{name_fg};">{_pt_name(c)}</span>'
+                f'{dup_badge if not muted else ""}'
                 f'<span style="font-size:12px;color:#94a3b8;"> {_pt_meta(c)}</span><br>'
                 f'<span style="font-size:13px;color:{sub_fg};white-space:nowrap;overflow:hidden;'
                 f'text-overflow:ellipsis;display:inline-block;max-width:100%;">'
