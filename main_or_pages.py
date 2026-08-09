@@ -1526,11 +1526,23 @@ def _room_focus_fragment(room_no):
         background-color:#edd2ff !important; color:#6b21a8 !important;
         border-color:#edd2ff !important;
     }
+    .st-key-rf_refresh button {height:46px !important;}
     div[data-testid="stNumberInput"] input {font-size:20px !important;}
     div[data-testid="stFormSubmitButton"] button {height:56px;}
     </style>""", unsafe_allow_html=True)
 
-    st.markdown(f"### 🚪 {room_label(room_no)}")
+    # 🔄 ปุ่มรีเฟรช (มุคกี้สั่ง 9 ส.ค. 2026): จอนี้ซิงก์เองทุก 30 วินาที แต่บางที
+    #    พยาบาลอยากเห็นผลที่จอรับ-ส่งเพิ่งกดทันที ไม่อยากรอ · ห้ามกด F5 เพราะ
+    #    จะโหลดหน้าใหม่ทั้งหน้า (ช้ากว่ามาก และหลุดออกจากโหมดจอประจำห้องได้)
+    #    ⚠️ ตั้งใจไม่ล้าง _board_dirty: ถ้าบันทึกขึ้นบอร์ดกลางไม่สำเร็จ (เน็ตหลุด)
+    #       ค่าที่พยาบาลเพิ่งกดยังค้างอยู่ในเครื่อง การดึงทับจะทำให้หายไปเงียบ ๆ
+    _hl, _hr = st.columns([4, 1], vertical_alignment="center")
+    with _hl:
+        st.markdown(f"### 🚪 {room_label(room_no)}")
+    with _hr:
+        if st.button("🔄 รีเฟรช", key="rf_refresh", width='stretch',
+                     help="ดึงสถานะล่าสุดจากบอร์ดกลางทันที (ห้ามกด F5)"):
+            _rerun_board()
 
     cur = next((i for i, c in enumerate(cases)
                 if c.get('status') == 'in_or' and _r(c) == room_no), None)
