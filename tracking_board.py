@@ -129,7 +129,7 @@ def _sched_order_html(c, tlabel):
     if c.get('is_tf'):
         # 🕓 TF hover (มุคกี้สั่ง 4 ส.ค. 2026): อธิบายความหมายทั้ง demo และ
         #    production — To Follow = ตามหลัง เริ่มเมื่อเคสก่อนหน้าในห้องเสร็จ
-        return (f'<span title="TF = To Follow (ตามหลัง) — ไม่กำหนดเวลานัด '
+        return (f'<span title="TF = To Follow (ตามหลัง) : ไม่กำหนดเวลานัด '
                 f'เริ่มผ่าเมื่อเคสก่อนหน้าในห้องเดียวกันเสร็จ" '
                 f'style="cursor:help;">{base}</span>')
     if not _demo_fx_tb():
@@ -157,7 +157,7 @@ def _sched_order_html(c, tlabel):
     except Exception:
         pass
     # 14px: บรรทัดล่างของคอลัมน์นัด เป็นข้อมูลรอง — ขนาดเดียวกับ HN ใต้ชื่อผู้ป่วย
-    return (f'{base}<br><span title="ล็อคคิว — ลำดับจัดมาจากตารางผ่าตัด" '
+    return (f'{base}<br><span title="ล็อคคิว : ลำดับจัดมาจากตารางผ่าตัด" '
             f'style="font-size:14px;color:#94a3b8;'
             f'white-space:nowrap;cursor:help;">🔒 คิว {o}</span>')
 
@@ -186,7 +186,7 @@ def _pt_meta(c) -> str:
     if code:
         # 📐 9 ส.ค. 2026: ย่อคำเป็น "รหัส" + tooltip — คอลัมน์ผู้ป่วยในบอร์ดตาราง
         #    กว้างจำกัด คำเต็มทำให้รหัสจริงโดนตัดหาย ซึ่งเป็นตัวที่ต้องอ่านออก
-        _c = (f'<span title="รหัสผู้รับบริการ — ใช้บอกญาติ ตรงกับที่ขึ้นจอสถานะ" '
+        _c = (f'<span title="รหัสผู้รับบริการ : ใช้บอกญาติ ตรงกับที่ขึ้นจอสถานะ" '
               f'style="cursor:help;">รหัส {_esc(code)}</span>')
         meta = f"{meta} · {_c}" if meta else _c
     return meta
@@ -502,7 +502,7 @@ def _cell_q(c, tlabel, emer=False):
     if emer:
         return (f'<span style="width:{_COL_Q}px;flex:none;font-size:15px;color:#c0392b;'
                 f'font-weight:600;white-space:nowrap;overflow:hidden;cursor:help;" '
-                f'title="เคสฉุกเฉิน — อยู่นอกขอบเขตวิจัย (เก็บเฉพาะ elective ในเวลา)">'
+                f'title="เคสฉุกเฉิน : อยู่นอกขอบเขตวิจัย (เก็บเฉพาะ elective ในเวลา)">'
                 f'<span class="emg-dot"></span>ฉุกเฉิน</span>')
     return (f'<span style="width:{_COL_Q}px;flex:none;font-size:16px;color:#64748b;'
             f'line-height:1.25;white-space:nowrap;overflow:hidden;">'
@@ -580,7 +580,7 @@ def _callnext_short(c, eff, tov_map):
     # เปล่า ๆ — ใช้สีเขียวทำหน้าที่ชี้ว่า "อันนี้คือสิ่งที่ต้องลงมือทำ" แทน
     short = (f'ออกห้อง ~{lo}-{hi} · '
              f'<span style="color:#2f7d52;font-weight:600;">เรียกคิวถัดไป ~{cn}</span>')
-    full = (f'ออกห้อง ~{lo}-{hi} น. (ช่วง ±{_hw} นาที กว้างตามความยาวเคส — '
+    full = (f'ออกห้อง ~{lo}-{hi} น. (ช่วง ±{_hw} นาที กว้างตามความยาวเคส : '
             f'คาลิเบรตจากเคสจริงปี 2567 ครอบราว 5-6 ใน 10 เคส) · '
             f'เรียกคิวถัดไปขึ้นมารอ ~{cn} น. (เผื่อเวลาเตรียมห้อง {int(tov)} นาที) · '
             f'ช่วงมั่นใจ 90% ของเคสนี้ดูในปุ่มแก้เวลา')
@@ -636,13 +636,15 @@ def _time_static(c, disp, eff, elapsed, now, tov_map=None):
     ov = c.get('user_override_min')
     if disp in ('holding_post', 'recovery'):
         ex = c.get('time_exited_or')
+        # 🔤 9 ส.ค. 2026: เดิมใช้ "—" ผิดกติกา UI (ห้าม em dash) และขีดเปล่าไม่บอกอะไร
+        #    ข้อความบอกสาเหตุตรง ๆ ช่วยให้พยาบาลรู้ว่าต้องไปกด ✏️ เติมเวลาย้อนหลัง
         _m = (f'เสร็จ {ex.strftime("%H:%M")} น.'
-              if (ex is not None and hasattr(ex, 'hour')) else '—')
+              if (ex is not None and hasattr(ex, 'hour')) else 'ยังไม่บันทึกเวลา')
         return _m, f'ใช้ห้องจริง {_dur_str(elapsed)}' if elapsed else '', ''
     if disp == 'discharged':
         dc = c.get('time_discharged')
         _m = (f'จำหน่าย {dc.strftime("%H:%M")} น.'
-              if (dc is not None and hasattr(dc, 'hour')) else '—')
+              if (dc is not None and hasattr(dc, 'hour')) else 'ยังไม่บันทึกเวลา')
         return _m, f'ใช้ห้องจริง {_dur_str(elapsed)}' if elapsed else '', ''
     if disp in ('in_or', 'overrun'):
         _short, _full = _callnext_short(c, eff, tov_map)
