@@ -1060,6 +1060,14 @@ def _board_fragment():
     _flush_toast()   # 🎨 โชว์ toast ที่ฝากไว้จากปุ่มรอบก่อน (demo)
     _flush_sound()   # 🔊 เล่นเสียงที่ฝากไว้จากปุ่มรอบก่อน (demo+production)
 
+    # 🟢 heartbeat แถบ "ใครออนไลน์" — เกาะไปกับ tick 30 วิของ fragment
+    #    (เครื่องที่เปิดบอร์ดทิ้งไว้เฉย ๆ ไม่มี full run จึงต้องเต้นที่นี่)
+    try:
+        from presence import beat as _presence_beat
+        _presence_beat()
+    except Exception:
+        pass
+
     # 🖥️ instance นี้เป็นแอป DEMO ไหม — ใช้ตัดสินตลอดทั้ง fragment:
     #    demo instance = โหมดสาธิตซิงก์ขึ้นบอร์ดกลาง (schema demo) เต็มรูปแบบ
     #    จอญาติ/จอห้อง demo จึงเห็นเคสสาธิตเหมือนใช้งานจริงทุกจอ
@@ -1487,6 +1495,14 @@ def _room_focus_fragment(room_no):
     from main_or_db import mask_patient_name
     _flush_toast()   # 🎨 โชว์ toast ที่ฝากไว้จากปุ่มรอบก่อน (demo)
     _flush_sound()   # 🔊 เล่นเสียงที่ฝากไว้จากปุ่มรอบก่อน (demo+production)
+
+    # 🟢 heartbeat แถบ "ใครออนไลน์" — จอประจำห้องเปิดค้างทั้งวัน ไม่มี full run
+    #    คีย์นับเป็น "ต่อห้อง" (ดู presence.beat) กด 🔄 กี่ครั้งก็ยังนับ 1
+    try:
+        from presence import beat as _presence_beat
+        _presence_beat()
+    except Exception:
+        pass
 
     # ดึงบอร์ดกลางทุกรอบ (จอนี้ไม่มีช่องพิมพ์ — ดึงได้เสมอ เว้นมีงานค้างยังไม่เซฟ)
     if not st.session_state.get('_board_dirty'):

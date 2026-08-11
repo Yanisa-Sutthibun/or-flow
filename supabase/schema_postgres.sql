@@ -191,6 +191,21 @@ CREATE INDEX IF NOT EXISTS idx_override_ref ON override_log(case_ref);
 
 
 -- ═══════════════════════════════════════════════════════════════════
+-- TABLE 8: presence_beat — 🟢 แถบ "ออนไลน์ N เครื่อง" บนหัวแอป (11 ส.ค. 2026)
+-- ทุกหน้าจอที่เปิดค้างอยู่ส่ง heartbeat เข้ามาทุก ~30 วิ (upsert ทับแถวเดิม)
+-- จำนวนแถว = จำนวนเครื่อง ไม่โตตามเวลา · แถวเก่ากว่า 1 ชม. ถูกกวาดทิ้งอัตโนมัติ
+-- 🔒 ไม่เก็บชื่อ/HN/เคส/IP — มีแค่คีย์เครื่อง กลุ่ม และเวลาที่เต้นล่าสุด
+-- ⚠️ แอปสร้างตารางนี้เองตอน runtime (presence._ensure_table) เพราะจอญาติ
+--    ออกจาก main() ก่อนถึง init_db — บล็อกนี้มีไว้ให้ schema ครบในไฟล์เดียว
+-- ═══════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS presence_beat (
+    beat_key TEXT PRIMARY KEY,   -- คีย์ประจำเครื่อง: 'room:<เลขห้อง>' หรือ '<กลุ่ม>:<session id>'
+    kind     TEXT,               -- room | family | staff | admin
+    beat_at  TEXT                -- 'YYYY-MM-DD HH:MM:SS' เวลาไทย ที่เต้นล่าสุด
+);
+
+
+-- ═══════════════════════════════════════════════════════════════════
 -- TRIGGER: auto-update updated_at เมื่อมีการแก้ไข cases
 -- ═══════════════════════════════════════════════════════════════════
 CREATE OR REPLACE FUNCTION update_cases_updated_at()
@@ -223,6 +238,7 @@ ALTER TABLE backup_log     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE room_settings  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE override_log   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE presence_beat  ENABLE ROW LEVEL SECURITY;
 -- (ไม่สร้าง policy = ปิดทุก role ยกเว้น service_role ที่ bypass อยู่แล้ว)
 
 
@@ -235,12 +251,14 @@ SELECT
 FROM information_schema.columns
 WHERE table_schema = 'orsurg'
   AND table_name IN ('cases', 'audit_log', 'prediction_log', 'backup_log',
-                     'room_settings', 'app_settings', 'override_log')
+                     'room_settings', 'app_settings', 'override_log',
+                     'presence_beat')
 GROUP BY table_name
 ORDER BY table_name;
 
 -- คาดหวัง:
 -- app_settings    | 2
+-- presence_beat   | 3
 -- audit_log       | 7
 -- backup_log      | 4
 -- cases           | 42

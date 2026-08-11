@@ -911,6 +911,13 @@ def main():
             _fam_tok = ''
         _k = str(st.query_params.get('k', '') or '')
         if _fam_tok and hmac.compare_digest(_k, _fam_tok):
+            # 🟢 นับจอญาติเข้าแถบ "ใครออนไลน์" — ต้องเรียกที่นี่ เพราะเส้นทางนี้
+            #    st.stop() ก่อนถึงจุด beat() ของเส้นทางปกติ (จอญาติ refresh เอง 30 วิ)
+            try:
+                from presence import beat as _presence_beat
+                _presence_beat('family')
+            except Exception:
+                pass
             from family_board import render_family_board
             render_family_board()
         else:
@@ -975,6 +982,18 @@ def main():
             st.code(str(_db_err)[:600])
         st.stop()
 
+    # 🟢 แถบ "ตอนนี้ใครออนไลน์อยู่บ้าง" (11 ส.ค. 2026 — มุคกี้สั่ง)
+    #    beat ก่อน counts เสมอ ไม่งั้นเครื่องตัวเองหายไปจากยอด
+    #    ⚠️ full run เกิดเฉพาะตอนมี interaction — เครื่องที่เปิดบอร์ดทิ้งไว้เฉย ๆ
+    #    อาศัย beat() ใน _board_fragment / _room_focus_fragment ที่เด้งเองทุก 30 วิ
+    try:
+        from presence import beat as _presence_beat, chips_html as _presence_chips
+        _presence_beat()
+        _online_chips = _presence_chips()
+    except Exception as _pres_err:
+        print(f"[main] presence ข้าม: {_pres_err}")
+        _online_chips = ''
+
     # ========================================================================
     # แถบเมนูบนสุด (แทน sidebar — กันปัญหา sidebar พับแล้วกางไม่ได้บน Streamlit Cloud)
     # ========================================================================
@@ -991,6 +1010,7 @@ def main():
             '<span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>'
             '<span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>'
             f'<span class="or-chip">📅 ปรับล่าสุด {_now_hdr}</span>'
+            + _online_chips
             + ('<span class="or-chip" style="background:#fff3e0;color:#e65100;">'
                '👤 ผู้วิจัย</span>'
                if st.session_state.get('role') == 'admin' else '')
