@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Mock-up: ชิป "ออนไลน์ N เครื่อง" บนหัวแอป</title>
+<style>
+  :root{
+    --ink-700:#334155; --ink-500:#64748b; --ink-400:#94a3b8;
+    --ink-200:#e2e8f0; --ink-100:#eef2f6; --ink-50:#f6f8fa;
+    --brand-700:#1565c0; --brand-100:#e3f0fb; --brand-50:#f2f8fe;
+    --success-700:#1b7f4b; --success-500:#22a565; --success-100:#e6f6ec;
+    --fs-meta:16px; --surface:#ffffff;
+  }
+  body{font-family:"Sarabun","Segoe UI",sans-serif;background:#f1f5f9;
+       color:var(--ink-700);margin:0;padding:28px 32px 60px;}
+  h1{font-size:22px;margin:0 0 4px;}
+  .sub{color:var(--ink-500);font-size:15px;margin:0 0 26px;}
+  .case{background:var(--surface);border:1px solid var(--ink-200);border-radius:12px;
+        padding:18px 20px 22px;margin:0 0 18px;}
+  .case h2{font-size:17px;margin:0 0 2px;}
+  .case .note{font-size:14px;color:var(--ink-500);margin:0 0 14px;line-height:1.55;}
+  .tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;
+       border-radius:6px;background:var(--ink-100);color:var(--ink-500);
+       vertical-align:middle;margin-left:8px;}
+  .tag.now{background:#fee2e2;color:#b91c1c;}
+  .tag.rec{background:var(--success-100);color:var(--success-700);}
+
+  /* ── ของจริงจาก ui_theme.py ── */
+  .or-chips{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 8px;align-items:center;}
+  .or-chip{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-meta);
+           color:var(--ink-500);background:var(--brand-50);padding:5px 13px;
+           border-radius:8px;border:1px solid var(--ink-100);}
+
+  /* ── tooltip จำลอง (ของจริงใช้ attribute title ของเบราว์เซอร์) ── */
+  .tip{position:relative;cursor:help;}
+  .tip::after{content:attr(data-tip);position:absolute;left:50%;top:calc(100% + 9px);
+    transform:translateX(-50%);background:#1e293b;color:#fff;font-size:14px;
+    font-weight:400;white-space:nowrap;padding:7px 11px;border-radius:7px;
+    opacity:0;pointer-events:none;transition:opacity .12s;z-index:9;}
+  .tip::before{content:"";position:absolute;left:50%;top:calc(100% + 3px);
+    transform:translateX(-50%);border:6px solid transparent;border-bottom-color:#1e293b;
+    opacity:0;pointer-events:none;transition:opacity .12s;z-index:9;}
+  .tip:hover::after,.tip:hover::before{opacity:1;}
+
+  /* ── แบบต่าง ๆ ของชิปออนไลน์ ── */
+  .on-solid{background:var(--success-700);color:#fff;border-color:var(--success-700);
+            font-weight:700;}                                   /* ของเดิม */
+  .on-plain{}                                                   /* A: เหมือนชิปอื่นเป๊ะ */
+  .on-text {color:var(--success-700);font-weight:700;}          /* B: ตัวหนังสือเขียว */
+  .on-soft {background:var(--success-100);color:var(--success-700);
+            border-color:#c9ead6;font-weight:700;}              /* C: พื้นเขียวอ่อน */
+  .dotpulse{width:9px;height:9px;border-radius:50%;background:var(--success-500);
+            display:inline-block;box-shadow:0 0 0 0 rgba(34,165,101,.55);
+            animation:pl 2s infinite;}
+  @keyframes pl{70%{box-shadow:0 0 0 7px rgba(34,165,101,0);}100%{box-shadow:0 0 0 0 rgba(34,165,101,0);}}
+  .hint{font-size:13.5px;color:var(--ink-400);margin-top:12px;}
+</style>
+</head>
+<body>
+
+<h1>Mock-up: ชิป 🟢 "ออนไลน์ N เครื่อง" บนหัวแอป</h1>
+<p class="sub">เอาเมาส์จ่อชิปเขียวในแต่ละแบบ เพื่อดู tooltip · ชิปอื่นในแถวคือของจริงบนหัวแอป (ไว้เทียบขนาด/สี)</p>
+
+<div class="case">
+  <h2>ตอนนี้บนแอปจริง <span class="tag now">ที่ push ไปแล้ว = ผิด</span></h2>
+  <p class="note">แถบเขียวทึบเปล่า ๆ ไม่มีข้อความ : ต้องแก้กลับ</p>
+  <div class="or-chips">
+    <span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>
+    <span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>
+    <span class="or-chip tip on-solid" data-tip="มีผู้ใช้งานในระบบ OR Flow ตอนนี้ 7 ท่าน">&nbsp;&nbsp;&nbsp;</span>
+  </div>
+</div>
+
+<div class="case">
+  <h2>แบบ A : ชิปธรรมดาเหมือนชิปอื่นเป๊ะ <span class="tag rec">แนะนำ</span></h2>
+  <p class="note">เอา "แถบสีเขียว" (พื้นเขียวทึบ) ออกทั้งหมด เหลือ 🟢 นำหน้าข้อความเหมือนชิปอื่นที่มีอีโมจินำ · กลมกลืน ไม่แย่งสายตาจากบอร์ด</p>
+  <div class="or-chips">
+    <span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>
+    <span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>
+    <span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>
+    <span class="or-chip">📅 ปรับล่าสุด 11/08/2026</span>
+    <span class="or-chip tip on-plain" data-tip="มีผู้ใช้งานในระบบ OR Flow ตอนนี้ 7 ท่าน">🟢 ออนไลน์ 7 เครื่อง</span>
+  </div>
+</div>
+
+<div class="case">
+  <h2>แบบ B : ตัวหนังสือเขียวเข้ม + ตัวหนา</h2>
+  <p class="note">พื้นยังเหมือนชิปอื่น (ไม่มีแถบเขียว) แต่ตัวหนังสือเขียว = เด่นขึ้นนิดเดียว ให้อาจารย์/ผู้ทรงสังเกตเห็นว่ามีคนใช้จริง</p>
+  <div class="or-chips">
+    <span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>
+    <span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>
+    <span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>
+    <span class="or-chip">📅 ปรับล่าสุด 11/08/2026</span>
+    <span class="or-chip tip on-text" data-tip="มีผู้ใช้งานในระบบ OR Flow ตอนนี้ 7 ท่าน">🟢 ออนไลน์ 7 เครื่อง</span>
+  </div>
+</div>
+
+<div class="case">
+  <h2>แบบ C : พื้นเขียวอ่อน + ตัวหนังสือเขียวเข้ม</h2>
+  <p class="note">ยังมีสีเขียวเป็นพื้นอยู่ แต่เป็นเขียวอ่อน (ชุดเดียวกับชิปสถานะ "อยู่ในห้อง" บนบอร์ด) ไม่ทึบเหมือนของเดิม</p>
+  <div class="or-chips">
+    <span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>
+    <span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>
+    <span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>
+    <span class="or-chip">📅 ปรับล่าสุด 11/08/2026</span>
+    <span class="or-chip tip on-soft" data-tip="มีผู้ใช้งานในระบบ OR Flow ตอนนี้ 7 ท่าน">🟢 ออนไลน์ 7 เครื่อง</span>
+  </div>
+</div>
+
+<div class="case">
+  <h2>ตัวเลือกเสริม : จุดกระพริบแทนอีโมจิ 🟢</h2>
+  <p class="note">อีโมจิ 🟢 แต่ละเครื่อง/แต่ละเบราว์เซอร์วาดไม่เหมือนกัน (บางเครื่องออกเป็นเขียวอมเหลือง) · จุด CSS กระพริบเบา ๆ คุมสีได้เป๊ะ และสื่อว่า "สด/เรียลไทม์" ชัดกว่า</p>
+  <div class="or-chips">
+    <span class="or-chip">📅 ปรับล่าสุด 11/08/2026</span>
+    <span class="or-chip tip on-plain" data-tip="มีผู้ใช้งานในระบบ OR Flow ตอนนี้ 7 ท่าน"><span class="dotpulse"></span> ออนไลน์ 7 เครื่อง</span>
+    <span class="or-chip tip on-text" data-tip="มีผู้ใช้งานในระบบ OR Flow ตอนนี้ 7 ท่าน"><span class="dotpulse"></span> ออนไลน์ 7 เครื่อง</span>
+  </div>
+  <p class="hint">ซ้าย = แบบ A + จุดกระพริบ · ขวา = แบบ B + จุดกระพริบ</p>
+</div>
+
+<p class="hint">หมายเหตุ: tooltip ในหน้า mock-up นี้วาดด้วย CSS เพื่อให้เห็นทันที · ของจริงบนแอปใช้ attribute <code>title</code>
+ของเบราว์เซอร์ (จ่อค้าง ~1 วิ แล้วขึ้นกล่องเทาเข้มของ Windows) ข้อความเหมือนกันเป๊ะ และไม่ง้อ JS</p>
+
+</body>
+</html>
