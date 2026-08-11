@@ -96,10 +96,18 @@ def _board_case_key(d):
             f"{d.get('sched_hour','')}:{d.get('sched_min','')}")
 
 
-def _mark_board_dirty(case=None):
+def _mark_board_dirty(case=None, undo=False):
     """ทำเครื่องหมายว่า 'เครื่องนี้เพิ่งแก้บอร์ดจริง' → ค่อยเซฟ + กัน pull ทับ (CR-2)
-    เก็บ id เคสที่แก้ไว้ใน _board_dirty_ids เพื่อ merge ราย-เคสตอนเซฟ"""
+    เก็บ id เคสที่แก้ไว้ใน _board_dirty_ids เพื่อ merge ราย-เคสตอนเซฟ
+
+    undo=True → เป็นการกด ↩️ ย้อนสถานะ "โดยตั้งใจ" (11 ส.ค. 2026 · CR-3)
+    เคสนั้นจะได้รับอนุญาตให้ดึงสถานะถอยหลังตอน merge ต่างจากการแก้ทั่วไป
+    ที่ถูก _merge_case_no_regress กันไว้ (ดูเหตุผลที่ฟังก์ชันนั้น)"""
     try:
+        # ⏳ ปุ่มบนบอร์ดอยู่ใน fragment (main() ไม่รันใหม่) → ประทับเวลาใช้งานที่นี่
+        #    ไม่งั้นผู้วิจัยที่กำลังทำงานบนบอร์ดจะโดน idle timeout ตัดสิทธิ์ทิ้ง
+        import time as _t_act
+        st.session_state['_last_activity'] = _t_act.monotonic()
         st.session_state['_board_dirty'] = True
         ids = st.session_state.get('_board_dirty_ids')
         if not isinstance(ids, set):
@@ -107,8 +115,75 @@ def _mark_board_dirty(case=None):
         if case is not None and case.get('id') not in (None, ''):
             ids.add(case.get('id'))
         st.session_state['_board_dirty_ids'] = ids
+        if undo and case is not None and case.get('id') not in (None, ''):
+            uids = st.session_state.get('_board_undo_ids')
+            if not isinstance(uids, set):
+                uids = set()
+            uids.add(case.get('id'))
+            st.session_state['_board_undo_ids'] = uids
+    except Exception as _dx:
+        # ⚠️ เดิมเงียบ (ตรวจระบบข้อ 9) — พลาดที่นี่ = เคสนี้ไม่ถูกทำเครื่องหมายว่าแก้
+        #    แล้วตอน merge จะถูกมองว่า "ไม่ได้แก้" ของเครื่องอื่นทับได้ = งานหาย
+        print(f"[board] ⚠️ ทำเครื่องหมายเคสที่แก้ไม่สำเร็จ (อาจถูกเขียนทับ): {_dx}")
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# 🚦 CR-3 (11 ส.ค. 2026): กัน "สถานะเคสถอยหลัง" ตอน merge หลายเครื่อง
+# ─────────────────────────────────────────────────────────────────────────
+# ปัญหาที่เจอตอนตรวจระบบ: merge เดิมเป็น last-writer-wins ราย-เคส
+# เครื่องที่เปิดบอร์ดค้างไว้ตั้งแต่เช้า (ยังถือ snapshot เก่า) พอกด ✏️ แก้เวลา
+# เคส X ตอนบ่าย จะเขียนทั้งก้อนของเคส X ทับของล่าสุด → สถานะที่เครื่องอื่น
+# เพิ่งกด "ผ่าเสร็จ" ถูกดึงกลับเป็น "กำลังผ่าตัด" เงียบ ๆ ไม่มีใครรู้
+# ผลทางคลินิก: บอร์ดโกหกว่าห้องยังไม่ว่าง + research_case_log ถูกเขียนย้อน
+#
+# ทางแก้: เวลารวมเคสเดียวกันจาก 2 เครื่อง ให้ "ขั้นของเคส" เดินหน้าอย่างเดียว
+# ส่วนที่คนแก้จริง ๆ (เวลาคาดการณ์/พยาบาล/หมายเหตุ) ยังรับมาตามปกติ ไม่ทิ้ง
+# ยกเว้นการกด ↩️ ที่ตั้งใจย้อน (undo=True) ซึ่งต้องย้อนได้จริงตามเจตนาคน
+# ═════════════════════════════════════════════════════════════════════════
+_PHASE_RANK = {
+    'not_arrived': 0,
+    'holding_pre': 1,
+    'in_or': 2,
+    'holding_post': 3,
+    'recovery': 3,      # ปลายทางคู่ขนานของ holding_post — ขั้นเดียวกัน
+    'discharged': 4,
+    'removed': 5,       # ถูกเอาออกจากบอร์ดแล้ว — ห้ามเคสผีย้อนกลับมา
+}
+
+# ช่องที่ "บอกขั้นของเคส" — ถ้าของอีกเครื่องไปไกลกว่า ต้องยกชุดนี้มาทั้งชุด
+# (ยกทีละช่องไม่ได้ เดี๋ยวได้สถานะ in_or ที่ไม่มีเวลาเข้าห้อง = บอร์ดเพี้ยน)
+_PHASE_FIELDS = ('status', 'time_arrived_holding', 'time_entered_or',
+                 'time_exited_or', 'time_discharged', 'actual_duration_min',
+                 'or_room_assigned')
+
+
+def _phase_rank(d) -> int:
+    """ขั้นของเคส — สถานะที่ไม่รู้จักถือเป็นขั้นต่ำสุด (ระวังไว้ก่อน)"""
+    try:
+        return _PHASE_RANK.get(str((d or {}).get('status') or ''), 0)
     except Exception:
-        pass
+        return 0
+
+
+def _merge_case_no_regress(mine, theirs, allow_undo=False):
+    """รวมเคสเดียวกัน 2 เวอร์ชัน โดยขั้นของเคสเดินหน้าอย่างเดียว
+    mine = ของเครื่องนี้ · theirs = ของที่อยู่บน DB แล้ว
+    คืน dict ที่จะเขียนลง DB + True/False ว่า "กันการถอยหลังไปหรือเปล่า"
+    """
+    if not theirs:
+        return mine, False
+    if allow_undo:
+        return mine, False              # ↩️ ตั้งใจย้อน — เจตนาคนชนะเสมอ
+    if _phase_rank(theirs) <= _phase_rank(mine):
+        return mine, False              # ของเราไม่เก่ากว่า → ใช้ของเราทั้งก้อน
+    # ของบน DB เดินไปไกลกว่า: คงขั้น/เวลาของ DB ไว้ แต่ยังรับสิ่งที่เราแก้จริง
+    out = dict(mine)
+    for k in _PHASE_FIELDS:
+        if k in theirs:
+            out[k] = theirs[k]
+        else:
+            out.pop(k, None)
+    return out, True
 
 
 def _mask_nurse_name(name):
@@ -326,7 +401,7 @@ def apply_undo_finish(cases, idx):
         log_case_state(c)
     except Exception as _rx:
         print(f"[research_log] ข้าม: {_rx}")
-    _mark_board_dirty(c)
+    _mark_board_dirty(c, undo=True)   # 🚦 CR-3: ↩️ ที่ตั้งใจ — ย้อนขั้นได้ตอน merge
     return True
 
 
@@ -358,7 +433,9 @@ def _save_board_snapshot(cases):
         # ---- optimistic concurrency: อ่านสถานะ DB ล่าสุดก่อนเขียน ----
         base_ver = int(st.session_state.get('_board_base_version', 0) or 0)
         dirty_ids = {str(x) for x in st.session_state.get('_board_dirty_ids', set())}
+        undo_ids = {str(x) for x in st.session_state.get('_board_undo_ids', set())}
         merged, new_ver = out, base_ver + 1
+        _guarded = 0        # 🚦 CR-3: กันการถอยหลังไปกี่เคสในรอบนี้
         try:
             from main_or_db import load_board_state
             _s = load_board_state(today)
@@ -372,12 +449,24 @@ def _save_board_snapshot(cases):
                     for d in out:
                         k = _board_case_key(d)
                         if overlay_all or str(d.get('id')) in dirty_ids or k not in by_key:
-                            by_key[k] = d
+                            # 🚦 CR-3: ขั้นของเคสเดินหน้าอย่างเดียว (ยกเว้น ↩️ ที่ตั้งใจ)
+                            _row, _blocked = _merge_case_no_regress(
+                                d, by_key.get(k),
+                                allow_undo=(str(d.get('id')) in undo_ids))
+                            if _blocked:
+                                _guarded += 1
+                                print(f"[snapshot] 🚦 กันสถานะถอยหลัง: เคส {k} "
+                                      f"({d.get('status')} ← คงของล่าสุด "
+                                      f"{by_key.get(k, {}).get('status')})")
+                            by_key[k] = _row
                     merged, new_ver = list(by_key.values()), db_ver + 1
                 elif db_ver >= base_ver:
                     new_ver = db_ver + 1
         except Exception as _mx:
             print(f"[snapshot] merge ข้าม (เขียนตรง): {_mx}")
+        if _guarded:
+            # บอกคนหน้าเครื่องตรง ๆ ว่าของที่เขาเห็นไม่ใช่ของล่าสุดแล้ว
+            st.session_state['_board_merge_notice'] = _guarded
 
         payload = {
             'date': today,
@@ -396,6 +485,7 @@ def _save_board_snapshot(cases):
                 _saved = True
                 st.session_state['_board_base_version'] = new_ver  # ซิงก์แล้ว = ฐานใหม่
                 st.session_state['_board_dirty_ids'] = set()        # ล้างหลังเซฟสำเร็จ
+                st.session_state['_board_undo_ids'] = set()         # 🚦 CR-3: ล้างพร้อมกัน
                 st.session_state['_board_db_fail'] = 0              # 🔌 M-09: เซฟสำเร็จ → รีเซ็ตตัวนับ
             else:
                 # 🔌 M-09: เซฟล้มเหลว (return False) — นับไว้ ไม่เคลม "ซิงก์แล้ว"
@@ -1175,10 +1265,24 @@ def _board_fragment():
                 st.session_state.patient_cases = _shared
                 cases = _shared
                 st.session_state['_board_was_restored'] = True
-    if cases and st.session_state.get('_board_db_fail', 0) > 2:
-        # 🔌 M-09: เซฟขึ้น DB กลางล้มเหลวติดกัน → บอกตรงๆ ว่าออฟไลน์ (ไม่โกหกว่า "ซิงก์แล้ว")
-        st.warning("⚠️ บอร์ดกลางออฟไลน์: เครื่องนี้ยังไม่ได้แชร์ขึ้นเซิร์ฟเวอร์ "
-                   "(บันทึกไว้ในเครื่องชั่วคราว) · ตรวจการเชื่อมต่อแล้วกด 🔄 รีเฟรช")
+    _dbfail = st.session_state.get('_board_db_fail', 0)
+    if cases and _dbfail > 0:
+        # 🔌 M-09: เซฟขึ้น DB กลางล้มเหลว → บอกตรง ๆ ว่าออฟไลน์ (ไม่โกหกว่า "ซิงก์แล้ว")
+        # 11 ส.ค. 2026 (ตรวจระบบ ข้อ 6): เดิมรอพลาด 3 ครั้งค่อยเตือน =
+        # พยาบาลกดปุ่มไปแล้ว 2 ครั้งโดยเชื่อว่าบันทึกแล้ว → เตือนตั้งแต่ครั้งแรก
+        # และบอก "สิ่งที่ต้องทำตอนนี้" เพราะไฟล์สำรองในเครื่องหายได้ทุกเมื่อบน cloud
+        st.error(
+            f"⛔ บอร์ดกลางออฟไลน์ (บันทึกไม่ขึ้นเซิร์ฟเวอร์ {_dbfail} ครั้งติด)\n\n"
+            "เครื่องอื่นยังไม่เห็นสิ่งที่กดจากเครื่องนี้ : "
+            "**จดเวลาที่กดไว้ในกระดาษก่อน** แล้วกด 🔄 รีเฟรช "
+            "ถ้ายังไม่หายใน 5 นาที แจ้งผู้วิจัย (Mukky)")
+    _mnotice = st.session_state.pop('_board_merge_notice', 0)
+    if _mnotice:
+        # 🚦 CR-3: เครื่องนี้ถือหน้าจอเก่า แล้วเพิ่งพยายามเขียนทับของใหม่กว่า
+        st.warning(
+            f"🔄 มี {_mnotice} เคสที่เครื่องอื่นกดไปก่อนแล้ว : "
+            "ระบบคงสถานะล่าสุดไว้ (ไม่ดึงกลับ) ส่วนที่แก้ไว้ยังอยู่ครบ · "
+            "กด 🔄 รีเฟรช เพื่อดูของล่าสุด")
     # (เอา caption "บอร์ดกลาง — ซิงก์ทุกเครื่อง" ออกเพื่อเพิ่มพื้นที่ — สถานะซิงก์โชว์เป็นชิปบนหัวแล้ว)
 
     # (วันที่/เวลาปรับล่าสุด ย้ายไปเป็นชิปบนแถบหัวแล้ว — board เริ่มที่แถวควบคุมเลย)
@@ -1451,7 +1555,8 @@ def _board_fragment():
             c['status'] = 'holding_post'
             c['time_discharged'] = None
         _rlog(c)               # 📊 undo แล้วเขียนสถานะล่าสุดทับ — ตารางวิจัยตรงกับบอร์ดเสมอ
-        _mark_board_dirty(c)   # CR-2
+        # CR-2 + 🚦 CR-3: undo=True → ได้รับอนุญาตให้ย้อนขั้นตอน merge (เจตนาคน)
+        _mark_board_dirty(c, undo=True)
         _toast_ok("ย้อนสถานะแล้ว ↩️")
         _rerun_board()
 
@@ -1626,18 +1731,34 @@ def _room_focus_fragment(room_no):
                     with _fcol2:
                         _sv = st.form_submit_button("💾 บันทึก", width='stretch')
         if _sv and int(_new_t) != _eff0:
-            # 🔗 ทางเดินเดียวกับ ✏️ บนบอร์ดหลัก: override + log + ขึ้นบอร์ดกลาง
-            _ce['user_override_min'] = int(_new_t)
-            _ce['effective_min'] = int(_new_t)
+            # ✏️ กันพิมพ์ผิดหลัก — เกณฑ์เดียวกับบอร์ดหลัก (ตรวจระบบข้อ 8)
+            _ovk = f"_ov_confirm_rf_{_ce.get('id') or cur}"
+            _ovwarn = ''
             try:
-                from main_or_db import log_override
-                log_override(_ce, int(_new_t))
-            except Exception as _ex:
-                print(f"[override_log] log_override ล้มเหลว: {_ex}")
-            _save_board_snapshot(cases)
-            st.session_state['_board_dirty'] = False
-            _toast_ok("บันทึกเวลาแล้ว ✓")
-            _rerun_board()
+                from main_or_core import override_sanity_warning
+                _ovwarn = override_sanity_warning(
+                    int(_new_t), _ce.get('ai_predicted_min')
+                    or _ce.get('predicted_min'))
+            except Exception as _wx:
+                print(f"[override] ตรวจค่าผิดปกติไม่สำเร็จ: {_wx}")
+            if _ovwarn and st.session_state.get(_ovk) != int(_new_t):
+                st.session_state[_ovk] = int(_new_t)
+                st.warning(_ovwarn)
+            else:
+                st.session_state.pop(_ovk, None)
+                # 🔗 ทางเดินเดียวกับ ✏️ บนบอร์ดหลัก: override + log + ขึ้นบอร์ดกลาง
+                _ce['user_override_min'] = int(_new_t)
+                _ce['effective_min'] = int(_new_t)
+                try:
+                    from main_or_db import log_override
+                    log_override(_ce, int(_new_t))
+                except Exception as _ex:
+                    print(f"[override_log] log_override ล้มเหลว: {_ex}")
+                _mark_board_dirty(_ce)   # 👣 + ⏳ ประทับเวลาใช้งาน/ทำเครื่องหมายแก้จริง
+                _save_board_snapshot(cases)
+                st.session_state['_board_dirty'] = False
+                _toast_ok("บันทึกเวลาแล้ว ✓")
+                _rerun_board()
 
         # 🔤 9 ส.ค. 2026: font-size:18px ตรง ๆ (จอนี้ไม่ผ่าน inject_theme())
         #    + แก้ em dash → ":" ตามกติกา UI (นร 0106 ไม่เกี่ยว แต่กติกาแอปเอง)

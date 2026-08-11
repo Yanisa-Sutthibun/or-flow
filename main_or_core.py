@@ -80,6 +80,52 @@ def fuzzy_resolve(query, candidates, cutoff=0.65):
         return matches[0], 'fuzzy'
     return None, None
 
+# ════════════════════════════════════════════════════════════════════════════
+# 🩺 เฝ้าดูว่า AI ยังทำงานด้วยโมเดลจริงอยู่ไหม (11 ส.ค. 2026 · ตรวจระบบข้อ 7)
+# ────────────────────────────────────────────────────────────────────────────
+# ความเสี่ยงที่รู้อยู่แล้ว: ไฟล์โมเดลเป็น pickle + requirements ไม่ pin แน่น
+# (ดูหัว requirements.txt) พอ Streamlit Cloud อัป xgboost/sklearn ข้ามรุ่น
+# โมเดลจะโหลดไม่ขึ้น แล้วระบบ "ตกบันได" ไปชั้น fallback อย่างเงียบเชิง
+# ชั้นสุดท้ายคือค่าคงที่ 60 นาที ซึ่งใช้ตัดสินใจจริงบนบอร์ดไม่ได้เลย
+#
+# เดิมป้องกันด้วย "คนต้องจำไปดูชิป AI หลัง deploy ทุกครั้ง" ซึ่งลืมได้
+# ตรงนี้จึงนับให้เอง: ทำนายไปกี่ครั้ง มาจากชั้นไหนบ้าง แล้วให้หน้าผู้วิจัยเตือน
+# ⛔ ตัวนับอยู่ในหน่วยความจำของ process ไม่แตะ DB และไม่มีข้อมูลผู้ป่วยใด ๆ
+#    (แอปรีสตาร์ท = เริ่มนับใหม่ ตั้งใจให้เป็นสัญญาณของ "ตอนนี้" ไม่ใช่สถิติสะสม)
+# ════════════════════════════════════════════════════════════════════════════
+_PRED_TALLY: dict = {}
+_PRED_HEALTHY_SOURCE = 'thesis_ML_v2'   # ชั้นเดียวที่ถือว่า "ปกติ"
+
+
+def _tally_prediction(source: str) -> None:
+    try:
+        _PRED_TALLY[source] = _PRED_TALLY.get(source, 0) + 1
+    except Exception:
+        pass
+
+
+def prediction_health() -> dict:
+    """สรุปสุขภาพสายการทำนายของ process นี้
+    คืน {'total', 'by_source', 'fallback_n', 'fallback_pct', 'alert', 'message'}
+    total = 0 (ยังไม่เคยทำนาย) → alert=False เสมอ ไม่เดาแทนข้อมูลที่ไม่มี"""
+    _by = dict(_PRED_TALLY)
+    _total = sum(_by.values())
+    _fb = _total - _by.get(_PRED_HEALTHY_SOURCE, 0)
+    _pct = (100.0 * _fb / _total) if _total else 0.0
+    # เกณฑ์: ต้องมีตัวอย่างพอ (≥20 ครั้ง) และ fallback เกิน 10% ถึงจะเตือน
+    # (ทำนายไม่กี่ครั้งแล้วพลาด 1 ครั้ง = 50% ซึ่งไม่ได้แปลว่าระบบพัง)
+    _alert = _total >= 20 and _pct > 10.0
+    _msg = ''
+    if _alert:
+        _worst = 'ค่าเริ่มต้น 60 นาที' if _by.get('default') else 'โมเดลสำรอง'
+        _msg = (f"⛔ AI ไม่ได้ใช้โมเดลหลัก (thesis_ML_v2) ใน {_pct:.0f}% "
+                f"ของการทำนายล่าสุด ({_fb} จาก {_total} ครั้ง) : ตกไปใช้{_worst} "
+                f"ตรวจว่าไฟล์โมเดลโหลดขึ้นหรือไม่ (ดูชิป AI บนหัวแอป) "
+                f"ก่อนนำผลช่วงนี้ไปใช้ในงานวิจัย")
+    return {'total': _total, 'by_source': _by, 'fallback_n': _fb,
+            'fallback_pct': round(_pct, 1), 'alert': _alert, 'message': _msg}
+
+
 # ============================================================================
 # PREDICTION ENGINE v3 (16 features — optimized, Major-OR compatible)
 # Feature order MUST match training:
@@ -138,6 +184,7 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
                     _case_in[_k] = _v
             _r2 = _mv2.predict_case(_case_in)
             _pn2 = int(_r2.get('proc_n') or 0)
+            _tally_prediction('thesis_ML_v2')
             return {
                 'predicted_min': int(_r2['predicted_min']),
                 'confidence': _r2.get('confidence', 'ปานกลาง'),
@@ -173,6 +220,7 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
         #    ไม่มีไฟล์คาลิเบรต → fallback heuristic เดิม (ติดป้ายให้รู้ว่าไม่การันตี)
         _iv90 = _det.get('interval90')
         _iv80 = _det.get('interval80')
+        _tally_prediction('thesis_ML')
         return {
             'predicted_min': _pm, 'confidence': _conf,
             'method': 'มัธยฐานลำดับชั้น + XGBoost residual (thesis_ML)',
@@ -203,6 +251,7 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
             procedure, surgeon,
             as_of_date=(op_date.strftime('%Y-%m-%d') if op_date else None))
         if local is not None:
+            _tally_prediction('local_history')
             return {
                 'predicted_min': local['predicted_min'],
                 'confidence': local['confidence'],
@@ -213,8 +262,15 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
                 'source': 'local_history',
                 'tier': local['tier'],
             }
-    except Exception:
-        pass
+    except Exception as _lx:
+        # ⚠️ เดิม except เงียบ (ตรวจระบบข้อ 9) — ชั้นสุดท้ายก่อนค่าเริ่มต้น 60 นาที
+        #    ล้มแล้วไม่มีใครรู้เลย ต้องได้ยินเสียงเสมอ
+        try:
+            from logger_setup import get_logger
+            get_logger("core").warning("predict_from_local_history ใช้ไม่ได้: %s", _lx)
+        except Exception:
+            print(f"[core] local_history fallback: {_lx}")
+    _tally_prediction('default')
     return {
         'predicted_min': 60, 'confidence': 'ต่ำ',
         'method': 'ค่าเริ่มต้น',
@@ -406,3 +462,42 @@ def init_session_state():
         st.session_state.uploaded_cases = []
     if 'schedule' not in st.session_state:
         st.session_state.schedule = []
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# ✏️ ตรวจค่าที่คนแก้เวลาก่อนบันทึก (11 ส.ค. 2026 · ผลการตรวจระบบข้อ 8)
+# ────────────────────────────────────────────────────────────────────────────
+# ช่องแก้เวลารับ 5-600 นาทีโดยไม่ทักท้วงอะไรเลย พิมพ์ 300 แทน 30 ระบบรับทันที
+# แล้วค่านั้น "ชนะ AI" บนบอร์ด (effective_min) → ห้องถัดไปถูกกันไว้ยาวเกินจริง
+# ซ้ำร้ายค่าผิดไหลลง override_log ซึ่งเป็นข้อมูลวิจัย human-AI collaboration
+#
+# เกณฑ์: ต่างจาก AI ตั้งแต่ 2.5 เท่าขึ้นไป "และ" ห่างกันเกิน 60 นาที
+# (บังคับสองเงื่อนไขพร้อมกัน เพราะเคสสั้น ๆ 10→25 นาทีเป็น 2.5 เท่าก็จริง
+#  แต่เป็นเรื่องปกติมากหน้างาน ถ้าเตือนด้วยจะกลายเป็นเตือนหมาป่า คนกดผ่านโดยไม่อ่าน)
+# ════════════════════════════════════════════════════════════════════════════
+_OV_RATIO_HI = 2.5
+_OV_RATIO_LO = 0.4
+_OV_MIN_GAP = 60
+
+
+def override_sanity_warning(new_min, ai_min):
+    """คืนข้อความเตือนถ้าค่าที่กรอกต่างจาก AI มากผิดปกติ · คืน '' ถ้าปกติ
+    ไม่รู้ค่า AI = ไม่เตือน (ไม่มีอะไรให้เทียบ อย่าเดา)"""
+    try:
+        new_v = int(new_min)
+        ai_v = int(ai_min) if ai_min else 0
+    except (TypeError, ValueError):
+        return ''
+    if ai_v <= 0 or new_v <= 0:
+        return ''
+    if abs(new_v - ai_v) < _OV_MIN_GAP:
+        return ''
+    if new_v >= ai_v * _OV_RATIO_HI:
+        return (f"⚠️ {new_v} นาที มากกว่าที่ AI ทำนายไว้ ({ai_v} นาที) "
+                f"ราว {new_v / ai_v:.1f} เท่า : พิมพ์เกินหลักหรือเปล่า "
+                f"ถ้าตั้งใจแบบนี้ กด 💾 บันทึก อีกครั้งเพื่อยืนยัน")
+    if new_v <= ai_v * _OV_RATIO_LO:
+        return (f"⚠️ {new_v} นาที น้อยกว่าที่ AI ทำนายไว้ ({ai_v} นาที) มาก : "
+                f"ตรวจอีกครั้งว่าใส่ถูกช่อง ถ้าตั้งใจแบบนี้ "
+                f"กด 💾 บันทึก อีกครั้งเพื่อยืนยัน")
+    return ''

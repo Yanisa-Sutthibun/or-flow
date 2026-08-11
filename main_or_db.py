@@ -22,9 +22,11 @@ from staff_unmask import apply_to_dataframe as _unmask_display, unmask_series as
 try:
     from logger_setup import get_logger as _get_logger
     _plog = _get_logger("predict")
+    _log = _get_logger("db")        # ทั่วไปของชั้น DB (mask/migration/PDPA)
 except Exception:
     import logging as _logging
     _plog = _logging.getLogger("orflow.predict")
+    _log = _logging.getLogger("orflow.db")
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(_SCRIPT_DIR, 'main_or.db')
@@ -691,11 +693,15 @@ def mask_unmasked_staff() -> int:
                         real.add(v)
                     elif m:
                         max_in_db = max(max_in_db, int(m.group(1)))
-            except Exception:
+            except Exception as _rx:
                 try:
                     conn.rollback()
                 except Exception:
                     pass
+                # ⚠️ เดิมเงียบสนิท (ตรวจระบบข้อ 9) — อ่านชื่อจริงมา mask ไม่ได้
+                #    = ชื่อบุคลากรตัวจริงยังค้างอยู่ในตารางนั้น ต้องรู้ ไม่ใช่ปล่อยผ่าน
+                _log.warning("อ่านชื่อจาก %s.%s เพื่อ mask ไม่สำเร็จ: %s",
+                             tbl, col, _rx)
         if not real:
             continue
         # start_at=max_in_db: เครื่องที่ mapping ไม่ครบ (เช่น cloud — ไฟล์ ephemeral)
@@ -706,17 +712,21 @@ def mask_unmasked_staff() -> int:
                 for nm, code in name2code.items():
                     conn.execute(f"UPDATE {tbl} SET {col}=? WHERE {col}=?", (code, nm))
                 conn.commit()
-            except Exception:
+            except Exception as _ux:
                 try:
                     conn.rollback()
                 except Exception:
                     pass
+                # ⚠️ ต้องดังที่สุดในไฟล์นี้: เขียนรหัสทับชื่อจริงไม่สำเร็จ =
+                #    ชื่อบุคลากรตัวจริงยังอยู่ใน DB (อาจถูกดันขึ้น cloud) — ผิดกติกา PDPA
+                _log.error("mask ชื่อใน %s.%s ไม่สำเร็จ — ชื่อจริงยังค้างอยู่ในตาราง: %s",
+                           tbl, col, _ux)
         total += len(real)
     conn.close()
     try:
         reload_mapping()
-    except Exception:
-        pass
+    except Exception as _mx:
+        _log.warning("reload_mapping หลัง mask ไม่สำเร็จ (รหัสอาจยังไม่ตรงกัน): %s", _mx)
     return total
 
 
@@ -1611,9 +1621,52 @@ def _ensure_override_log(conn):
             ai_predicted_min INTEGER,
             override_min INTEGER,
             actual_duration_min INTEGER,
-            source TEXT DEFAULT 'board'
+            source TEXT DEFAULT 'board',
+            actor_role TEXT,
+            actor_room INTEGER
         )""")
     conn.commit()
+    # 🔁 migration (11 ส.ค. 2026): ตารางที่เกิดก่อนหน้านี้ยังไม่มี 2 คอลัมน์นี้
+    try:
+        _cols = _table_columns(conn, 'override_log')
+        if 'actor_role' not in _cols:
+            conn.execute("ALTER TABLE override_log ADD COLUMN actor_role TEXT")
+        if 'actor_room' not in _cols:
+            conn.execute("ALTER TABLE override_log ADD COLUMN actor_room INTEGER")
+        conn.commit()
+    except Exception as _mx:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f"[override_log] เพิ่มคอลัมน์ actor ไม่สำเร็จ (ใช้ต่อได้): {_mx}")
+
+
+def current_actor():
+    """👣 "เครื่องไหนเป็นคนกด" — คืน (actor_role, actor_room) สำหรับเขียนลง log วิจัย
+    (11 ส.ค. 2026 · ผลการตรวจระบบข้อ 3)
+
+    ทำไมต้องมี: เดิม log รู้ว่า "เกิดอะไรขึ้นเมื่อไร" แต่ไม่รู้ว่ามาจากจอไหน
+    เวลามีข้อโต้แย้งหน้างาน (เช่น "เวลาเข้าห้องเคสนี้ถูกบันทึกผิด") สืบกลับไม่ได้เลย
+    และงานวิจัยก็แยกไม่ได้ว่าใครแก้เวลา AI บ่อยกว่ากัน (จอห้อง vs จอรับ-ส่ง)
+
+    ⛔ PDPA: เก็บแค่ "บทบาท" กับ "เลขห้องของจอ" ซึ่งไม่ใช่ข้อมูลส่วนบุคคล
+       ไม่มีชื่อผู้ใช้ ไม่มี IP ไม่มี session id (ทุกคนใช้รหัสร่วมกันอยู่แล้ว
+       ระบบจึงไม่รู้จักตัวบุคคลตั้งแต่ต้น และตั้งใจให้เป็นแบบนั้น)
+    """
+    try:
+        import streamlit as _st
+        _role = str(_st.session_state.get('role') or '').strip() or None
+        _room = None
+        if _role == 'room':      # เลขห้องมีความหมายเฉพาะจอประจำห้อง
+            try:
+                _rv = _st.session_state.get('room_scope')
+                _room = int(float(_rv)) if _rv is not None else None
+            except (TypeError, ValueError):
+                _room = None
+        return _role, _room
+    except Exception:
+        return None, None
 
 
 def _mask_staff_for_log(name):
@@ -1670,13 +1723,16 @@ def log_override(case, override_min, source='board'):
             except (TypeError, ValueError):
                 room = None
             ai0 = case.get('ai_predicted_min') or case.get('predicted_min')
+            _arole, _aroom = current_actor()   # 👣 จอไหนเป็นคนแก้ (ไม่ระบุตัวบุคคล)
             conn.execute(
                 "INSERT INTO override_log (logged_at, case_ref, "
                 "procedure_name, surgeon_name, room_no, ai_predicted_min, "
-                "override_min, source) VALUES (?,?,?,?,?,?,?,?)",
+                "override_min, source, actor_role, actor_room) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (_now(), str(case.get('id') or ''),
                  case.get('procedure'), _mask_staff_for_log(case.get('surgeon')),
-                 room, int(ai0) if ai0 else None, int(override_min), source))
+                 room, int(ai0) if ai0 else None, int(override_min), source,
+                 _arole, _aroom))
             conn.commit()
         finally:
             conn.close()

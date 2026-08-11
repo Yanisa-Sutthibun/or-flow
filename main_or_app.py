@@ -748,6 +748,112 @@ def parse_schedule_csv_to_cases(uploaded_file):
 # MAIN
 # ============================================================================
 
+# ═══════════════════════════════════════════════════════════════════════════
+# 🛡️ กันเดารหัสผ่าน (11 ส.ค. 2026 · ผลการตรวจระบบข้อ 1)
+# ───────────────────────────────────────────────────────────────────────────
+# ปัญหา: แอปอยู่บน URL สาธารณะของ Streamlit Cloud + ใช้รหัสร่วมกันทั้งหน่วย
+# แล้วเดาได้ไม่จำกัดครั้งโดยระบบไม่รู้ตัว
+# กันสองชั้น เพราะชั้นเดียวไม่พอ:
+#   ① ต่อ session (เบราว์เซอร์ที่นั่งกดอยู่) — พลาดครบโควตา = ล็อกชั่วคราว
+#   ② ทั้งแอป — กันคนเลี่ยงชั้นแรกด้วยการเปิด session ใหม่ทุกครั้ง
+#      ใช้แค่ "หน่วงเวลาตอบ" ไม่ล็อกทั้งระบบ เพราะห้ามกันพยาบาลตัวจริงเข้าใช้งาน
+# ⛔ ไม่แตะ IP ตามกติกาข้อ 2 ของโปรเจกต์ (ทุกเครื่องออกเน็ตผ่าน NAT เดียวกัน
+#    IP จึงแยกคนไม่ได้จริง แถมเป็นข้อมูลส่วนบุคคล)
+# ═══════════════════════════════════════════════════════════════════════════
+_LOGIN_MAX_TRY = 5          # พลาดกี่ครั้งต่อ session ถึงล็อก
+_LOGIN_LOCK_SEC = 60        # ล็อกนานเท่าไร (ครั้งถัดไปคูณสอง สูงสุด 15 นาที)
+_LOGIN_LOCK_MAX = 900
+_GLOBAL_FAIL_WINDOW = 300   # นับความพยายามพลาดทั้งแอปย้อนหลังกี่วินาที
+_GLOBAL_FAIL_LOG: list = []  # เวลา (monotonic) ของความพยายามที่พลาด — ทั้ง process
+
+
+def _login_recent_global_fails() -> int:
+    """จำนวนครั้งที่ 'ใครก็ตาม' กรอกรหัสผิดในหน้าต่างเวลาล่าสุด"""
+    import time as _t
+    _cut = _t.monotonic() - _GLOBAL_FAIL_WINDOW
+    while _GLOBAL_FAIL_LOG and _GLOBAL_FAIL_LOG[0] < _cut:
+        _GLOBAL_FAIL_LOG.pop(0)
+    return len(_GLOBAL_FAIL_LOG)
+
+
+def _login_lock_left() -> int:
+    """เหลือถูกล็อกอีกกี่วินาที (0 = ไม่ได้ถูกล็อก)"""
+    import time as _t
+    _until = float(st.session_state.get('_login_lock_until') or 0.0)
+    return max(0, int(round(_until - _t.monotonic())))
+
+
+def _login_note_fail() -> None:
+    """บันทึกว่ากรอกผิด 1 ครั้ง + ล็อกถ้าครบโควตา + หน่วงเวลาตอบ"""
+    import time as _t
+    _n = int(st.session_state.get('_login_fail_n') or 0) + 1
+    st.session_state['_login_fail_n'] = _n
+    _GLOBAL_FAIL_LOG.append(_t.monotonic())
+    _g = _login_recent_global_fails()
+    # หน่วงตอบเสมอ: ทำให้การไล่เดาอัตโนมัติช้าลงมาก แต่คนพิมพ์ผิดแทบไม่รู้สึก
+    #   (ยิ่งทั้งแอปพลาดถี่ ยิ่งหน่วงนาน — เพดาน 3 วิ ไม่ให้กระทบคนใช้จริง)
+    _t.sleep(min(3.0, 0.4 + 0.1 * _g))
+    if _n >= _LOGIN_MAX_TRY:
+        _rounds = _n - _LOGIN_MAX_TRY          # ล็อกรอบที่เท่าไร (0 = รอบแรก)
+        _dur = min(_LOGIN_LOCK_SEC * (2 ** _rounds), _LOGIN_LOCK_MAX)
+        st.session_state['_login_lock_until'] = _t.monotonic() + _dur
+    if _g >= 20:
+        # ผิดถี่ผิดปกติทั้งแอป — ทิ้งร่องรอยไว้ให้ผู้วิจัยเห็นใน log ของ Cloud
+        print(f"[login] ⚠️ กรอกรหัสผิด {_g} ครั้งใน {_GLOBAL_FAIL_WINDOW//60} นาที "
+              f"— อาจมีคนพยายามเดารหัส")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⏳ สิทธิ์ผู้วิจัยหมดอายุเมื่อทิ้งไว้เฉย ๆ (11 ส.ค. 2026 · ตรวจระบบข้อ 5)
+# ───────────────────────────────────────────────────────────────────────────
+# จอในห้อง/จอรับ-ส่ง เปิดค้างทั้งวัน = ตั้งใจให้เป็นแบบนั้น ห้ามไปยุ่ง
+# แต่สิทธิ์ 'admin' เห็นผลวิจัย ส่งออกข้อมูล และล้างข้อมูลได้ ถ้าเปิดค้างบน
+# เครื่องส่วนกลางแล้วลืมออก คนถัดไปที่มานั่งได้สิทธิ์เต็มทันที → ให้หมดอายุเอง
+# ═══════════════════════════════════════════════════════════════════════════
+_ADMIN_IDLE_SEC = 45 * 60
+
+
+def _touch_activity() -> None:
+    """ประทับเวลา 'มีการใช้งานจริง' — เรียกตอน login และทุก action บนบอร์ด
+    (ปุ่มบนบอร์ดอยู่ใน fragment ซึ่งไม่ทำให้ main() รันใหม่ จึงต้องประทับที่นั่นด้วย
+    ดู _mark_board_dirty ใน main_or_pages.py — ไม่งั้นผู้วิจัยจะหลุดทั้งที่กำลังทำงาน)"""
+    try:
+        import time as _t
+        st.session_state['_last_activity'] = _t.monotonic()
+    except Exception:
+        pass
+
+
+def _enforce_idle_timeout() -> None:
+    """ตัดสิทธิ์ admin ที่ทิ้งหน้าจอไว้นานเกิน — role อื่นไม่แตะ"""
+    try:
+        import time as _t
+        if st.session_state.get('role') != 'admin':
+            return
+        _last = st.session_state.get('_last_activity')
+        if _last is None:
+            _touch_activity()
+            return
+        if (_t.monotonic() - float(_last)) < _ADMIN_IDLE_SEC:
+            _touch_activity()   # หน้าถูกโหลดใหม่ = ยังใช้งานอยู่
+            return
+        for _k in ('authenticated', 'role', '_maint_unlocked', '_clear_unlocked',
+                   '_last_activity'):
+            st.session_state.pop(_k, None)
+        st.session_state['_idle_logged_out'] = True
+    except Exception as _ex:
+        print(f"[auth] ตรวจ idle timeout ไม่สำเร็จ (ข้าม): {_ex}")
+
+
+def _pwd_match(entered, expected) -> bool:
+    """เทียบรหัสแบบเวลาคงที่ — ให้เหมือน token จอห้อง/จอญาติที่ใช้ hmac อยู่แล้ว
+    (เทียบด้วย == จะตอบเร็ว/ช้าตามจำนวนตัวอักษรที่ตรง = ใบ้รหัสให้คนเดา)"""
+    import hmac as _hmac
+    if not expected:
+        return False
+    return _hmac.compare_digest(str(entered or ''), str(expected))
+
+
 def _check_password():
     """🔒 Password gate — แสดง login form ถ้ายังไม่ได้ authenticate.
     Return True ถ้าผ่านแล้ว / False ถ้ายังไม่ผ่าน (และจะแสดง login form)
@@ -794,6 +900,9 @@ def _check_password():
 
     _l, _c, _r = st.columns([1, 2, 1])
     with _c:
+        if st.session_state.pop('_idle_logged_out', False):
+            st.info("⏳ ออกจากระบบอัตโนมัติ เพราะไม่มีการใช้งานนานเกิน "
+                    f"{_ADMIN_IDLE_SEC // 60} นาที : เข้าสู่ระบบใหม่ได้เลย")
         st.markdown(
             '<div style="text-align:center;margin:60px 0 24px;">'
             '<div style="font-size:48px;">🔐</div>'
@@ -811,14 +920,19 @@ def _check_password():
             'โรงพยาบาลตำรวจ</div></div>',
             unsafe_allow_html=True)
 
+        _lock_left = _login_lock_left()
         with st.form("login_form", clear_on_submit=False):
             pwd = st.text_input("รหัสผ่าน", type="password",
                                 placeholder="••••••••",
-                                label_visibility='collapsed')
-            submit = st.form_submit_button("🔓 เข้าสู่ระบบ",
-                                            use_container_width=True,
-                                            type='primary')
-            if submit:
+                                label_visibility='collapsed',
+                                disabled=bool(_lock_left))
+            submit = st.form_submit_button(
+                "🔓 เข้าสู่ระบบ", use_container_width=True, type='primary',
+                disabled=bool(_lock_left))
+            if submit and _lock_left:
+                # 🛡️ ยังอยู่ในช่วงล็อก — ไม่ตรวจรหัสเลย (กันไล่เดาต่อ)
+                st.error(f"⏳ กรอกผิดหลายครั้งเกินไป : ลองใหม่ในอีก {_lock_left} วินาที")
+            elif submit:
                 # 👤 role-based login (มุคกี้สั่ง 19 ก.ค. 2026 — production):
                 #    app_password = ผู้ใช้ทั่วไป · admin_pin = ผู้ดูแล (Mukky)
                 #    ใส่รหัสของตัวเองครั้งเดียวที่หน้านี้ — ไม่ถามซ้ำอีกทุกจุด
@@ -828,18 +942,33 @@ def _check_password():
                     _admin_pwd = _gap()
                 except Exception:
                     pass
-                if _admin_pwd and pwd == _admin_pwd:
+                if _pwd_match(pwd, _admin_pwd):
                     st.session_state['authenticated'] = True
                     st.session_state['role'] = 'admin'
                     st.session_state['_maint_unlocked'] = True
                     st.session_state['_clear_unlocked'] = True
+                    st.session_state['_login_fail_n'] = 0
+                    _touch_activity()
                     st.rerun()
-                elif pwd == _pwd_set:
+                elif _pwd_match(pwd, _pwd_set):
                     st.session_state['authenticated'] = True
                     st.session_state['role'] = 'user'
+                    st.session_state['_login_fail_n'] = 0
+                    _touch_activity()
                     st.rerun()
                 else:
-                    st.error("❌ รหัสผ่านไม่ถูกต้อง")
+                    _login_note_fail()
+                    _left = _login_lock_left()
+                    if _left:
+                        st.error(f"⏳ กรอกผิดหลายครั้งเกินไป : "
+                                 f"ลองใหม่ในอีก {_left} วินาที")
+                        st.rerun()   # เริ่มนับถอยหลัง + ปิดช่องกรอกทันที
+                    else:
+                        _n_left = _LOGIN_MAX_TRY - int(
+                            st.session_state.get('_login_fail_n') or 0)
+                        st.error("❌ รหัสผ่านไม่ถูกต้อง"
+                                 + (f" (เหลืออีก {_n_left} ครั้งก่อนถูกล็อกชั่วคราว)"
+                                    if _n_left <= 2 else ""))
 
         # 🖥️ แอป demo: แถบเหลือง-ดำเล็กบนหน้า login — "Demonstration mode"
         #    (มุคกี้สั่ง 2 ส.ค. 2026: เลิกใช้กรอบฟ้า st.info ให้เข้าชุดแถบใหญ่)
@@ -916,8 +1045,8 @@ def main():
             try:
                 from presence import beat as _presence_beat
                 _presence_beat('family')
-            except Exception:
-                pass
+            except Exception as _fbx:
+                print(f"[main] presence (จอญาติ) ข้าม: {_fbx}")
             from family_board import render_family_board
             render_family_board()
         else:
@@ -955,6 +1084,10 @@ def main():
         else:   # 🔒 fail-closed: ไม่ตั้ง token / token ผิด = เข้าไม่ได้
             st.error("🚪 จอประจำห้องไม่พร้อมใช้งาน : กรุณาติดต่อผู้วิจัย (Mukky)")
             st.stop()
+
+    # ⏳ ตัดสิทธิ์ผู้วิจัยที่ทิ้งหน้าจอไว้นานเกิน — ต้องอยู่ "ก่อน" password gate
+    #    เพื่อให้ตกลงไปเจอหน้า login ในรอบเดียวกัน ไม่ใช่รอบถัดไป
+    _enforce_idle_timeout()
 
     # 🔒 Password gate ก่อนทุก action
     if not _check_password():

@@ -934,25 +934,43 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 if ((int(new_t) != eff or _room_changed)
                         and st.button("💾 บันทึก", key=f"tb_sv_{idx}",
                                       width='stretch')):
+                    # ✏️ กันพิมพ์ผิดหลัก (30 → 300) ก่อนค่าจะชนะ AI บนบอร์ด
+                    #    และก่อนไหลลง override_log ซึ่งเป็นข้อมูลวิจัย
+                    _ovk = f"_ov_confirm_{c.get('id') or idx}"
+                    _ovwarn = ''
                     if int(new_t) != eff:
-                        c['user_override_min'] = int(new_t)
-                        c['effective_min'] = int(new_t)
                         try:
-                            from main_or_db import log_override
-                            log_override(c, int(new_t))
-                        except Exception as _ex:
-                            print(f"[override_log] log_override ล้มเหลว: {_ex}")
-                    if _room_changed:
-                        c['room'] = _new_room
-                        c['or_room_assigned'] = _new_room
-                    if mark_dirty:
-                        mark_dirty(c)   # CR-2: ✏️ แก้เวลา/ย้ายห้อง ต้องเซฟขึ้นบอร์ดกลาง
-                    try:    # 🎨 demo: ตอบรับทันที (Doherty)
-                        from main_or_pages import _toast_ok
-                        _toast_ok("บันทึกแล้ว ✓")
-                    except Exception:
-                        pass
-                    _rerun_board()
+                            from main_or_core import override_sanity_warning
+                            _ovwarn = override_sanity_warning(int(new_t), _ai0)
+                        except Exception as _wx:
+                            print(f"[override] ตรวจค่าผิดปกติไม่สำเร็จ: {_wx}")
+                    if _ovwarn and st.session_state.get(_ovk) != int(new_t):
+                        # ครั้งแรก: เตือนคาไว้ตรงนี้ รอกดยืนยันอีกครั้ง
+                        # ⚠️ ห้าม st.stop() ที่นี่ — อยู่ใน fragment จะตัดแถวที่เหลือ
+                        #    ของบอร์ดทิ้งทั้งหมด (บอร์ดหายไปครึ่งจอ)
+                        st.session_state[_ovk] = int(new_t)
+                        st.warning(_ovwarn)
+                    else:
+                        st.session_state.pop(_ovk, None)
+                        if int(new_t) != eff:
+                            c['user_override_min'] = int(new_t)
+                            c['effective_min'] = int(new_t)
+                            try:
+                                from main_or_db import log_override
+                                log_override(c, int(new_t))
+                            except Exception as _ex:
+                                print(f"[override_log] log_override ล้มเหลว: {_ex}")
+                        if _room_changed:
+                            c['room'] = _new_room
+                            c['or_room_assigned'] = _new_room
+                        if mark_dirty:
+                            mark_dirty(c)   # CR-2: ✏️ แก้เวลา/ย้ายห้อง ต้องเซฟขึ้นบอร์ดกลาง
+                        try:    # 🎨 demo: ตอบรับทันที (Doherty)
+                            from main_or_pages import _toast_ok
+                            _toast_ok("บันทึกแล้ว ✓")
+                        except Exception:
+                            pass
+                        _rerun_board()
 
                 # 🌙 เคสที่ผ่าไปแล้วก่อนบอร์ดเปิด (เช่นฉุกเฉินกลางคืน) — มุคกี้สั่ง 19 ก.ค. 2026
                 #    มีเฉพาะเคส "ยังไม่มา" · เคสที่เข้า flow แล้วใช้ปุ่มปกติ/↩️ ตามเดิม

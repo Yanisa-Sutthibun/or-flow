@@ -143,9 +143,27 @@ def _ensure_table(conn):
             actual_or_min INTEGER,
             actual_source TEXT,
             csv_updated_at TEXT,
-            updated_at TEXT
+            updated_at TEXT,
+            actor_role TEXT,
+            actor_room INTEGER
         )""")
     conn.commit()
+    # 🔁 migration (11 ส.ค. 2026 · ตรวจระบบข้อ 3): ตารางเดิมยังไม่มีคอลัมน์ actor
+    #    เก็บแค่ "บทบาท + เลขจอห้อง" ไม่ใช่ข้อมูลส่วนบุคคล (ดู main_or_db.current_actor)
+    try:
+        from main_or_db import _table_columns
+        _cols = _table_columns(conn, 'research_case_log')
+        if 'actor_role' not in _cols:
+            conn.execute("ALTER TABLE research_case_log ADD COLUMN actor_role TEXT")
+        if 'actor_room' not in _cols:
+            conn.execute("ALTER TABLE research_case_log ADD COLUMN actor_room INTEGER")
+        conn.commit()
+    except Exception as _mx:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f"[research_log] เพิ่มคอลัมน์ actor ไม่สำเร็จ (ใช้ต่อได้): {_mx}")
     # 🔒 เปิด RLS ทันทีที่ตารางเกิด (26 ก.ค. 2026) — กันประตู REST API ของ
     #    Supabase โดยไม่ต้องจำไปรัน SQL มือ · sqlite ไม่รู้จักคำสั่งนี้ = ข้ามเงียบ
     try:
@@ -167,7 +185,8 @@ def log_case_state(case) -> bool:
         if not cref:
             return False
 
-        from main_or_db import get_conn, _mask_staff_for_log, _now
+        from main_or_db import (get_conn, _mask_staff_for_log, _now,
+                                current_actor)
         now = _now()
         log_date = now.date().isoformat()
 
@@ -193,6 +212,8 @@ def log_case_state(case) -> bool:
         except (TypeError, IndexError):
             lo, hi = None, None
         actual_new = _int(case.get('actual_duration_min'))
+        # 👣 จอไหนเป็นคนกดปุ่มล่าสุดของเคสนี้ (upsert = ทับด้วยคนกดล่าสุดเสมอ)
+        actor_role, actor_room = current_actor()
 
         vals = {
             'hn_hash': hn_hash(case.get('hn')),
@@ -216,6 +237,8 @@ def log_case_state(case) -> bool:
             'pred_proc_n': _int(case.get('proc_n')),
             'user_override_min': _int(case.get('user_override_min')),
             'updated_at': now.isoformat(timespec='seconds'),
+            'actor_role': actor_role,
+            'actor_room': actor_room,
         }
 
         conn = get_conn()

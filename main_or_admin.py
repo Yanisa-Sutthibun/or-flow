@@ -3688,6 +3688,16 @@ def page_admin(section='today'):
         pass
     st.markdown(_ADMIN_CSS, unsafe_allow_html=True)
 
+    # 🩺 เตือนเมื่อ AI ตกไปใช้ชั้น fallback มากผิดปกติ (11 ส.ค. 2026 · ตรวจระบบข้อ 7)
+    #    ขึ้นทุกแท็บของหน้าผู้วิจัย เพราะเป็นเรื่องที่ต้องรู้ "ก่อน" อ่านตัวเลขใด ๆ
+    try:
+        from main_or_core import prediction_health
+        _ph = prediction_health()
+        if _ph.get('alert'):
+            st.error(_ph['message'])
+    except Exception as _phx:
+        print(f"[admin] ตรวจสุขภาพการทำนายไม่สำเร็จ (ข้าม): {_phx}")
+
     today = _now_bkk().strftime('%Y-%m-%d')
 
     # (เอาบรรทัด "ข้อมูล ณ วันที่..." ออก — วันที่/เวลาปรับล่าสุดโชว์ที่ชิปบนแถบหัวแล้ว)
