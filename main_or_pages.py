@@ -860,11 +860,44 @@ _DIV_OPTIONS = [
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
+def _demo_surgeons_by_specialty():
+    """🎭 รายชื่อแพทย์สำหรับช่อง "แพทย์ผ่าตัด" บนแอปสาธิต — ชื่อสมมุติล้วน
+    ═══════════════════════════════════════════════════════════════════
+    ⛔ PDPA (มุคกี้พบ 12 ส.ค. 2026): เดิม dropdown นี้ดึง DISTINCT surgeon_name
+       จากตาราง cases ซึ่งบนแอปสาธิตคือ schema demo ที่มีชื่อแพทย์จริงปนอยู่
+       → ชื่อบุคลากรจริงโผล่ให้ผู้ทรงคุณวุฒิ/คนนอกเห็น ทั้งที่กติกาข้อ 6 ของ
+       โปรเจกต์ระบุว่าคนนอกได้สิทธิ์ DEMO เท่านั้น แอปนี้จึงห้ามมีชื่อจริงทุกกรณี
+
+    ชุดนี้เอาจาก demo_cases_data.DEMO_POOL ซึ่งเป็นชื่อสมมุติที่จับคู่กับ SURG_xxx
+    อยู่แล้ว (เช่น "วีระ จ" = SURG_003) เคสที่ผู้ทรงพิมพ์เพิ่มเองจึงยังทำนายด้วย
+    โมเดลจริงได้เหมือนเดิม · อ่านไม่ได้ = คืนว่าง (ช่องกลายเป็นพิมพ์อิสระ ไม่พัง
+    และไม่มีทางหลุดชื่อจริง)"""
+    try:
+        from demo_cases_data import DEMO_POOL
+        from main_or_db import div_name
+    except Exception as _ex:
+        print(f"[demo] อ่านรายชื่อแพทย์สาธิตไม่ได้ ({type(_ex).__name__}): {_ex}")
+        return {}
+    out = {}
+    for _d in DEMO_POOL:
+        _nm = str(_d.get('surgeon') or '').strip()
+        if _nm:
+            out.setdefault(div_name(str(_d.get('division') or '1')), set()).add(_nm)
+    return {k: sorted(v) for k, v in out.items()}
+
+
 def _surgeons_by_specialty():
     """🧑‍⚕️ {ชื่อสาขา: [ชื่อแพทย์]} จากประวัติในตาราง cases — เติม dropdown
     "แพทย์ผ่าตัด" ตามสาขาที่เลือก · unmask รหัส SURG_xxx ได้เมื่อเครื่องมีกุญแจ
     (เครื่องที่ไม่มีกุญแจ เช่น cloud → รายชื่อว่าง = ช่องกลายเป็นพิมพ์อิสระ ไม่พัง)
-    key ด้วย "ชื่อสาขา" (div_name) — ครอบทั้งรหัสสาขาชุดเก่า (75,74,…) และใหม่ (1-10)"""
+    key ด้วย "ชื่อสาขา" (div_name) — ครอบทั้งรหัสสาขาชุดเก่า (75,74,…) และใหม่ (1-10)
+    🎭 แอปสาธิต: ตัดออกตั้งแต่บรรทัดแรก ไม่แตะตาราง cases เลย (PDPA — ห้ามชื่อจริง
+       โผล่ให้คนนอกเห็น · ดู _demo_surgeons_by_specialty)"""
+    try:
+        if str(st.secrets.get('instance_mode', '')).lower() == 'demo':
+            return _demo_surgeons_by_specialty()
+    except Exception:
+        pass
     try:
         from main_or_db import get_conn, div_name
         conn = get_conn()
@@ -966,8 +999,11 @@ def _render_add_case_form(demo_active):
                 "🤖 แพทย์ผ่าตัด *", options=_known_surg, index=None,
                 key="ac_surg_sel", accept_new_options=True,
                 placeholder="พิมพ์ค้นหา หรือพิมพ์ชื่อแพทย์ใหม่แล้วกด Enter",
-                help=(f"รายชื่อจากประวัติเคสสาขานี้ ({len(_known_surg)} คน) — "
-                      "ถ้าเป็นแพทย์ใหม่ พิมพ์ชื่อ-สกุลเต็มแล้วกด Enter ได้เลย"))
+                help=((f"รายชื่อแพทย์สมมุติของระบบสาธิต ({len(_known_surg)} คน) : "
+                       "พิมพ์ชื่ออื่นเองก็ได้ ระบบทำนายเวลาให้เหมือนกัน")
+                      if _demo_inst else
+                      (f"รายชื่อจากประวัติเคสสาขานี้ ({len(_known_surg)} คน) — "
+                       "ถ้าเป็นแพทย์ใหม่ พิมพ์ชื่อ-สกุลเต็มแล้วกด Enter ได้เลย")))
         except TypeError:   # streamlit เก่ากว่า 1.45 — พิมพ์อิสระตามเดิม
             surg = st.text_input("🤖 แพทย์ผ่าตัด *", key="ac_surg",
                                  placeholder="ชื่อแพทย์")

@@ -727,6 +727,48 @@ def test_demo_switch_survives_broken_presence():
     assert P._demo_switch_pressed('on', False) is True
 
 
+# ═══ 12. 🎭 PDPA: แอปสาธิตห้ามมีชื่อแพทย์จริง (มุคกี้พบ 12 ส.ค. 2026) ═══
+# ช่อง "แพทย์ผ่าตัด" ในฟอร์มเพิ่มเคสเคยดึง DISTINCT surgeon_name จากตาราง cases
+# ซึ่งบนแอปสาธิตคือ schema demo ที่มีชื่อแพทย์จริงปนอยู่ → ชื่อจริงโผล่ให้คนนอกเห็น
+# กติกาข้อ 6 ของโปรเจกต์: ผู้ทรงคุณวุฒิ/คนนอกได้สิทธิ์ DEMO เท่านั้น
+
+def _as_demo_instance(on=True):
+    st.secrets = {'instance_mode': 'demo'} if on else {}
+
+
+def test_demo_surgeon_list_comes_only_from_demo_pool():
+    _fresh_state()
+    from demo_cases_data import DEMO_POOL
+    _ok = {str(d.get('surgeon') or '').strip() for d in DEMO_POOL}
+    got = P._demo_surgeons_by_specialty()
+    assert got, "รายชื่อแพทย์สาธิตว่างเปล่า"
+    for _spec, _names in got.items():
+        for _n in _names:
+            assert _n in _ok, f"ชื่อ '{_n}' ไม่ได้มาจากชุดเคสสาธิต"
+
+
+def test_demo_instance_never_queries_real_case_table():
+    """บนแอปสาธิต ต้องไม่แตะตาราง cases เลย — _isolate_io ทำให้ get_conn ระเบิด
+    ถ้าเผลอเปิด connection เทสต์นี้จึงจับได้ทันทีว่ามีเส้นทางหลุดไปอ่านของจริง"""
+    _fresh_state()
+    _as_demo_instance(True)
+    try:
+        got = P._surgeons_by_specialty()
+    finally:
+        _as_demo_instance(False)
+    assert got == P._demo_surgeons_by_specialty(), "แอปสาธิตไม่ได้ใช้รายชื่อสมมุติ"
+
+
+def test_demo_surgeon_names_are_masked_style():
+    """ชื่อในชุดสาธิตต้องเป็นชื่อสมมุติแบบ 'ชื่อต้น + อักษรไทยตัวเดียว'
+    (กันวันหลังมีคนเผลอเอาชื่อจริงใส่ DEMO_POOL แล้วไม่มีอะไรเตือน)"""
+    _fresh_state()
+    import re
+    for _spec, _names in P._demo_surgeons_by_specialty().items():
+        for _n in _names:
+            assert re.fullmatch(r'[ก-๙]+ [ก-๙]', _n), f"ชื่อ '{_n}' ไม่ใช่รูปแบบชื่อสมมุติ"
+
+
 # ═════════════════════════════ runner ═════════════════════════════
 
 def _run_all():
