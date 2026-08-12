@@ -790,14 +790,38 @@ def test_demo_instance_does_not_download_staff_map():
         _as_demo_instance(False)
 
 
-def test_demo_surgeon_names_are_masked_style():
-    """ชื่อในชุดสาธิตต้องเป็นชื่อสมมุติแบบ 'ชื่อต้น + อักษรไทยตัวเดียว'
-    (กันวันหลังมีคนเผลอเอาชื่อจริงใส่ DEMO_POOL แล้วไม่มีอะไรเตือน)"""
+# 🎭 ชื่อแพทย์ในชุดสาธิต ต้องเป็นชื่อตัวละครในวรรณคดี/แบบเรียนภาษาไทยเท่านั้น
+# (มุคกี้เลือกเอง 12 ส.ค. 2026): คนไทยทุกคนจำได้ทันทีว่าเป็นชื่อสมมุติ ไม่ใช่คนจริง
+# ⛔ รายชื่อนี้คือด่านสุดท้ายกันชื่อจริงหลุดเข้า DEMO_POOL — ถ้าจะเพิ่มแพทย์สาธิต
+#    ต้องมาเพิ่มชื่อที่นี่ด้วย จะได้มีคนตรวจซ้ำเสมอว่าไม่ใช่ชื่อคนจริง
+_DEMO_SURGEON_WHITELIST = {
+    'มานะ รักเผ่าไทย', 'มานี รักเผ่าไทย', 'ปิติ พิทักษ์ถิ่น',
+    'ชูใจ เลิศล้ำ', 'วีระ ประสงค์สุข', 'สุดสาคร เกาะแก้ว',
+    'ก้านกล้วย คชสาร', 'โกมินทร์ กุมาร', 'พิมพิลาลัย วันทอง',
+    'เจ้าหญิง พิกุลทอง', 'ฟ้าลั่น มะม่วง',
+}
+
+
+def test_demo_surgeon_names_are_fictional_only():
+    """กันวันหลังมีคนเผลอเอาชื่อแพทย์จริงใส่ DEMO_POOL แล้วไม่มีอะไรเตือน"""
     _fresh_state()
-    import re
     for _spec, _names in P._demo_surgeons_by_specialty().items():
         for _n in _names:
-            assert re.fullmatch(r'[ก-๙]+ [ก-๙]', _n), f"ชื่อ '{_n}' ไม่ใช่รูปแบบชื่อสมมุติ"
+            assert _n in _DEMO_SURGEON_WHITELIST, f"ชื่อ '{_n}' ไม่อยู่ในรายชื่อสมมุติที่อนุมัติ"
+
+
+def test_demo_surgeon_names_are_unique_per_code():
+    """แพทย์สาธิตแต่ละรหัส SURG_ ต้องมีชื่อไม่ซ้ำกัน — คนละรหัสคือคนละคน
+    (คนละประวัติ คนละค่าทำนายของ AI) ถ้าชื่อซ้ำ บอร์ดจะดูเหมือนหมอคนเดียวอยู่ 2 ห้อง"""
+    _fresh_state()
+    from demo_cases_data import DEMO_POOL
+    by_code = {}
+    for d in DEMO_POOL:
+        _c, _n = d.get('surgeon_code'), str(d.get('surgeon') or '').strip()
+        if _c:
+            assert by_code.setdefault(_c, _n) == _n, f"รหัส {_c} มีหลายชื่อ"
+    _names = list(by_code.values())
+    assert len(set(_names)) == len(_names), "มีชื่อแพทย์สาธิตซ้ำกันข้ามรหัส"
 
 
 # ═════════════════════════════ runner ═════════════════════════════
