@@ -4,7 +4,7 @@ live_link.py — ตัวเชื่อมข้อมูลสด: หน้�
 แปลง st.session_state.patient_cases ให้อยู่ในโครงเดียวกับ
 get_room_status() / get_kpi() / get_workload() / get_delay_alerts()
 เพื่อให้ การ์ดห้อง + ไทม์ไลน์ AI + KPI + ภาระงาน + แจ้งเตือน แสดงชุดเดียวกับกระดาน
-(เวลาคาดการณ์ใช้ effective_min — ค่าที่คนแก้ชนะ AI — เชื่อม override ไปด้วย)
+(เวลาทำนายใช้ effective_min — ค่าที่คนแก้ชนะ AI — เชื่อม override ไปด้วย)
 """
 import pandas as pd
 from datetime import datetime

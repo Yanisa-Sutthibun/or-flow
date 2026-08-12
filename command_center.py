@@ -4,7 +4,7 @@ command_center.py — พยากรณ์เวลาเสร็จราย�
 ใช้ข้อมูลรายห้องจาก get_room_status() (มี rm['cases'] = DataFrame ทุกเคสของห้อง
 พร้อม ai_predicted_min / in_or_at / op_end_at / status)
 
-room_forecast(rm)        → dict สถานะ + เวลาเสร็จคาดการณ์ (ใช้ร่วมทั้ง 2 section)
+room_forecast(rm)        → dict สถานะ + เวลาเสร็จทำนาย (ใช้ร่วมทั้ง 2 section)
 forecast_caption_html()  → บรรทัด "เคสสุดท้ายของวัน" สำหรับการ์ด (Section 1)
 render_room_timeline()   → ไทม์ไลน์รายห้อง (Section 2)
 ทั้งสอง section เรียก room_forecast ตัวเดียวกัน → ตัวเลขตรงกันเสมอ (เชื่อมกัน)
