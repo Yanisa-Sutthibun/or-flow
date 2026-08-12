@@ -618,6 +618,115 @@ def test_demo_refresh_overwrites_finished_cases_on_central_board():
     assert saved[0]['status'] == 'not_arrived', "ชุดสาธิตใหม่ถูกด่าน CR-3 บล็อก"
 
 
+# ═══ 11. 🛡️ ถามก่อนสลับสวิตช์สาธิต ถ้ามีเครื่องอื่นออนไลน์ (มุกกี้สั่ง 12 ส.ค. 2026) ═══
+# สวิตช์นี้เขียนทับ "บอร์ดกลาง" ที่ทุกจอใช้ร่วมกัน ผู้ทรงที่กดเล่นอยู่คนละเครื่อง
+# จะโดนล้าง/รีเซ็ตใส่หน้าโดยไม่รู้ตัว → ไม่มีใครออนไลน์ = กดผ่านเลย มีคน = ถามก่อน
+
+import presence as PR                                # noqa: E402
+
+
+def _fake_online(*counts_by_kind):
+    """แทน presence.counts() ด้วยยอดปลอม (รวมเครื่องที่ถามเองด้วยเสมอ)"""
+    PR.counts = lambda: dict(counts_by_kind)
+
+
+def test_others_online_does_not_count_myself():
+    _fresh_state()
+    _fake_online(('staff', 3), ('room', 2))
+    assert PR.others_online() == 4
+
+
+def test_others_online_is_zero_when_alone_or_unreadable():
+    """อ่าน heartbeat ไม่ได้ = ถือว่าไม่มีใคร (ห้ามขวางการใช้งาน) และห้ามติดลบ"""
+    _fresh_state()
+    _fake_online(('staff', 1))
+    assert PR.others_online() == 0
+    _fake_online()
+    assert PR.others_online() == 0
+
+
+def test_demo_switch_goes_through_when_nobody_else_online():
+    """อยู่คนเดียว: กดแล้วต้องทำงานทันที ไม่มีขั้นตอนเพิ่ม"""
+    _fresh_state()
+    _fake_online(('staff', 1))
+    assert P._demo_switch_pressed('on', False) is True
+    assert P._demo_switch_pressed('off', True) is False
+    assert st.session_state.get('_demo_switch_confirm') is None
+
+
+def test_demo_switch_asks_first_when_others_online():
+    """มีเครื่องอื่นอยู่: ยังไม่สลับ แต่ตั้งธงขอยืนยัน + จำจำนวนเครื่องไว้แสดง"""
+    _fresh_state()
+    _fake_online(('staff', 2), ('room', 1))
+    assert P._demo_switch_pressed('off', True) is True, "ปิดไปแล้วทั้งที่ยังไม่ยืนยัน"
+    assert st.session_state['_demo_switch_confirm'] == 'off'
+    assert st.session_state['_demo_switch_others'] == 2
+
+    _fresh_state()
+    _fake_online(('staff', 2))
+    assert P._demo_switch_pressed('on', False) is False
+    assert st.session_state['_demo_switch_confirm'] == 'on'
+
+
+def _buttons(*pressed):
+    """คุมว่าปุ่มคีย์ไหนถูกกดในรอบนี้ — st_stub ตั้งต้นให้ทุกปุ่มเป็น 'ถูกกด' เสมอ
+    ซึ่งใช้ทดสอบกล่องยืนยันไม่ได้ (ต้องแยกให้ออกระหว่างกดยืนยัน/กดยกเลิก/ไม่กดเลย)"""
+    st.button = lambda *_a, **_k: _k.get('key') in pressed
+
+
+def test_demo_switch_confirm_box_states_the_consequence():
+    """กล่องยืนยันต้องบอกจำนวนเครื่อง + ผลที่จะเกิดกับ 'ทุกจอ' ไม่ใช่แค่จอตัวเอง"""
+    _fresh_state()
+    _buttons()                                   # ยังไม่กดปุ่มไหน
+    st.session_state['_demo_switch_others'] = 3
+    assert P._render_demo_switch_confirm('off', True) is True, "สลับทั้งที่ยังไม่ยืนยัน"
+    _warn = ' '.join(st.calls['warning'])
+    assert '3' in _warn and 'ทุกจอ' in _warn, _warn
+
+    _fresh_state()
+    _buttons()
+    st.session_state['_demo_switch_others'] = 2
+    P._render_demo_switch_confirm('on', False)
+    assert 'ทับบอร์ดของทุกจอ' in ' '.join(st.calls['warning'])
+
+
+def test_demo_switch_confirm_yes_applies_the_action():
+    _fresh_state()
+    _buttons('orboard_demo_confirm_yes')
+    st.session_state['_demo_switch_confirm'] = 'off'
+    st.session_state['_demo_switch_others'] = 2
+    assert P._render_demo_switch_confirm('off', True) is False   # ปิดจริง
+    assert st.session_state.get('_demo_switch_confirm') is None, "ธงยืนยันค้าง"
+    assert st.session_state.get('_demo_switch_others') is None
+
+    _fresh_state()
+    _buttons('orboard_demo_confirm_yes')
+    assert P._render_demo_switch_confirm('on', False) is True     # เปิดจริง
+
+
+def test_demo_switch_confirm_cancel_changes_nothing():
+    """กดยกเลิก = สถานะเดิมทุกอย่าง + ธงต้องถูกล้าง ไม่งั้นกล่องจะค้างถามซ้ำ"""
+    _fresh_state()
+    _buttons('orboard_demo_confirm_no')
+    st.session_state['_demo_switch_confirm'] = 'off'
+    st.session_state['_demo_switch_others'] = 2
+    assert P._render_demo_switch_confirm('off', True) is True
+    assert st.session_state.get('_demo_switch_confirm') is None
+    assert st.session_state.get('_demo_switch_others') is None
+
+
+def test_demo_switch_survives_broken_presence():
+    """presence ใช้ไม่ได้ (DB ล่ม) = ต้องกดได้ตามปกติ ไม่ใช่ค้างหรือ error"""
+    _fresh_state()
+
+    def _boom():
+        raise RuntimeError("presence ล่ม")
+
+    PR.counts = _boom
+    assert P._demo_switch_others_online() == 0
+    assert P._demo_switch_pressed('on', False) is True
+
+
 # ═════════════════════════════ runner ═════════════════════════════
 
 def _run_all():

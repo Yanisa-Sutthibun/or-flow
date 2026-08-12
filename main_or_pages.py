@@ -570,6 +570,61 @@ def _sync_demo_flag_from_board(cases, is_demo_instance):
     return True
 
 
+def _demo_switch_others_online():
+    """มีเครื่องอื่นเปิด OR Flow ค้างอยู่กี่เครื่องตอนนี้ (0 = กดสวิตช์สาธิตได้เลย)
+    อ่านไม่ได้ = 0 โดยตั้งใจ (ดู presence.others_online) ห้ามขวางการใช้งาน"""
+    try:
+        from presence import others_online
+        return int(others_online())
+    except Exception as _px:
+        print(f"[demo] นับเครื่องออนไลน์ไม่ได้ ({type(_px).__name__}): {_px}")
+        return 0
+
+
+def _render_demo_switch_confirm(action, demo_on):
+    """กล่องยืนยันก่อนสลับสวิตช์สาธิต เมื่อมีเครื่องอื่นเปิดค้างอยู่
+    (มุคกี้สั่ง 12 ส.ค. 2026): ปุ่มนี้เขียนทับ "บอร์ดกลาง" ที่ทุกจอใช้ร่วมกัน
+    ผู้ทรงคุณวุฒิที่กดเล่นอยู่คนละเครื่องจะโดนล้าง/รีเซ็ตใส่หน้าโดยไม่รู้ตัว
+    → ไม่มีใครออนไลน์ = กดผ่านเลยเหมือนเดิม · มีคนอยู่ = ถามก่อนหนึ่งจังหวะ
+
+    ใช้กล่องยืนยันในหน้าแทน st.dialog เพราะบอร์ดอยู่ใน fragment ที่เด้งเองทุก 30 วิ
+    และโปรเจกต์นี้ยังไม่ได้ใช้ dialog ที่ไหนเลย (เสี่ยงน้อยกว่า) · คืนค่า _demo_on ที่จะใช้ต่อ"""
+    _n = int(st.session_state.get('_demo_switch_others') or 0)
+    if action == 'off':
+        _what = ("ปิดโหมดสาธิตจะล้างเคสสาธิตออกจากทุกจอทันที "
+                 "รวมถึงสิ่งที่เครื่องอื่นกำลังกดค้างอยู่")
+        _yes = "⏹️ ยืนยัน ปิดโหมดสาธิต"
+    else:
+        _what = ("เปิดโหมดสาธิตจะสร้างชุดเคสจำลองใหม่ทับบอร์ดของทุกจอ "
+                 "สิ่งที่เครื่องอื่นกดไว้จะหายทั้งหมด")
+        _yes = "🎬 ยืนยัน เปิดโหมดสาธิต"
+    st.warning(f"⚠️ ตอนนี้มีอีก {_n} เครื่องเปิด OR Flow อยู่ : {_what}")
+    _c_yes, _c_no = st.columns(2)
+    with _c_yes:
+        if st.button(_yes, key="orboard_demo_confirm_yes", width='stretch'):
+            st.session_state.pop('_demo_switch_confirm', None)
+            st.session_state.pop('_demo_switch_others', None)
+            return action == 'on'
+    with _c_no:
+        if st.button("ยกเลิก", key="orboard_demo_confirm_no", width='stretch'):
+            st.session_state.pop('_demo_switch_confirm', None)
+            st.session_state.pop('_demo_switch_others', None)
+            _rerun_board()
+    return demo_on
+
+
+def _demo_switch_pressed(action, demo_on):
+    """กดสวิตช์สาธิตแล้ว: ไม่มีเครื่องอื่น = ทำเลย · มีเครื่องอื่น = ขอยืนยันก่อน
+    คืนค่า _demo_on ที่จะใช้ต่อ (ยังไม่เปลี่ยนถ้าต้องถามก่อน)"""
+    _n = _demo_switch_others_online()
+    if _n <= 0:
+        return action == 'on'
+    st.session_state['_demo_switch_confirm'] = action
+    st.session_state['_demo_switch_others'] = _n
+    _rerun_board()
+    return demo_on
+
+
 DEMO_IDLE_RESET_MIN = 60      # 🎬 มุกกี้เลือก 12 ส.ค. 2026 (เผื่อเวลาอ่านคู่มือ/นั่งดูเฉย ๆ)
 
 
@@ -1410,16 +1465,22 @@ def _board_fragment():
             #    ข้ามแท็บ ทำให้กดเปิด-ปิดไม่ติด) → เปลี่ยนเป็นปุ่มกดตรง ๆ
             #    ปุ่ม = stateless สั่งธง _or_demo ทันที ไม่มีสถานะ widget ให้ค้าง
             #    เห็นทีละปุ่มตามสถานะจริง (Hick's Law: ทางเลือกเดียว กดไม่พลาด)
+            #    🛡️ 12 ส.ค. 2026 (มุคกี้สั่ง): ปุ่มนี้เขียนทับบอร์ดกลางที่ทุกจอ
+            #    ใช้ร่วมกัน → ถ้ามีเครื่องอื่นออนไลน์อยู่ ขอยืนยันก่อนหนึ่งจังหวะ
+            #    (ไม่มีใครออนไลน์ = กดผ่านเลย ไม่เพิ่มขั้นตอนให้คนใช้คนเดียว)
             _demo_on = bool(st.session_state.get('_or_demo'))
-            if _demo_on:
+            _confirm = st.session_state.get('_demo_switch_confirm')
+            if _confirm in ('on', 'off'):
+                _demo_on = _render_demo_switch_confirm(_confirm, _demo_on)
+            elif _demo_on:
                 if st.button("⏹️ ปิดโหมดสาธิต", key="orboard_demo_off",
                              help="ปิดแล้วเคสสาธิตทั้งหมดจะถูกล้างออกจากบอร์ด"):
-                    _demo_on = False
+                    _demo_on = _demo_switch_pressed('off', _demo_on)
             else:
                 if st.button("🎬 เปิดโหมดสาธิต", key="orboard_demo_on",
                              help="เปิดแล้วจะมีเคสสาธิตพร้อมใช้งาน "
                                   "กดปุ่มต่าง ๆ ได้เหมือนระบบจริง"):
-                    _demo_on = True
+                    _demo_on = _demo_switch_pressed('on', _demo_on)
     if _demo_on and not st.session_state.get('_or_demo'):
         st.session_state.patient_cases = _or_board_demo()
         st.session_state['_or_demo'] = True
