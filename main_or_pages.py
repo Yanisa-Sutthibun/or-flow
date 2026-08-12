@@ -545,6 +545,28 @@ def _load_board_snapshot():
         return None
 
 
+def _board_is_demo_set(cases):
+    """บอร์ดที่ดึงกลับมาจากบอร์ดกลาง เป็น 'ชุดสาธิต' อยู่หรือเปล่า
+    (12 ส.ค. 2026 · มุคกี้แจ้ง): ธง _or_demo อยู่แค่ใน session_state — ปิดเครื่อง
+    แล้วล็อกอินใหม่ = session ใหม่ ธงหาย แต่เคสสาธิตยังอยู่บนบอร์ดกลาง
+    จึงต้องกู้ธงจาก "เนื้อบอร์ด" แทน · ใช้ any ไม่ใช่ all เพราะบนแอป DEMO
+    ผู้ทรงเพิ่มเคส walk-in เองได้ระหว่างสาธิต (เคสที่พิมพ์เองไม่มีธง _demo)"""
+    return bool(cases) and any(bool(c.get('_demo')) for c in cases)
+
+
+def _sync_demo_flag_from_board(cases, is_demo_instance):
+    """กู้ธง 🎬 สาธิต ให้ตรงกับบอร์ดที่เพิ่งดึงจากบอร์ดกลาง — คืน True ถ้าเพิ่งเปิดให้
+    ⚠️ เปิดได้อย่างเดียว ห้ามปิดอัตโนมัติ: การปิดสาธิตจะล้างบอร์ดกลางทิ้ง
+    (clear_board_state) จอที่ดึงข้อมูลช้ากว่าจะพากันล้างบอร์ดของคนอื่น —
+    การปิดต้องมาจากคนกดปุ่ม ⏹️ เท่านั้น"""
+    if not is_demo_instance or st.session_state.get('_or_demo'):
+        return False
+    if not _board_is_demo_set(cases):
+        return False
+    st.session_state['_or_demo'] = True
+    return True
+
+
 def _or_board_demo():
     """เคสสาธิต Main OR — สร้างจาก demo_cases_data.DEMO_POOL (28 ก.ค. 2026)
     ═══════════════════════════════════════════════════════════════════
@@ -1265,6 +1287,13 @@ def _board_fragment():
                 st.session_state.patient_cases = _shared
                 cases = _shared
                 st.session_state['_board_was_restored'] = True
+                # 🎬 12 ส.ค. 2026 (มุคกี้แจ้ง): ล็อกอินใหม่แล้วปุ่มขึ้น "เปิดโหมด
+                #    สาธิต" ทั้งที่เปิดค้างอยู่ — เพราะธงอยู่แค่ใน session_state
+                #    แต่เคสสาธิตอยู่บนบอร์ดกลาง · กดปุ่มนั้นจะโหลดชุดจำลองใหม่
+                #    ทับสิ่งที่เพิ่งกดเล่นไปทั้งหมด → กู้ธงจากเนื้อบอร์ดที่ดึงมา
+                #    ⚠️ ตั้ง True อย่างเดียว ห้ามตั้ง False อัตโนมัติ:
+                #    การปิดสาธิตจะล้างบอร์ดกลาง ต้องมาจากคนกดปุ่มเท่านั้น
+                _sync_demo_flag_from_board(_shared, _is_demo_instance)
     _dbfail = st.session_state.get('_board_db_fail', 0)
     if cases and _dbfail > 0:
         # 🔌 M-09: เซฟขึ้น DB กลางล้มเหลว → บอกตรง ๆ ว่าออฟไลน์ (ไม่โกหกว่า "ซิงก์แล้ว")

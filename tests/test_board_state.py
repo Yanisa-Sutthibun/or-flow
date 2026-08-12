@@ -474,6 +474,55 @@ def test_snapshot_masks_name_hn_and_drops_procnote():
     assert c['name'] == 'สมชาย ใจดีมาก'      # ของบนจอต้องไม่ถูกแก้ตาม
 
 
+# ═════════ 9. 🎬 ธงสาธิตต้องรอด "ปิดเครื่องแล้วล็อกอินใหม่" ═════════
+# มุคกี้แจ้ง 12 ส.ค. 2026: เปิดสาธิตไว้ → ปิดเครื่อง → ล็อกอินใหม่ แล้วปุ่มขึ้น
+# "🎬 เปิดโหมดสาธิต" ทั้งที่เคสสาธิตยังอยู่บนบอร์ด · กดปุ่มนั้น = โหลดชุดจำลอง
+# ใหม่ทับสิ่งที่ผู้ทรงเพิ่งกดเล่นไปทั้งหมด
+
+def test_demo_flag_recovered_after_relogin():
+    """session ใหม่ (ธงหาย) + บอร์ดกลางยังเป็นชุดสาธิต → ต้องกู้ธงกลับมาเอง"""
+    _fresh_state()
+    assert st.session_state.get('_or_demo') is None      # เหมือนเพิ่งล็อกอินใหม่
+    restored = [_case(id='D1'), _case(id='D2')]          # _case มี _demo=True
+    assert P._sync_demo_flag_from_board(restored, True) is True
+    assert st.session_state['_or_demo'] is True
+
+
+def test_demo_flag_not_set_on_production_instance():
+    """ระบบจริงไม่มีปุ่มสาธิต — เคส 🧪 ทดสอบที่อัปโหลดไว้ต้องไม่ปลุกธงสาธิต"""
+    _fresh_state()
+    assert P._sync_demo_flag_from_board([_case()], False) is False
+    assert not st.session_state.get('_or_demo')
+
+
+def test_demo_flag_not_set_for_real_cases():
+    """บอร์ดที่เป็นเคสจริงล้วน (ไม่มีธง _demo) ต้องไม่ถูกมองว่าเป็นชุดสาธิต"""
+    _fresh_state()
+    real = [_case(id='R1', _demo=False), _case(id='R2', _demo=False)]
+    assert P._sync_demo_flag_from_board(real, True) is False
+    assert not st.session_state.get('_or_demo')
+    assert P._sync_demo_flag_from_board([], True) is False   # บอร์ดว่าง
+
+
+def test_demo_flag_survives_walkin_case_added_during_demo():
+    """แอป DEMO เพิ่มเคส walk-in ระหว่างสาธิตได้ (เคสที่พิมพ์เองไม่มีธง _demo)
+    บอร์ดผสมแบบนี้ยังต้องนับเป็นชุดสาธิต ไม่งั้นล็อกอินใหม่แล้วธงหายอีก"""
+    _fresh_state()
+    mixed = [_case(id='D1'), _case(id='W1', _demo=False, name='เคสแทรก')]
+    assert P._sync_demo_flag_from_board(mixed, True) is True
+    assert st.session_state['_or_demo'] is True
+
+
+def test_demo_flag_never_auto_turned_off():
+    """ห้ามปิดธงอัตโนมัติ: การปิดสาธิตจะล้างบอร์ดกลางทิ้ง (clear_board_state)
+    จอที่ดึงข้อมูลช้ากว่าจะพากันล้างบอร์ดของเครื่องอื่น — ปิดได้จากปุ่ม ⏹️ เท่านั้น"""
+    _fresh_state()
+    st.session_state['_or_demo'] = True
+    for board in ([], [_case(_demo=False)], [_case()]):
+        assert P._sync_demo_flag_from_board(board, True) is False   # ไม่ต้องเปิดซ้ำ
+        assert st.session_state['_or_demo'] is True, "ธงถูกปิดอัตโนมัติ = อันตราย"
+
+
 # ═════════════════════════════ runner ═════════════════════════════
 
 def _run_all():
