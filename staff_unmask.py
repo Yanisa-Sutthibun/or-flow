@@ -41,10 +41,38 @@ _CODE_PATTERN = re.compile(r"\b(SURG|SCRUB|CIRC)_\d{2,5}\b")
 _cache: Optional[dict] = None
 
 
+def _is_demo_instance() -> bool:
+    """แอปที่กำลังรันอยู่คือ "ระบบสาธิต" หรือเปล่า (อ่านไม่ได้ = ถือว่าไม่ใช่)
+    เขียนไว้ในไฟล์นี้เองเพราะโมดูลนี้ถูก import จากสคริปต์ที่ไม่มี streamlit ด้วย"""
+    try:
+        import streamlit as _st
+        return str(_st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        return False
+
+
 def _load_mapping() -> dict[str, str]:
-    """Load mapping CSV → {masked_code: original_name}"""
+    """Load mapping CSV → {masked_code: original_name}
+
+    🎭 12 ส.ค. 2026 (PDPA · มุคกี้พบ): ระบบสาธิตห้ามถอดรหัสกลับเป็นชื่อจริงเด็ดขาด
+    ═══════════════════════════════════════════════════════════════════
+    ผู้ทรงคุณวุฒิ/คนนอกได้สิทธิ์เข้าเฉพาะแอปสาธิต (กติกาข้อ 6 ของโปรเจกต์)
+    ถ้าแอปนั้นมีพจนานุกรมนี้ ทุกจุดที่แสดงผลจะเปลี่ยน SURG_xxx เป็นชื่อจริงให้เอง
+    (6 จุดใน main_or_db: สถิติแพทย์ · Top-5 แพทย์ · การ์ดเคสที่กำลังผ่า · รับส่งเวร)
+    ปิดที่ฟังก์ชันนี้จุดเดียว = ปิดครบทุกทาง เพราะ unmask / unmask_multi /
+    apply_to_dataframe / is_available เรียกผ่านตัวนี้ทั้งหมด
+
+    ⛔ จงใจ "ไม่ลบไฟล์" staff_mapping.csv ทิ้ง: เครื่องที่ รพ. อาจเปิด demo_app.py
+       บนเครื่องที่มีทะเบียนตัวจริงวางอยู่ การลบจะทำลายข้อมูลตั้งต้นของระบบจริง
+    ⚠️ ผลข้างเคียงที่ยอมรับแล้ว: บนแอปสาธิต โมเดลจะจับคู่ "ชื่อแพทย์ที่พิมพ์เอง"
+       กับรหัสไม่ได้ (เท่ากับเครื่องที่ไม่มี mapping ซึ่งโค้ดรองรับอยู่แล้ว)
+       เคสในชุดสาธิตไม่กระทบ เพราะส่ง SURG_xxx เข้าโมเดลตรง ๆ อยู่แล้ว
+    """
     global _cache
     if _cache is not None:
+        return _cache
+    if _is_demo_instance():
+        _cache = {}
         return _cache
     if not _MAPPING_PATH.exists():
         _cache = {}

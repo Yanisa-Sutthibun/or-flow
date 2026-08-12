@@ -37,6 +37,17 @@ def ensure_staff_mapping() -> str | None:
     """ตอนแอปบูต: มีไฟล์อยู่แล้ว → 'local' · ไม่มี → ดึงจาก Supabase มาเขียนไฟล์
     ('cloud') · ดึงไม่ได้ → None (แอปทำงานต่อแบบไม่เห็นตัวแพทย์ — เหมือนก่อนแก้)"""
     global _failed
+    # 🎭 12 ส.ค. 2026 (PDPA · มุคกี้พบ): แอปสาธิตห้ามดึงทะเบียนชื่อจริงลงมาเก็บ
+    #    ผู้ทรงคุณวุฒิ/คนนอกเข้าได้เฉพาะแอปนี้ (กติกาข้อ 6) ถ้ามีไฟล์นี้อยู่ข้างแอป
+    #    ทุกจุดที่แสดงผลจะถอด SURG_xxx กลับเป็นชื่อจริงอัตโนมัติ
+    #    (ชั้นที่สองอยู่ที่ staff_unmask._load_mapping ซึ่งปฏิเสธการถอดรหัสอีกที
+    #     เผื่อกรณีเปิด demo_app.py บนเครื่อง รพ. ที่มีไฟล์จริงวางอยู่แล้ว)
+    try:
+        import streamlit as _st
+        if str(_st.secrets.get('instance_mode', '')).lower() == 'demo':
+            return 'demo-skip'
+    except Exception:
+        pass
     if os.path.exists(CSV_PATH):
         return 'local'
     if _failed:

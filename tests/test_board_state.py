@@ -759,6 +759,37 @@ def test_demo_instance_never_queries_real_case_table():
     assert got == P._demo_surgeons_by_specialty(), "แอปสาธิตไม่ได้ใช้รายชื่อสมมุติ"
 
 
+def test_demo_instance_refuses_to_unmask_staff_codes():
+    """ด่านที่สอง: ต่อให้มีไฟล์ staff_mapping.csv วางอยู่ข้างแอป (เช่นเปิด demo_app.py
+    บนเครื่อง รพ.) ระบบสาธิตก็ต้องไม่แปลง SURG_xxx กลับเป็นชื่อจริง
+    ปิดที่ _load_mapping จุดเดียว = ปิดครบทุกทางที่แสดงผล"""
+    _fresh_state()
+    import staff_unmask as SU
+    _keep = SU._cache
+    try:
+        _as_demo_instance(True)
+        SU._cache = None
+        assert SU._load_mapping() == {}
+        assert SU.is_available() is False
+        assert SU.unmask('SURG_003') == 'SURG_003', "ระบบสาธิตถอดรหัสเป็นชื่อจริง"
+        assert SU.unmask_multi('SURG_003, SURG_011') == 'SURG_003, SURG_011'
+    finally:
+        _as_demo_instance(False)
+        SU._cache = _keep
+
+
+def test_demo_instance_does_not_download_staff_map():
+    """ด่านแรก: แอปสาธิตต้องไม่ดึงทะเบียนชื่อจริงจากฐานข้อมูลมาเขียนไฟล์ตอนบูต
+    (_isolate_io ทำให้ get_conn ระเบิด ถ้าเผลอไปดึงจริงเทสต์นี้จะจับได้)"""
+    _fresh_state()
+    import staff_map_sync as SMS
+    try:
+        _as_demo_instance(True)
+        assert SMS.ensure_staff_mapping() == 'demo-skip'
+    finally:
+        _as_demo_instance(False)
+
+
 def test_demo_surgeon_names_are_masked_style():
     """ชื่อในชุดสาธิตต้องเป็นชื่อสมมุติแบบ 'ชื่อต้น + อักษรไทยตัวเดียว'
     (กันวันหลังมีคนเผลอเอาชื่อจริงใส่ DEMO_POOL แล้วไม่มีอะไรเตือน)"""
