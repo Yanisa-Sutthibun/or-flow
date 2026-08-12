@@ -536,6 +536,9 @@ def _load_board_snapshot():
             st.session_state['_snap_pii_kept'] = bool(payload.get('pii_kept', False))
             # 🔁 CR-2: จำ version ที่เพิ่งโหลด = ฐานสำหรับ optimistic concurrency ตอนเซฟ
             st.session_state['_board_base_version'] = int(payload.get('version', 0) or 0)
+            # 🎬 12 ส.ค. 2026: เวลาที่ "มีคนกดปุ่มครั้งล่าสุด" — บอร์ดเซฟเฉพาะตอน
+            #    dirty จริง (ไม่ได้เซฟทุก tick) ค่านี้จึงเป็นเวลาใช้งานจริง ไม่ใช่เวลาเปิดจอ
+            st.session_state['_snap_saved_at'] = payload.get('saved_at')
         except Exception:
             pass
         return [{k: _deser(val) for k, val in c.items()}
@@ -565,6 +568,45 @@ def _sync_demo_flag_from_board(cases, is_demo_instance):
         return False
     st.session_state['_or_demo'] = True
     return True
+
+
+DEMO_IDLE_RESET_MIN = 60      # 🎬 มุกกี้เลือก 12 ส.ค. 2026 (เผื่อเวลาอ่านคู่มือ/นั่งดูเฉย ๆ)
+
+
+def _demo_board_idle_min(saved_at, now):
+    """ชุดสาธิตบนบอร์ดกลางถูกกดปุ่มครั้งล่าสุดมาแล้วกี่นาที
+    คืน None ถ้าอ่านเวลาไม่ได้ — ผู้เรียกต้องแปลว่า 'ไม่รู้ = อย่ารีเซ็ต' (fail-safe)"""
+    if not saved_at:
+        return None
+    try:
+        ts = (saved_at if isinstance(saved_at, datetime)
+              else datetime.fromisoformat(str(saved_at)))
+    except (ValueError, TypeError):
+        return None
+    # _now() ของโปรเจกต์เป็นเวลาไทยแบบ "ไม่มี tzinfo" (ดูหัวไฟล์) — ถ้า payload
+    # ติด timezone มาด้วย (บิลด์เก่า/เครื่องอื่น) ลบกันตรง ๆ จะ TypeError แล้วเงียบ
+    # ทั้งสองฝั่งเป็นเวลาไทยอยู่แล้ว จึงปรับให้เทียบกันได้แทนที่จะยอมแพ้
+    if (ts.tzinfo is None) != (now.tzinfo is None):
+        ts = ts.replace(tzinfo=now.tzinfo)
+    return (now - ts).total_seconds() / 60.0
+
+
+def _should_refresh_demo_board(cases, is_demo_instance, saved_at, now):
+    """ถึงเวลาสร้างชุดสาธิตใหม่ทับของเดิมหรือยัง
+    ═══════════════════════════════════════════════════════════════════
+    ทำไมต้องมี (มุกกี้สั่ง 12 ส.ค. 2026): เคสสาธิตถูกสร้างโดยอิงเวลา "ตอนกดเปิด"
+    (เช่น OR3 เข้าห้องมาแล้ว 40% ของเวลาที่ทำนาย) ทิ้งค้างไว้ข้ามชั่วโมง เคสที่
+    ยังผ่าอยู่จะเลยเวลาทำนายไปไกล → บอร์ดแดงยกแถว + หน้าบริหารขึ้นเตือนเกินเวลารัว
+    ผู้ทรงที่เปิดเข้ามาทีหลังจะเห็นภาพที่ไม่ใช่ของจริง
+
+    เกณฑ์ 'ค้าง' นับจากการกดปุ่มครั้งล่าสุดของทุกเครื่อง ไม่ใช่เวลาที่เปิดจอทิ้งไว้
+    (บอร์ดเซฟขึ้น DB เฉพาะตอนมีคนกดจริง) → ใครกำลังใช้อยู่จะไม่ถูกรีเซ็ตใส่หน้า"""
+    if not is_demo_instance or not _board_is_demo_set(cases):
+        return False
+    idle = _demo_board_idle_min(saved_at, now)
+    if idle is None:
+        return False                     # อ่านเวลาไม่ได้ = ไม่รู้ → อย่าไปล้างของใคร
+    return idle >= DEMO_IDLE_RESET_MIN
 
 
 def _or_board_demo():
@@ -1294,6 +1336,25 @@ def _board_fragment():
                 #    ⚠️ ตั้ง True อย่างเดียว ห้ามตั้ง False อัตโนมัติ:
                 #    การปิดสาธิตจะล้างบอร์ดกลาง ต้องมาจากคนกดปุ่มเท่านั้น
                 _sync_demo_flag_from_board(_shared, _is_demo_instance)
+                # 🎬 ชุดสาธิตค้างเกิน 60 นาที (ไม่มีใครกดปุ่มเลย) = เลิกใช้แล้ว →
+                #    สร้างชุดใหม่อิงเวลาปัจจุบัน ไม่งั้นเคสที่ยังผ่าอยู่จะเลยเวลา
+                #    ทำนายไปไกลจนบอร์ดแดงยกแถว · ผู้ทรงเปิดตอนไหนก็ได้ภาพที่ถูก
+                if _should_refresh_demo_board(
+                        _shared, _is_demo_instance,
+                        st.session_state.get('_snap_saved_at'), _now()):
+                    _fresh = _or_board_demo()
+                    if _fresh:
+                        st.session_state.patient_cases = _fresh
+                        cases = _fresh
+                        st.session_state['_or_demo'] = True
+                        # ชุดใหม่ทั้งกระดาน = เขียนทับตรง ๆ (base_version เพิ่ง sync
+                        # จาก _load_board_snapshot → ไม่เข้าเส้น merge ราย-เคส)
+                        st.session_state['_board_dirty_ids'] = set()
+                        _save_board_snapshot(_fresh)
+                        # ฝากข้อความตรง ๆ ไม่ผ่าน _toast_ok — เลี่ยงเสียง "กดสำเร็จ"
+                        # ทั้งที่ไม่มีใครกดปุ่ม (อยู่ใน _is_demo_instance อยู่แล้ว)
+                        st.session_state['_pending_toast'] = (
+                            "รีเฟรชชุดสาธิตใหม่แล้ว 🎬 (ค้างเกิน 1 ชม.)")
     _dbfail = st.session_state.get('_board_db_fail', 0)
     if cases and _dbfail > 0:
         # 🔌 M-09: เซฟขึ้น DB กลางล้มเหลว → บอกตรง ๆ ว่าออฟไลน์ (ไม่โกหกว่า "ซิงก์แล้ว")

@@ -523,6 +523,101 @@ def test_demo_flag_never_auto_turned_off():
         assert st.session_state['_or_demo'] is True, "ธงถูกปิดอัตโนมัติ = อันตราย"
 
 
+# ═════════ 10. 🎬 ชุดสาธิตค้างนาน = สร้างใหม่ (มุกกี้สั่ง 12 ส.ค. 2026) ═════════
+# เคสสาธิตอิงเวลา "ตอนกดเปิด" ทิ้งค้างข้ามชั่วโมงแล้วเคสที่ยังผ่าอยู่จะเลยเวลา
+# ทำนายไปไกล → บอร์ดแดงยกแถว ผู้ทรงที่เปิดทีหลังเห็นภาพที่ไม่ใช่ของจริง
+
+def _ago(minutes):
+    """เวลาบันทึกล่าสุดแบบ ISO ย้อนหลัง N นาที (รูปแบบเดียวกับ payload จริง)"""
+    return (P._now() - timedelta(minutes=minutes)).isoformat()
+
+
+def test_demo_board_refreshed_when_idle_too_long():
+    _fresh_state()
+    stale = _ago(P.DEMO_IDLE_RESET_MIN + 5)
+    assert P._should_refresh_demo_board([_case()], True, stale, P._now()) is True
+
+
+def test_demo_board_kept_while_someone_is_using_it():
+    """เกณฑ์นับจาก 'การกดปุ่มครั้งล่าสุด' — ใครกำลังใช้อยู่ต้องไม่ถูกรีเซ็ตใส่หน้า"""
+    _fresh_state()
+    for idle in (0, 5, P.DEMO_IDLE_RESET_MIN - 1):
+        assert P._should_refresh_demo_board(
+            [_case()], True, _ago(idle), P._now()) is False, f"idle={idle}"
+
+
+def test_demo_board_refresh_needs_demo_instance_and_demo_cases():
+    """ระบบจริง / บอร์ดเคสจริง ห้ามถูกสร้างทับเด็ดขาด (ข้อมูลผู้ป่วยจริงหาย)"""
+    _fresh_state()
+    stale = _ago(P.DEMO_IDLE_RESET_MIN + 120)
+    real = [_case(_demo=False)]
+    assert P._should_refresh_demo_board([_case()], False, stale, P._now()) is False
+    assert P._should_refresh_demo_board(real, True, stale, P._now()) is False
+    assert P._should_refresh_demo_board([], True, stale, P._now()) is False
+
+
+def test_demo_board_refresh_fails_safe_on_unreadable_time():
+    """อ่านเวลาไม่ได้ = ไม่รู้ว่าค้างจริงไหม → ห้ามล้างของใคร"""
+    _fresh_state()
+    for bad in (None, '', 'เมื่อกี้', '2026-13-45T99:99', 12345):
+        assert P._should_refresh_demo_board(
+            [_case()], True, bad, P._now()) is False, f"saved_at={bad!r}"
+        assert P._demo_board_idle_min(bad, P._now()) is None
+
+
+def test_demo_idle_min_reads_the_format_the_app_actually_writes():
+    """_save_board_snapshot เขียน saved_at = _now().isoformat() (เวลาไทย ไม่มี tzinfo)
+    ต้องอ่านกลับมาเป็นจำนวนนาทีได้ตรง — ไม่ใช่ None แล้วไม่รีเซ็ตอะไรเลยตลอดกาล"""
+    _fresh_state()
+    _FAKE_DB.clear()
+    P._save_board_snapshot([_case()])
+    import json
+    saved_at = json.loads(_FAKE_DB[P._now().date().isoformat()])['saved_at']
+    idle = P._demo_board_idle_min(saved_at, P._now() + timedelta(minutes=90))
+    assert idle is not None and 89 <= idle <= 91, (saved_at, idle)
+
+
+def test_demo_idle_min_handles_timestamp_with_timezone():
+    """payload ที่ติด timezone มา (บิลด์เก่า/เครื่องอื่น) ต้องเทียบกับ _now() แบบ
+    ไม่มี tzinfo ได้ ไม่ใช่ TypeError แล้วเงียบจนบอร์ดไม่มีวันรีเซ็ต"""
+    _fresh_state()
+    now = P._now()
+    assert now.tzinfo is None, "ข้อสมมุติของเทสต์นี้เปลี่ยนไปแล้ว — _now() ไม่ naive"
+    from datetime import timezone
+    aware = (now - timedelta(minutes=90)).replace(
+        tzinfo=timezone(timedelta(hours=7))).isoformat()
+    idle = P._demo_board_idle_min(aware, now)
+    assert idle is not None and 89 <= idle <= 91, idle
+
+
+def test_demo_refresh_overwrites_finished_cases_on_central_board():
+    """ชุดสาธิตใหม่ต้องเขียนทับของเก่าได้จริง แม้ของเก่าจะเดินไปถึง 'จำหน่าย' แล้ว
+    (ด่าน CR-3 ห้ามสถานะถอยหลังต้องไม่บล็อกการสร้างชุดใหม่ทั้งกระดาน —
+    เส้นทางนี้ไม่เข้า merge ราย-เคส เพราะ base_version เพิ่ง sync จากตอนโหลด)
+    เคสสาธิตจริงไม่มีคีย์ id → คีย์ merge = hn|หัตถการ|เวลานัด"""
+    _fresh_state()
+    _FAKE_DB.clear()
+    old = _case(id=None, status='discharged', actual_duration_min=88)
+    old.pop('id')
+    P._save_board_snapshot([old])                    # ชุดเก่าอยู่บนบอร์ดกลาง
+
+    _fresh_state()                                   # ผู้ทรงคนใหม่เปิดแอป = session ใหม่
+    restored = P._load_board_snapshot()
+    assert restored and restored[0]['status'] == 'discharged'
+    assert P._should_refresh_demo_board(
+        restored, True, _ago(P.DEMO_IDLE_RESET_MIN + 30), P._now()) is True
+
+    new = _case(id=None, status='not_arrived')       # ชุดใหม่ = ทุกเคสกลับไปตั้งต้น
+    new.pop('id')
+    st.session_state['_board_dirty_ids'] = set()
+    P._save_board_snapshot([new])
+
+    import json
+    saved = json.loads(_FAKE_DB[P._now().date().isoformat()])['cases']
+    assert len(saved) == 1, saved
+    assert saved[0]['status'] == 'not_arrived', "ชุดสาธิตใหม่ถูกด่าน CR-3 บล็อก"
+
+
 # ═════════════════════════════ runner ═════════════════════════════
 
 def _run_all():
