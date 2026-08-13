@@ -157,6 +157,13 @@ def _ensure_table(conn):
             conn.execute("ALTER TABLE research_case_log ADD COLUMN actor_role TEXT")
         if 'actor_room' not in _cols:
             conn.execute("ALTER TABLE research_case_log ADD COLUMN actor_room INTEGER")
+        # 🔔 ระบบเรียกคิว (13 ส.ค. 2026): เวลาเรียกจริง + เวลาแผน + จอที่กด —
+        #    ตอบตัวชี้วัด "เรียกแล้วผู้ป่วยรอไม่เกิน 60 นาที" ได้ตรง ๆ
+        #    (called_at → arrived_holding_at → entered_or_at อยู่แถวเดียวกัน)
+        for _ck, _ct in (('called_at', 'TEXT'), ('call_planned_hhmm', 'TEXT'),
+                         ('call_source', 'TEXT')):
+            if _ck not in _cols:
+                conn.execute(f"ALTER TABLE research_case_log ADD COLUMN {_ck} {_ct}")
         conn.commit()
     except Exception as _mx:
         try:
@@ -236,6 +243,11 @@ def log_case_state(case) -> bool:
             'pred_confidence': case.get('confidence'),
             'pred_proc_n': _int(case.get('proc_n')),
             'user_override_min': _int(case.get('user_override_min')),
+            # 🔔 ระบบเรียกคิว: เวลาเรียกจริง (📣/🔔) + เวลาแผนที่แช่แข็งตอนกด
+            #    + จอที่กด — undo การเรียกแล้ว upsert รอบถัดไปจะกลายเป็น NULL ตามจริง
+            'called_at': _iso(case.get('call_time')),
+            'call_planned_hhmm': case.get('call_planned_hhmm'),
+            'call_source': case.get('call_from'),
             'updated_at': now.isoformat(timespec='seconds'),
             'actor_role': actor_role,
             'actor_room': actor_room,

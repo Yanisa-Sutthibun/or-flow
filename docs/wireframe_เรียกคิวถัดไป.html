@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Wireframe — ระบบเรียกคิวถัดไป (rev.2 ตามคอมเมนต์มุคกี้ 13 ส.ค. 2026)</title>
+<style>
+  body{font-family:'Segoe UI','Leelawadee UI',sans-serif;background:#e9edf2;margin:0;padding:24px;color:#1e293b}
+  .page{max-width:960px;margin:0 auto}
+  .note{background:#fff8e1;border:1px dashed #d4a017;border-radius:8px;padding:10px 14px;font-size:13.5px;color:#7a5c00;margin:0 0 18px}
+  .app{background:#fff;border:1px solid #d7dee8;border-radius:14px;padding:20px 24px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:20px}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:#64748b;font-size:13px;margin-bottom:14px}
+  h2{font-size:16px;margin:0 0 8px;color:#0d47a1}
+  .muted{color:#94a3b8;font-size:12.5px}
+  .annot{font-size:12px;color:#b45309;margin:2px 0 12px}
+
+  /* ── การ์ดเคสบนบอร์ด (แถวบน = ข้อมูลเคสเดิม · แถวล่าง = เรียกคิวถัดไป ของใหม่) ── */
+  .bcard{border:1px solid #eef2f6;border-left:5px solid #cbd5e1;background:#fff;border-radius:10px;margin:8px 0;overflow:hidden}
+  .bcard.inor{border-left-color:#22a565}
+  .brow{display:flex;align-items:center;gap:10px;padding:8px 12px;height:52px}
+  .b-rm{width:76px;flex:none}.b-rm b{font-size:17px;color:#1565c0}.b-rm span{display:block;font-size:11px;color:#94a3b8}
+  .b-q{width:46px;flex:none;font-size:13px;color:#64748b}
+  .b-nm{width:128px;flex:none}.b-nm b{display:block;font-size:14px}.b-nm span{font-size:11px;color:#94a3b8}
+  .b-op{flex:1;min-width:0}.b-op div{font-size:14px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .b-op span{font-size:12px;color:#94a3b8}
+  .b-st{width:96px;flex:none}
+  .b-tm{width:190px;flex:none;text-align:right;font-variant-numeric:tabular-nums}
+  .b-tm .main{font-size:15px;color:#475569}
+  .b-tm .sub2{font-size:11.5px;color:#8a96a3;white-space:nowrap}
+  .chipst{display:inline-block;border-radius:999px;padding:3px 11px;font-size:12px;font-weight:700}
+  .st-wait{background:#f1f5f9;color:#64748b}
+  .st-inor{background:#e6f6ec;color:#1b7f4b}
+
+  /* ── แถวเรียกคิวถัดไป (ของใหม่ ต่อท้ายการ์ด) ── */
+  .callline{display:flex;align-items:center;gap:8px;border-top:1px dashed #e2e8f0;background:#fafcff;
+    padding:6px 12px;font-size:13px;font-variant-numeric:tabular-nums}
+  .callline .ico{font-size:15px}
+  .callline b.t{font-size:16px;color:#2f7d52}
+  .callline.called{background:#f3f9f5}
+  .callline.called b.t{color:#1565c0}
+  .pencil{border:1px solid #d7dee8;background:#fff;border-radius:7px;padding:2px 8px;font-size:13px;cursor:pointer}
+  .bell{border:1px solid #f0deb0;background:#fff8e1;border-radius:7px;padding:2px 9px;font-size:14px;cursor:pointer}
+  .ovbadge{background:#e3f0fb;color:#1565c0;border-radius:8px;padding:1px 8px;font-size:11px;font-weight:600}
+  .spacer{flex:1}
+  .undo{color:#94a3b8;font-size:12px;border:1px solid #e2e8f0;border-radius:7px;padding:1px 8px;background:#fff}
+
+  /* ── กล่องแก้เวลา + กล่องยืนยันกระดิ่ง ── */
+  .pop{border:1px solid #bbdefb;border-left:5px solid #1565c0;background:#f4f8fd;border-radius:12px;padding:12px 14px;max-width:520px}
+  .pop .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:7px 0}
+  .qchip{border:1px solid #bbd3ee;background:#fff;color:#1565c0;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700}
+  .qchip.sel{background:#1565c0;color:#fff}
+  .tfield{border:1px solid #bbd3ee;border-radius:8px;padding:5px 10px;font-size:16px;font-weight:700;width:78px;text-align:center;background:#fff;font-variant-numeric:tabular-nums}
+  select{border:1px solid #bbd3ee;border-radius:8px;padding:5px 8px;font-size:12.5px;color:#475569;background:#fff}
+  .hint{font-size:11.5px;color:#8a96a3}
+  .btn{display:inline-block;border-radius:9px;padding:7px 14px;font-size:13.5px;font-weight:700;border:none}
+  .btn.pri{background:#1565c0;color:#fff}
+  .btn.ok{background:#22a565;color:#fff}
+  .btn.ghost{background:#fff;color:#475569;border:1px solid #d7dee8;font-weight:600}
+  .confirm{border:1px solid #f0deb0;border-left:5px solid #e3920b;background:#fffdf5;border-radius:12px;padding:12px 14px;max-width:480px}
+
+  table.rules{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0}
+  table.rules th{background:#eef4fb;color:#0d47a1;text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:2px solid #d7e3f4}
+  table.rules td{padding:6px 10px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+  ul{margin:6px 0 6px 20px;padding:0}li{margin:3px 0;font-size:13px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="note">📐 <b>Wireframe — ระบบเรียกคิวถัดไป · rev.2</b> (mock-up · ยังไม่แก้โค้ด · 13 ส.ค. 2026)<br>
+แก้ตามคอมเมนต์มุคกี้: ตัดแผงการ์ดแยกของ rev.1 ทิ้ง → <b>ฝังเป็น "แถวเรียกคิวถัดไป" ต่อท้ายการ์ดเคส
+บนจอรับ-ส่งโดยตรง</b> (ไอคอนคิวถัดไป : เวลาเรียก · ค่าเริ่มต้นจาก AI · เคสที่ไม่ได้จัดคิว = แถวนี้ว่าง)
+· แก้เวลาที่ไอคอนดินสอ ✏️ (สงวนสิทธิ์ให้จอรับ-ส่ง และจอห้องเฉพาะเคสห้องตัวเอง)
+· <b>จอในห้องผ่าตัดมีกระดิ่ง 🔔 บนการ์ดเคสรอผ่า</b> กดแล้วถามยืนยัน "เรียกคิวของเคสนี้ใช่ไหม"
+→ เวลาที่กดเรียกไปโผล่ที่จอรับ-ส่ง</div>
+
+<!-- ═══════════════ ① จอรับ-ส่ง ═══════════════ -->
+<div class="app">
+  <h1>① จอรับ-ส่ง : การ์ดเคสมีแถวล่างใหม่ "เรียกคิวถัดไป" <span class="muted" style="font-weight:400">(ตอนนี้ 10:50)</span></h1>
+  <div class="sub">แถวบน = การ์ดเคสหน้าตาเดิมทุกอย่าง · แถวล่าง (พื้นฟ้าจาง เส้นประคั่น) = ของใหม่</div>
+
+  <!-- เคสกำลังผ่า : แถวเรียกคิวโชว์ของ "คิวถัดไปในห้องนี้" ไม่ได้อยู่ที่การ์ดนี้ -->
+  <div class="bcard inor">
+    <div class="brow">
+      <span class="b-rm"><b>OR92</b><span>URO</span></span>
+      <span class="b-q">09:00</span>
+      <span class="b-nm"><b>นาย สมชาย 3</b><span>HN ••••0003</span></span>
+      <span class="b-op"><div>LT. DJ STENT EXCHANGING</div><span>ชูใจ เลิศล้ำ</span></span>
+      <span class="b-st"><span class="chipst st-inor" style="display:block;text-align:center">กำลังผ่า</span></span>
+      <span class="b-tm"><span class="main">40 / 75 น.</span><br><span class="sub2">ออกห้อง ~10:55-11:55</span></span>
+    </div>
+  </div>
+
+  <!-- เคสคิวถัดไป OR92 : ยังไม่เรียก ใช้เวลา AI -->
+  <div class="bcard">
+    <div class="brow">
+      <span class="b-rm"><b>OR92</b><span>URO</span></span>
+      <span class="b-q">คิว 2</span>
+      <span class="b-nm"><b>ด.ต. สมศักดิ์ 4</b><span>HN ••••0004</span></span>
+      <span class="b-op"><div>REZUM</div><span>ชูใจ เลิศล้ำ</span></span>
+      <span class="b-st"><span class="chipst st-wait" style="display:block;text-align:center">ยังไม่มา</span></span>
+      <span class="b-tm"><span class="main">~50 น.</span><br><span class="sub2">ward ฉก.12</span></span>
+    </div>
+    <div class="callline">
+      <span class="ico">⏭️</span> เรียกคิวถัดไป : <b class="t">~11:10</b>
+      <span class="hint">(AI คำนวณ · อีก 20 น.)</span>
+      <button class="pencil" title="แก้เวลาเรียก : กดได้จากจอรับ-ส่ง และจอห้อง OR92">✏️</button>
+      <span class="spacer"></span><span class="chipst st-wait">รอเรียก</span>
+    </div>
+  </div>
+
+  <!-- เคสคิวถัดไป OR95 : แก้เวลาแล้ว -->
+  <div class="bcard">
+    <div class="brow">
+      <span class="b-rm"><b>OR95</b><span>NEURO</span></span>
+      <span class="b-q">คิว 2</span>
+      <span class="b-nm"><b>นาย สมชาย 3</b><span>HN ••••0016</span></span>
+      <span class="b-op"><div>RT CRANIOTOMY C TUMOR REMOVAL</div><span>พิมพิลาลัย วันทอง</span></span>
+      <span class="b-st"><span class="chipst st-wait" style="display:block;text-align:center">ยังไม่มา</span></span>
+      <span class="b-tm"><span class="main">~3 ชม.</span><br><span class="sub2">ward ICU NEURO</span></span>
+    </div>
+    <div class="callline">
+      <span class="ico">⏭️</span> เรียกคิวถัดไป : <b class="t">11:20</b>
+      <span class="ovbadge">ปรับแล้ว · AI 11:50</span>
+      <button class="pencil">✏️</button>
+      <span class="spacer"></span><span class="chipst st-wait">รอเรียก</span>
+    </div>
+  </div>
+
+  <!-- เคสคิวถัดไป OR97 : ห้องกดกระดิ่งเรียกแล้ว → เวลาโผล่ที่นี่ -->
+  <div class="bcard">
+    <div class="brow">
+      <span class="b-rm"><b>OR97</b><span>ENT</span></span>
+      <span class="b-q">คิว 2</span>
+      <span class="b-nm"><b>นาง สมหญิง 2</b><span>HN ••••0002</span></span>
+      <span class="b-op"><div>LC</div><span>มานะ รักเผ่าไทย</span></span>
+      <span class="b-st"><span class="chipst st-wait" style="display:block;text-align:center">ยังไม่มา</span></span>
+      <span class="b-tm"><span class="main">~55 น.</span><br><span class="sub2">ward ฉก.8</span></span>
+    </div>
+    <div class="callline called">
+      <span class="ico">📣</span> เรียกแล้ว : <b class="t">10:47</b>
+      <span class="hint">กดกระดิ่งจากจอห้อง OR97 (AI แนะนำ ~10:45)</span>
+      <span class="spacer"></span>
+      <span class="chipst" style="background:#e3f0fb;color:#1565c0">โทรตาม ward แล้วรอรับเข้า</span>
+      <button class="undo" title="กดผิด : ยกเลิกการเรียก">↩️</button>
+    </div>
+  </div>
+
+  <!-- เคสไม่ได้จัดคิว : แถวเรียกคิวว่าง -->
+  <div class="bcard">
+    <div class="brow">
+      <span class="b-rm"><b>OR96</b><span>PLASTIC</span></span>
+      <span class="b-q">TF</span>
+      <span class="b-nm"><b>นาย สมหมาย 19</b><span>HN ••••0019</span></span>
+      <span class="b-op"><div>EXCISION</div><span>เจ้าหญิง พิกุลทอง</span></span>
+      <span class="b-st"><span class="chipst st-wait" style="display:block;text-align:center">ยังไม่มา</span></span>
+      <span class="b-tm"><span class="main">~30 น.</span><br><span class="sub2">ตามแพทย์นัด</span></span>
+    </div>
+  </div>
+  <div class="annot">☝️ เคสนี้ไม่ได้จัดคิว (TF/ยังไม่ผ่านการจัดคิว) : แถวเรียกคิวถัดไปว่าง ไม่แสดง</div>
+</div>
+
+<!-- ═══════════════ ② กล่องแก้เวลา (กดดินสอ) ═══════════════ -->
+<div class="app">
+  <h2>② กด ✏️ แล้วเจอกล่องนี้ (แก้เวลาเรียกคิว)</h2>
+  <div class="sub">สงวนสิทธิ์ : จอรับ-ส่งแก้ได้ทุกเคส · จอห้องแก้ได้เฉพาะเคสของห้องตัวเอง · จออื่นเห็นอย่างเดียว (ดินสอไม่ขึ้น)</div>
+  <div class="pop">
+    <b style="font-size:14px;color:#0d47a1">✏️ แก้เวลาเรียกคิว : ด.ต. สมศักดิ์ 4 · REZUM · OR92 คิว 2</b>
+    <div class="row">
+      <span class="qchip">-30 น.</span><span class="qchip sel">-15 น.</span><span class="qchip">+15 น.</span><span class="qchip">+30 น.</span>
+      <span class="hint">หรือพิมพ์ :</span> <input class="tfield" value="10:55">
+    </div>
+    <div class="row">
+      <span class="hint">เหตุผล :</span>
+      <select><option>ward อยู่ไกล</option><option>ผู้ป่วยเตรียมตัวนาน (ICU / เตียงเคลื่อนย้าย)</option><option>แพทย์สั่ง</option><option>อื่น ๆ (พิมพ์เอง)</option></select>
+      <button class="btn pri" style="padding:5px 14px">บันทึก 10:55</button>
+      <button class="btn ghost" style="padding:5px 12px">คืนค่า AI (~11:10)</button>
+    </div>
+    <div class="hint">ค่าที่แก้ชนะ AI และหยุดขยับตามสถานการณ์ · เก็บค่า AI + ค่าที่แก้ + เหตุผล + จอที่แก้ ลง log (แบบเดียวกับ override_log)</div>
+  </div>
+</div>
+
+<!-- ═══════════════ ③ จอในห้องผ่าตัด : กระดิ่ง ═══════════════ -->
+<div class="app">
+  <h2>③ จอในห้องผ่าตัด (เช่น จอห้อง OR97) : กระดิ่งบนการ์ดเคสรอผ่า</h2>
+  <div class="sub">ห้องเห็นเองว่าเคสในห้องใกล้เสร็จ → กด 🔔 สั่งเรียกคิวถัดไปของห้องตัวเองได้เลย ไม่ต้องวิ่งไปบอกรับ-ส่ง</div>
+
+  <div class="bcard inor">
+    <div class="brow">
+      <span class="b-rm"><b>OR97</b><span>ENT</span></span>
+      <span class="b-q">09:00</span>
+      <span class="b-nm"><b>ร.ต.อ. สมพร 1</b><span>HN ••••0001</span></span>
+      <span class="b-op"><div>TEMPORARY TRACHEOSTOMY</div><span>โกมินทร์ กุมาร</span></span>
+      <span class="b-st"><span class="chipst st-inor" style="display:block;text-align:center">กำลังผ่า</span></span>
+      <span class="b-tm"><span class="main">95 / 105 น.</span><br><span class="sub2">ออกห้อง ~10:40-11:40</span></span>
+    </div>
+  </div>
+
+  <div class="bcard">
+    <div class="brow">
+      <span class="b-rm"><b>OR97</b><span>ENT</span></span>
+      <span class="b-q">คิว 2</span>
+      <span class="b-nm"><b>นาง สมหญิง 2</b><span>HN ••••0002</span></span>
+      <span class="b-op"><div>LC</div><span>มานะ รักเผ่าไทย</span></span>
+      <span class="b-st"><span class="chipst st-wait" style="display:block;text-align:center">ยังไม่มา</span></span>
+      <span class="b-tm"><span class="main">~55 น.</span><br><span class="sub2">ward ฉก.8</span></span>
+    </div>
+    <div class="callline">
+      <span class="ico">⏭️</span> เรียกคิวถัดไป : <b class="t">~10:45</b>
+      <span class="hint">(AI คำนวณ)</span>
+      <button class="pencil" title="เคสห้องตัวเอง : แก้ได้">✏️</button>
+      <span class="spacer"></span>
+      <button class="bell">🔔 เรียกคิว</button>
+    </div>
+  </div>
+
+  <div style="margin:14px 0 4px;font-size:13px;color:#475569">กด 🔔 แล้วขึ้นกล่องยืนยันก่อน (กันมือลั่น) :</div>
+  <div class="confirm">
+    <b style="font-size:14.5px">🔔 เรียกคิวของเคสนี้ใช่ไหม</b>
+    <div style="font-size:13px;margin:6px 0;color:#475569">
+      นาง สมหญิง 2 · HN ••••0002 · LC · ward ฉก.8<br>
+      <span class="hint">AI แนะนำเรียก ~10:45 · ตอนนี้ 10:47</span>
+    </div>
+    <button class="btn ok">📣 ใช่ เรียกเลย</button>
+    <button class="btn ghost">ยกเลิก</button>
+    <div class="hint" style="margin-top:6px">ยืนยันแล้ว : บันทึกเวลาที่กด + จอที่กด → ขึ้นที่จอรับ-ส่งเป็น "📣 เรียกแล้ว 10:47" (การ์ดใบที่ 4 ใน ①)</div>
+  </div>
+</div>
+
+<!-- ═══════════════ ④ กติกา ═══════════════ -->
+<div class="app">
+  <h2>④ กติกาของระบบ (สรุปให้เคาะ)</h2>
+  <table class="rules">
+    <tr><th style="width:180px">เรื่อง</th><th>กติกาที่เสนอ</th></tr>
+    <tr><td><b>เวลาเริ่มต้น</b></td>
+      <td>มาจาก AI สูตรเดิมบนบอร์ด : คาดออกห้องของเคสก่อนหน้า (effective_min : คนแก้ชนะ AI) + เตรียมห้อง (median turnover รายห้อง) - 30 นาทีเผื่อโทร/เดินทาง → ผู้ป่วยมารอราว 15-30 นาที ไม่เกิน 1 ชั่วโมง · ยังไม่กดเรียกและไม่ได้แก้มือ = เวลาขยับตามสถานการณ์จริง (เคสก่อนหน้าเกินเวลา → เลื่อนออกอัตโนมัติ)</td></tr>
+    <tr><td><b>เคสไม่ได้จัดคิว</b></td>
+      <td>ไม่มีลำดับคิวในห้อง (TF/ตามแพทย์นัด/ยังไม่ผ่านหน้าจัดคิว) = แถวเรียกคิวว่าง ไม่แสดงทั้งแถว</td></tr>
+    <tr><td><b>สิทธิ์แก้คิว/เวลา (✏️)</b></td>
+      <td>จอรับ-ส่ง : แก้ได้ทุกเคส · จอห้อง : แก้ได้เฉพาะเคสของห้องตัวเอง (ตามหลัก "ล็อกที่มือ ไม่ล็อกที่ตา" เดิมของบอร์ด) · จอผู้บริหาร/จอญาติ : อ่านอย่างเดียว</td></tr>
+    <tr><td><b>กระดิ่ง (🔔 จอห้อง)</b></td>
+      <td>อยู่บนการ์ดเคสรอผ่าคิวถัดไปของห้องตัวเองเท่านั้น · กดแล้วถามยืนยัน "เรียกคิวของเคสนี้ใช่ไหม" → บันทึกเวลาที่กด + จอที่กด → โผล่ที่จอรับ-ส่งทันทีที่ซิงก์ (~30 วิ) ให้รับ-ส่งโทรตาม ward · ↩️ ยกเลิกได้กรณีกดผิด</td></tr>
+    <tr><td><b>ซิงก์หลายจอ</b></td>
+      <td>สถานะเรียกเป็น field ใหม่ในเคส (call_suggested_min, call_override, call_time, called_from ฯลฯ) → ติดไปกับ snapshot บอร์ดกลาง + merge กันสถานะถอยหลังตามกลไกเดิม</td></tr>
+    <tr><td><b>จังหวะจบ</b></td>
+      <td>ผู้ป่วยมาถึง → กด "รับเข้า" ปุ่มเดิมบนบอร์ด = จบวงจรเรียก · นาฬิกา waiting time เดินตามเดิม · ได้ระยะ "เรียก → มาถึง → เข้าห้อง" ครบ</td></tr>
+    <tr><td><b>ขอบเขตวิจัย</b></td>
+      <td>เคสในขอบเขต (in_research_scope เดิม) เก็บ call_suggested / call_actual / มาถึง / เข้าห้อง ลง research_case_log → ตอบตัวชี้วัด "เรียกแล้วรอไม่เกิน 60 นาที" ตรง ๆ · เคสนอกขอบเขตใช้ได้ครบแต่ไม่ทิ้งรอย</td></tr>
+    <tr><td><b>จอญาติ</b></td>
+      <td>ไม่แสดงอะไรเพิ่ม (read-only รหัสรับบริการ ตามเดิม)</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════ ⑤ คำถามให้เคาะ ═══════════════ -->
+<div class="app">
+  <h2>⑤ จุดที่ต้องเคาะก่อนลงโค้ดจริง</h2>
+  <ul>
+    <li><b>จอรับ-ส่งกดเรียกเองได้ไหม</b> (ไม่ผ่านกระดิ่งห้อง)? — เสนอ: ได้ ให้มีปุ่ม 📣 เล็ก ๆ ข้างดินสอด้วย กันกรณีห้องไม่ว่างกด</li>
+    <li><b>ถึง/เลยเวลาเรียกแล้วยังไม่มีใครกด</b> ให้แถวเรียกคิวเปลี่ยนสีเหลือง/แดง + เสียงเตือนที่จอรับ-ส่งไหม?</li>
+    <li><b>กระดิ่งกดก่อนเวลา AI มาก ๆ</b> (เช่น เร็วกว่า 45 นาที) ระบบทัก 1 จังหวะว่าผู้ป่วยอาจรอเกิน 1 ชม. ก่อนยืนยัน ดีไหม?</li>
+    <li><b>เวลาเผื่อ 30 นาที</b> ใช้ค่าเดียวทั้งตึก หรือให้ตั้งต่อ ward (ward ไกล/ICU 45 น.)? — เสนอ: เริ่มค่าเดียว แก้รายเคสด้วย ✏️</li>
+    <li><b>หลายเคสรอในห้องเดียว</b> แถวเรียกคิวโชว์เฉพาะ "คิวถัดไปจริง ๆ" ใบเดียว หรือทุกใบที่จัดคิวแล้ว (ใบหลังเป็นสีจาง)?</li>
+  </ul>
+  <div class="muted">mock-up ล้วน ยังไม่แตะโค้ดแอป · ชื่อ/HN เป็นชุดสาธิต (mask แล้ว) ทั้งหมด · rev.1 (แผงการ์ดแยก) ถูกแทนที่ด้วยไฟล์นี้</div>
+</div>
+
+</div>
+</body>
+</html>

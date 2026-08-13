@@ -262,6 +262,14 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     busy_rooms = {rid(c) for c in cases if c['status'] == 'in_or' and rid(c)}
     tov_map = _turnover_map()
     dup_badges = _dup_name_badges(cases, loc)
+    # 🔔 เคส "คิวถัดไปที่ต้องเรียก" ของแต่ละห้อง + เวลาเรียก (AI/ที่แก้)
+    #    คำนวณสดทุกรอบ — ยังไม่กดเรียก/ไม่แก้มือ เวลาจึงขยับตามสถานการณ์จริงเอง
+    try:
+        from call_queue import next_call_map
+        call_map = next_call_map(cases, now, tov_map)
+    except Exception as _cx:
+        print(f"[call_queue] คำนวณคิวเรียกไม่สำเร็จ (บอร์ดทำงานต่อ): {_cx}")
+        call_map = {}
 
     # ---------- หัวตาราง ----------
     # 📐 ต้องวางใน st.columns สัดส่วนเดียวกับแถว ([8, .8, 1.5, .8] ใน _render_row)
@@ -374,7 +382,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         for idx, c, disp, eff, elapsed in rs:
             _render_row(idx, c, disp, eff, elapsed, now, rid(c), busy_rooms,
                         do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
-                        room_opts, mark_dirty, tov_map, dup_badges)
+                        room_opts, mark_dirty, tov_map, dup_badges, call_map)
 
     z_pre = _pick('not_arrived', 'holding_pre')
     z_or = _pick('in_or', 'overrun')
@@ -429,7 +437,9 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
             _rows(z_done)
 
 
-_CALL_LEAD_MIN = 30  # เวลาเตรียม/เคลื่อนย้ายผู้ป่วยก่อนห้องว่าง (นาที) สำหรับ Call next
+# ⏰ เวลาเตรียม/เคลื่อนย้ายผู้ป่วยก่อนห้องว่าง (นาที) สำหรับ Call next —
+#    ย้ายค่าไปไว้ที่ call_queue.py (13 ส.ค. 2026) ให้ระบบเรียกคิวใช้เลขเดียวกัน
+from call_queue import CALL_LEAD_MIN as _CALL_LEAD_MIN
 
 
 @st.cache_data(ttl=1800)
@@ -560,9 +570,11 @@ def _cell_time(main, sub='', title=''):
             f'{_sub}</span>')
 
 
-def _callnext_short(c, eff, tov_map):
+def _callnext_short(c, eff, tov_map, call_info=None):
     """ผลลัพธ์ AI แบบสั้นสำหรับบรรทัดล่างของคอลัมน์เวลา — คืน (สั้น, เต็มไว้ทำ tooltip)
-    🚪 ช่วงเวลาออกห้อง (กว้างตามความยาวเคส) · ⏰ เวลาที่ควรเรียกเคสถัดไปขึ้นมารอ"""
+    🚪 ช่วงเวลาออกห้อง (กว้างตามความยาวเคส) · ⏰ เวลาที่ควรเรียกเคสถัดไปขึ้นมารอ
+    call_info = (เคสถัดไป, เวลาเรียก, 'override'|'ai') จาก call_queue.next_call_map —
+    ถ้าคิวถัดไปถูกเรียกแล้ว/ถูกแก้เวลา บรรทัดนี้ต้องพูดเลขเดียวกัน ไม่ใช่สูตรดิบ"""
     ent = c.get('time_entered_or')
     if ent is None or not hasattr(ent, 'hour'):
         return '', ''
@@ -578,14 +590,67 @@ def _callnext_short(c, eff, tov_map):
     cn = (ent + _td(minutes=int(eff) + float(tov) - _CALL_LEAD_MIN)).strftime('%H:%M')
     # ไม่ใส่อีโมจิในบรรทัดนี้: ที่ 13px มันกลายเป็นก้อนสีมัว ๆ อ่านไม่ออก เพิ่มความรก
     # เปล่า ๆ — ใช้สีเขียวทำหน้าที่ชี้ว่า "อันนี้คือสิ่งที่ต้องลงมือทำ" แทน
-    short = (f'ออกห้อง ~{lo}-{hi} · '
-             f'<span style="color:#2f7d52;font-weight:600;">เรียกคิวถัดไป ~{cn}</span>')
+    _cn_html = f'<span style="color:#2f7d52;font-weight:600;">เรียกคิวถัดไป ~{cn}</span>'
+    _cn_full = (f'เรียกคิวถัดไปขึ้นมารอ ~{cn} น. '
+                f'(เผื่อเวลาเตรียมห้อง {int(tov)} นาที)')
+    if call_info:
+        _nc, _cdt, _csrc = call_info[0], call_info[1], call_info[2]
+        _ct = _nc.get('call_time')
+        if _ct is not None and hasattr(_ct, 'hour'):
+            # 📣 เรียกไปแล้ว — งานนี้จบแล้ว บรรทัดนี้เปลี่ยนหน้าที่เป็น "ยืนยันผล"
+            _cn_html = (f'<span style="color:#1565c0;font-weight:600;">'
+                        f'เรียกคิวถัดไปแล้ว {_ct.strftime("%H:%M")} ✓</span>')
+            _cn_full = f'เรียกคิวถัดไปไปแล้วเมื่อ {_ct.strftime("%H:%M")} น.'
+        elif _csrc == 'override' and _cdt is not None:
+            _cn_html = (f'<span style="color:#2f7d52;font-weight:600;">'
+                        f'เรียกคิวถัดไป {_cdt.strftime("%H:%M")} (ปรับแล้ว)</span>')
+            _cn_full = (f'เวลาเรียกคิวถัดไปถูกปรับด้วยมือเป็น '
+                        f'{_cdt.strftime("%H:%M")} น. (ค่า AI ~{cn} น.)')
+    short = f'ออกห้อง ~{lo}-{hi} · {_cn_html}'
     full = (f'ออกห้อง ~{lo}-{hi} น. (ช่วง ±{_hw} นาที กว้างตามความยาวเคส : '
             f'คาลิเบรตจากเคสจริงปี 2567 ครอบราว 5-6 ใน 10 เคส) · '
-            f'เรียกคิวถัดไปขึ้นมารอ ~{cn} น. (เผื่อเวลาเตรียมห้อง {int(tov)} นาที) · '
-            f'ช่วงมั่นใจ 90% ของเคสนี้ดูในปุ่มแก้เวลา')
+            f'{_cn_full} · ช่วงมั่นใจ 90% ของเคสนี้ดูในปุ่มแก้เวลา')
     return short, full
 
+
+
+def _call_line_html(c, dt, src, now):
+    """🔔 แถวเรียกคิวถัดไป ต่อท้ายการ์ดเคส "ยังไม่มา" ที่เป็นคิวถัดไปของห้อง
+    (wireframe rev.2 มุคกี้เคาะ 13 ส.ค. 2026) — ภาษาสีชุดเดิมของบอร์ด:
+    เขียว = สิ่งที่ต้องลงมือทำ · น้ำเงิน = ทำแล้ว · เหลือง = ปัญหาเวลา
+    (แดงสงวนให้เคสฉุกเฉิน — เลยเวลาเรียกจึงเป็นเหลือง ไม่ใช่แดง)"""
+    _base = ('display:flex;align-items:center;gap:8px;padding:5px 12px 6px;'
+             'border-top:1px dashed #e2e8f0;font-size:15px;color:#64748b;'
+             'font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;')
+    ct = c.get('call_time')
+    if ct is not None and hasattr(ct, 'hour'):
+        from call_queue import call_from_label
+        return (f'<div style="{_base}background:#f3f9f5;">📣 '
+                f'<span style="color:#1565c0;font-weight:700;">'
+                f'เรียกแล้ว {ct.strftime("%H:%M")}</span>'
+                f'<span>กดจาก{call_from_label(c.get("call_from"))} · '
+                f'โทรตาม ward แล้วรอกดรับเข้า · กดผิดยกเลิกได้ใน ✏️</span></div>')
+    if dt is None or not hasattr(dt, 'hour'):
+        return ''
+    diff = int((dt - now).total_seconds() // 60)
+    _ov = ('<span style="background:#e3f0fb;color:#1565c0;border-radius:8px;'
+           'padding:1px 9px;font-size:13px;font-weight:600;">ปรับแล้ว</span>'
+           if src == 'override' else '')
+    _t_prefix = '' if src == 'override' else '~'
+    if diff < 0:
+        # ⏰ เลยเวลาเรียก — เหลืองทั้งแถบ (ภาษาสี: ปัญหาเวลา) ให้เห็นข้ามห้อง
+        return (f'<div style="{_base}background:#fff8e1;">⏰ '
+                f'<span style="color:#9a6700;font-weight:700;">เรียกคิว '
+                f'{_t_prefix}{dt.strftime("%H:%M")} : เลยมา {-diff} น.</span>{_ov}'
+                f'<span>โทรเรียกแล้วกด 📣 บันทึก หรือเลื่อนเวลาที่ ✏️</span></div>')
+    _state = (f'<span style="color:#9a6700;font-weight:600;">อีก {diff} น.</span>'
+              if diff <= 10 else f'<span>อีก {_dur_str(diff)}</span>')
+    return (f'<div style="{_base}background:#fafcff;">🔔 '
+            f'<span style="color:#2f7d52;font-weight:700;">เรียกคิวถัดไป '
+            f'{_t_prefix}{dt.strftime("%H:%M")}</span>{_ov}{_state}'
+            f'<span style="cursor:help;" title="เวลาเรียก = คาดว่าห้องจะพร้อมรับ '
+            f'- {_CALL_LEAD_MIN} นาที (เผื่อโทร/เดินทาง) : ผู้ป่วยขึ้นมารอไม่เกิน '
+            f'1 ชั่วโมง · แก้เวลาได้ที่ ✏️ · โทรแล้วกด 📣 บันทึก">ⓘ</span></div>')
 
 
 def _progress_bar(pct, label, color='#22a565', wrap_id='', fill_id='', label_id=''):
@@ -613,10 +678,19 @@ def _progress_bar(pct, label, color='#22a565', wrap_id='', fill_id='', label_id=
             f'text-overflow:ellipsis;">{label}</span></span>')
 
 
-def _row_shell(inner, bg, border_css, row_id='row', prog=''):
-    return (f'<div id="{row_id}" style="display:flex;align-items:center;gap:10px;'
-            f'{border_css}background:{bg};border-radius:10px;padding:8px 12px;'
-            f'height:{_ROW_H}px;position:relative;overflow:hidden;">{prog}{inner}</div>')
+def _row_shell(inner, bg, border_css, row_id='row', prog='', extra=''):
+    """extra = แถบต่อท้ายการ์ด (แถวเรียกคิวถัดไป — wireframe rev.2 13 ส.ค. 2026)
+    มี extra → กรอบ/พื้นย้ายไปอยู่ที่กล่องนอก การ์ดสูงขึ้นตามเนื้อหา
+    ⚠️ ส่ง extra ได้เฉพาะแถวที่ render ด้วย st.markdown (ยังไม่มา) — แถว iframe
+    ประกาศความสูงล่วงหน้าไว้ที่ _ROW_IFRAME_H ถ้าสูงขึ้นเนื้อหาจะโดนตัดเงียบ ๆ"""
+    _skin = '' if extra else f'{border_css}background:{bg};'
+    row = (f'<div id="{row_id}" style="display:flex;align-items:center;gap:10px;'
+           f'{_skin}border-radius:10px;padding:8px 12px;'
+           f'height:{_ROW_H}px;position:relative;overflow:hidden;">{prog}{inner}</div>')
+    if not extra:
+        return row
+    return (f'<div style="{border_css}background:{bg};border-radius:10px;'
+            f'overflow:hidden;">{row}{extra}</div>')
 
 
 def _iframe_doc(body):
@@ -803,9 +877,14 @@ def _inroom_row_iframe(c, loc, tlabel, eff, border_css, ov_badge, now,
 
 def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
-                room_opts=None, mark_dirty=None, tov_map=None, dup_badges=None):
+                room_opts=None, mark_dirty=None, tov_map=None, dup_badges=None,
+                call_map=None):
     room_opts = room_opts or []
     dup_badge = (dup_badges or {}).get(id(c), '')
+    # 🔔 เคสนี้คือ "คิวถัดไปที่ต้องเรียก" ของห้องหรือเปล่า (identity เทียบ object
+    #    ตรง ๆ — call_map สร้างจาก list เดียวกันในรอบ render นี้เสมอ)
+    _ci = (call_map or {}).get(R)
+    _is_next_call = bool(_ci) and (_ci[0] is c)
     # 🚪 โหมดจอประจำห้อง ("ล็อกที่มือ ไม่ล็อกที่ตา"): เห็นทุกห้อง แต่กดได้เฉพาะ
     #    เคสห้องตัวเองตามเขตหน้าที่ — รับเข้า/เข้าห้อง/จำหน่าย/ย้ายห้อง = จอรับ-ส่ง
     _scope = (st.session_state.get('room_scope')
@@ -852,15 +931,21 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
               and c.get('time_entered_or') is not None
               and hasattr(c.get('time_entered_or'), 'timestamp')):
             # แถวกำลังผ่าแบบสด — นาฬิกาเดินหน้า + สลับเกินเวลาอัตโนมัติ
+            # 🔔 ส่งสถานะเรียกของคิวถัดไปในห้องนี้ไปด้วย — บรรทัด "เรียกคิวถัดไป"
+            #    ท้ายแถวต้องพูดเลขเดียวกับแถบเรียกคิว (เรียกแล้ว/ปรับแล้ว)
             components.html(
                 _inroom_row_iframe(c, loc, tlabel, max(int(eff), 5),
                                    border_css, ov_badge, now,
-                                   _callnext_short(c, eff, tov_map), dup_badge),
+                                   _callnext_short(c, eff, tov_map, _ci), dup_badge),
                 height=_ROW_IFRAME_H)
         else:
             # ความคืบหน้าอยู่ในแถบของคอลัมน์เวลาแล้ว (_progress_bar) ไม่ต้องมีแถบ
             # ที่ขอบล่างแถวซ้ำอีก — สองแถบบอกเรื่องเดียวกันคือความรก
             _tm_html, _tm_sub, _tm_tip = _time_static(c, disp, eff, elapsed, now, tov_map)
+            # 🔔 แถวเรียกคิวถัดไป ต่อท้ายการ์ด — เฉพาะเคสคิวถัดไปของห้อง
+            #    (เคสไม่ได้จัดคิว = แถวนี้ว่าง ตาม wireframe rev.2)
+            _call_extra = (_call_line_html(c, _ci[1], _ci[2], now)
+                           if _is_next_call and disp == 'not_arrived' else '')
             st.markdown(
                 _row_shell(
                     _cell_room(c, loc, fg=room_fg)
@@ -869,7 +954,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                     + _cell_op(c, fg=sub_fg)
                     + _cell_chip(label, fg, chipbg)
                     + _cell_time(_tm_html + ov_badge, sub=_tm_sub, title=_tm_tip),
-                    bg=bg, border_css=border_css) ,
+                    bg=bg, border_css=border_css, extra=_call_extra),
                 unsafe_allow_html=True)
 
     with c1:
@@ -972,6 +1057,99 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                             pass
                         _rerun_board()
 
+                # 🔔 เวลาเรียกคิวถัดไป (wireframe rev.2 มุคกี้เคาะ 13 ส.ค. 2026)
+                #    แก้ที่ดินสอตัวเดียวตามที่เคาะ · สิทธิ์ = _own อยู่แล้ว
+                #    (จอรับ-ส่งแก้ได้ทุกเคส · จอห้องเฉพาะเคสห้องตัวเอง)
+                if _is_next_call and disp == 'not_arrived':
+                    from call_queue import (fmt_hhmm as _cq_fmt,
+                                            CALL_EDIT_REASONS as _CQ_REASONS)
+                    st.markdown("---")
+                    _ct = c.get('call_time')
+                    if _ct is not None and hasattr(_ct, 'hour'):
+                        from call_queue import call_from_label as _cq_lbl
+                        st.caption(f"📣 เรียกคิวแล้ว {_ct.strftime('%H:%M')} น. "
+                                   f"(กดจาก{_cq_lbl(c.get('call_from'))})")
+                        if st.button("↩️ ยกเลิกการเรียก (กดผิด)",
+                                     key=f"tb_cu_{idx}", width='stretch'):
+                            from call_queue import apply_undo_call as _cq_undo
+                            if _cq_undo(c):
+                                try:
+                                    from main_or_db import log_call_event
+                                    log_call_event(c, 'undo')
+                                except Exception as _ex:
+                                    print(f"[call_log] log undo ล้มเหลว: {_ex}")
+                                try:
+                                    from research_log import log_case_state
+                                    log_case_state(c)
+                                except Exception as _rx:
+                                    print(f"[research_log] ข้าม: {_rx}")
+                                if mark_dirty:
+                                    mark_dirty(c)
+                                try:
+                                    from main_or_pages import _toast_ok
+                                    _toast_ok("ยกเลิกการเรียกแล้ว ↩️")
+                                except Exception:
+                                    pass
+                            _rerun_board()
+                    else:
+                        st.caption("🔔 เวลาเรียกคิวถัดไป (เคสนี้เป็นคิวถัดไปของห้อง) "
+                                   ": ค่าเริ่มต้นจาก AI แก้แทนได้ · ค่าที่แก้จะล็อก "
+                                   "ไม่ขยับตามสถานการณ์อีก")
+                        _ai_dt = _ci[3]
+                        if _ai_dt is not None:
+                            st.caption(f"🤖 AI แนะนำเรียก ~{_ai_dt.strftime('%H:%M')} น. "
+                                       f"(ห้องพร้อม - เผื่อเดินทาง {_CALL_LEAD_MIN} นาที)")
+                        _tv = st.time_input(
+                            "เวลาเรียก", value=(_ci[1].time() if _ci[1] else None),
+                            key=f"tb_ct_{idx}", step=300,
+                            label_visibility="collapsed")
+                        _rsn = st.selectbox("เหตุผลที่แก้", _CQ_REASONS,
+                                            key=f"tb_cr_{idx}")
+                        _cur_hhmm = _cq_fmt(_ci[1]) or ''
+                        if (_tv is not None
+                                and _tv.strftime('%H:%M') != _cur_hhmm
+                                and st.button("💾 บันทึกเวลาเรียก",
+                                              key=f"tb_cs_{idx}", width='stretch')):
+                            _newv = _tv.strftime('%H:%M')
+                            c['call_override_hhmm'] = _newv
+                            c['call_override_reason'] = _rsn
+                            c['call_ai_hhmm'] = _cq_fmt(_ai_dt)
+                            try:
+                                from main_or_db import log_call_event
+                                log_call_event(c, 'edit', ai_hhmm=_cq_fmt(_ai_dt),
+                                               new_hhmm=_newv, reason=_rsn)
+                            except Exception as _ex:
+                                print(f"[call_log] log edit ล้มเหลว: {_ex}")
+                            if mark_dirty:
+                                mark_dirty(c)
+                            try:
+                                from main_or_pages import _toast_ok
+                                _toast_ok(f"เวลาเรียกคิว {_newv} ✓")
+                            except Exception:
+                                pass
+                            _rerun_board()
+                        if c.get('call_override_hhmm'):
+                            if st.button("↺ คืนค่า AI", key=f"tb_ca_{idx}",
+                                         width='stretch',
+                                         help="เลิกใช้เวลาที่แก้ กลับไปให้ AI "
+                                              "ขยับเวลาตามสถานการณ์เหมือนเดิม"):
+                                c.pop('call_override_hhmm', None)
+                                c.pop('call_override_reason', None)
+                                try:
+                                    from main_or_db import log_call_event
+                                    log_call_event(c, 'reset',
+                                                   ai_hhmm=_cq_fmt(_ai_dt))
+                                except Exception as _ex:
+                                    print(f"[call_log] log reset ล้มเหลว: {_ex}")
+                                if mark_dirty:
+                                    mark_dirty(c)
+                                try:
+                                    from main_or_pages import _toast_ok
+                                    _toast_ok("กลับไปใช้ค่า AI แล้ว ✓")
+                                except Exception:
+                                    pass
+                                _rerun_board()
+
                 # 🌙 เคสที่ผ่าไปแล้วก่อนบอร์ดเปิด (เช่นฉุกเฉินกลางคืน) — มุคกี้สั่ง 19 ก.ค. 2026
                 #    มีเฉพาะเคส "ยังไม่มา" · เคสที่เข้า flow แล้วใช้ปุ่มปกติ/↩️ ตามเดิม
                 #    🚪 โหมดจอห้อง: ซ่อน (จำหน่ายก่อนบอร์ด/ลบเคส = งานจอรับ-ส่ง)
@@ -1006,6 +1184,35 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
         if disp == 'not_arrived' and _scope is None:
             if st.button("รับเข้า", key=f"tb_a_{idx}", width='stretch'):
                 do_arrive(idx)
+            # 📣 บันทึกว่าโทรเรียกคิวแล้ว — เฉพาะเคสคิวถัดไปที่ยังไม่ถูกเรียก
+            #    (จอรับ-ส่งเป็นคนโทรตาม ward · จอห้องสั่งเรียกผ่านกระดิ่ง 🔔
+            #    ที่หน้าจอห้องแทน — เคาะจาก wireframe rev.2 ข้อ ⑤)
+            if _is_next_call and c.get('call_time') is None:
+                if st.button("📣 เรียกแล้ว", key=f"tb_call_{idx}", width='stretch',
+                             help="โทรเรียกผู้ป่วยจาก ward แล้ว : บันทึกเวลาที่เรียก"):
+                    from call_queue import apply_call as _cq_call
+                    from call_queue import fmt_hhmm as _cq_fmt
+                    if _cq_call(c, _now(), 'board',
+                                planned_hhmm=_cq_fmt(_ci[1])):
+                        try:
+                            from main_or_db import log_call_event
+                            log_call_event(c, 'call', ai_hhmm=_cq_fmt(_ci[3]),
+                                           new_hhmm=_cq_fmt(c.get('call_time')))
+                        except Exception as _ex:
+                            print(f"[call_log] log call ล้มเหลว: {_ex}")
+                        try:    # 📊 called_at ลงตารางวิจัย (เคสในขอบเขตเท่านั้น)
+                            from research_log import log_case_state
+                            log_case_state(c)
+                        except Exception as _rx:
+                            print(f"[research_log] ข้าม: {_rx}")
+                        if mark_dirty:
+                            mark_dirty(c)
+                        try:
+                            from main_or_pages import _toast_ok
+                            _toast_ok("บันทึกเรียกคิวแล้ว 📣")
+                        except Exception:
+                            pass
+                    _rerun_board()
         elif disp == 'holding_pre' and _scope is None:
             _busy = R in busy_rooms
             if st.button("ห้องไม่ว่าง" if _busy else "เข้าห้อง", key=f"tb_e_{idx}",

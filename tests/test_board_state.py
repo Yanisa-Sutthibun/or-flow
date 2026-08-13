@@ -824,6 +824,148 @@ def test_demo_surgeon_names_are_unique_per_code():
     assert len(set(_names)) == len(_names), "มีชื่อแพทย์สาธิตซ้ำกันข้ามรหัส"
 
 
+# ═══════════ 8. 🔔 ระบบเรียกคิวถัดไป (call_queue · 13 ส.ค. 2026) ═══════════
+# wireframe rev.2: แถวเรียกคิวบนการ์ดจอรับ-ส่ง + กระดิ่งจอห้อง — เทสต์ logic ล้วน
+
+import call_queue as Q                             # noqa: E402
+
+_T0 = datetime(2026, 8, 13, 10, 0)                 # "ตอนนี้" คงที่ของชุดเทสต์นี้
+
+
+def _call_cases():
+    """ห้อง 92: เคสกำลังผ่า (เข้า 09:00 ทำนาย 60) + คิว 2 ยังไม่มา + คิว 3 ยังไม่มา"""
+    cur = _case(id='CUR', room=92, status='in_or', ororder=1,
+                time_entered_or=datetime(2026, 8, 13, 9, 0), effective_min=60)
+    n2 = _case(id='N2', room=92, status='not_arrived', ororder=2,
+               effective_min=45)
+    n3 = _case(id='N3', room=92, status='not_arrived', ororder=3,
+               effective_min=30)
+    return [cur, n2, n3]
+
+
+def test_call_next_case_picks_smallest_order():
+    """คิวถัดไปของห้อง = เคส 'ยังไม่มา' ที่เลขคิวเล็กสุด (ไม่ใช่เคสกำลังผ่า)"""
+    cases = _call_cases()
+    nxt = Q.next_call_case(cases, 92)
+    assert nxt is not None and nxt['id'] == 'N2'
+
+
+def test_call_suggested_matches_board_formula():
+    """สูตรเดียวกับบรรทัด 'เรียกคิวถัดไป ~' บนบอร์ด: เข้า 09:00 + 60 นาที
+    + เตรียมห้อง 15 - เผื่อเดินทาง 30 = 09:45"""
+    cases = _call_cases()
+    dt = Q.suggested_call_dt(cases, cases[1], _T0, {})
+    assert dt == datetime(2026, 8, 13, 9, 45), dt
+
+
+def test_call_suggested_chains_cases_ahead():
+    """คิว 3 ต้องรอคิว 2 ผ่าเสร็จก่อน: ออก 10:00 → (เตรียม 15 + คิว 2 ใช้ 45)
+    → ออก 11:00 → +15 -30 = เรียก 10:45"""
+    cases = _call_cases()
+    dt = Q.suggested_call_dt(cases, cases[2], _T0, {})
+    assert dt == datetime(2026, 8, 13, 10, 45), dt
+
+
+def test_call_room_free_suggests_now():
+    """ห้องว่างและไม่มีเคสคั่น = เรียกได้เลย (คืนเวลาปัจจุบัน)"""
+    n = _case(id='N1', room=93, status='not_arrived', ororder=1)
+    assert Q.suggested_call_dt([n], n, _T0, {}) == _T0
+
+
+def test_call_skips_unqueued_tf_manual_emergency():
+    """เคสไม่ได้จัดคิว (TF / Manual 99 / ฉุกเฉิน) ไม่ถูกเลือกเป็นคิวถัดไป —
+    ตาม wireframe: แถวเรียกคิวว่าง"""
+    tf = _case(id='TF', room=92, status='not_arrived', ororder=2, is_tf=True)
+    manual = _case(id='M', room=92, status='not_arrived', ororder=99)
+    emer = _case(id='E', room=92, status='not_arrived', ororder=3,
+                 is_emergency=True)
+    assert Q.next_call_case([tf, manual, emer], 92) is None
+
+
+def test_call_distrusts_duplicate_orders():
+    """เลขคิวซ้ำในห้อง (HIS ยังไม่จัดคิวจริง) = ไม่โชว์เรียกคิวทั้งห้อง —
+    กติกาเดียวกับป้าย 🔒 ล็อคคิว"""
+    a = _case(id='A', room=92, status='not_arrived', ororder=1)
+    b = _case(id='B', room=92, status='not_arrived', ororder=1)
+    assert Q.next_call_case([a, b], 92) is None
+
+
+def test_call_override_wins_and_locks():
+    """เวลาแก้มือชนะ AI (กติกาเดียวกับ effective_min)"""
+    cases = _call_cases()
+    cases[1]['call_override_hhmm'] = '11:20'
+    dt, src = Q.effective_call_dt(cases, cases[1], _T0, {})
+    assert src == 'override' and dt == datetime(2026, 8, 13, 11, 20)
+
+
+def test_call_map_reports_ai_value_alongside_override():
+    """next_call_map ต้องพก 'ค่า AI' ติดมาด้วยแม้ถูก override —
+    UI ใช้โชว์เทียบ และ log เก็บทั้งสองค่า"""
+    cases = _call_cases()
+    cases[1]['call_override_hhmm'] = '11:20'
+    room92 = Q.next_call_map(cases, _T0, {})[92]
+    assert room92[0]['id'] == 'N2' and room92[2] == 'override'
+    assert room92[3] == datetime(2026, 8, 13, 9, 45)   # ค่า AI ยังอยู่
+
+
+def test_apply_call_once_only():
+    """กดเรียกซ้ำ (สองจอกดพร้อมกัน) ครั้งที่สองต้องไม่ทับเวลาแรก"""
+    c = _case(id='N2', status='not_arrived')
+    assert Q.apply_call(c, _T0, 'room:92', planned_hhmm='09:45')
+    assert c['call_time'] == _T0 and c['call_from'] == 'room:92'
+    assert c['call_planned_hhmm'] == '09:45'
+    assert not Q.apply_call(c, _T0 + timedelta(minutes=5), 'board')
+    assert c['call_time'] == _T0          # เวลาแรกอยู่ครบ
+
+
+def test_apply_undo_call_sets_flag():
+    """↩️ ยกเลิกเรียก: ล้างเวลา + ตั้งธง call_undone (กัน merge ดึงคืน)"""
+    c = _case(id='N2', status='not_arrived')
+    Q.apply_call(c, _T0, 'board')
+    assert Q.apply_undo_call(c)
+    assert c['call_time'] is None and c['call_undone'] is True
+    assert not Q.apply_undo_call(c)       # ไม่มีอะไรให้ยกเลิกแล้ว
+
+
+def test_merge_keeps_call_from_other_machine():
+    """เครื่องที่ถือ snapshot เก่า (ไม่เห็นการเรียก) เซฟทับ — เวลาเรียกที่จอห้อง
+    กดไว้ต้องไม่หาย (การเรียกเดินหน้าอย่างเดียว เหมือนขั้นของเคส)"""
+    mine = _case(id='N2', status='not_arrived')
+    theirs = _case(id='N2', status='not_arrived',
+                   call_time={'__dt__': '2026-08-13T10:05:00'},
+                   call_from='room:92', call_planned_hhmm='09:45')
+    out, blocked = P._merge_case_no_regress(mine, theirs)
+    assert not blocked
+    assert out['call_time'] == {'__dt__': '2026-08-13T10:05:00'}
+    assert out['call_from'] == 'room:92'
+
+
+def test_merge_respects_intentional_call_undo():
+    """แต่ถ้าเครื่องนี้เพิ่งกด ↩️ ยกเลิกการเรียกเอง (call_undone) —
+    merge ต้องไม่ดึงเวลาเรียกจากเครื่องอื่นกลับมา (เจตนาคนชนะ)"""
+    mine = _case(id='N2', status='not_arrived', call_time=None,
+                 call_undone=True)
+    theirs = _case(id='N2', status='not_arrived',
+                   call_time={'__dt__': '2026-08-13T10:05:00'},
+                   call_from='room:92')
+    out, _ = P._merge_case_no_regress(mine, theirs)
+    assert out.get('call_time') is None
+
+
+def test_merge_call_forward_survives_phase_merge():
+    """เครื่องเก่าแก้เวลาผ่าตัดของเคสที่เครื่องอื่นทั้งรับเข้า+เคยเรียกไว้ —
+    ทั้งขั้นของเคส (holding_pre) และเวลาเรียก ต้องคงของล่าสุดไว้คู่กัน"""
+    mine = _case(id='N2', status='not_arrived', user_override_min=50)
+    theirs = _case(id='N2', status='holding_pre',
+                   time_arrived_holding={'__dt__': '2026-08-13T10:20:00'},
+                   call_time={'__dt__': '2026-08-13T10:05:00'},
+                   call_from='board')
+    out, blocked = P._merge_case_no_regress(mine, theirs)
+    assert blocked and out['status'] == 'holding_pre'
+    assert out['user_override_min'] == 50          # สิ่งที่เราแก้ยังอยู่
+    assert out['call_time'] == {'__dt__': '2026-08-13T10:05:00'}
+
+
 # ═════════════════════════════ runner ═════════════════════════════
 
 def _run_all():

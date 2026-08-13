@@ -1742,6 +1742,67 @@ def log_override(case, override_min, source='board'):
         return False
 
 
+def _ensure_call_log(conn):
+    """🔔 ตาราง log ระบบเรียกคิวถัดไป (wireframe rev.2 · 13 ส.ค. 2026)
+    เก็บทุกเหตุการณ์: edit (แก้เวลา) / reset (คืนค่า AI) / call (กดเรียก) /
+    undo (ยกเลิกเรียก) — audit trail แบบเดียวกับ override_log ให้งานวิจัยตอบได้
+    ว่าหน้างานเชื่อเวลาเรียกของ AI แค่ไหน · ไม่มี PII (case_ref + เวลา + จอที่กด)"""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS call_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            logged_at TEXT NOT NULL,
+            case_ref TEXT,
+            room_no INTEGER,
+            event TEXT,
+            ai_hhmm TEXT,
+            new_hhmm TEXT,
+            reason TEXT,
+            actor_role TEXT,
+            actor_room INTEGER
+        )""")
+    conn.commit()
+    # 🔒 เปิด RLS ทันทีที่ตารางเกิด (กันประตู REST API ของ Supabase) —
+    #    sqlite ไม่รู้จักคำสั่งนี้ = ข้ามเงียบ (pattern เดียวกับ research_case_log)
+    try:
+        conn.execute("ALTER TABLE call_log ENABLE ROW LEVEL SECURITY")
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+
+def log_call_event(case, event, ai_hhmm=None, new_hhmm=None, reason=None):
+    """บันทึกเหตุการณ์ระบบเรียกคิว — event: 'edit'/'reset'/'call'/'undo'
+    ai_hhmm = เวลาที่ AI แนะนำ ณ ขณะนั้น · new_hhmm = เวลาที่แก้/เวลาที่กดเรียก
+    (ข้ามเคสสาธิต/นอกขอบเขตวิจัย — ประตูเดียวกับ log วิจัยอื่นทุกตัว)"""
+    try:
+        if not _in_research_scope(case):
+            return False
+        conn = get_conn()
+        try:
+            _ensure_call_log(conn)
+            try:
+                room = int(float(case.get('room') or 0)) or None
+            except (TypeError, ValueError):
+                room = None
+            _arole, _aroom = current_actor()   # 👣 จอไหนเป็นคนกด (ไม่ระบุตัวบุคคล)
+            conn.execute(
+                "INSERT INTO call_log (logged_at, case_ref, room_no, event, "
+                "ai_hhmm, new_hhmm, reason, actor_role, actor_room) "
+                "VALUES (?,?,?,?,?,?,?,?,?)",
+                (_now(), str(case.get('id') or ''), room, str(event),
+                 ai_hhmm, new_hhmm, reason, _arole, _aroom))
+            conn.commit()
+        finally:
+            conn.close()
+        return True
+    except Exception:
+        _plog.exception("log_call_event ล้มเหลว")
+        return False
+
+
 def complete_override(case, actual_min):
     """เติมเวลาจริงให้ log ของเคสนี้ — เรียกตอนกด 'ผ่าเสร็จ'
     (อัปเดตทุกแถวของเคสที่ยังไม่มีเวลาจริง — รองรับการแก้หลายครั้ง)"""

@@ -169,13 +169,18 @@ def _merge_case_no_regress(mine, theirs, allow_undo=False):
     """รวมเคสเดียวกัน 2 เวอร์ชัน โดยขั้นของเคสเดินหน้าอย่างเดียว
     mine = ของเครื่องนี้ · theirs = ของที่อยู่บน DB แล้ว
     คืน dict ที่จะเขียนลง DB + True/False ว่า "กันการถอยหลังไปหรือเปล่า"
-    """
+
+    🔔 13 ส.ค. 2026 (ระบบเรียกคิว): การเรียกคิว (call_time) ก็เดินหน้าอย่างเดียว
+    เช่นกัน — เครื่องที่ถือ snapshot เก่า (ยังไม่เห็นว่าจอห้องกดกระดิ่งแล้ว)
+    แก้เคสเดียวกันแล้วเซฟ ห้ามลบเวลาเรียกทิ้งเงียบ ๆ · ยกเว้นเครื่องนั้นกด
+    ↩️ ยกเลิกการเรียกเองโดยตั้งใจ (call_undone — ดู call_queue.apply_undo_call)"""
+    from call_queue import merge_call_forward as _call_fwd
     if not theirs:
         return mine, False
     if allow_undo:
-        return mine, False              # ↩️ ตั้งใจย้อน — เจตนาคนชนะเสมอ
+        return _call_fwd(mine, theirs), False   # ↩️ ตั้งใจย้อน — เจตนาคนชนะเสมอ
     if _phase_rank(theirs) <= _phase_rank(mine):
-        return mine, False              # ของเราไม่เก่ากว่า → ใช้ของเราทั้งก้อน
+        return _call_fwd(mine, theirs), False   # ของเราไม่เก่ากว่า → ใช้ของเราทั้งก้อน
     # ของบน DB เดินไปไกลกว่า: คงขั้น/เวลาของ DB ไว้ แต่ยังรับสิ่งที่เราแก้จริง
     out = dict(mine)
     for k in _PHASE_FIELDS:
@@ -183,7 +188,7 @@ def _merge_case_no_regress(mine, theirs, allow_undo=False):
             out[k] = theirs[k]
         else:
             out.pop(k, None)
-    return out, True
+    return _call_fwd(out, theirs), True
 
 
 def _mask_nurse_name(name):
@@ -1576,6 +1581,11 @@ def _board_fragment():
             "- กดพลาด? ปุ่ม **↩️** ท้ายแถวย้อนกลับได้หนึ่งขั้น\n"
             "- **✏️** = แก้เวลาทำนายการใช้ห้องหรือย้ายห้อง ตัวเลข AI เป็นค่าประมาณ "
             "พยาบาลปรับเวลาได้เสมอ\n"
+            "- **🔔 เรียกคิวถัดไป** (แถบใต้การ์ดเคสคิวถัดไปของแต่ละห้อง): AI คำนวณ"
+            "เวลาที่ควรโทรเรียกผู้ป่วยขึ้นมารอ (ไม่เกิน 1 ชั่วโมง) — โทรตาม ward แล้วกด "
+            "**📣 เรียกแล้ว** เพื่อบันทึก · แก้เวลาเรียกได้ใน ✏️ ของเคสนั้น · "
+            "จอห้องผ่าตัดกดกระดิ่ง 🔔 สั่งเรียกคิวห้องตัวเองได้เช่นกัน "
+            "(เวลาที่กดขึ้นที่จอรับ-ส่ง)\n"
             "- **จาก N เคส** ใต้ค่า AI = ทำนายจากเคสใกล้เคียงกี่เคส ยิ่งมากยิ่งน่าเชื่อถือ\n"
             "- หน้าจออัปเดตเองทุก 30 วินาที — **ไม่ต้องกด F5** "
             "(อยากดึงข้อมูลทันทีกด 🔄 รีเฟรช มุมขวาบน)\n\n"
@@ -1979,6 +1989,156 @@ def _room_focus_fragment(room_no):
                     f"จอรับ-ส่งเป็นผู้กด 'เข้าห้อง' · คิวของห้องนี้เหลือ {len(nxt)} เคส")
         else:
             st.success("ห้องว่าง — ไม่มีเคสค้างของห้องนี้แล้ววันนี้ 🎉")
+
+    # ═══════ 🔔 เรียกคิวถัดไป (wireframe rev.2 มุคกี้เคาะ 13 ส.ค. 2026) ═══════
+    #    ห้องเห็นเองว่าเคสในห้องใกล้เสร็จ → กดกระดิ่งสั่งเรียกคิวถัดไปของห้องตัวเอง
+    #    ได้เลย ไม่ต้องวิ่งไปบอกรับ-ส่ง · เวลาที่กดไปโผล่ที่จอรับ-ส่งผ่าน snapshot
+    #    บอร์ดกลาง · แก้เวลาเรียกได้เฉพาะเคสของห้องตัวเอง (สิทธิ์ตามที่เคาะ)
+    try:
+        from call_queue import (next_call_map as _cq_map, apply_call as _cq_call,
+                                apply_undo_call as _cq_undo, fmt_hhmm as _cq_fmt,
+                                call_from_label as _cq_lbl,
+                                CALL_EDIT_REASONS as _CQ_REASONS,
+                                CALL_EARLY_WARN_MIN as _CQ_EARLY)
+        from tracking_board import _turnover_map as _cq_tov
+        _cmap = _cq_map(cases, _now(), _cq_tov())
+    except Exception as _cqx:
+        print(f"[call_queue] จอห้อง: คำนวณคิวเรียกไม่สำเร็จ: {_cqx}")
+        _cmap = {}
+    _nc = _cmap.get(room_no)
+    if _nc:
+        _ncase, _cdt, _csrc, _cai = _nc
+        _ncid = _ncase.get('id')
+
+        def _push_call_change(msg):
+            """ทางเดินเดียวกับปุ่มอื่นของจอห้อง: log วิจัย → dirty → เซฟขึ้น
+            บอร์ดกลางทันที → toast → rerun (จอรับ-ส่งเห็นในรอบซิงก์ถัดไป)"""
+            try:
+                from research_log import log_case_state
+                log_case_state(_ncase)
+            except Exception as _rx:
+                print(f"[research_log] ข้าม: {_rx}")
+            _mark_board_dirty(_ncase)
+            _save_board_snapshot(cases)
+            st.session_state['_board_dirty'] = False
+            _toast_ok(msg)
+            _rerun_board()
+
+        with st.container(border=True):
+            st.markdown('<span style="font-size:18px;font-weight:600;'
+                        'color:#0f172a;">🔔 เรียกคิวถัดไปของห้องนี้</span>',
+                        unsafe_allow_html=True)
+            _cw = str(_ncase.get('ward') or '').strip()
+            _cw = f' · ward {_cw}' if _cw and _cw.lower() != 'nan' else ''
+            st.markdown(f'<span style="font-size:18px;color:#475569;">'
+                        f'{mask_patient_name(_ncase.get("name") or "-")} · '
+                        f'{(_ncase.get("procedure") or "-")}{_cw}</span>',
+                        unsafe_allow_html=True)
+            _ct = _ncase.get('call_time')
+            if _ct is not None and hasattr(_ct, 'hour'):
+                # 📣 เรียกไปแล้ว — เหลือทางเดียวคือยกเลิกกรณีกดผิด
+                st.markdown(f'<span style="font-size:18px;color:#1565c0;'
+                            f'font-weight:700;">📣 เรียกแล้ว '
+                            f'{_ct.strftime("%H:%M")} น.</span> '
+                            f'<span style="font-size:18px;color:#64748b;">'
+                            f'(กดจาก{_cq_lbl(_ncase.get("call_from"))}) : '
+                            f'รอจอรับ-ส่งกดรับเข้าเมื่อผู้ป่วยมาถึง</span>',
+                            unsafe_allow_html=True)
+                if st.button("↩️ ยกเลิกการเรียก (กดผิด)", key="rf_call_undo",
+                             width='stretch'):
+                    if _cq_undo(_ncase):
+                        try:
+                            from main_or_db import log_call_event
+                            log_call_event(_ncase, 'undo')
+                        except Exception as _ex:
+                            print(f"[call_log] log undo ล้มเหลว: {_ex}")
+                        _push_call_change("ยกเลิกการเรียกแล้ว ↩️")
+                    _rerun_board()
+            else:
+                _diff = int((_cdt - _now()).total_seconds() // 60)
+                _src_txt = ('ปรับแล้ว' if _csrc == 'override'
+                            else 'AI คำนวณ ขยับตามสถานการณ์เอง')
+                _st_txt = (f'<span style="color:#9a6700;font-weight:700;">'
+                           f'เลยมา {-_diff} น.</span>' if _diff < 0
+                           else f'อีก {_diff} น.')
+                st.markdown(f'<span style="font-size:18px;color:#2f7d52;'
+                            f'font-weight:700;">เวลาเรียก '
+                            f'{_cdt.strftime("%H:%M")} น.</span> '
+                            f'<span style="font-size:18px;color:#64748b;">'
+                            f'({_src_txt}) · {_st_txt}</span>',
+                            unsafe_allow_html=True)
+                _bc1, _bc2 = st.columns([3, 2])
+                if _bc1.button("🔔 เรียกคิว", key="rf_call_bell", type='primary',
+                               width='stretch',
+                               help="สั่งเรียกผู้ป่วยคิวถัดไปขึ้นมารอ : "
+                                    "เวลาที่กดจะไปขึ้นที่จอรับ-ส่ง"):
+                    st.session_state['_rf_call_confirm'] = _ncid
+                    _rerun_board()
+                with _bc2.popover("✏️ แก้เวลาเรียก"):
+                    st.caption("ค่าเริ่มต้นจาก AI แก้แทนได้ : ค่าที่แก้จะล็อก "
+                               "ไม่ขยับตามสถานการณ์อีก")
+                    if _cai is not None:
+                        st.caption(f"🤖 AI แนะนำเรียก ~{_cai.strftime('%H:%M')} น.")
+                    _tv = st.time_input("เวลาเรียก", value=_cdt.time(),
+                                        key=f"rf_call_t_{_ncid}", step=300,
+                                        label_visibility="collapsed")
+                    _rsn = st.selectbox("เหตุผลที่แก้", _CQ_REASONS,
+                                        key=f"rf_call_r_{_ncid}")
+                    if (_tv is not None
+                            and _tv.strftime('%H:%M') != _cdt.strftime('%H:%M')
+                            and st.button("💾 บันทึกเวลาเรียก", key="rf_call_sv",
+                                          width='stretch')):
+                        _newv = _tv.strftime('%H:%M')
+                        _ncase['call_override_hhmm'] = _newv
+                        _ncase['call_override_reason'] = _rsn
+                        _ncase['call_ai_hhmm'] = _cq_fmt(_cai)
+                        try:
+                            from main_or_db import log_call_event
+                            log_call_event(_ncase, 'edit', ai_hhmm=_cq_fmt(_cai),
+                                           new_hhmm=_newv, reason=_rsn)
+                        except Exception as _ex:
+                            print(f"[call_log] log edit ล้มเหลว: {_ex}")
+                        _push_call_change(f"เวลาเรียกคิว {_newv} ✓")
+                    if _ncase.get('call_override_hhmm'):
+                        if st.button("↺ คืนค่า AI", key="rf_call_rst",
+                                     width='stretch'):
+                            _ncase.pop('call_override_hhmm', None)
+                            _ncase.pop('call_override_reason', None)
+                            try:
+                                from main_or_db import log_call_event
+                                log_call_event(_ncase, 'reset',
+                                               ai_hhmm=_cq_fmt(_cai))
+                            except Exception as _ex:
+                                print(f"[call_log] log reset ล้มเหลว: {_ex}")
+                            _push_call_change("กลับไปใช้ค่า AI แล้ว ✓")
+                # 🛎️ กล่องยืนยัน (กันมือลั่น — กระดิ่งเป็นการสั่งงานข้ามจอ)
+                if st.session_state.get('_rf_call_confirm') == _ncid:
+                    st.warning(f"🔔 เรียกคิวของเคสนี้ใช่ไหม : "
+                               f"{mask_patient_name(_ncase.get('name') or '-')} · "
+                               f"{(_ncase.get('procedure') or '-')}\n\n"
+                               f"เวลาแนะนำ {_cdt.strftime('%H:%M')} น. · "
+                               f"ตอนนี้ {_now().strftime('%H:%M')} น.")
+                    if _diff > _CQ_EARLY:
+                        st.caption(f"⚠️ เร็วกว่าเวลาแนะนำ {_diff} นาที : "
+                                   "ผู้ป่วยอาจขึ้นมารอนานเกิน 1 ชั่วโมง")
+                    _cf1, _cf2 = st.columns(2)
+                    if _cf1.button("📣 ใช่ เรียกเลย", key="rf_call_yes",
+                                   type='primary', width='stretch'):
+                        st.session_state.pop('_rf_call_confirm', None)
+                        if _cq_call(_ncase, _now(), f'room:{room_no}',
+                                    planned_hhmm=_cq_fmt(_cdt)):
+                            try:
+                                from main_or_db import log_call_event
+                                log_call_event(
+                                    _ncase, 'call', ai_hhmm=_cq_fmt(_cai),
+                                    new_hhmm=_cq_fmt(_ncase.get('call_time')))
+                            except Exception as _ex:
+                                print(f"[call_log] log call ล้มเหลว: {_ex}")
+                            _push_call_change("บันทึกเรียกคิวแล้ว 📣")
+                        _rerun_board()
+                    if _cf2.button("ยกเลิก", key="rf_call_no", width='stretch'):
+                        st.session_state.pop('_rf_call_confirm', None)
+                        _rerun_board()
 
     # 🕓 คิวรอของห้อง — เต็มความกว้าง อยู่ล่างสุด (9 ส.ค. 2026 มุคกี้สั่ง: ย้าย
     #    ออกจากคอลัมน์ขวาเดิมที่วางคู่กับแก้เวลา ทำให้หน้าจอเอียง สูงไม่เท่ากัน)
