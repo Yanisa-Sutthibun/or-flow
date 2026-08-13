@@ -1743,10 +1743,11 @@ def log_override(case, override_min, source='board'):
 
 
 def _ensure_call_log(conn):
-    """🔔 ตาราง log ระบบเรียกคิวถัดไป (wireframe rev.2 · 13 ส.ค. 2026)
-    เก็บทุกเหตุการณ์: edit (แก้เวลา) / reset (คืนค่า AI) / call (กดเรียก) /
-    undo (ยกเลิกเรียก) — audit trail แบบเดียวกับ override_log ให้งานวิจัยตอบได้
-    ว่าหน้างานเชื่อเวลาเรียกของ AI แค่ไหน · ไม่มี PII (case_ref + เวลา + จอที่กด)"""
+    """🔔 ตาราง log ระบบเรียกคิวถัดไป (rev.3 · 13 ส.ค. 2026)
+    เหตุการณ์ที่เกิดจริงใน rev.3: call (ห้องกดกระดิ่ง) / undo (ยกเลิกการแจ้ง)
+    — audit trail แบบเดียวกับ override_log ให้งานวิจัยตอบได้ว่าห้องกดกระดิ่ง
+    เร็ว/ช้ากว่าเวลาที่ AI แนะนำแค่ไหน · ไม่มี PII (case_ref + เวลา + จอที่กด)
+    (คอลัมน์ ai_hhmm/new_hhmm/reason คงไว้ตามเดิม — reason ว่างใน rev.3)"""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS call_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

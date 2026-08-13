@@ -1,32 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-call_queue.py — 🔔 ระบบเรียกคิวถัดไป (มุคกี้เคาะ wireframe rev.2 · 13 ส.ค. 2026)
+call_queue.py — 🔔 ระบบคิวถัดไป/ตามผู้ป่วยมารอ (rev.3 มุคกี้แก้ 13 ส.ค. 2026)
 ════════════════════════════════════════════════════════════════════════════
-จุดขายของ OR Flow: ใช้เวลาทำนายของ AI หา "เวลาเรียกผู้ป่วยคิวถัดไปขึ้นมารอ
-ไม่เกิน 1 ชั่วโมง" — โมดูลนี้เป็น logic ล้วนของฟีเจอร์นั้น:
-  · หาว่าเคสไหนคือ "คิวถัดไปที่ต้องเรียก" ของแต่ละห้อง (next_call_map)
-  · คำนวณเวลาเรียกที่ AI แนะนำ (suggested_call_dt) — สูตรเดียวกับบรรทัด
-    "เรียกคิวถัดไป ~HH:MM" ท้ายแถวเคสกำลังผ่าบน tracking_board ไม่ใช่สูตรใหม่
-  · ค่าที่คนแก้ (call_override_hhmm) ชนะ AI — กติกาเดียวกับ effective_min
-  · กดเรียก/ยกเลิกเรียก (apply_call / apply_undo_call)
+จุดขายของ OR Flow: ใช้เวลาทำนายของ AI บอก "เวลาที่ควรตามผู้ป่วยคิวถัดไป
+ขึ้นมารอ" ให้รอหน้าห้องไม่เกิน 1 ชั่วโมง — โมดูลนี้เป็น logic ล้วน:
+  · หาว่าเคสไหนคือ "คิวถัดไป" ของแต่ละห้อง (next_call_map)
+  · คำนวณเวลาตามผู้ป่วยมารอที่ AI แนะนำ (suggested_call_dt) — สูตรเดียวกับ
+    บรรทัดท้ายแถวเคสกำลังผ่าบน tracking_board ไม่ใช่สูตรใหม่
+  · กระดิ่ง 🔔 จากจอห้องผ่าตัด = "ใกล้เสร็จแล้ว เรียกเคสถัดไปมารอได้เลย
+    ไม่ต้องรอถึงเวลา" (apply_call / apply_undo_call)
 
-field ใหม่ในเคส (ติดไปกับ snapshot บอร์ดกลาง → ทุกจอเห็นเหมือนกัน):
-  call_override_hhmm  'HH:MM' ที่คนแก้ (None = ใช้ค่า AI)
-  call_override_reason เหตุผลที่แก้
-  call_time           datetime ตอนกดเรียกจริง (📣/🔔)
-  call_from           จอที่กด: 'board' หรือ 'room:<เลขห้อง>'
-  call_planned_hhmm   เวลาแผน (AI หรือที่แก้) แช่แข็ง ณ ตอนกดเรียก — ไว้เทียบใน log
-  call_undone         True = เพิ่งกด ↩️ ยกเลิกการเรียกโดยตั้งใจ (กัน merge ดึงเวลา
-                      เรียกจากเครื่องอื่นกลับมา — ดู _merge_case_no_regress)
+📌 กติกา rev.3 (แทน rev.2 เดิม): จอรับ-ส่งเป็นฝ่าย "ไปตามผู้ป่วย" ตามเวลา
+ที่ขึ้นบนแถบ — ไม่มีปุ่มบันทึกว่าเรียกแล้ว และไม่มีการแก้เวลาด้วยมือ (ตัด
+override ออกทั้งชั้นตามมุคกี้สั่ง) · สัญญาณกระดิ่งจากห้องเป็น action เดียว
+ของฟีเจอร์นี้ และยกเลิกได้จากจอห้องที่กดเท่านั้น
+
+field ในเคส (ติดไปกับ snapshot บอร์ดกลาง → ทุกจอเห็นเหมือนกัน):
+  call_time           datetime ตอนห้องกดกระดิ่ง (None = ยังไม่กด)
+  call_from           จอที่กด: 'room:<เลขห้อง>'
+  call_planned_hhmm   เวลาที่ AI แนะนำ ณ ตอนกด — แช่แข็งไว้เทียบใน log
+  call_undone         True = เพิ่งกด ↩️ ยกเลิกโดยตั้งใจ (กัน merge ดึงสัญญาณ
+                      จากเครื่องอื่นกลับมา — ดู _merge_case_no_regress)
 
 ⛔ โมดูลนี้ห้าม import streamlit — ต้องรันได้ใน tests/test_board_state.py ตรง ๆ
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 # ⏰ เผื่อเวลาโทรตาม ward + เคลื่อนย้าย + เปลี่ยนชุด ก่อนห้องพร้อม (นาที)
-#    เรียกก่อนห้องพร้อม 30 นาที → ผู้ป่วยมารอหน้าห้องราว 15-30 นาที ไม่เกิน 1 ชม.
+#    ตามก่อนห้องพร้อม 30 นาที → ผู้ป่วยมารอหน้าห้องราว 15-30 นาที ไม่เกิน 1 ชม.
 #    (ตัวเดียวกับที่ tracking_board ใช้แสดงท้ายแถวเคสกำลังผ่า — แก้ที่นี่ที่เดียว)
 CALL_LEAD_MIN = 30
 
@@ -34,10 +37,6 @@ CALL_LEAD_MIN = 30
 CALL_EARLY_WARN_MIN = 45
 
 _DEF_TURNOVER = 15   # เตรียมห้อง (นาที) เมื่อไม่มีข้อมูล turnover จริงของห้อง
-
-# เหตุผลการแก้เวลาเรียก (ให้เลือกใน ✏️ — เก็บลง call_log)
-CALL_EDIT_REASONS = ('ward อยู่ไกล', 'ผู้ป่วยเตรียมตัวนาน (ICU / เตียงเคลื่อนย้าย)',
-                     'แพทย์สั่ง', 'อื่น ๆ')
 
 
 # ─────────────────────────── helpers ───────────────────────────
@@ -93,28 +92,11 @@ def fmt_hhmm(dt) -> str | None:
         return None
 
 
-def parse_hhmm(s, on_date) -> datetime | None:
-    """'HH:MM' → datetime บนวันที่ที่กำหนด (คืน None ถ้า parse ไม่ได้)"""
-    try:
-        h, m = str(s).strip().split(':')
-        return datetime(on_date.year, on_date.month, on_date.day, int(h), int(m))
-    except (ValueError, AttributeError, TypeError):
-        return None
-
-
-def call_from_label(src) -> str:
-    """'room:97' → 'จอห้อง 97' · 'board' → 'จอรับ-ส่ง' (ไว้โชว์บนบอร์ด/log)"""
-    s = str(src or '')
-    if s.startswith('room:'):
-        return f'จอห้อง {s[5:]}'
-    return 'จอรับ-ส่ง' if s == 'board' else (s or '?')
-
-
 # ─────────────────────── เลือกเคส "คิวถัดไป" ───────────────────────
 
 def is_queued(c) -> bool:
     """เคส "จัดคิวแล้ว" = มีลำดับคิวจริงจากตารางผ่าตัด · TF/Manual(99)/ฉุกเฉิน
-    ไม่นับ (ตาม wireframe: เคสไม่ได้จัดคิว แถวเรียกคิวว่าง)"""
+    ไม่นับ (ตามที่เคาะ: เคสไม่ได้จัดคิว แถบคิวถัดไปว่าง)"""
     return (_ord(c) is not None) and not c.get('is_tf') and not _is_emer(c)
 
 
@@ -132,7 +114,7 @@ def _room_queue_trusted(cases, room) -> bool:
 
 
 def next_call_case(cases, room):
-    """เคสคิวถัดไปที่ต้องเรียกของห้องนี้ (ยังไม่มา + จัดคิวแล้ว + คิวเล็กสุด)
+    """เคสคิวถัดไปของห้องนี้ (ยังไม่มา + จัดคิวแล้ว + คิวเล็กสุด)
     คืน None ถ้าไม่มี/คิวห้องนี้เชื่อไม่ได้"""
     if room is None or not _room_queue_trusted(cases, room):
         return None
@@ -144,13 +126,13 @@ def next_call_case(cases, room):
     return min(cands, key=lambda x: _ord(x))
 
 
-# ─────────────────────── คำนวณเวลาเรียก ───────────────────────
+# ─────────────────────── คำนวณเวลาตามผู้ป่วยมารอ ───────────────────────
 
 def suggested_call_dt(cases, case, now, tov_map=None):
-    """เวลาเรียกที่ AI แนะนำ = ห้องพร้อมรับเคสนี้ - CALL_LEAD_MIN
+    """เวลาที่ควรตามผู้ป่วยมารอ = ห้องพร้อมรับเคสนี้ - CALL_LEAD_MIN
     ห้องพร้อม = คาดออกห้องของเคสสุดท้ายก่อนหน้า + เตรียมห้อง (turnover)
     ไล่โซ่: เคสกำลังผ่า → เคสรอผ่าตัดในห้อง → เคสยังไม่มาที่คิวเล็กกว่า
-    ยังไม่กดเรียก/ไม่ได้แก้มือ = ค่านี้ขยับตามสถานการณ์จริงเอง (คำนวณสดทุกรอบ)"""
+    ค่านี้ขยับตามสถานการณ์จริงเอง (คำนวณสดทุกรอบ ไม่มีการแก้มือ — rev.3)"""
     room = _rid(case)
     if room is None:
         return None
@@ -158,7 +140,7 @@ def suggested_call_dt(cases, case, now, tov_map=None):
 
     # จุดตั้งต้น: คาดออกห้องของเคสที่กำลังผ่าอยู่ (ent + effective_min —
     # เลขเดียวกับบรรทัด "ออกห้อง ~" บนบอร์ด · เคสเกินเวลา = ค่าอยู่ในอดีต
-    # → เวลาเรียกกลายเป็น "เลยเวลา" ให้หน้างานเห็นว่าต้องตัดสินใจเอง)
+    # → กลายเป็น "เลยเวลา" ให้หน้างานเห็นว่าต้องตัดสินใจเอง)
     t = None
     cur = next((x for x in cases
                 if x.get('status') == 'in_or' and _rid(x) == room), None)
@@ -168,7 +150,7 @@ def suggested_call_dt(cases, case, now, tov_map=None):
             t = ent + timedelta(minutes=_eff(cur))
 
     # เคสคั่นกลางก่อนถึงคิวเคสนี้: รอผ่าตัดในห้อง (มาแล้ว รอเข้า) +
-    # ยังไม่มาที่คิวเล็กกว่า (ต้องเรียก/ผ่าก่อนเคสนี้)
+    # ยังไม่มาที่คิวเล็กกว่า (ต้องตาม/ผ่าก่อนเคสนี้)
     my_ord = _ord(case)
     ahead = [x for x in cases
              if x is not case and _rid(x) == room and (
@@ -177,43 +159,31 @@ def suggested_call_dt(cases, case, now, tov_map=None):
                      and my_ord is not None and (_ord(x) or 0) < my_ord))]
     if t is None:
         if not ahead:
-            return now          # ห้องว่าง ไม่มีใครคั่น : เรียกได้เลย
+            return now          # ห้องว่าง ไม่มีใครคั่น : ตามมารอได้เลย
         t = now
     for x in sorted(ahead, key=lambda x: (_ord(x) or 999)):
         t = t + timedelta(minutes=tov + _eff(x))
     return t + timedelta(minutes=tov - CALL_LEAD_MIN)
 
 
-def effective_call_dt(cases, case, now, tov_map=None):
-    """เวลาเรียกที่ใช้จริง — (datetime, 'override'|'ai') · คนแก้ชนะ AI และ
-    ค่าที่แก้ "ล็อก" ไม่ขยับตามสถานการณ์ (ตามกติกาที่เคาะใน wireframe ④)"""
-    ov = parse_hhmm(case.get('call_override_hhmm'), now.date())
-    if ov is not None:
-        return ov, 'override'
-    return suggested_call_dt(cases, case, now, tov_map), 'ai'
-
-
 def next_call_map(cases, now, tov_map=None):
-    """{room: (case, เวลาเรียกที่ใช้จริง, 'override'|'ai', เวลาที่ AI แนะนำ)}
-    ของทุกห้องที่มีคิวถัดไปให้เรียก — ช่องสุดท้ายไว้โชว์ค่า AI คู่กับค่าที่คนแก้"""
+    """{room: (เคสคิวถัดไป, เวลาที่ AI แนะนำให้ตามมารอ)} ของทุกห้องที่มีคิวถัดไป"""
     out = {}
     for room in {_rid(c) for c in cases} - {None}:
         nxt = next_call_case(cases, room)
         if nxt is None:
             continue
-        ai_dt = suggested_call_dt(cases, nxt, now, tov_map)
-        ov = parse_hhmm(nxt.get('call_override_hhmm'), now.date())
-        dt, src = (ov, 'override') if ov is not None else (ai_dt, 'ai')
+        dt = suggested_call_dt(cases, nxt, now, tov_map)
         if dt is not None:
-            out[room] = (nxt, dt, src, ai_dt)
+            out[room] = (nxt, dt)
     return out
 
 
-# ─────────────────────── การกดเรียก / ยกเลิก ───────────────────────
+# ─────────────────────── กระดิ่งจากห้องผ่าตัด ───────────────────────
 
 def apply_call(case, now, source, planned_hhmm=None) -> bool:
-    """บันทึกว่า "เรียกแล้ว" (📣 จอรับ-ส่ง / 🔔 จอห้อง) — คืน False ถ้ากดซ้ำ
-    planned_hhmm = เวลาแผน (AI/ที่แก้) ณ ตอนกด — แช่แข็งไว้เทียบใน log วิจัย"""
+    """🔔 ห้องกดกระดิ่ง "เรียกเคสถัดไปมารอได้เลย" — คืน False ถ้ากดซ้ำ
+    planned_hhmm = เวลาที่ AI แนะนำ ณ ตอนกด — แช่แข็งไว้เทียบใน log วิจัย"""
     if case.get('call_time') is not None:
         return False            # กันกดรัว/สองจอกดพร้อมกัน
     case['call_time'] = now
@@ -225,7 +195,8 @@ def apply_call(case, now, source, planned_hhmm=None) -> bool:
 
 
 def apply_undo_call(case) -> bool:
-    """↩️ ยกเลิกการเรียก (กดผิด) — ตั้ง call_undone กัน merge ดึงเวลาเรียกคืน"""
+    """↩️ ยกเลิกสัญญาณกระดิ่ง (กดผิด — ยกเลิกได้จากจอห้องที่กดเท่านั้น)
+    ตั้ง call_undone กัน merge ดึงสัญญาณคืน"""
     if case.get('call_time') is None:
         return False
     case['call_time'] = None
@@ -237,8 +208,8 @@ def apply_undo_call(case) -> bool:
 
 def merge_call_forward(out, theirs):
     """🔁 ใช้ตอน merge หลายเครื่อง (เรียกจาก _merge_case_no_regress):
-    เครื่องที่ยังไม่เห็นการเรียก (out ไม่มี call_time) ห้ามลบเวลาเรียกที่เครื่องอื่น
-    บันทึกไปแล้ว — ยกเว้นเครื่องนี้เพิ่งกด ↩️ ยกเลิกเอง (call_undone)
+    เครื่องที่ยังไม่เห็นสัญญาณกระดิ่ง (out ไม่มี call_time) ห้ามลบสัญญาณที่
+    เครื่องอื่นกดแล้ว — ยกเว้นเครื่องนี้เพิ่งกด ↩️ ยกเลิกเอง (call_undone)
     ทำงานกับทั้ง dict ปกติและ dict ที่ serialize แล้ว ({'__dt__': ...})"""
     try:
         if (theirs and theirs.get('call_time')

@@ -824,8 +824,9 @@ def test_demo_surgeon_names_are_unique_per_code():
     assert len(set(_names)) == len(_names), "มีชื่อแพทย์สาธิตซ้ำกันข้ามรหัส"
 
 
-# ═══════════ 8. 🔔 ระบบเรียกคิวถัดไป (call_queue · 13 ส.ค. 2026) ═══════════
-# wireframe rev.2: แถวเรียกคิวบนการ์ดจอรับ-ส่ง + กระดิ่งจอห้อง — เทสต์ logic ล้วน
+# ═══════════ 8. 🔔 ระบบคิวถัดไป/กระดิ่ง (call_queue · rev.3 13 ส.ค. 2026) ═══════════
+# จอรับ-ส่ง: แถบบอกเวลา "ตามผู้ป่วยมารอ" (AI ล้วน ไม่มีปุ่ม/ไม่มีแก้มือ) ·
+# จอห้อง: กระดิ่ง 🔔 = เรียกมารอได้เลย (สัญญาณขึ้นจอรับ-ส่ง) — เทสต์ logic ล้วน
 
 import call_queue as Q                             # noqa: E402
 
@@ -890,22 +891,13 @@ def test_call_distrusts_duplicate_orders():
     assert Q.next_call_case([a, b], 92) is None
 
 
-def test_call_override_wins_and_locks():
-    """เวลาแก้มือชนะ AI (กติกาเดียวกับ effective_min)"""
+def test_call_map_returns_case_and_ai_time():
+    """next_call_map = {ห้อง: (เคสคิวถัดไป, เวลาที่ AI แนะนำ)} — rev.3 ไม่มี
+    override เวลาบนแถบเป็นค่า AI ล้วน ขยับตามสถานการณ์เอง"""
     cases = _call_cases()
-    cases[1]['call_override_hhmm'] = '11:20'
-    dt, src = Q.effective_call_dt(cases, cases[1], _T0, {})
-    assert src == 'override' and dt == datetime(2026, 8, 13, 11, 20)
-
-
-def test_call_map_reports_ai_value_alongside_override():
-    """next_call_map ต้องพก 'ค่า AI' ติดมาด้วยแม้ถูก override —
-    UI ใช้โชว์เทียบ และ log เก็บทั้งสองค่า"""
-    cases = _call_cases()
-    cases[1]['call_override_hhmm'] = '11:20'
     room92 = Q.next_call_map(cases, _T0, {})[92]
-    assert room92[0]['id'] == 'N2' and room92[2] == 'override'
-    assert room92[3] == datetime(2026, 8, 13, 9, 45)   # ค่า AI ยังอยู่
+    assert room92[0]['id'] == 'N2'
+    assert room92[1] == datetime(2026, 8, 13, 9, 45)
 
 
 def test_apply_call_once_only():
