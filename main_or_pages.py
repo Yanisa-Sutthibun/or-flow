@@ -1991,11 +1991,13 @@ def _room_focus_fragment(room_no):
         else:
             st.success("ห้องว่าง — ไม่มีเคสค้างของห้องนี้แล้ววันนี้ 🎉")
 
-    # ═══════ 🔔 กระดิ่งเรียกคิวถัดไป (rev.3 มุคกี้แก้ 13 ส.ค. 2026) ═══════
-    #    ห้องเห็นเองว่าเคสในห้องใกล้เสร็จ → กดกระดิ่งสื่อว่า "เรียกเคสถัดไป
-    #    มารอได้เลย ไม่ต้องรอถึงเวลา" → สัญญาณ + เวลาที่กดขึ้นที่จอรับ-ส่ง
-    #    (แถบเขียวใต้การ์ดเคส + เสียงติ๊ง) ให้รับ-ส่งไปตามผู้ป่วยทันที
-    #    ไม่มีการแก้เวลาด้วยมือ (ตัด ✏️ ออกตามมุคกี้สั่ง) · ยกเลิกได้จากจอนี้
+    # ═══════ 🔔 กระดิ่งเรียกคิวถัดไป (rev.4 UX มุคกี้แก้ 14 ส.ค. 2026) ═══════
+    #    rev.3 เคยเป็นกล่องใหญ่แยกเหนือรายการคิว — มุคกี้บอกงง: กระดิ่งต้องเกาะ
+    #    อยู่บนแถวเคสถัดไปในรายการ "คิวรอของห้อง" เลย กดกระดิ่งก่อน แล้วค่อย
+    #    pop up คำถามยืนยัน (ใช้ st.popover — กดกระดิ่งแล้วกล่องยืนยันเด้งใต้ปุ่ม
+    #    แตะที่อื่นคือปิด/ไม่เรียก) · กระดิ่ง = "ใกล้เสร็จแล้ว เรียกเคสถัดไปมารอ
+    #    ได้เลย ไม่ต้องรอถึงเวลา" → สัญญาณ + เวลาที่กดขึ้นที่จอรับ-ส่ง
+    #    (แถบเขียวใต้การ์ดเคส + เสียงติ๊ง) · ยกเลิกได้จากจอนี้ (ใน popover ↩️)
     try:
         from call_queue import (next_call_map as _cq_map, apply_call as _cq_call,
                                 apply_undo_call as _cq_undo, fmt_hhmm as _cq_fmt,
@@ -2006,44 +2008,31 @@ def _room_focus_fragment(room_no):
         print(f"[call_queue] จอห้อง: คำนวณคิวเรียกไม่สำเร็จ: {_cqx}")
         _cmap = {}
     _nc = _cmap.get(room_no)
-    if _nc:
-        _ncase, _cdt = _nc
-        _ncid = _ncase.get('id')
+    _ncase, _cdt = _nc if _nc else (None, None)
 
-        def _push_call_change(msg):
-            """ทางเดินเดียวกับปุ่มอื่นของจอห้อง: log วิจัย → dirty → เซฟขึ้น
-            บอร์ดกลางทันที → toast → rerun (จอรับ-ส่งเห็นในรอบซิงก์ถัดไป)"""
-            try:
-                from research_log import log_case_state
-                log_case_state(_ncase)
-            except Exception as _rx:
-                print(f"[research_log] ข้าม: {_rx}")
-            _mark_board_dirty(_ncase)
-            _save_board_snapshot(cases)
-            st.session_state['_board_dirty'] = False
-            _toast_ok(msg)
-            _rerun_board()
+    def _push_call_change(msg):
+        """ทางเดินเดียวกับปุ่มอื่นของจอห้อง: log วิจัย → dirty → เซฟขึ้น
+        บอร์ดกลางทันที → toast → rerun (จอรับ-ส่งเห็นในรอบซิงก์ถัดไป)"""
+        try:
+            from research_log import log_case_state
+            log_case_state(_ncase)
+        except Exception as _rx:
+            print(f"[research_log] ข้าม: {_rx}")
+        _mark_board_dirty(_ncase)
+        _save_board_snapshot(cases)
+        st.session_state['_board_dirty'] = False
+        _toast_ok(msg)
+        _rerun_board()
 
-        with st.container(border=True):
-            st.markdown('<span style="font-size:18px;font-weight:600;'
-                        'color:#0f172a;">🔔 คิวถัดไปของห้องนี้</span>',
-                        unsafe_allow_html=True)
-            _cw = str(_ncase.get('ward') or '').strip()
-            _cw = f' · ward {_cw}' if _cw and _cw.lower() != 'nan' else ''
-            st.markdown(f'<span style="font-size:18px;color:#475569;">'
-                        f'{mask_patient_name(_ncase.get("name") or "-")} · '
-                        f'{(_ncase.get("procedure") or "-")}{_cw}</span>',
-                        unsafe_allow_html=True)
-            _ct = _ncase.get('call_time')
-            if _ct is not None and hasattr(_ct, 'hour'):
-                # 🔔 แจ้งไปแล้ว — เหลือทางเดียวคือยกเลิกกรณีกดผิด
-                st.markdown(f'<span style="font-size:18px;color:#1b7f4b;'
-                            f'font-weight:700;">🔔 แจ้งเรียกมารอแล้ว '
-                            f'{_ct.strftime("%H:%M")} น.</span> '
-                            f'<span style="font-size:18px;color:#64748b;">'
-                            f': จอรับ-ส่งกำลังตามผู้ป่วยมารอ '
-                            f'สัญญาณจะหายเองเมื่อกดรับเข้า</span>',
-                            unsafe_allow_html=True)
+    def _render_call_bell():
+        """🔔 ปุ่มกระดิ่งท้ายแถวเคสถัดไป — กดแล้ว popover ยืนยันเด้งขึ้น"""
+        _ct = _ncase.get('call_time')
+        if _ct is not None and hasattr(_ct, 'hour'):
+            # แจ้งไปแล้ว — ปุ่มกลายเป็น ↩️ ไว้ยกเลิกกรณีกดผิด
+            with st.popover("↩️", help="แจ้งเรียกไปแล้ว : กดเพื่อยกเลิก (กดผิด)"):
+                st.caption(f"🔔 แจ้งเรียกไปเมื่อ {_ct.strftime('%H:%M')} น. : "
+                           "จอรับ-ส่งกำลังตามผู้ป่วยมารอ "
+                           "สัญญาณจะหายเองเมื่อกดรับเข้า")
                 if st.button("↩️ ยกเลิกการแจ้ง (กดผิด)", key="rf_call_undo",
                              width='stretch'):
                     if _cq_undo(_ncase):
@@ -2054,51 +2043,33 @@ def _room_focus_fragment(room_no):
                             print(f"[call_log] log undo ล้มเหลว: {_ex}")
                         _push_call_change("ยกเลิกการแจ้งแล้ว ↩️")
                     _rerun_board()
-            else:
-                _diff = int((_cdt - _now()).total_seconds() // 60)
-                _st_txt = (f'<span style="color:#9a6700;font-weight:700;">'
-                           f'เลยมา {-_diff} น.</span>' if _diff < 0
-                           else f'อีก {_diff} น.')
-                st.markdown(f'<span style="font-size:18px;color:#2f7d52;'
-                            f'font-weight:700;">AI แนะนำตามมารอเวลา '
-                            f'~{_cdt.strftime("%H:%M")} น.</span> '
-                            f'<span style="font-size:18px;color:#64748b;">'
-                            f'(ขยับตามสถานการณ์เอง) · {_st_txt}</span>',
-                            unsafe_allow_html=True)
-                if st.button("🔔 เรียกเคสถัดไปมารอได้เลย", key="rf_call_bell",
-                             type='primary', width='stretch',
-                             help="ใกล้ผ่าเสร็จแล้ว : แจ้งจอรับ-ส่งให้ตาม"
-                                  "ผู้ป่วยคิวถัดไปขึ้นมารอทันที ไม่ต้องรอถึงเวลา"):
-                    st.session_state['_rf_call_confirm'] = _ncid
-                    _rerun_board()
-                # 🛎️ กล่องยืนยัน (กันมือลั่น — กระดิ่งเป็นการสั่งงานข้ามจอ)
-                if st.session_state.get('_rf_call_confirm') == _ncid:
-                    st.warning(f"🔔 เรียกเคสนี้มารอเลยใช่ไหม : "
-                               f"{mask_patient_name(_ncase.get('name') or '-')} · "
-                               f"{(_ncase.get('procedure') or '-')}\n\n"
-                               f"AI แนะนำ ~{_cdt.strftime('%H:%M')} น. · "
-                               f"ตอนนี้ {_now().strftime('%H:%M')} น.")
-                    if _diff > _CQ_EARLY:
-                        st.caption(f"⚠️ เร็วกว่าเวลาแนะนำ {_diff} นาที : "
-                                   "ผู้ป่วยอาจขึ้นมารอนานเกิน 1 ชั่วโมง")
-                    _cf1, _cf2 = st.columns(2)
-                    if _cf1.button("🔔 ใช่ เรียกเลย", key="rf_call_yes",
-                                   type='primary', width='stretch'):
-                        st.session_state.pop('_rf_call_confirm', None)
-                        if _cq_call(_ncase, _now(), f'room:{room_no}',
-                                    planned_hhmm=_cq_fmt(_cdt)):
-                            try:
-                                from main_or_db import log_call_event
-                                log_call_event(
-                                    _ncase, 'call', ai_hhmm=_cq_fmt(_cdt),
-                                    new_hhmm=_cq_fmt(_ncase.get('call_time')))
-                            except Exception as _ex:
-                                print(f"[call_log] log call ล้มเหลว: {_ex}")
-                            _push_call_change("แจ้งเรียกคิวถัดไปแล้ว 🔔")
-                        _rerun_board()
-                    if _cf2.button("ยกเลิก", key="rf_call_no", width='stretch'):
-                        st.session_state.pop('_rf_call_confirm', None)
-                        _rerun_board()
+            return
+        with st.popover("🔔", help="ใกล้ผ่าเสร็จแล้ว : เรียกเคสถัดไปมารอได้เลย"):
+            _diff = int((_cdt - _now()).total_seconds() // 60)
+            st.markdown(f'<span style="font-size:18px;font-weight:700;'
+                        f'color:#0f172a;">🔔 เรียกเคสนี้มารอเลยใช่ไหม</span><br>'
+                        f'<span style="font-size:18px;color:#475569;">'
+                        f'{mask_patient_name(_ncase.get("name") or "-")} · '
+                        f'{(_ncase.get("procedure") or "-")}</span>',
+                        unsafe_allow_html=True)
+            st.caption(f"AI แนะนำตามมารอ ~{_cdt.strftime('%H:%M')} น. · "
+                       f"ตอนนี้ {_now().strftime('%H:%M')} น.")
+            if _diff > _CQ_EARLY:
+                st.caption(f"⚠️ เร็วกว่าเวลาแนะนำ {_diff} นาที : "
+                           "ผู้ป่วยอาจขึ้นมารอนานเกิน 1 ชั่วโมง")
+            if st.button("🔔 ใช่ เรียกเลย", key="rf_call_yes",
+                         type='primary', width='stretch'):
+                if _cq_call(_ncase, _now(), f'room:{room_no}',
+                            planned_hhmm=_cq_fmt(_cdt)):
+                    try:
+                        from main_or_db import log_call_event
+                        log_call_event(_ncase, 'call', ai_hhmm=_cq_fmt(_cdt),
+                                       new_hhmm=_cq_fmt(_ncase.get('call_time')))
+                    except Exception as _ex:
+                        print(f"[call_log] log call ล้มเหลว: {_ex}")
+                    _push_call_change("แจ้งเรียกคิวถัดไปแล้ว 🔔")
+                _rerun_board()
+            st.caption("ยังไม่เรียก : แตะที่อื่นเพื่อปิด")
 
     # 🕓 คิวรอของห้อง — เต็มความกว้าง อยู่ล่างสุด (9 ส.ค. 2026 มุคกี้สั่ง: ย้าย
     #    ออกจากคอลัมน์ขวาเดิมที่วางคู่กับแก้เวลา ทำให้หน้าจอเอียง สูงไม่เท่ากัน)
@@ -2131,7 +2102,16 @@ def _room_focus_fragment(room_no):
             return (0 if c.get('status') == 'holding_pre' else 1,
                     _sm, c.get('ororder') or 999)
 
-        _rows = []
+        # 🔔 rev.4: แถวของ "เคสถัดไปที่กระดิ่งเรียกได้" แยก render ด้วย st.columns
+        #    เพื่อวางปุ่มกระดิ่งท้ายแถว (HTML ล้วนใส่ปุ่ม Streamlit ไม่ได้) —
+        #    แถวอื่นยังเป็น HTML ต่อเนื่องตามเดิม สะสมไว้แล้ว flush เป็นช่วง ๆ
+        _pending_rows = []
+
+        def _flush_rows():
+            if _pending_rows:
+                st.markdown(''.join(_pending_rows), unsafe_allow_html=True)
+                _pending_rows.clear()
+
         for _w in sorted(_wait, key=_skey):
             _t = ('TF' if _w.get('is_tf') else
                   f"{int(_w.get('sched_hour') or 8):02d}:"
@@ -2144,6 +2124,7 @@ def _room_focus_fragment(room_no):
                                         and not _w.get('is_tf')) else '')
             _ai = int(_w.get('effective_min') or _w.get('predicted_min') or 0)
             _ai_txt = f' · AI ~{_ai} นาที' if _ai else ''
+            _is_bell_row = (_ncase is not None and _w is _ncase)
             if _w.get('status') == 'holding_pre':
                 _chip = ('<span style="background:#fdf3dd;color:#9a6700;'
                          'border-radius:10px;padding:4px 14px;font-size:18px;'
@@ -2152,7 +2133,24 @@ def _room_focus_fragment(room_no):
                 _chip = ('<span style="background:#f1f5f9;color:#64748b;'
                          'border-radius:10px;padding:4px 14px;font-size:18px;'
                          'white-space:nowrap;">ยังไม่มา</span>')
-            _rows.append(
+            # สถานะการเรียกของเคสถัดไป — โชว์ในแถวเลย (คู่กับปุ่มกระดิ่งท้ายแถว)
+            _call_txt = ''
+            if _is_bell_row:
+                _bct = _ncase.get('call_time')
+                if _bct is not None and hasattr(_bct, 'hour'):
+                    _call_txt = (f'<span style="color:#1b7f4b;font-weight:700;'
+                                 f'white-space:nowrap;">🔔 แจ้งเรียกแล้ว '
+                                 f'{_bct.strftime("%H:%M")}</span>')
+                elif _cdt is not None:
+                    _cdiff = int((_cdt - _now()).total_seconds() // 60)
+                    _call_txt = (
+                        f'<span style="color:#9a6700;font-weight:700;'
+                        f'white-space:nowrap;">ควรตามมารอตั้งแต่ '
+                        f'{_cdt.strftime("%H:%M")}</span>' if _cdiff < 0 else
+                        f'<span style="color:#2f7d52;font-weight:600;'
+                        f'white-space:nowrap;">ตามมารอ ~{_cdt.strftime("%H:%M")}'
+                        f'</span>')
+            _row = (
                 f'<div style="display:flex;align-items:center;gap:10px;'
                 f'border-top:1px solid #eef2f6;padding:9px 0;font-size:18px;">'
                 f'<span style="color:#94a3b8;white-space:nowrap;">{_q}{_t}</span>'
@@ -2161,10 +2159,20 @@ def _room_focus_fragment(room_no):
                 f'<span style="color:#64748b;flex:1;min-width:0;overflow:hidden;'
                 f'text-overflow:ellipsis;white-space:nowrap;">'
                 f'{(_w.get("procedure") or "-")}{_ai_txt}</span>'
-                f'{_chip}</div>')
-        st.markdown(''.join(_rows), unsafe_allow_html=True)
+                f'{_call_txt}{_chip}</div>')
+            if _is_bell_row:
+                _flush_rows()
+                _rc1, _rc2 = st.columns([6, 1], vertical_alignment="center")
+                with _rc1:
+                    st.markdown(_row, unsafe_allow_html=True)
+                with _rc2:
+                    _render_call_bell()
+            else:
+                _pending_rows.append(_row)
+        _flush_rows()
         st.markdown('<span style="font-size:18px;color:#94a3b8;">'
-                     'อ่านอย่างเดียว : การรับเข้า/เข้าห้อง กดที่จอรับ-ส่ง</span>',
+                     'การรับเข้า/เข้าห้อง กดที่จอรับ-ส่ง · กระดิ่ง 🔔 ท้ายแถว'
+                     'เคสถัดไป = เรียกมารอได้เลย ไม่ต้องรอถึงเวลา</span>',
                      unsafe_allow_html=True)
     else:
         st.markdown('<span style="font-size:18px;color:#64748b;">'
