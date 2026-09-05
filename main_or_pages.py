@@ -1474,7 +1474,14 @@ def _board_fragment():
     # (วันที่/เวลาปรับล่าสุด ย้ายไปเป็นชิปบนแถบหัวแล้ว — board เริ่มที่แถวควบคุมเลย)
 
     # ---------- แถวควบคุม: Demo Mode + ปุ่มรีเฟรช (มุมขวา) ----------
-    _ctl_l, _ctl_warn, _ctl_r = st.columns([3, 1.5, 1], vertical_alignment="center")
+    # 🧹 ชั้น A: ตัดสินก่อนวางคอลัมน์ — แถวควบคุมให้ปุ่มแคบลง ข้อความอยู่ตรงกลาง
+    try:
+        from ui_theme import compact_ui as _compact_ui_fn
+        _compact = _compact_ui_fn()
+    except Exception:
+        _compact = False
+    _ctl_l, _ctl_warn, _ctl_r = st.columns([1.3, 4, 1] if _compact else [3, 1.5, 1],
+                                           vertical_alignment="center")
     with _ctl_r:
         if st.button("🔄 รีเฟรช", key="orboard_refresh", width='stretch',
                      type='primary',
@@ -1482,12 +1489,6 @@ def _board_fragment():
             st.session_state['_board_force_pull'] = True   # บังคับดึงจาก DB กลาง
             st.session_state['_board_user_pull'] = True    # ✋ คนสั่งเอง — ห้ามถูกเลื่อน
             _rerun_board()
-    # 🧹 5 ก.ย. 2026 (ชั้น A): เลย์เอาต์ลดความรก — สวิตช์เดียวที่ ui_theme.compact_ui
-    try:
-        from ui_theme import compact_ui as _compact_ui_fn
-        _compact = _compact_ui_fn()
-    except Exception:
-        _compact = False
     with _ctl_warn:
         # ⚠️ ป้าย "อย่ากด F5" บนจอ: คู่มือ 1.5 สอนกติกานี้ในเล่มอยู่แล้ว ป้ายบนจอ
         #    กินที่แถวควบคุมทุกวัน → ชั้น A ถอดออก (ปุ่มรีเฟรชมี tooltip อยู่แล้ว)
@@ -1495,9 +1496,13 @@ def _board_fragment():
             st.markdown("<div style=\x27text-align:right;color:#808495;font-size:var(--fs-meta);line-height:1.3;\x27>⚠️ อย่ากด F5 : ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
         # 🎨 demo: บอกเวลาซิงก์ล่าสุด — ช่องว่าง 30 วิ จะไม่ถูกอ่านว่า "ค้าง"
         if _is_demo_instance and st.session_state.get('_board_last_pull_wall'):
+            # 🧹 ชั้น A: ชิป "สาธิต · ไม่บันทึกจริง" รวมอยู่บรรทัดเดียวกับเวลาซิงก์
+            #    (เดิมเป็นแถวของตัวเอง กินความสูงเพิ่มอีกแถว)
+            _demo_note = (' · สาธิต ไม่บันทึกจริง'
+                          if (_compact and st.session_state.get('_or_demo')) else '')
             st.markdown(
                 f"<div style='text-align:right;color:#b6c2cf;font-size:var(--fs-meta);'>"
-                f"อัปเดตล่าสุด {st.session_state['_board_last_pull_wall']}</div>",
+                f"อัปเดตล่าสุด {st.session_state['_board_last_pull_wall']}{_demo_note}</div>",
                 unsafe_allow_html=True)
     # 🚪 โหมดจอประจำห้อง: ไม่มีสวิตช์สาธิต (กันจอห้องเผลอสลับบอร์ดทั้งตึกเป็นสาธิต)
     _room_scope_board = (st.session_state.get('room_scope')
@@ -1556,7 +1561,9 @@ def _board_fragment():
                 pass
             st.session_state['_board_base_version'] = 0
         _rerun_board()
-    if st.session_state.get('_or_demo'):
+    if st.session_state.get('_or_demo') and _compact:
+        pass    # 🧹 ชั้น A: ข้อความสาธิตอยู่ในบรรทัดเวลาซิงก์แล้ว
+    elif st.session_state.get('_or_demo'):
         # 🎬 โหมดสาธิต: UI เหมือนโหมดจริงทุกอย่าง — เหลือชิปจาง ๆ กันสับสนเท่านั้น
         st.markdown(
             '<div style="text-align:right;margin:-4px 0 2px;">'

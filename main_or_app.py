@@ -1005,6 +1005,14 @@ def main():
         pass    # ถูกตั้งไปแล้วตอนรันไฟล์นี้ตรง ๆ (เรียกซ้ำใน run เดียวกันไม่ได้)
     init_session_state()
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)   # CSS ต้องฉีดทุก run (เส้นทาง demo)
+    # 🐛 5 ก.ย. 2026: เส้นทาง demo_app.py import โมดูลนี้ครั้งเดียว → inject_theme()
+    #    ระดับโมดูลไม่รันซ้ำทุก rerun แอป DEMO จึงไม่มีธีมเลย (แท็บเป็นวงกลม radio
+    #    ปุ่มใหญ่ ช่องว่างกว้าง) ทั้งที่ production ปกติ — ฉีดซ้ำใน main() ทุก run
+    try:
+        from ui_theme import inject_theme as _inject_theme_main
+        _inject_theme_main()
+    except Exception:
+        pass
 
     # 🖥️ แถบเหลือง-ดำคาดหัว "ทุกหน้า" ของแอป DEMO (รวมหน้า login/จอญาติ/จอห้อง)
     try:

@@ -253,7 +253,8 @@ THEME_CSS = (
     'padding:11px 20px !important;border-bottom:2px solid transparent;'
     'border-radius:8px 8px 0 0;cursor:pointer;transition:background .15s;}'
     '.st-key-_main_page div[role="radiogroup"]>label:hover{background:var(--brand-50) !important;}'
-    '.st-key-_main_page div[role="radiogroup"]>label>div:first-child{display:none !important;}'
+    # (5 ก.ย. 2026: Streamlit รุ่นใหม่ วงกลม radio เป็น <span> ไม่ใช่ <div> — ใช้ *:first-child)
+    '.st-key-_main_page div[role="radiogroup"]>label>*:first-child{display:none !important;}'
     '.st-key-_main_page div[role="radiogroup"]>label p{font-size:var(--fs-body) !important;'
     'color:var(--ink-500) !important;font-weight:600 !important;margin:0 !important;}'
     '.st-key-_main_page div[role="radiogroup"]>label:has(input:checked){'
@@ -294,9 +295,43 @@ def compact_ui() -> bool:
         return False
 
 
+# 🧹 ชั้น A: CSS เสริมเมื่อ compact_ui() — ลดความสูงปุ่ม/แท็บ/ช่องว่างแนวตั้งของแถบหัว
+#    (ปุ่มในตารางบอร์ดมี CSS ของตัวเองใน tracking_board ไม่แตะ)
+COMPACT_CSS = (
+    '<style>'
+    # ปุ่มแถบหัว/แถวควบคุม: เตี้ยลง 48 → 38px
+    '.st-key-_logout_btn .stButton>button,.st-key-orboard_refresh .stButton>button,'
+    '.st-key-orboard_demo_on .stButton>button,.st-key-orboard_demo_off .stButton>button{'
+    'min-height:38px !important;padding:6px 16px !important;'
+    'font-size:var(--fs-meta) !important;}'
+    '.st-key-_logout_btn .stButton>button{border-color:transparent !important;'
+    'color:var(--ink-500) !important;font-weight:500 !important;}'
+    # แท็บเมนู: บางลง
+    '.st-key-_main_page div[role="radiogroup"]>label{padding:7px 14px 9px !important;}'
+    '.st-key-_main_page div[role="radiogroup"]>label p{font-size:16px !important;}'
+    # expander เครื่องมือ: หัวเตี้ยลง
+    '[data-testid="stExpander"] summary{padding:6px 12px !important;'
+    'font-size:var(--fs-meta) !important;}'
+    # ช่องว่างแนวตั้งระหว่างบล็อก
+    '[data-testid="stVerticalBlock"]{gap:0.45rem !important;}'
+    '.block-container,[data-testid="stMainBlockContainer"]{padding-top:0.6rem !important;}'
+    # pills กรองสถานะ: ทึบเมื่อเลือก อ่านเป็นชิปไม่ใช่ลิงก์
+    '[data-testid="stPills"] button{border-radius:999px !important;'
+    'font-size:var(--fs-meta) !important;font-weight:600 !important;'
+    'padding:3px 12px !important;min-height:30px !important;}'
+    '[data-testid="stPills"] button[kind="pillsActive"],'
+    '[data-testid="stPills"] button[aria-pressed="true"]{'
+    'background:var(--ink-900) !important;color:#fff !important;'
+    'border-color:var(--ink-900) !important;}'
+    '</style>'
+)
+
+
 def inject_theme() -> None:
     """Inject central theme CSS (ต้องเรียกทุก rerun — อย่าใส่ session_state guard)."""
     st.markdown(THEME_CSS, unsafe_allow_html=True)
+    if compact_ui():
+        st.markdown(COMPACT_CSS, unsafe_allow_html=True)
 
 
 def render_page_header(emoji: str, title: str, subtitle: str = "") -> None:
