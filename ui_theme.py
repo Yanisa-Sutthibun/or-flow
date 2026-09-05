@@ -254,7 +254,9 @@ THEME_CSS = (
     'border-radius:8px 8px 0 0;cursor:pointer;transition:background .15s;}'
     '.st-key-_main_page div[role="radiogroup"]>label:hover{background:var(--brand-50) !important;}'
     # (5 ก.ย. 2026: Streamlit รุ่นใหม่ วงกลม radio เป็น <span> ไม่ใช่ <div> — ใช้ *:first-child)
-    '.st-key-_main_page div[role="radiogroup"]>label>*:first-child{display:none !important;}'
+    #  DOM 1.45+: label > span(input ซ่อน) + div > div > [div วงกลม, div ข้อความ]
+    '.st-key-_main_page div[role="radiogroup"]>label>*:first-child,'
+    '.st-key-_main_page div[role="radiogroup"]>label>div>div>div:first-child{display:none !important;}'
     '.st-key-_main_page div[role="radiogroup"]>label p{font-size:var(--fs-body) !important;'
     'color:var(--ink-500) !important;font-weight:600 !important;margin:0 !important;}'
     '.st-key-_main_page div[role="radiogroup"]>label:has(input:checked){'
@@ -300,11 +302,12 @@ def compact_ui() -> bool:
 COMPACT_CSS = (
     '<style>'
     # ปุ่มแถบหัว/แถวควบคุม: เตี้ยลง 48 → 38px
-    '.st-key-_logout_btn .stButton>button,.st-key-orboard_refresh .stButton>button,'
-    '.st-key-orboard_demo_on .stButton>button,.st-key-orboard_demo_off .stButton>button{'
+    #  (ปุ่มที่มี help= ถูกห่อด้วย span.stTooltipHoverTarget → ใช้ descendant ไม่ใช่ >)
+    '.st-key-_logout_btn button,.st-key-orboard_refresh button,'
+    '.st-key-orboard_demo_on button,.st-key-orboard_demo_off button{'
     'min-height:38px !important;padding:6px 16px !important;'
     'font-size:var(--fs-meta) !important;}'
-    '.st-key-_logout_btn .stButton>button{border-color:transparent !important;'
+    '.st-key-_logout_btn button{border-color:transparent !important;'
     'color:var(--ink-500) !important;font-weight:500 !important;}'
     # แท็บเมนู: บางลง
     '.st-key-_main_page div[role="radiogroup"]>label{padding:7px 14px 9px !important;}'
