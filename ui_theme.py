@@ -318,14 +318,27 @@ COMPACT_CSS = (
     # ช่องว่างแนวตั้งระหว่างบล็อก
     '[data-testid="stVerticalBlock"]{gap:0.45rem !important;}'
     '.block-container,[data-testid="stMainBlockContainer"]{padding-top:0.6rem !important;}'
-    # pills กรองสถานะ: ทึบเมื่อเลือก อ่านเป็นชิปไม่ใช่ลิงก์
-    '[data-testid="stPills"] button{border-radius:999px !important;'
+    # pills กรองสถานะ (DOM 1.45: button[data-variant=pills][data-selected=true])
+    'button[data-variant="pills"]{border-radius:999px !important;'
     'font-size:var(--fs-meta) !important;font-weight:600 !important;'
-    'padding:3px 12px !important;min-height:30px !important;}'
-    '[data-testid="stPills"] button[kind="pillsActive"],'
-    '[data-testid="stPills"] button[aria-pressed="true"]{'
+    'padding:2px 12px !important;min-height:30px !important;height:30px !important;'
+    'border:1px solid var(--ink-200) !important;background:var(--ink-50) !important;'
+    'color:var(--ink-700) !important;}'
+    'button[data-variant="pills"][data-selected="true"]{'
     'background:var(--ink-900) !important;color:#fff !important;'
     'border-color:var(--ink-900) !important;}'
+    # ช่องค้นหา + dropdown ห้อง: 45 → 36px ให้เตี้ยเท่าชิป
+    '[data-testid="stTextInputRootElement"],'
+    '.stSelectbox [data-baseweb="select"]>div{'
+    'height:36px !important;min-height:36px !important;}'
+    '.stTextInput input,.stSelectbox [data-baseweb="select"]>div{'
+    'font-size:var(--fs-meta) !important;padding-top:0 !important;padding-bottom:0 !important;}'
+    # ชิปแถบหัว (ป้ายโมเดล/ออนไลน์): เล็กลง ไม่มีพื้นสี
+    '.or-chips .or-chip{font-size:14px !important;padding:2px 10px !important;'
+    'background:transparent !important;border:1px solid var(--ink-200) !important;'
+    'color:var(--ink-500) !important;}'
+    # ระยะห่างระหว่างคอลัมน์ในแถวเดียวกัน
+    '[data-testid="stHorizontalBlock"]{gap:0.6rem !important;}'
     '</style>'
 )
 
