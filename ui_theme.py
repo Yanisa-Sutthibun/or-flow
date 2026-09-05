@@ -303,7 +303,7 @@ COMPACT_CSS = (
     '<style>'
     # ปุ่มแถบหัว/แถวควบคุม: เตี้ยลง 48 → 38px
     #  (ปุ่มที่มี help= ถูกห่อด้วย span.stTooltipHoverTarget → ใช้ descendant ไม่ใช่ >)
-    '.st-key-_logout_btn button,.st-key-orboard_refresh button,'
+    '.st-key-_logout_btn button,.st-key-orboard_refresh button,.st-key-hdr_refresh button,'
     '.st-key-orboard_demo_on button,.st-key-orboard_demo_off button{'
     'min-height:38px !important;padding:6px 16px !important;'
     'font-size:var(--fs-meta) !important;}'

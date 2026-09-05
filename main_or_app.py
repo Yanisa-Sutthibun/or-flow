@@ -1210,14 +1210,28 @@ def main():
     except Exception:
         _default_page = _page_options[0]
     _default_idx = _page_options.index(_default_page) if _default_page in _page_options else 0
-    page = st.radio(
-        "เมนูหลัก",
-        _page_options,
-        index=_default_idx,
-        horizontal=True,
-        label_visibility="collapsed",
-        key='_main_page',
-    )
+    # 🧹 ชั้น A (มุคกี้สั่ง 5 ก.ย. 2026): ปุ่ม 🔄 รีเฟรช ย้ายมาอยู่แถวเดียวกับแท็บ
+    #    มุมขวา ใต้ปุ่มออกจากระบบ (คู่มือ 1.5 "รีเฟรช มุมขวาบน" ยังจริง)
+    #    กดแล้วตั้งธงดึงบอร์ดกลางชุดเดียวกับปุ่มเดิมใน _board_fragment แล้ว rerun ทั้งหน้า
+    _tab_col, _rf_col = st.columns([6, 1], vertical_alignment="center") \
+        if _hdr_compact else (st.container(), None)
+    with _tab_col:
+        page = st.radio(
+            "เมนูหลัก",
+            _page_options,
+            index=_default_idx,
+            horizontal=True,
+            label_visibility="collapsed",
+            key='_main_page',
+        )
+    if _rf_col is not None:
+        with _rf_col:
+            if st.button("🔄 รีเฟรช", key="hdr_refresh", type="primary",
+                         use_container_width=True,
+                         help="ดึงสถานะล่าสุดจากบอร์ดกลาง (เห็นที่เครื่องอื่นกด)"):
+                st.session_state['_board_force_pull'] = True
+                st.session_state['_board_user_pull'] = True
+                st.rerun()
     try:
         if page != _default_page:
             st.query_params['page'] = page

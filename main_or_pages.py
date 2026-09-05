@@ -1480,10 +1480,11 @@ def _board_fragment():
         _compact = _compact_ui_fn()
     except Exception:
         _compact = False
-    _ctl_l, _ctl_warn, _ctl_r = st.columns([1.3, 4, 1] if _compact else [3, 1.5, 1],
+    _ctl_l, _ctl_warn, _ctl_r = st.columns([1.3, 4, 0.01] if _compact else [3, 1.5, 1],
                                            vertical_alignment="center")
     with _ctl_r:
-        if st.button("🔄 รีเฟรช", key="orboard_refresh", width='stretch',
+        # 🧹 ชั้น A: ปุ่มรีเฟรชอยู่แถวแท็บแล้ว (main_or_app: hdr_refresh) ไม่วางซ้ำ
+        if (not _compact) and st.button("🔄 รีเฟรช", key="orboard_refresh", width='stretch',
                      type='primary',
                      help="ดึงสถานะล่าสุดจากบอร์ดกลาง (เห็นที่เครื่องอื่นกด)"):
             st.session_state['_board_force_pull'] = True   # บังคับดึงจาก DB กลาง
