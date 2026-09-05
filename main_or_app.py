@@ -1137,12 +1137,24 @@ def main():
         _now_hdr = _dtm.now(_tzu(_td(hours=7))).strftime('%d/%m/%Y')
         # (ชิป DEMO เล็กในแถวนี้ถูกถอด 3 ส.ค. 2026 — แถบเหลืองดำ + หน้า login
         #  ประกาศชัดอยู่แล้ว ไม่ต้องย้ำซ้ำให้รกหัวจอ)
+        # 🧹 5 ก.ย. 2026 (ชั้น A): แถบหัวเหลือเฉพาะสิ่งที่คู่มือรูปที่ 1 ระบุ —
+        #    ป้ายโมเดล (ข้อ 1) + ป้ายออนไลน์ (ข้อ 2) · ชิปวิทยานิพนธ์/เวลาเปิดใช้/
+        #    วันที่ ไม่มีใครใช้ระหว่างเวร (มีอยู่แล้วที่หน้า login และ ⚙️ ตั้งค่า)
+        try:
+            from ui_theme import compact_ui as _compact_ui
+            _hdr_compact = _compact_ui()
+        except Exception:
+            _hdr_compact = False
+        _hdr_extra = ('' if _hdr_compact else
+                      '<span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>')
+        _hdr_extra2 = ('' if _hdr_compact else
+                       '<span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>'
+                       f'<span class="or-chip">📅 ปรับล่าสุด {_now_hdr}</span>')
         st.markdown(
             '<div class="or-chips" style="margin-top:6px;">'
-            '<span class="or-chip">🎓 ส่วนหนึ่งของวิทยานิพนธ์การบริหารทางการพยาบาล</span>'
-            '<span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>'
-            '<span class="or-chip">🕗 OR Flow เปิดใช้งานเวลา 08:00–16:00 น.</span>'
-            f'<span class="or-chip">📅 ปรับล่าสุด {_now_hdr}</span>'
+            + _hdr_extra
+            + '<span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>'
+            + _hdr_extra2
             + _online_chips
             + ('<span class="or-chip" style="background:#fff3e0;color:#e65100;">'
                '👤 ผู้วิจัย</span>'

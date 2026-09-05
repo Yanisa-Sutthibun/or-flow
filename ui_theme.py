@@ -278,6 +278,22 @@ THEME_CSS = (
 )
 
 
+def compact_ui() -> bool:
+    """🧹 เลย์เอาต์ลดความรก "ชั้น A" (ผู้ทรงคุณวุฒิติง 5 ก.ย. 2026 ว่า UI รก)
+    ปรับเฉพาะสิ่งที่คู่มือฉบับส่ง IRB (31 ส.ค. 2026) ไม่ได้ระบุ — ทุกอย่างที่คู่มือ
+    เขียนถึงยังอยู่ครบ (ป้ายโมเดล แท็บ 6 อัน แถบเครื่องมือ ปุ่ม ✏️/↩️ แถบคิวถัดไป
+    "จาก N เคส ช่วง x-y" ฯลฯ) · เปิดเฉพาะแอป DEMO ก่อน ให้ดูของจริงได้โดย
+    production ยังเห็นของเดิม · เคาะแล้วค่อยเปิดทั้งสองแอปด้วย secrets ui_compact=true
+    (ไม่ตั้ง = ตามชนิด instance)"""
+    try:
+        _v = st.secrets.get('ui_compact', None)
+        if _v is not None:
+            return str(_v).strip().lower() in ('1', 'true', 'yes', 'on')
+        return str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        return False
+
+
 def inject_theme() -> None:
     """Inject central theme CSS (ต้องเรียกทุก rerun — อย่าใส่ session_state guard)."""
     st.markdown(THEME_CSS, unsafe_allow_html=True)

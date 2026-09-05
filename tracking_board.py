@@ -89,6 +89,45 @@ _PACU_BTN_CSS = (
 )
 
 
+def _compact() -> bool:
+    """🧹 ชั้น A (5 ก.ย. 2026) — สวิตช์เดียวอยู่ที่ ui_theme.compact_ui (demo ก่อน)"""
+    try:
+        from ui_theme import compact_ui
+        return compact_ui()
+    except Exception:
+        return False
+
+
+def _room_fg_default() -> str:
+    """สีรหัสห้อง: ชั้น A = ดำ (สี = ความเร่งด่วนเท่านั้น) · เดิม = น้ำเงิน"""
+    return '#0f172a' if _compact() else '#1565c0'
+
+
+def _ov_badge_html(c) -> str:
+    """ป้าย "ปรับแล้ว" (พยาบาลแก้เวลาทับ AI) — ชั้น A ย่อเป็นข้อมูลรอง 14px"""
+    if not c.get('user_override_min'):
+        return ''
+    _fs = 14 if _compact() else 18
+    return (f'<span style="background:#e3f0fb;color:#1565c0;border-radius:8px;'
+            f'padding:2px 10px;font-size:{_fs}px;margin-left:6px;">ปรับแล้ว</span>')
+
+
+# 🧹 ชั้น A: ปุ่มบนแถวขนาดเดิม แต่ "เสร็จ → พักฟื้น" เป็นปุ่มรองสีกลาง (ไม่ม่วง)
+#    — ในแถวมีปุ่มน้ำเงินเดียว = สิ่งที่ต้องกดตอนนี้ · ปุ่มยังมีครบตามคู่มือ 1.3
+_PACU_BTN_CSS_COMPACT = (
+    '[class*="st-key-tb_"] button{padding:8px 6px !important;font-size:16px !important;'
+    'white-space:nowrap !important;}'
+    '[class*="st-key-tb_f2_"] button{'
+    'background:#f6f8fa !important;border:1px solid #e2e8f0 !important;'
+    'color:#475569 !important;font-weight:500 !important;font-size:14px !important;'
+    'padding:5px 6px !important;min-height:0 !important;}'
+    '[class*="st-key-tb_f2_"] button:hover{'
+    'background:#eef2f6 !important;border-color:#cbd5e1 !important;}'
+    # ↩️ และ ✏️ เป็นปุ่มไอคอนสีกลาง
+    '[class*="st-key-tb_un_"] button{color:#64748b !important;}'
+)
+
+
 def _dur_str(m) -> str:
     """นาที → ข้อความอ่านง่าย: ≤60 = 'X น.' · เกิน = 'X ชม. Y น.' (มุคกี้สั่ง 19 ก.ค. 2026)"""
     try:
@@ -216,7 +255,8 @@ def _dup_name_badges(cases, loc) -> dict:
                 f'<span title="ชื่อซ้ำกับอีกเคสวันนี้{(" · " + rooms_txt) if rooms_txt else ""}'
                 f' · ตรวจ HN ก่อนดำเนินการ" style="display:inline-flex;align-items:center;'
                 f'gap:6px;background:#fdf3dd;color:#9a6700;border-radius:999px;'
-                f'padding:4px 14px;font-size:18px;font-weight:600;margin-left:7px;'
+                f'padding:{"2px 10px" if _compact() else "4px 14px"};'
+                f'font-size:{14 if _compact() else 18}px;font-weight:600;margin-left:7px;'
                 f'white-space:nowrap;">👥 ชื่อซ้ำ{(" · " + rooms_txt) if rooms_txt else ""}</span>')
     return badges
 
@@ -230,10 +270,33 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     room_opts = [(room_no, ชื่อห้อง)] ห้องที่เปิดใช้ — สำหรับ dropdown ย้ายห้องใน ✏️"""
     now = _now()
     room_opts = room_opts or []
-    st.markdown(f'<style>{_EMG_CSS}{_PACU_BTN_CSS}</style>', unsafe_allow_html=True)
+    _cmp = _compact()
+    st.markdown(f'<style>{_EMG_CSS}{_PACU_BTN_CSS_COMPACT if _cmp else _PACU_BTN_CSS}</style>',
+                unsafe_allow_html=True)
 
     # ---------- ค้นหา + กรอง ----------
-    fc1, fc2, fc3 = st.columns([3, 1.4, 1.6])
+    # 🧹 ชั้น A: ชิปสถานะพร้อมตัวเลข (แทน KPI 5 การ์ด + dropdown "ทุกสถานะ")
+    #    กดชิป = กรองแถวทันที · ตัวเลขชุดเดียวกับการ์ดเดิมทุกตัว
+    if _cmp:
+        _cnt = {'ยังไม่มา': 0, 'รอผ่าตัด': 0, 'กำลังผ่า': 0, 'รอจำหน่าย': 0, 'จำหน่ายแล้ว': 0}
+        for _c0 in cases:
+            _g0 = _STATUS_GROUP.get(_c0.get('status'))
+            if _g0 in _cnt:
+                _cnt[_g0] += 1
+        _n_all = sum(_cnt.values())
+        _pill_opts = [f"ทั้งหมด {_n_all}"] + [f"{k} {v}" for k, v in _cnt.items()]
+        fc0, fc1, fc2 = st.columns([3.4, 2, 1.1], vertical_alignment="center")
+        try:
+            _sel = fc0.pills("สถานะ", _pill_opts, default=_pill_opts[0],
+                             key="tb_status_pill", label_visibility="collapsed")
+        except Exception:
+            _sel = fc0.radio("สถานะ", _pill_opts, horizontal=True,
+                             key="tb_status_pill", label_visibility="collapsed")
+        _sel = _sel or _pill_opts[0]
+        status_f = 'ทุกสถานะ' if _sel.startswith('ทั้งหมด') else _sel.rsplit(' ', 1)[0]
+        fc3 = None
+    else:
+        fc1, fc2, fc3 = st.columns([3, 1.4, 1.6])
     q = fc1.text_input("ค้นหา", key="tb_q", placeholder="ค้นหา ชื่อ / HN / หัตถการ",
                        label_visibility="collapsed")
     rooms_avail = sorted({loc(c) for c in cases})
@@ -253,9 +316,10 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         st.session_state['_tb_room_seeded'] = True
     room_f = fc2.selectbox("ห้อง", ["ทุกห้อง", _Z_HOLD, _Z_RECOV] + rooms_avail,
                            key="tb_room", label_visibility="collapsed")
-    status_f = fc3.selectbox("สถานะ", ["ทุกสถานะ", "ยังไม่มา", "รอผ่าตัด", "กำลังผ่า",
-                                       "รอจำหน่าย", "จำหน่ายแล้ว"], key="tb_status",
-                             label_visibility="collapsed")
+    if fc3 is not None:
+        status_f = fc3.selectbox("สถานะ", ["ทุกสถานะ", "ยังไม่มา", "รอผ่าตัด", "กำลังผ่า",
+                                           "รอจำหน่าย", "จำหน่ายแล้ว"], key="tb_status",
+                                 label_visibility="collapsed")
     ql = (q or '').strip().lower()
 
     # ห้องที่มีเคสกำลังผ่าอยู่ → ห้ามเข้าห้องซ้ำ
@@ -408,13 +472,55 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         'not_arrived', 'holding_pre', 'in_or', 'overrun',
         'holding_post', 'recovery', 'discharged')]
 
+    # ---------- 🧹 ชั้น A: 3 กลุ่มตามคู่มือรูปที่ 2 (ก่อนผ่าตัด / ระยะผ่าตัด / หลังผ่าตัด)
+    #    แทน 7 หัวข้อ · สถานะย่อย (รอเกินเวลา รับ-ส่ง พักฟื้น) อ่านจากชิปในแถว
+    #    · รายการห้องว่างแปะท้ายหัวกลุ่มระยะผ่าตัด ไม่มีกล่องแยก
+    if _cmp:
+        def _zh(title, en, n, right=''):
+            _r = (f'<span style="margin-left:auto;font-size:14px;color:#94a3b8;'
+                  f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{right}</span>'
+                  if right else '')
+            st.markdown(
+                f'<div style="display:flex;align-items:baseline;gap:10px;'
+                f'border-bottom:1px solid #eef2f6;padding:8px 2px 6px;margin:10px 0 4px;">'
+                f'<span style="font-size:16px;font-weight:700;color:#0f172a;">{title}</span>'
+                f'<span style="font-size:12.5px;color:#94a3b8;">{en}</span>'
+                f'<span style="font-size:14px;color:#94a3b8;">{n} เคส</span>{_r}</div>',
+                unsafe_allow_html=True)
+        _free_txt = ''
+        if room_f == 'ทุกห้อง' and status_f == 'ทุกสถานะ' and not ql:
+            _busy_now = {rid(c1_) for _, c1_, d_, _, _ in z_or if rid(c1_)}
+            # ชื่อห้องอย่างเดียว (ตัดสาขา) — ' · ' ซ้ำกับตัวคั่นชื่อห้องแล้วอ่านไม่ออก
+            _free = [str(lbl).partition(' · ')[0] for rn, lbl in room_opts
+                     if rn not in _busy_now]
+            if _free:
+                _free_txt = 'ห้องว่าง: ' + ' · '.join(_esc(x) for x in _free)
+        if z_pre:
+            _zh('ก่อนผ่าตัด', 'Preoperative', len(z_pre))
+            _rows(z_pre)
+        _zh('ระยะผ่าตัด', 'Intraoperative', len(z_or), right=_free_txt)
+        if z_or:
+            _rows(z_or)
+        else:
+            st.caption("ไม่มีเคสกำลังผ่าตัด")
+        if z_post or z_rec:
+            _zh('หลังผ่าตัด', 'Postoperative', len(z_post) + len(z_rec))
+            _rows(z_post)
+            _rows(z_rec)
+        if z_other:
+            _rows(z_other)
+        if z_done:
+            with st.expander(f"✅ จำหน่ายแล้ววันนี้ ({len(z_done)} ราย)", expanded=False):
+                _rows(z_done)
+        return
+
     # ---------- โซน 1: ห้องรับ-ส่ง ----------
     _zone_head('🚪 ห้องรับ-ส่ง', len(z_pre) + len(z_post), '#f1c40f')
     if z_pre:
         _sub_head('ก่อนผ่าตัด')
         _rows(z_pre)
     if z_post:
-        _sub_head('หลังผ่าตัด — รอจำหน่าย')
+        _sub_head('หลังผ่าตัด : รอจำหน่าย')
         _rows(z_post)
     if not z_pre and not z_post:
         st.caption("ไม่มีผู้ป่วยในห้องรับ-ส่ง")
@@ -507,9 +613,10 @@ _ROW_H = 70                 # ความสูงแถว (px) — iframe ต
 _ROW_IFRAME_H = _ROW_H + 8
 
 
-def _cell_room(c, loc, fg='#1565c0'):
+def _cell_room(c, loc, fg=None):
     """ห้อง: ชื่อห้องบรรทัดบน · สาขาบรรทัดล่าง — เดิม 'OR7 · PLASTIC' บรรทัดเดียว
     ยาวจนล้นไปชนคอลัมน์ถัดไป"""
+    fg = fg or _room_fg_default()
     head, _, sub = str(loc(c) or '').partition(' · ')
     _sub = (f'<span style="display:block;font-size:14px;font-weight:500;color:#94a3b8;'
             f'line-height:1.2;letter-spacing:.3px;white-space:nowrap;overflow:hidden;'
@@ -632,6 +739,12 @@ def _call_line_html(c, dt, now):
     _base = ('display:flex;align-items:center;gap:8px;padding:5px 12px 6px;'
              'border-top:1px dashed #e2e8f0;font-size:15px;color:#64748b;'
              'font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;')
+    if _compact():
+        # 🧹 ชั้น A: แถบเดิมสูงเกือบเท่าแถวเคส → บรรทัดเดียว 13px ไม่มีเส้นประ
+        #    (ยังเป็น "แถบใต้การ์ด" ข้อความ/สี ตามคู่มือ 1.7 ทุกคำ)
+        _base = ('display:flex;align-items:center;gap:8px;padding:3px 12px 4px 100px;'
+                 'font-size:13px;color:#64748b;'
+                 'font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;')
     ct = c.get('call_time')
     if ct is not None and hasattr(ct, 'hour'):
         # 🔔 ห้องผ่าตัดกดกระดิ่ง — แถบเขียวเด่น: นี่คืองานที่รับ-ส่งต้องทำเดี๋ยวนี้
@@ -764,10 +877,7 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
     # แล้วให้ JS เดินต่อจากค่านี้ด้วย Date.now() ของเครื่องเอง (ไม่พึ่ง .timestamp()
     # ที่เพี้ยนเมื่อ server คนละ timezone) — ทุกเครื่องเห็นเลขเริ่มต้นเท่ากัน
     el0 = max((now - arr).total_seconds(), 0) if (arr is not None and hasattr(arr, 'hour')) else 0
-    ov = c.get('user_override_min')
-    ov_badge = ('<span style="background:#e3f0fb;color:#1565c0;border-radius:8px;'
-                'padding:3px 12px;font-size:18px;margin-left:6px;">ปรับแล้ว</span>'
-                if ov else '')
+    ov_badge = _ov_badge_html(c)
     emer = _is_emer(c)
     # แถบสีซ้าย 5px = สถานะแบบเห็นจากไกล (เทา=รอ · แดง=ฉุกเฉิน · เหลือง=รอเกินเวลา ใส่ทีหลังด้วย JS)
     border_css = ('border:1px solid #f5c6c5;border-left:5px solid #e0312e;'
@@ -903,9 +1013,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
         disp, (str(disp or 'ไม่ทราบสถานะ'), '#64748b', '#f1f5f9', ''))
     bg = rowbg if rowbg else '#ffffff'
     ov = c.get('user_override_min')
-    ov_badge = ('<span style="background:#e3f0fb;color:#1565c0;border-radius:8px;'
-                'padding:3px 12px;font-size:18px;margin-left:6px;">ปรับแล้ว</span>'
-                if ov else '')
+    ov_badge = _ov_badge_html(c)
     # จำหน่ายแล้ว → แถบเทาจาง ทุกอย่างหรี่ลง (ไฟฉุกเฉินดับด้วย — เคสจบแล้ว ไม่รกตา)
     muted = (disp == 'discharged')
     emer = _is_emer(c) and not muted
@@ -915,6 +1023,10 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     _bar = {'holding_pre': '#cbd5e1', 'in_or': '#22a565', 'overrun': '#e3920b',
             'holding_post': '#1565c0', 'recovery': '#a855f7',
             'discharged': '#e2e8f0'}.get(disp, '#cbd5e1')
+    if _compact() and disp != 'overrun':
+        # 🧹 ชั้น A: สี = ความเร่งด่วนเท่านั้น — แถบซ้ายประจำสถานะ (เขียว/น้ำเงิน/ม่วง)
+        #    ซ้ำกับชิปสถานะอยู่แล้ว เหลือแดง = ฉุกเฉิน · เหลือง = เกินเวลา
+        _bar = '#e2e8f0'
     border_css = ('border:1px solid #f5c6c5;border-left:5px solid #e0312e;'
                   if emer else f'border:1px solid #eef2f6;border-left:5px solid {_bar};')
     # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026): แถบสี = ภาษาปัญหาเท่านั้น
@@ -923,7 +1035,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     if _demo_fx_tb() and not muted:
         bg = ('#fdeeee' if emer
               else '#fff8e1' if disp == 'overrun' else '#ffffff')
-    room_fg = '#b6c2cf' if muted else '#1565c0'
+    room_fg = '#b6c2cf' if muted else _room_fg_default()
     name_fg = '#94a3b8' if muted else '#0f172a'
     sub_fg = '#b6c2cf' if muted else '#64748b'
     time_fg = '#b6c2cf' if muted else '#475569'

@@ -1482,8 +1482,17 @@ def _board_fragment():
             st.session_state['_board_force_pull'] = True   # บังคับดึงจาก DB กลาง
             st.session_state['_board_user_pull'] = True    # ✋ คนสั่งเอง — ห้ามถูกเลื่อน
             _rerun_board()
+    # 🧹 5 ก.ย. 2026 (ชั้น A): เลย์เอาต์ลดความรก — สวิตช์เดียวที่ ui_theme.compact_ui
+    try:
+        from ui_theme import compact_ui as _compact_ui_fn
+        _compact = _compact_ui_fn()
+    except Exception:
+        _compact = False
     with _ctl_warn:
-        st.markdown("<div style=\x27text-align:right;color:#808495;font-size:var(--fs-meta);line-height:1.3;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
+        # ⚠️ ป้าย "อย่ากด F5" บนจอ: คู่มือ 1.5 สอนกติกานี้ในเล่มอยู่แล้ว ป้ายบนจอ
+        #    กินที่แถวควบคุมทุกวัน → ชั้น A ถอดออก (ปุ่มรีเฟรชมี tooltip อยู่แล้ว)
+        if not _compact:
+            st.markdown("<div style=\x27text-align:right;color:#808495;font-size:var(--fs-meta);line-height:1.3;\x27>⚠️ อย่ากด F5 : ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
         # 🎨 demo: บอกเวลาซิงก์ล่าสุด — ช่องว่าง 30 วิ จะไม่ถูกอ่านว่า "ค้าง"
         if _is_demo_instance and st.session_state.get('_board_last_pull_wall'):
             st.markdown(
@@ -1655,18 +1664,22 @@ def _board_fragment():
             ('ในห้องผ่าตัด', n_inor, '#0f6e56', '#e1f5ee'),
             ('รอจำหน่าย', n_post, '#1565c0', '#e3f0fb'),
             ('จำหน่าย', n_done, '#475569', '#eceff3')]
-    st.markdown(
-        '<div style="display:flex;gap:12px;margin:6px 0 12px;">'
-        + ''.join(
-            f'<div style="flex:1;background:#ffffff;border:1px solid #eef2f6;'
-            f'border-radius:14px;padding:14px 16px 12px;">'
-            f'<span style="display:inline-block;background:{_bg};color:{_fg};'
-            f'border-radius:10px;padding:4px 12px;font-size:var(--fs-meta);'
-            f'font-weight:600;white-space:nowrap;">{_lb}</span>'
-            f'<div style="font-size:32px;font-weight:800;color:#0f172a;'
-            f'line-height:1.15;margin-top:6px;">{_v}</div></div>'
-            for _lb, _v, _fg, _bg in _KPI)
-        + '</div>', unsafe_allow_html=True)
+    # 🧹 ชั้น A: การ์ด KPI 5 ใบกินทั้งแถบก่อนถึงเคสแรก → ตัวเลขชุดเดียวกันย้ายไป
+    #    เป็นชิปกรองแถวเดียวในบอร์ด (tracking_board: กดชิป = กรองสถานะ)
+    #    (คู่มือพูดถึง "การ์ดตัวเลขสำคัญ" เฉพาะหน้าภาพรวมวันนี้ ไม่ใช่บอร์ด)
+    if not _compact:
+        st.markdown(
+            '<div style="display:flex;gap:12px;margin:6px 0 12px;">'
+            + ''.join(
+                f'<div style="flex:1;background:#ffffff;border:1px solid #eef2f6;'
+                f'border-radius:14px;padding:14px 16px 12px;">'
+                f'<span style="display:inline-block;background:{_bg};color:{_fg};'
+                f'border-radius:10px;padding:4px 12px;font-size:var(--fs-meta);'
+                f'font-weight:600;white-space:nowrap;">{_lb}</span>'
+                f'<div style="font-size:32px;font-weight:800;color:#0f172a;'
+                f'line-height:1.15;margin-top:6px;">{_v}</div></div>'
+                for _lb, _v, _fg, _bg in _KPI)
+            + '</div>', unsafe_allow_html=True)
 
     # ---------- action handlers ----------
     # (มี guard กันกดรัว/กดซ้ำ — ถ้าสถานะเปลี่ยนไปแล้วจากคลิกก่อนหน้า ไม่ทำซ้ำ)
@@ -1985,11 +1998,11 @@ def _room_focus_fragment(room_no):
                 c.get('ororder') or 999))[0]
             _st_txt = ('พร้อมแล้วที่ห้องรับ-ส่ง' if n0.get('status') == 'holding_pre'
                        else 'ยังไม่มา')
-            st.info(f"ห้องว่าง — คิวถัดไป: **{mask_patient_name(n0.get('name') or '-')}** · "
+            st.info(f"ห้องว่าง : คิวถัดไป: **{mask_patient_name(n0.get('name') or '-')}** · "
                     f"{n0.get('procedure', '-')} ({_st_txt})\n\n"
                     f"จอรับ-ส่งเป็นผู้กด 'เข้าห้อง' · คิวของห้องนี้เหลือ {len(nxt)} เคส")
         else:
-            st.success("ห้องว่าง — ไม่มีเคสค้างของห้องนี้แล้ววันนี้ 🎉")
+            st.success("ห้องว่าง : ไม่มีเคสค้างของห้องนี้แล้ววันนี้ 🎉")
 
     # ═══════ 🔔 กระดิ่งเรียกคิวถัดไป (rev.4 UX มุคกี้แก้ 14 ส.ค. 2026) ═══════
     #    rev.3 เคยเป็นกล่องใหญ่แยกเหนือรายการคิว — มุคกี้บอกงง: กระดิ่งต้องเกาะ
