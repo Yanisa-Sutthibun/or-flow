@@ -76,3 +76,6 @@ backups_research/
 
 # ของ legacy ที่ถอดจากระบบแล้ว (pkl v1 + or_agent_demo) — เก็บ local เผื่ออ้างอิง
 _archive_legacy/
+
+# Claude Code local settings (permissions เฉพาะเครื่อง) — ไม่ต้อง commit
+.claude/settings.local.json*
