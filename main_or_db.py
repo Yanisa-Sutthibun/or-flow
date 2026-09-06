@@ -1510,7 +1510,7 @@ def import_history_6467(progress_cb=None):
         model_label = f"v{_reg.get('active_version', 1)}"
     except Exception:
         pass
-    _ver_tag = f"{model_label} (in-sample 64-67)"
+    _ver_tag = f"{model_label} (in-sample 65-67)"
 
     def _s(v):
         t = str(v).strip()

@@ -17,32 +17,31 @@
   "diagnosis_te"
  ],
  "train_years_be": [
-  64,
   65,
   66
  ],
  "test_year_be": [
   67
  ],
- "n_train": 10757,
+ "n_train": 7973,
  "n_test": 3803,
  "metrics_test67": {
   "MAE": 30.5,
-  "R2": 0.611,
+  "R2": 0.622,
   "within15min_pct": 49,
   "within30min_pct": 70
  },
  "reference_metrics": {
   "MAE": 30.5,
-  "R2": 0.611,
+  "R2": 0.622,
   "within_15min": "49",
   "within_30min": "70"
  },
  "seed": 42,
  "te_smoothing": 10,
- "exported_at": "2026-07-03T22:56:55",
+ "exported_at": "2026-09-06T14:27:05",
  "pii": "surgeon masked เป็น SURG_xxx แล้ว (ชุดเดียวกับ staff_mapping.csv) — กุญแจอยู่ local เท่านั้น · te keys กรองอักษรไทยแล้ว",
  "surgeon_masked": true,
- "n_new_codes": 45,
+ "n_new_codes": 0,
  "room_note": "เทรนด้วยห้องตึกเก่า 11-17 — ห้องตึกใหม่ 90-97 โมเดลไม่รู้จัก (OHE ignore, ไม่พัง)"
 }

@@ -216,7 +216,7 @@ def render_system_status():
                 f'🤖 <b>AI Model: thesis_ML_v2</b> — โมเดลวิทยานิพนธ์ 13 features '
                 f'(ตัวที่ทำนายบนบอร์ด · เริ่ม 7 ก.ค. 2569)<br>'
                 f'General XGBoost + Target Encoding · เทรน {_m2.get("n_train", "—"):,} เคส '
-                f'(พ.ศ. 2564–2566)<br>'
+                f'(พ.ศ. 2565–2566)<br>'
                 f'MAE {_mt.get("MAE", "—")} นาที · R² {_mt.get("R2", "—")} · '
                 f'±30 นาที {_mt.get("within30min_pct", "—")}% (ทดสอบปี 2567)<br>'
                 f'ช่วงทำนาย 90%: split conformal · fallback: thesis_ML → ค่ากลาง DB'

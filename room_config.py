@@ -58,7 +58,7 @@ def get_active_rooms(op_date: str | None = None) -> list:
 #   → วิธีที่ "ข้ามตึกได้" จริงคือใช้ 'division' (specialty) ซึ่งโมเดลใช้เป็น feature อยู่แล้ว
 #   ฟังก์ชันด้านล่างไว้สร้าง feature specialty ที่ consistent ทั้งสองตึก (ถ้าต้องการ)
 
-# รหัสห้อง HIS ตึกเก่า (ในข้อมูล train ปี 64–67) → specialty
+# รหัสห้อง HIS ตึกเก่า (ในข้อมูลวิจัย ปี 65–67 : เทรน 65-66 ทดสอบ 67) → specialty
 # มาจาก division ที่พบบ่อยสุดในแต่ละห้องจากข้อมูลจริง (ควรให้พยาบาล OR ยืนยัน)
 OLD_HIS_ROOM_INFO = {
     11: "GEN",   12: "NEURO", 13: "GEN",   14: "URO",

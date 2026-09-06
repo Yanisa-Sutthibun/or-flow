@@ -15,7 +15,7 @@
   "board_engine": {
     "current": "thesis_ML_v2",
     "switched_at": "2026-07-07",
-    "note": "โปรโมต thesis_ML_v2 (General XGBoost 13 features — โมเดลเล่ม เทรนข้อมูล 2564-2566 ethics-approved, MAE 30.5/R2 0.611 test 2567) ขึ้นเป็นตัวทำนายบนบอร์ด ตามคำสั่งผู้วิจัย · thesis_ML สลับไปทำนายเงียบใน shadow_v2_log (คอลัมน์ pred_thesis_ml) เพื่อเทียบต่อเนื่อง · fallback chain: thesis_ML_v2 → thesis_ML → local median → default",
+    "note": "โปรโมต thesis_ML_v2 (General XGBoost 13 features — โมเดลเล่ม เทรนข้อมูล 2565-2566 (ตัดปี 64 ช่วงโควิด ตรงขอบเขต IRB, 6 ก.ย. 69), MAE 30.5/R2 0.622 test 2567) ขึ้นเป็นตัวทำนายบนบอร์ด ตามคำสั่งผู้วิจัย · thesis_ML สลับไปทำนายเงียบใน shadow_v2_log (คอลัมน์ pred_thesis_ml) เพื่อเทียบต่อเนื่อง · fallback chain: thesis_ML_v2 → thesis_ML → local median → default",
     "history": [
       {"until": "2026-07-07", "engine": "thesis_ML (เดิมชื่อ honest_v1)"}
     ]

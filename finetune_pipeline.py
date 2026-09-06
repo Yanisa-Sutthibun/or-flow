@@ -3,7 +3,7 @@ finetune_pipeline.py — ตัวอ่านไฟล์ HIS (schedule.csv / i
 =================================================================
 ⚠️ ETHICS LOCK (10 มิ.ย. 2026): ฟังก์ชัน fine-tune (auto_finetune /
 prepare_finetune_data) ถูก "ถอดออก" จากไฟล์นี้แล้ว — เพราะการเทรน/fine-tune
-ด้วยข้อมูลปี 2568-2569 อยู่นอกขอบเขต ethics approval (อนุมัติเฉพาะ พ.ศ. 2564-2567)
+ด้วยข้อมูลปี 2568-2569 อยู่นอกขอบเขต ethics approval (อนุมัติเฉพาะ พ.ศ. 2565-2567)
 
   - artifact ที่เคย fine-tune (v2-v7) ถูกย้ายไปกักกันที่ data/_quarantine_models_6869/
   - engine การเทรนยังอยู่ใน retrain_model.py แต่ติดกุญแจ (ดู OR_ETHICS_AMENDMENT_OK)

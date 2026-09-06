@@ -6,7 +6,7 @@ shadow_v2.py — 🕶️ Shadow mode: โมเดลวิทยานิพน
 shadow_v2_log ตอนกด "ผ่าเสร็จ" (จังหวะที่รู้เวลาจริงแล้ว) → ได้ตารางเทียบ
 head-to-head บนเคสจริง: thesis_ML vs thesis_ML_v2 vs พยาบาล override vs เวลาจริง
 
-✅ ไม่ติด ethics lock: thesis_ML_v2 เทรนด้วยข้อมูล พ.ศ. 2564-2567 (ethics-approved)
+✅ ไม่ติด ethics lock: thesis_ML_v2 ใช้ข้อมูล พ.ศ. 2565-2567 (เทรน 65-66 ทดสอบ 67, ethics-approved)
    เท่านั้น — shadow คือ "การทำนาย" (prospective validation) ไม่ใช่การเทรน
 🔒 PDPA: surgeon ถูก mask เป็น SURG_xxx ก่อนลง log (ชุดเดียวกับ override_log)
 🛡️ Fail-safe ทุกชั้น: ไม่มีโฟลเดอร์ models/thesis_ML_v2 / โหลดพัง / DB พัง
