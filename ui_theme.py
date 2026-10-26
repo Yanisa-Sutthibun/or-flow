@@ -285,16 +285,16 @@ def compact_ui() -> bool:
     """🧹 เลย์เอาต์ลดความรก "ชั้น A" (ผู้ทรงคุณวุฒิติง 5 ก.ย. 2026 ว่า UI รก)
     ปรับเฉพาะสิ่งที่คู่มือฉบับส่ง IRB (31 ส.ค. 2026) ไม่ได้ระบุ — ทุกอย่างที่คู่มือ
     เขียนถึงยังอยู่ครบ (ป้ายโมเดล แท็บ 6 อัน แถบเครื่องมือ ปุ่ม ✏️/↩️ แถบคิวถัดไป
-    "จาก N เคส ช่วง x-y" ฯลฯ) · เปิดเฉพาะแอป DEMO ก่อน ให้ดูของจริงได้โดย
-    production ยังเห็นของเดิม · เคาะแล้วค่อยเปิดทั้งสองแอปด้วย secrets ui_compact=true
-    (ไม่ตั้ง = ตามชนิด instance)"""
+    "จาก N เคส ช่วง x-y" ฯลฯ)
+    ✅ 16 ก.ย. 2026 (มุกกี้สั่ง): เปิดทั้งสองแอป — ระบบจริงหน้าตาเดียวกับ DEMO
+       ไม่ตั้ง secrets = เปิด · ถอยกลับหน้าตาเดิมได้ด้วย ui_compact=false"""
     try:
         _v = st.secrets.get('ui_compact', None)
         if _v is not None:
             return str(_v).strip().lower() in ('1', 'true', 'yes', 'on')
-        return str(st.secrets.get('instance_mode', '')).lower() == 'demo'
     except Exception:
-        return False
+        pass
+    return True
 
 
 # 🧹 ชั้น A: CSS เสริมเมื่อ compact_ui() — ลดความสูงปุ่ม/แท็บ/ช่องว่างแนวตั้งของแถบหัว

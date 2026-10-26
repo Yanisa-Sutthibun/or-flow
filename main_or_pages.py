@@ -221,13 +221,11 @@ def _toast_ok(msg="อัปเดตแล้ว ✓"):
     (rerun ทิ้ง output ของรอบปัจจุบัน) → ฝากข้อความใน session แล้วให้
     _flush_toast() โชว์ตอนต้นรอบถัดไปแทน — ตายังเห็นเป็น 'ทันที' เหมือนเดิม
     🔊 9 ส.ค. 2026 (มุคกี้สั่ง): เสียง "กดสำเร็จ" ผูกกับจุดนี้ด้วย — ต่างจาก toast
-    ข้อความ (demo เท่านั้น) เสียงเล่นทุก instance ทั้ง demo และ production"""
+    ข้อความ (demo เท่านั้น) เสียงเล่นทุก instance ทั้ง demo และ production
+    📘 16 ก.ย. 2026 (มุกกี้สั่ง): snackbar เปิดทุก instance แล้ว — ตรงคู่มือ 1.5
+    "กดปุ่มบนตารางผ่าตัด จะมีป้ายพร้อมเสียงขึ้นมา" """
     _queue_sound('ok')
-    try:
-        if str(st.secrets.get('instance_mode', '')).lower() == 'demo':
-            st.session_state['_pending_toast'] = msg
-    except Exception:
-        pass
+    st.session_state['_pending_toast'] = msg
 
 
 def _flush_toast():
@@ -673,8 +671,8 @@ def _or_board_demo():
     """เคสสาธิต Main OR — สร้างจาก demo_cases_data.DEMO_POOL (28 ก.ค. 2026)
     ═══════════════════════════════════════════════════════════════════
     ที่มา: ตารางผ่าตัดจริง 5 วัน (13-17 ก.ค. 69) mix แบบ "ห้องละหนึ่งวัน"
-    → คง pattern แพทย์ประจำวัน · mask ครบ (ชื่อแพทย์จำลอง เช่น "โกมินทร์ กุมาร" /
-    ชื่อผู้ป่วยจำลอง เช่น "สมชาย 3" / HN ปลอม — เปลี่ยนชุดชื่อ 9 ส.ค. 2026)
+    → คง pattern แพทย์ประจำวัน · mask ครบ (แพทย์ = รหัส "แพทย์ A-K" /
+    ผู้ป่วย = รหัส "ผู้ป่วยทดสอบ NN" / HN ปลอม — เปลี่ยนเป็นรหัส 26 ต.ค. 2026 ตาม IRB ข้อ 14)
     แต่หัตถการ+วินิจฉัย+ASA/BMI คงจริง → ทำนายด้วยโมเดลจริง
     ตอนเปิดสาธิต (ส่ง SURG_xxx เข้าโมเดล) — ตัวเลข AI จึงเท่า production
 
@@ -874,7 +872,7 @@ def _demo_surgeons_by_specialty():
        โปรเจกต์ระบุว่าคนนอกได้สิทธิ์ DEMO เท่านั้น แอปนี้จึงห้ามมีชื่อจริงทุกกรณี
 
     ชุดนี้เอาจาก demo_cases_data.DEMO_POOL ซึ่งเป็นชื่อสมมุติที่จับคู่กับ SURG_xxx
-    อยู่แล้ว (เช่น "วีระ ประสงค์สุข" = SURG_003) เคสที่ผู้ทรงพิมพ์เพิ่มเองจึงยังทำนายด้วย
+    อยู่แล้ว (เช่น "แพทย์ C" = SURG_003) เคสที่ผู้ทรงพิมพ์เพิ่มเองจึงยังทำนายด้วย
     โมเดลจริงได้เหมือนเดิม · อ่านไม่ได้ = คืนว่าง (ช่องกลายเป็นพิมพ์อิสระ ไม่พัง
     และไม่มีทางหลุดชื่อจริง)"""
     try:
@@ -1307,7 +1305,7 @@ def _board_fragment():
     #    (idempotent: มี key แล้ว = ไม่ทำอะไร)
     from main_or_core import init_session_state as _iss
     _iss()
-    _flush_toast()   # 🎨 โชว์ toast ที่ฝากไว้จากปุ่มรอบก่อน (demo)
+    _flush_toast()   # 🎨 โชว์ toast ที่ฝากไว้จากปุ่มรอบก่อน (ทุก instance)
     _flush_sound()   # 🔊 เล่นเสียงที่ฝากไว้จากปุ่มรอบก่อน (demo+production)
 
     # 🟢 heartbeat แถบ "ใครออนไลน์" — เกาะไปกับ tick 30 วิของ fragment
@@ -1817,7 +1815,7 @@ def page_room_focus(room_no):
 def _room_focus_fragment(room_no):
     from room_config import room_label
     from main_or_db import mask_patient_name
-    _flush_toast()   # 🎨 โชว์ toast ที่ฝากไว้จากปุ่มรอบก่อน (demo)
+    _flush_toast()   # 🎨 โชว์ toast ที่ฝากไว้จากปุ่มรอบก่อน (ทุก instance)
     _flush_sound()   # 🔊 เล่นเสียงที่ฝากไว้จากปุ่มรอบก่อน (demo+production)
 
     # 🟢 heartbeat แถบ "ใครออนไลน์" — จอประจำห้องเปิดค้างทั้งวัน ไม่มี full run

@@ -127,7 +127,8 @@ def _page_config_kwargs():
     if _d:
         return dict(page_title="DEMO · OR Flow ระบบสาธิต", page_icon="🖥️",
                     layout="wide", initial_sidebar_state="collapsed")
-    return dict(page_title="ห้องผ่าตัดศัลยกรรมทั่วไป Dashboard", page_icon="🏥",
+    # 📘 16 ก.ย. 2026 (มุกกี้สั่ง): ชื่อแท็บระบบจริงตรงชื่อระบบในเล่มคู่มือ (บทนำ)
+    return dict(page_title="OR Flow ระบบบริหารห้องผ่าตัดและทำนายเวลาผ่าตัด", page_icon="🏥",
                 layout="wide", initial_sidebar_state="collapsed")
 
 

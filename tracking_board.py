@@ -90,12 +90,12 @@ _PACU_BTN_CSS = (
 
 
 def _compact() -> bool:
-    """🧹 ชั้น A (5 ก.ย. 2026) — สวิตช์เดียวอยู่ที่ ui_theme.compact_ui (demo ก่อน)"""
+    """🧹 ชั้น A (5 ก.ย. 2026) — สวิตช์เดียวอยู่ที่ ui_theme.compact_ui (ทั้งสองแอป 16 ก.ย. 2026)"""
     try:
         from ui_theme import compact_ui
         return compact_ui()
     except Exception:
-        return False
+        return True
 
 
 def _room_fg_default() -> str:
