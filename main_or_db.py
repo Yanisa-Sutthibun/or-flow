@@ -616,6 +616,10 @@ def mask_patient_name(name) -> str:
     ชื่อเดี่ยว/ว่าง → คืนตามเดิม · mask ซ้ำไม่เพี้ยน (idempotent)"""
     if not name or not isinstance(name, str):
         return name or '-'
+    # 🎬 26 ต.ค. 2026 (มุกกี้สั่ง ตาม IRB conditional approve ข้อ 14): รหัสผู้ป่วยสาธิต
+    #    "ผู้ป่วยทดสอบ NN" ไม่ใช่ชื่อคน ไม่มี PII → คงไว้ทั้งคำ (ไม่งั้นย่อเป็น "ผู้ป่วยทดสอบ 1.")
+    if name.strip().startswith('ผู้ป่วยทดสอบ'):
+        return ' '.join(name.split())
     parts = ' '.join(name.split()).split()
     title_parts = []
     # 1) เก็บยศ/คำนำหน้าแบบแยกคำ (เช่น 'ว่าที่ ร.ต.' = 2 คำ) — เหลือชื่อจริงอย่างน้อย 1 คำ
