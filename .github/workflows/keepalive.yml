@@ -15,15 +15,12 @@ jobs:
   wake:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # ใช้ image ทางการของ Playwright ที่มี Chromium + ไลบรารีครบ
+    # (ติดตั้งเองด้วย --with-deps เคยค้างที่ apt จนหมดเวลา 6 พ.ย. 2026)
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.47.0-jammy
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: ติดตั้ง Playwright
-        run: |
-          pip install playwright==1.47.0
-          python -m playwright install --with-deps chromium
       - name: ปลุกแอป
         env:
           KEEPALIVE_URLS: ${{ secrets.KEEPALIVE_URLS }}
