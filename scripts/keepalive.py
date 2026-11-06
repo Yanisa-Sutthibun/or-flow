@@ -27,27 +27,38 @@ def _mask(url: str) -> str:
     return url.split("?")[0] + ("?..." if "?" in url else "")
 
 
+def _all_text(page) -> str:
+    """รวมข้อความจากทุก frame : *.streamlit.app เป็นหน้าห่อที่ฝังตัวแอปใน iframe
+    อ่านแค่ body ชั้นนอกจะได้ค่าว่าง (เจอจริง 6 พ.ย. 2026)"""
+    parts = []
+    for fr in page.frames:
+        try:
+            parts.append(fr.inner_text("body"))
+        except Exception:
+            pass
+    return "\n".join(parts)
+
+
 def wake(page, url: str) -> bool:
     page.goto(url, wait_until="domcontentloaded", timeout=60_000)
     deadline = time.time() + WAIT_SEC
+    body = ""
     while time.time() < deadline:
-        try:
-            body = page.inner_text("body")
-        except Exception:
-            body = ""
+        body = _all_text(page)
         if any(t in body for t in READY_TEXTS):
             return True
         if "เชื่อมต่อฐานข้อมูลไม่สำเร็จ" in body:
             print("  ✗ แอปขึ้น แต่ต่อ Supabase ไม่ได้ (โปรเจกต์หลับ?)")
             return False
         # ปุ่ม "Yes, get this app back up!" ของ Streamlit ตอนหลับลึก
-        try:
-            btn = page.get_by_role("button", name="Yes, get this app back up!")
-            if btn.count() > 0:
-                btn.first.click()
-                print("  กดปุ่มปลุกของ Streamlit")
-        except Exception:
-            pass
+        for fr in page.frames:
+            try:
+                btn = fr.get_by_role("button", name="Yes, get this app back up!")
+                if btn.count() > 0:
+                    btn.first.click()
+                    print("  กดปุ่มปลุกของ Streamlit")
+            except Exception:
+                pass
         time.sleep(5)
     # หมดเวลา: พิมพ์ข้อความบนหน้าช่วยวินิจฉัย (ไม่มี token ในเนื้อหา)
     print("  หน้าที่เห็นตอนหมดเวลา:", " ".join(body.split())[:300] or "(ว่าง)")
