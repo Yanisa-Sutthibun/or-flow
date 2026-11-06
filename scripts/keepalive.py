@@ -15,7 +15,11 @@ import time
 from playwright.sync_api import sync_playwright
 
 WAIT_SEC = 180          # Streamlit ตื่นจากหลับใช้ราว 60-120 วิ
-READY_TEXT = "AI:"      # ชิปแบบจำลองที่ขึ้นทุกจอเมื่อโหลดเสร็จ
+# ข้อความที่แปลว่าแอปโหลดเสร็จและต่อ Supabase ได้ (เจออันใดอันหนึ่งพอ)
+READY_TEXTS = ("AI:", "รีเฟรช", "จอประจำห้อง", "คิวรอของ")
+# UA ของ Chrome ปกติ กัน Streamlit/Cloudflare ปฏิบัติกับ HeadlessChrome ต่างออกไป
+USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
 
 
 def _mask(url: str) -> str:
@@ -31,7 +35,7 @@ def wake(page, url: str) -> bool:
             body = page.inner_text("body")
         except Exception:
             body = ""
-        if READY_TEXT in body:
+        if any(t in body for t in READY_TEXTS):
             return True
         if "เชื่อมต่อฐานข้อมูลไม่สำเร็จ" in body:
             print("  ✗ แอปขึ้น แต่ต่อ Supabase ไม่ได้ (โปรเจกต์หลับ?)")
@@ -45,6 +49,8 @@ def wake(page, url: str) -> bool:
         except Exception:
             pass
         time.sleep(5)
+    # หมดเวลา: พิมพ์ข้อความบนหน้าช่วยวินิจฉัย (ไม่มี token ในเนื้อหา)
+    print("  หน้าที่เห็นตอนหมดเวลา:", " ".join(body.split())[:300] or "(ว่าง)")
     return False
 
 
@@ -59,7 +65,8 @@ def main() -> int:
         browser = p.chromium.launch()
         for url in urls:
             print("เปิด", _mask(url))
-            page = browser.new_page()
+            page = browser.new_page(user_agent=USER_AGENT,
+                                    viewport={"width": 1280, "height": 900})
             ok = False
             try:
                 ok = wake(page, url)
