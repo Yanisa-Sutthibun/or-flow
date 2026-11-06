@@ -1,0 +1,30 @@
+# ⏰ ตัวปลุกแอป OR Flow บน Streamlit Community Cloud (มุกกี้สั่ง 6 พ.ย. 2026)
+# ทำไม: Community Cloud หลับเองเมื่อไม่มีคนเปิด ~12 ชม. คนแรกของวันต้องรอ 1-2 นาที
+# วิธี: เปิดเบราว์เซอร์จริง (Playwright) เข้าลิงก์จอห้องของทั้ง 2 แอปทุก 4 ชม.
+#        แอปนับเป็นมีคนดู จึงไม่หลับ และยังเป็น query ไป Supabase ด้วย
+# ลิงก์ (มี token) เก็บใน GitHub Secrets ชื่อ KEEPALIVE_URLS คั่นด้วยจุลภาค ไม่อยู่ในโค้ด
+# ถ้าปลุกไม่สำเร็จ job จะ fail และ GitHub ส่งอีเมลแจ้งเจ้าของ repo
+name: keepalive
+
+on:
+  schedule:
+    - cron: '17 */4 * * *'   # ทุก 4 ชม. ที่นาที 17 (เลี่ยงนาที 0 ที่ GitHub คิวยาว)
+  workflow_dispatch:         # กดรันเองได้จากแท็บ Actions
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: ติดตั้ง Playwright
+        run: |
+          pip install playwright==1.47.0
+          python -m playwright install --with-deps chromium
+      - name: ปลุกแอป
+        env:
+          KEEPALIVE_URLS: ${{ secrets.KEEPALIVE_URLS }}
+        run: python scripts/keepalive.py
