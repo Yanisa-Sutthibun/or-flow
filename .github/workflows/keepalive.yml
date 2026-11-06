@@ -21,7 +21,9 @@ jobs:
       image: mcr.microsoft.com/playwright/python:v1.47.0-jammy
     steps:
       - uses: actions/checkout@v4
+      - name: ติดตั้ง playwright (เบราว์เซอร์มีใน image แล้ว ไม่ต้อง apt)
+        run: python3 -m pip install -q playwright==1.47.0
       - name: ปลุกแอป
         env:
           KEEPALIVE_URLS: ${{ secrets.KEEPALIVE_URLS }}
-        run: python scripts/keepalive.py
+        run: python3 scripts/keepalive.py
