@@ -1127,12 +1127,13 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     time_fg = '#b6c2cf' if muted else '#475569'
 
     # ---------- layout ต่อแถว: [แถว] [✏️] [ปุ่มหลัก] [↩] ----------
-    #    🧹 minimal (DEMO): [แถว] [ปุ่มหลัก] [⋯] · เนื้อหา ✏️ และ ↩️ ไปอยู่ในเมนู ⋯ อันเดียว
+    #    🧹 minimal (DEMO): [แถว] [ปุ่มหลัก] [✏️] · เนื้อหา ✏️ และ ↩️ รวมอยู่ในเมนู ✏️ อันเดียว
     _mb = _minimal_board()
     if _mb:
         c0, c2, _cm = st.columns(_BOARD_COLS_MIN)
         with _cm:
-            _more = _popover("⋯", help="เพิ่มเติม : HN แก้เวลา ย้ายห้อง เลิกทำ",
+            # ✏️ ไอคอนดินสอ ให้ตรงกับคู่มือ (มุกกี้สั่ง 7 พ.ย. 2026 · เดิม ⋯)
+            _more = _popover("✏️", help="แก้เวลาทำนาย ย้ายห้อง เลิกทำ และดู HN",
                              width='stretch', key=f"tb_more_{idx}")
         with _more:
             _meta = _pt_meta(c)
