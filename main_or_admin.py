@@ -3931,11 +3931,25 @@ def page_admin(section='today'):
         _render_room_cards(rooms)
 
         # 🤖 Section 2: AI timeline forecast (เชื่อมกับการ์ดด้านบน — ใช้ room_forecast ชุดเดียวกัน)
-        st.markdown('<div class="section-title">🤖 AI ทำนายเวลาครองห้อง — ไทม์ไลน์รายห้อง</div>',
-                    unsafe_allow_html=True)
+        # 🗓️ 7 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO ใช้ไทม์ไลน์รุ่น 2 ตาม mockup ก่อน
+        #    ระบบจริงยังเป็นรุ่นเดิม (หัวข้อ/หน้าตาเดิมทุกอย่าง)
         try:
-            from command_center import render_room_timeline
-            render_room_timeline(rooms, _now_bkk())
+            _tl_demo = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+        except Exception:
+            _tl_demo = False
+        if _tl_demo:
+            st.markdown('<div class="section-title">🤖 ไทม์ไลน์ห้องผ่าตัด : เวลาที่แบบจำลองทำนาย</div>',
+                        unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="section-title">🤖 AI ทำนายเวลาครองห้อง — ไทม์ไลน์รายห้อง</div>',
+                        unsafe_allow_html=True)
+        try:
+            if _tl_demo:
+                from command_center import render_room_timeline_v2
+                render_room_timeline_v2(rooms, _now_bkk())
+            else:
+                from command_center import render_room_timeline
+                render_room_timeline(rooms, _now_bkk())
         except Exception as _tl_err:
             st.caption(f"ไทม์ไลน์ยังไม่พร้อม: {_tl_err}")
 

@@ -295,3 +295,209 @@ def render_room_timeline(rooms, now=None):
         f'{rows}{legend}',
         unsafe_allow_html=True,
     )
+
+
+# ════════════════════════════════════════════════════════════════════
+# 🗓️ ไทม์ไลน์รุ่น 2 (มุกกี้สั่ง 7 พ.ย. 2026 : ทำตาม mockup "มุมมองไทม์ไลน์ห้องผ่าตัด"
+#    เปิดเฉพาะแอป DEMO ก่อน · ระบบจริงยังใช้ render_room_timeline เดิม)
+#    ที่มา: ผู้ทรงคุณวุฒิ (อ.ณัฐวิทย์) ติว่าจอรก + ศึกษางานมืออาชีพ (LiveData/Apella)
+#    ต่างจากรุ่นเดิม: ป้ายห้องคอลัมน์ซ้าย (แถวเตี้ยลง เห็นครบ 9 ห้อง) · เรียงตามห้อง
+#    OR1-OR9 เหมือนกระดานไวท์บอร์ด · เส้นตอนนี้ลากยาวทุกแถว · แรเงาหลัง 15:30 ·
+#    แถบกำลังผ่า = สีเข้มส่วนที่ผ่านไป/อ่อนส่วนที่เหลือ · เกินเวลาเป็นแดงเฉพาะส่วนที่เกิน ·
+#    แจ้งเตือนสรุปบนหัว (เกินเวลาที่ทำนาย / คาดเลิกหลัง 15:30)
+#    ตัวเลขทุกตัวยังมาจาก room_forecast ชุดเดียวกับการ์ดห้อง → ตรงกันเสมอ
+# ════════════════════════════════════════════════════════════════════
+_CUT_1530 = 15 * 60 + 30
+
+
+def _hhmm(m):
+    m = int(round(m))
+    return f'{(m // 60) % 24:02d}:{m % 60:02d}'
+
+
+def render_room_timeline_v2(rooms, now=None):
+    """ไทม์ไลน์ห้องผ่าตัดรุ่น 2 (DEMO) : แถวละ 1 ห้อง แกนเวลาแนวนอน."""
+    import html as _html
+    now = now or datetime.now()
+    _tmap = _turnover_map()
+    try:
+        from room_config import ROOM_INFO as _RI
+    except Exception:
+        _RI = {}
+    rows_in = [rm for rm in rooms if not rm.get('closed')]
+    fcs = [(rm, room_forecast(rm, now, _tmap)) for rm in rows_in]
+    if not any(fc['has_cases'] for _, fc in fcs):
+        st.caption('ยังไม่มีเคสวันนี้ : ไทม์ไลน์จะขึ้นเมื่อมีเคสเข้า')
+        return
+
+    now_min = _mins(now)
+    starts = [_mins(fc['earliest']) for _, fc in fcs if fc['earliest']]
+    finishes = [_mins(fc['finish']) for _, fc in fcs if fc['finish'] and fc['has_future']]
+    day_start = (min([8 * 60] + starts) // 60) * 60
+    day_end = max([18 * 60 + 30, now_min + 15] + finishes)
+    day_end = -(-day_end // 30) * 30
+    span = max(day_end - day_start, 60)
+
+    def pos(m):
+        return max(0.0, min(100.0, (m - day_start) / span * 100))
+
+    hour_w = 60 / span * 100
+    LBL = 150   # ความกว้างคอลัมน์ป้ายห้อง (px)
+
+    def _blk(a, b, sty, label, sub, tip):
+        w = pos(b) - pos(a)
+        _l = (f'<span style="display:block;font-weight:600;">{label}</span>' if w > 6 else '')
+        _s = (f'<span style="display:block;font-size:12px;">{sub}</span>' if w > 9 else '')
+        return (f'<div title="{tip}" style="position:absolute;top:9px;bottom:9px;'
+                f'left:{pos(a):.2f}%;width:{max(w, 0.6):.2f}%;box-sizing:border-box;'
+                f'border-radius:6px;padding:3px 7px;overflow:hidden;white-space:nowrap;'
+                f'font-size:13px;line-height:1.3;{sty}">{_l}{_s}</div>')
+
+    alerts = []
+    rows = ''
+    for rm, fc in fcs:
+        try:
+            _rno = int(float(rm.get('room_no')))
+        except (TypeError, ValueError):
+            _rno = None
+        if _rno in _RI:
+            code, spec = _RI[_rno]
+        else:
+            code, spec = (rm.get('room_label') or f"ห้อง {rm.get('room_no')}"), ''
+        bar = ''
+        cases = rm.get('cases')
+        df = cases if (cases is not None and len(cases)) else None
+        if df is not None:
+            for _, c in df.iterrows():
+                stt = str(c.get('status') or '')
+                proc = _html.escape(str(c.get('procedure_name') or '-')[:36])
+                sdt = _parse_dt(c.get('in_or_at'))
+                if stt == 'cancelled' or sdt is None:
+                    continue
+                s = _mins(sdt)
+                edt = _parse_dt(c.get('op_end_at'))
+                if stt in ('post_op', 'discharged') and edt is not None:
+                    e = _mins(edt)
+                    bar += _blk(s, e, 'background:#E9EDF2;border:1px solid #CBD5E1;color:#475569;',
+                                proc, f'จริง {e - s} น.', f'{proc} : เสร็จแล้ว ใช้เวลา {e - s} นาที')
+                elif stt == 'in_or':
+                    try:
+                        ai = int(c.get('ai_predicted_min') or 0)
+                    except (ValueError, TypeError):
+                        ai = 0
+                    pe = s + ai if ai else now_min + (fc['active_rem'] or 30)
+                    b = max(pe, now_min)
+                    tot = max(b - s, 1)
+                    if now_min > pe:
+                        y = (pe - s) / tot * 100
+                        sty = (f'background:linear-gradient(90deg,#BFE6D6 0 {y:.1f}%,'
+                               f'#F2D4D4 {y:.1f}% 100%);border:2px solid #A32D2D;color:#7A1F1F;')
+                        sub = f'เกิน {now_min - pe} น.'
+                    else:
+                        x = (now_min - s) / tot * 100
+                        sty = (f'background:linear-gradient(90deg,#BFE6D6 0 {x:.1f}%,'
+                               f'#E1F5EE {x:.1f}% 100%);border:2px solid #1D9E75;color:#085041;')
+                        sub = f'{now_min - s} / {ai} น.' if ai else f'{now_min - s} น.'
+                    bar += _blk(s, b, sty, proc, sub,
+                                f'{proc} : กำลังผ่า ทำนาย {ai} นาที' if ai else f'{proc} : กำลังผ่า')
+            # คิวถัดไป: ต่อจาก ตอนนี้ + เวลาที่เหลือของเคสในห้อง + turnover (สูตรเดียวกับรุ่นเดิม)
+            cur = now_min + (fc['active_rem'] or 0) + (fc['turnover_min'] if fc['active_rem'] else 0)
+            if fc['over_min']:
+                cur = now_min + fc['turnover_min']
+            try:
+                wdf = df[df['status'].isin(['scheduled', 'arrived'])]
+            except Exception:
+                wdf = df.iloc[0:0]
+            for _, c in wdf.iterrows():
+                proc = _html.escape(str(c.get('procedure_name') or '-')[:36])
+                try:
+                    ai = int(c.get('ai_predicted_min') or 60)
+                except (ValueError, TypeError):
+                    ai = 60
+                bar += _blk(cur, cur + ai, 'background:#FFFFFF;border:1.5px dashed #94A3B8;color:#475569;',
+                            proc, f'ทำนาย {ai} น.', f'{proc} : คิวถัดไป ทำนาย {ai} นาที')
+                cur += ai + fc['turnover_min']
+
+        # ป้ายสรุปใต้ชื่อห้อง
+        sum_sty = 'color:#475569;'
+        if not fc['has_cases']:
+            summary, sum_sty = 'ไม่มีเคสวันนี้', 'color:#64748B;'
+        elif not fc['has_future']:
+            summary = (f'ว่างตั้งแต่ {fc["latest_end"].strftime("%H:%M")}'
+                       if fc['latest_end'] else 'เสร็จงานแล้ว')
+        else:
+            fin_m = _mins(fc['finish']) if fc['finish'] else now_min
+            summary = f'คาดเลิก {_hhmm(fin_m)}'
+            if fin_m > _CUT_1530 and now_min < _CUT_1530:
+                sum_sty = 'color:#8A5A00;font-weight:700;'
+                alerts.append(('amber', f'{code} คาดเลิก {_hhmm(fin_m)} หลังเวลา 15:30'))
+        if fc['over_min']:
+            alerts.insert(0, ('red', f'{code} เกินเวลาที่ทำนาย {fc["over_min"]} นาที'))
+
+        rows += (
+            f'<div style="display:flex;height:60px;border-bottom:1px solid #EEF2F6;">'
+            f'<div style="width:{LBL}px;flex:none;padding:6px 12px;box-sizing:border-box;'
+            f'display:flex;flex-direction:column;justify-content:center;">'
+            f'<div style="font-size:16px;font-weight:700;color:#0F172A;">{code} '
+            f'<span style="font-size:12px;font-weight:500;color:#64748B;">{_html.escape(spec)}</span></div>'
+            f'<div style="font-size:13px;{sum_sty}">{summary}</div></div>'
+            f'<div style="position:relative;flex:1;margin-right:16px;background-image:'
+            f'repeating-linear-gradient(90deg,#EEF2F6 0 1px,transparent 1px {hour_w:.4f}%);">'
+            f'{bar}</div></div>')
+
+    # แกนเวลา (รายชั่วโมง) + ป้าย 15:30 + ป้ายเวลาปัจจุบัน
+    ticks = ''
+    for t in range(day_start, day_end + 1, 60):
+        _tx = 'transform:translateX(-50%);' if t > day_start else ''
+        ticks += (f'<span style="position:absolute;top:8px;left:{pos(t):.2f}%;{_tx}'
+                  f'font-size:12px;color:#64748B;">{_hhmm(t)}</span>')
+    ticks += (f'<span style="position:absolute;top:6px;left:{pos(_CUT_1530):.2f}%;'
+              f'transform:translateX(-50%);padding:1px 6px;border-radius:4px;background:#FDF3DD;'
+              f'color:#7A5200;font-size:11px;font-weight:600;">15:30</span>')
+    ticks += (f'<span style="position:absolute;top:5px;left:{pos(now_min):.2f}%;'
+              f'transform:translateX(-50%);padding:1px 7px;border-radius:4px;background:#2563EB;'
+              f'color:#FFFFFF;font-size:12px;font-weight:600;">{_hhmm(now_min)}</span>')
+    axis = (f'<div style="display:flex;height:32px;border-bottom:1px solid #E2E8F0;">'
+            f'<div style="width:{LBL}px;flex:none;padding:8px 12px;box-sizing:border-box;'
+            f'font-size:12px;color:#64748B;">ห้อง</div>'
+            f'<div style="position:relative;flex:1;margin-right:16px;">{ticks}</div></div>')
+
+    zone = (f'<div style="position:absolute;top:0;bottom:0;left:{LBL}px;right:16px;pointer-events:none;">'
+            f'<div style="position:absolute;top:0;bottom:0;left:{pos(_CUT_1530):.2f}%;right:0;'
+            f'background:rgba(253,243,221,0.55);"></div></div>')
+    nowline = (f'<div style="position:absolute;top:0;bottom:0;left:{LBL}px;right:16px;pointer-events:none;">'
+               f'<div style="position:absolute;top:0;bottom:0;left:{pos(now_min):.2f}%;width:2px;'
+               f'margin-left:-1px;background:#2563EB;"></div></div>')
+
+    _ast = {'red': 'background:#FBEAEA;color:#7A1F1F;border:1px solid #E8BDBD;',
+            'amber': 'background:#FDF3DD;color:#6B4600;border:1px solid #EBD39C;'}
+    alert_html = ''
+    if alerts:
+        alert_html = ('<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
+                      + ''.join(f'<div style="padding:6px 12px;border-radius:8px;font-size:14px;'
+                                f'font-weight:600;{_ast[k]}">{_html.escape(t)}</div>'
+                                for k, t in alerts)
+                      + '</div>')
+
+    def _sw(sty):
+        return (f'<span style="display:inline-block;width:20px;height:11px;border-radius:3px;'
+                f'box-sizing:border-box;vertical-align:middle;margin-right:6px;{sty}"></span>')
+    legend = (
+        '<div style="display:flex;flex-wrap:wrap;gap:16px;padding:10px 14px;font-size:13px;'
+        'color:#475569;border-top:1px solid #E2E8F0;">'
+        f'<span>{_sw("background:#E9EDF2;border:1px solid #CBD5E1;")}เสร็จแล้ว (ยาวตามเวลาจริง)</span>'
+        f'<span>{_sw("background:linear-gradient(90deg,#BFE6D6 0 50%,#E1F5EE 50% 100%);border:2px solid #1D9E75;")}'
+        'กำลังผ่า (สีเข้ม = เวลาที่ผ่านไป)</span>'
+        f'<span>{_sw("background:#F2D4D4;border:2px solid #A32D2D;")}เกินเวลาที่ทำนาย</span>'
+        f'<span>{_sw("background:#FFFFFF;border:1.5px dashed #94A3B8;")}คิวถัดไป (ยาวตามเวลาที่ทำนาย)</span>'
+        f'<span>{_sw("width:2px;background:#2563EB;border-radius:0;")}เวลาปัจจุบัน</span>'
+        f'<span>{_sw("background:rgba(253,243,221,0.9);")}หลังเวลา 15:30</span></div>')
+
+    st.markdown(
+        f'{alert_html}'
+        f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;overflow-x:auto;">'
+        f'<div style="min-width:880px;">{axis}'
+        f'<div style="position:relative;">{zone}{rows}{nowline}</div>'
+        f'{legend}</div></div>',
+        unsafe_allow_html=True,
+    )
