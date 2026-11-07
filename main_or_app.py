@@ -1202,6 +1202,15 @@ def main():
 
     _page_options = ["📋 ตารางผ่าตัด", "🗓️ จัดคิว AI", "📊 ภาพรวมวันนี้",
                      "📈 สถิติย้อนหลัง", "📺 จอญาติ (Demo)", "⚙️ ตั้งค่า"]
+    # 🗓️ 7 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO เพิ่มแท็บ "จัดคิวพรุ่งนี้" แทนที่ตำแหน่งที่ 2
+    #    และย้าย "จัดคิว AI" ไปเป็นแท็บสุดท้าย (คงไว้เป็น feature) · ระบบจริงยังเรียงแบบเดิม
+    try:
+        if str(st.secrets.get('instance_mode', '')).lower() == 'demo':
+            _page_options = ["📋 ตารางผ่าตัด", "🗓️ จัดคิวพรุ่งนี้", "📊 ภาพรวมวันนี้",
+                             "📈 สถิติย้อนหลัง", "📺 จอญาติ (Demo)", "⚙️ ตั้งค่า",
+                             "🗓️ จัดคิว AI"]
+    except Exception:
+        pass
     # 🚪 โหมดจอประจำห้อง: เหลือ 3 แท็บ (ทำงาน + รับรู้สถานการณ์ + ดูสถิติ)
     #    จัดคิว AI / จอญาติ / ตั้งค่า = สิทธิ์ master (จอรับ-ส่ง, หัวหน้าเวร) เท่านั้น
     if st.session_state.get('role') == 'room':
@@ -1250,6 +1259,9 @@ def main():
     elif page == "🗓️ จัดคิว AI":
         from or_scheduler import page_scheduler
         page_scheduler()
+    elif page == "🗓️ จัดคิวพรุ่งนี้":
+        from tomorrow_plan import page_tomorrow
+        page_tomorrow()
     elif page == "📊 ภาพรวมวันนี้":
         page_admin('today')
     elif page == "📈 สถิติย้อนหลัง":

@@ -3678,6 +3678,117 @@ def _render_daily_summary():
                 f"นัด {c.get('sched_hour',0):02d}:{c.get('sched_min',0):02d}")
 
 
+def _render_today_lean(rooms, kpi, live_cases, op_date):
+    """🧭 หน้าภาพรวมวันนี้แบบ 3 ชั้น (DEMO · มุกกี้สั่ง 7 พ.ย. 2026)
+    ที่มา: ผู้ทรงคุณวุฒิ (อ.ณัฐวิทย์) ติว่าหน้ารก + งานวิจัยความต้องการข้อมูลของผู้บริหาร
+    ห้องผ่าตัด (Dexter 2004, 2007; Siirala et al. 2020; Xiao et al. 2008)
+      ชั้น 1 ต้องจัดการตอนนี้ : เกินเวลาที่ทำนาย · รอเกินเกณฑ์ · คาดเลิกหลัง 15:30 · ห้องว่างแล้ว
+      ชั้น 2 สถานการณ์ห้อง   : ไทม์ไลน์รุ่น 2 (แทนการ์ดห้อง ซึ่งคำนวณจาก room_forecast ตัวเดียวกัน)
+      ชั้น 3 ตัวเลขของวัน    : การ์ด KPI เดิม
+    ตัดออก (ซ้ำกับส่วนอื่น): แถบความคืบหน้า · Upcoming queue · กราฟรายชั่วโมง ·
+    จำนวนเคสรายห้อง · สถิติรับเวร (เมื่อมีบอร์ดสดขึ้นแค่ข้อความให้ไปดูสรุปรายวัน)"""
+    _now = _now_bkk()
+
+    # ── ชั้น 1 : ต้องจัดการตอนนี้ ──
+    st.markdown('<div class="section-title">⚠️ ต้องจัดการตอนนี้</div>',
+                unsafe_allow_html=True)
+    try:
+        if live_cases:
+            from live_link import alerts_from_session
+            alerts = alerts_from_session(live_cases, _now)
+        else:
+            alerts = get_delay_alerts(op_date)
+    except Exception as _ax:
+        print(f"[today-lean] โหลดแจ้งเตือนไม่สำเร็จ: {_ax}")
+        alerts = []
+    try:
+        from command_center import room_status_notes
+        notes = room_status_notes(rooms, _now)
+    except Exception as _nx:
+        print(f"[today-lean] สรุปห้องไม่สำเร็จ: {_nx}")
+        notes = []
+    from room_config import room_label as _rl
+    _sty = {'overrun': 'background:#FBEAEA;color:#7A1F1F;border:1px solid #E8BDBD;',
+            'long_wait': 'background:#FDF3DD;color:#6B4600;border:1px solid #EBD39C;',
+            'late': 'background:#FDF3DD;color:#6B4600;border:1px solid #EBD39C;',
+            'idle': 'background:#EEF4FB;color:#1E3A5F;border:1px solid #C9D9EC;'}
+    _items = []
+    for a in alerts:
+        _msg = str(a.get('message') or '').replace(' — ', ' : ').replace('—', ':')
+        _room = _rl(a.get('room_no')).replace(' · ', ' ')
+        _txt = f"{_room} : {a.get('procedure') or '-'} | {a.get('name') or '-'} | {_msg}"
+        _items.append((_sty.get(a.get('type'), _sty['long_wait']), _txt))
+    for kind, txt in notes:
+        if kind == 'late':
+            _items.append((_sty['late'], txt))
+    for kind, txt in notes:
+        if kind == 'idle':
+            _items.append((_sty['idle'], txt))
+    if _items:
+        st.markdown(
+            '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;">'
+            + ''.join(f'<div style="padding:8px 14px;border-radius:8px;font-size:17px;'
+                      f'font-weight:600;{sty}">{_esc(t)}</div>' for sty, t in _items)
+            + '</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(
+            '<div style="padding:10px 14px;border-radius:8px;background:#E1F5EE;'
+            'color:#085041;font-size:17px;font-weight:600;">ไม่มีเรื่องต้องจัดการ : '
+            'ทุกห้องเป็นไปตามเวลาที่ทำนาย</div>', unsafe_allow_html=True)
+
+    # ── ชั้น 2 : สถานการณ์ห้อง ──
+    st.markdown('<div class="section-title">🛏️ สถานการณ์ห้องผ่าตัด</div>',
+                unsafe_allow_html=True)
+    try:
+        from main_or_db import load_room_settings as _lrs
+        _rs_closed = _lrs()
+        for _rm in rooms:
+            _s = _rs_closed.get(_rm.get('room_no'))
+            if _s is not None and not _s.get('enabled', True):
+                _rm['closed'] = True
+    except Exception:
+        pass
+    # 👩‍⚕️ เวรวันนี้ (มุกกี้สั่ง 7 พ.ย. 2026): จากแผนที่จัดไว้ในแท็บ "จัดคิวพรุ่งนี้"
+    _staff = {}
+    try:
+        from tomorrow_plan import staff_for
+        _staff = staff_for(_now.date().isoformat())
+    except Exception as _sx:
+        print(f"[today-lean] อ่านเวรวันนี้ไม่สำเร็จ: {_sx}")
+    _bits = [f"{k} : <b>{_esc(v)}</b>" for k, v in (_staff.get('posts') or {}).items() if v]
+    _bits += [f'<span style="color:#64748B;">{k} : {_esc(", ".join(v))}</span>'
+              for k, v in (_staff.get('absences') or {}).items() if v]
+    if _bits:
+        st.markdown(
+            '<div style="display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;'
+            'padding:8px 14px;margin-bottom:10px;border:1px solid #E2E8F0;border-radius:10px;'
+            'font-size:15px;color:#334155;"><b style="color:#0F172A;">เวรวันนี้</b>'
+            + ''.join(f'<span>{b}</span>' for b in _bits) + '</div>',
+            unsafe_allow_html=True)
+    try:
+        from command_center import render_room_timeline_v2
+        render_room_timeline_v2(rooms, _now, show_alerts=False,
+                                room_staff=_staff.get('rooms') or None)
+    except Exception as _tl_err:
+        st.caption(f"ไทม์ไลน์ยังไม่พร้อม: {_tl_err}")
+
+    # ── ชั้น 3 : ตัวเลขของวัน ──
+    st.markdown('<div class="section-title">📈 ตัวเลขของวัน</div>',
+                unsafe_allow_html=True)
+    _render_kpi(kpi)
+
+    # ── รายละเอียดเพิ่มเติม (พับไว้) ──
+    with st.expander("👥 ภาระงาน", expanded=False):
+        if live_cases:
+            from live_link import workload_from_session
+            wl = workload_from_session(live_cases)
+        else:
+            wl = get_workload(op_date)
+        _render_workload(wl)
+    with st.expander("🌙 สรุปรายวัน / รับเวร", expanded=False):
+        _render_daily_summary()
+
+
 def page_admin(section='today'):
     """หน้าบริหารจัดการ — สำหรับหัวหน้าพยาบาล / ผู้บริหาร.
     section: 'today' | 'history' | 'util' | 'ai' — เรนเดอร์เฉพาะ section ที่เลือก
@@ -3824,6 +3935,16 @@ def page_admin(section='today'):
             else:
                 rooms = get_room_status(op_date)
                 kpi = get_kpi(op_date)
+
+        # 🧭 7 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO จัดหน้าเป็น 3 ชั้นตามงานวิจัย
+        #    (ต้องจัดการตอนนี้ → สถานการณ์ห้อง → ตัวเลขของวัน) ระบบจริงยังเป็นหน้าเดิม
+        try:
+            _lean_today = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+        except Exception:
+            _lean_today = False
+        if _lean_today and not demo_active:
+            _render_today_lean(rooms, kpi, _live_cases, op_date)
+            return
 
         # 🎬 KPI section ขึ้นก่อน Room status
         _thai_months_top = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',

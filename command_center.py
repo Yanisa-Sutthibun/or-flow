@@ -315,8 +315,9 @@ def _hhmm(m):
     return f'{(m // 60) % 24:02d}:{m % 60:02d}'
 
 
-def render_room_timeline_v2(rooms, now=None):
-    """ไทม์ไลน์ห้องผ่าตัดรุ่น 2 (DEMO) : แถวละ 1 ห้อง แกนเวลาแนวนอน."""
+def render_room_timeline_v2(rooms, now=None, show_alerts=True, room_staff=None):
+    """ไทม์ไลน์ห้องผ่าตัดรุ่น 2 (DEMO) : แถวละ 1 ห้อง แกนเวลาแนวนอน.
+    show_alerts=False : ไม่วาดแถบแจ้งเตือนบนหัว (หน้าภาพรวมแบบ 3 ชั้นวาดเองในชั้นที่ 1)"""
     import html as _html
     now = now or datetime.now()
     _tmap = _turnover_map()
@@ -342,7 +343,7 @@ def render_room_timeline_v2(rooms, now=None):
         return max(0.0, min(100.0, (m - day_start) / span * 100))
 
     hour_w = 60 / span * 100
-    LBL = 150   # ความกว้างคอลัมน์ป้ายห้อง (px)
+    LBL = 170 if room_staff else 150   # ความกว้างคอลัมน์ป้ายห้อง (px)
 
     def _blk(a, b, sty, label, sub, tip):
         w = pos(b) - pos(a)
@@ -435,12 +436,16 @@ def render_room_timeline_v2(rooms, now=None):
             alerts.insert(0, ('red', f'{code} เกินเวลาที่ทำนาย {fc["over_min"]} นาที'))
 
         rows += (
-            f'<div style="display:flex;height:60px;border-bottom:1px solid #EEF2F6;">'
+            f'<div style="display:flex;height:{68 if room_staff else 60}px;border-bottom:1px solid #EEF2F6;">'
             f'<div style="width:{LBL}px;flex:none;padding:6px 12px;box-sizing:border-box;'
             f'display:flex;flex-direction:column;justify-content:center;">'
             f'<div style="font-size:16px;font-weight:700;color:#0F172A;">{code} '
             f'<span style="font-size:12px;font-weight:500;color:#64748B;">{_html.escape(spec)}</span></div>'
-            f'<div style="font-size:13px;{sum_sty}">{summary}</div></div>'
+            f'<div style="font-size:13px;{sum_sty}">{summary}</div>'
+            + (f'<div style="font-size:12px;color:#475569;">พยาบาล : '
+               f'{_html.escape(", ".join(room_staff[_rno]))}</div>'
+               if room_staff and room_staff.get(_rno) else '')
+            + f'</div>'
             f'<div style="position:relative;flex:1;margin-right:16px;background-image:'
             f'repeating-linear-gradient(90deg,#EEF2F6 0 1px,transparent 1px {hour_w:.4f}%);">'
             f'{bar}</div></div>')
@@ -472,7 +477,7 @@ def render_room_timeline_v2(rooms, now=None):
     _ast = {'red': 'background:#FBEAEA;color:#7A1F1F;border:1px solid #E8BDBD;',
             'amber': 'background:#FDF3DD;color:#6B4600;border:1px solid #EBD39C;'}
     alert_html = ''
-    if alerts:
+    if alerts and show_alerts:
         alert_html = ('<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
                       + ''.join(f'<div style="padding:6px 12px;border-radius:8px;font-size:14px;'
                                 f'font-weight:600;{_ast[k]}">{_html.escape(t)}</div>'
@@ -501,3 +506,37 @@ def render_room_timeline_v2(rooms, now=None):
         f'{legend}</div></div>',
         unsafe_allow_html=True,
     )
+
+
+def room_status_notes(rooms, now=None):
+    """🧭 7 พ.ย. 2026 (มุกกี้สั่ง): ข้อความสั้นสำหรับชั้น "ต้องจัดการตอนนี้" ของหน้าภาพรวม DEMO
+    คืน list ของ (kind, text) · kind = 'late' (คาดเลิกหลัง 15:30) | 'idle' (ห้องว่างแล้ว)
+    ที่มา: Dexter 2004 ผู้บริหารต้องรู้ว่าห้องไหนมีผู้ป่วย/เคสไหนใกล้เสร็จ ·
+    Dexter 2007 จอที่ "บอกสิ่งที่ทำได้" ช่วยตัดสินใจดีกว่าจอสถานะล้วน
+    ตัวเลขมาจาก room_forecast ตัวเดียวกับไทม์ไลน์และการ์ดห้อง → ตรงกันเสมอ"""
+    now = now or datetime.now()
+    _tmap = _turnover_map()
+    try:
+        from room_config import ROOM_INFO as _RI
+    except Exception:
+        _RI = {}
+    now_min = _mins(now)
+    notes = []
+    for rm in rooms:
+        if rm.get('closed'):
+            continue
+        fc = room_forecast(rm, now, _tmap)
+        if not fc['has_cases']:
+            continue
+        try:
+            _rno = int(float(rm.get('room_no')))
+        except (TypeError, ValueError):
+            _rno = None
+        code = _RI[_rno][0] if _rno in _RI else (rm.get('room_label') or f"ห้อง {rm.get('room_no')}")
+        if fc['has_future']:
+            fin_m = _mins(fc['finish']) if fc['finish'] else now_min
+            if fin_m > _CUT_1530 and now_min < _CUT_1530:
+                notes.append(('late', f'{code} คาดเลิก {_hhmm(fin_m)} หลังเวลา 15:30'))
+        elif fc['latest_end'] is not None and now_min < _CUT_1530:
+            notes.append(('idle', f'{code} ว่างตั้งแต่ {fc["latest_end"].strftime("%H:%M")} รับเคสเพิ่มได้'))
+    return notes

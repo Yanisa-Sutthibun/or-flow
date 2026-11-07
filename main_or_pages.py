@@ -1449,6 +1449,22 @@ def _board_fragment():
                         # ทั้งที่ไม่มีใครกดปุ่ม (อยู่ใน _is_demo_instance อยู่แล้ว)
                         st.session_state['_pending_toast'] = (
                             "รีเฟรชชุดสาธิตใหม่แล้ว 🎬 (ค้างเกิน 1 ชม.)")
+            elif not cases:
+                # 🗓️ 7 พ.ย. 2026 (มุกกี้สั่ง): ยังไม่มีบอร์ดของวันนี้ แต่มีตารางที่เตรียมไว้
+                #    จากแท็บ "จัดคิวพรุ่งนี้" → ย้ายเข้าบอร์ดครั้งเดียว (ธง promoted กันซ้ำ)
+                try:
+                    from tomorrow_plan import promote_plan_if_needed
+                    _plan_cases = promote_plan_if_needed(_now().date().isoformat())
+                except Exception as _plx:
+                    print(f"[day_plan] ย้ายตารางที่เตรียมไว้ไม่สำเร็จ: {_plx}")
+                    _plan_cases = None
+                if _plan_cases:
+                    st.session_state.patient_cases = _plan_cases
+                    cases = _plan_cases
+                    st.session_state['_board_dirty'] = True
+                    st.session_state['_board_dirty_ids'] = set()
+                    st.session_state['_pending_toast'] = (
+                        f"โหลดตารางที่เตรียมไว้ {len(_plan_cases)} เคสแล้ว")
     _dbfail = st.session_state.get('_board_db_fail', 0)
     if cases and _dbfail > 0:
         # 🔌 M-09: เซฟขึ้น DB กลางล้มเหลว → บอกตรง ๆ ว่าออฟไลน์ (ไม่โกหกว่า "ซิงก์แล้ว")
