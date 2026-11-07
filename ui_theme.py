@@ -378,16 +378,51 @@ def inject_font_scale() -> None:
         f'{{zoom:{_z};}}</style>', unsafe_allow_html=True)
 
 
+def _font_preview_html(label: str, z: float, cur: float) -> str:
+    """แถวตัวอย่างหน้าตาเหมือนแถวบนบอร์ด · zoom เทียบกับขนาดที่ใช้อยู่
+    (หน้าทั้งหน้าถูกขยายด้วยค่าปัจจุบันแล้ว ตัวอย่างจึงต้องหารออกก่อน)"""
+    _rel = round(z / cur, 4) if cur else z
+    _mark = ' (ใช้อยู่)' if z == cur else ''
+    return (
+        f'<div style="margin:6px 0 2px;font-size:15px;font-weight:700;color:#334155;">'
+        f'{label} {int(round(z * 100))}%{_mark}</div>'
+        f'<div style="zoom:{_rel};border:1px solid #e2e8f0;border-radius:10px;'
+        f'background:#fff;padding:8px 12px;display:flex;align-items:center;gap:12px;">'
+        f'<span style="width:84px;flex:none;"><span style="display:block;font-size:20px;'
+        f'font-weight:600;color:#0f172a;line-height:1.15;">OR4</span>'
+        f'<span style="display:block;font-size:14px;color:#94a3b8;">08:30</span></span>'
+        f'<span style="flex:1;min-width:0;overflow:hidden;">'
+        f'<span style="display:block;font-size:18px;font-weight:600;color:#0f172a;'
+        f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">ผู้ป่วยทดสอบ 09'
+        f'<span style="margin-left:8px;font-size:14px;font-weight:400;color:#b6c2cf;">'
+        f'HN …0005</span></span>'
+        f'<span style="display:block;font-size:15px;color:#64748b;white-space:nowrap;'
+        f'overflow:hidden;text-overflow:ellipsis;">LAPAROSCOPIC CHOLECYSTECTOMY · แพทย์ E'
+        f'</span></span>'
+        f'<span style="flex:none;text-align:right;font-size:18px;font-weight:700;'
+        f'color:#0f172a;white-space:nowrap;">72 / 123 น.</span></div>')
+
+
 def render_font_size_setting() -> None:
-    """ตัวเลือกขนาดตัวอักษร (หน้าตั้งค่า) · มีผลกับจอเครื่องนี้ทันที"""
+    """ตัวเลือกขนาดตัวอักษร (หน้าตั้งค่า) · ดูตัวอย่างทั้ง 3 ขนาดก่อน
+    เลือกแล้วต้องกด "บันทึก" จึงเปลี่ยนจริง (มุกกี้สั่ง 7 พ.ย. 2026) · มีผลเฉพาะจอเครื่องนี้"""
     _labels = list(FONT_SCALES)
     _cur = font_scale()
+    st.markdown('<div style="font-size:15px;color:#64748b;">ตัวอย่างแถวบนตารางผ่าตัด'
+                'ในแต่ละขนาด</div>', unsafe_allow_html=True)
+    st.markdown(''.join(_font_preview_html(k, v, _cur) for k, v in FONT_SCALES.items()),
+                unsafe_allow_html=True)
     _idx = next((i for i, k in enumerate(_labels) if FONT_SCALES[k] == _cur), 0)
-    _sel = st.radio('ขนาดตัวอักษร', _labels, index=_idx, horizontal=True,
-                    key='_font_scale_radio',
-                    help='มีผลเฉพาะจอเครื่องนี้ · จำค่าไว้แม้กด F5')
-    _z = FONT_SCALES.get(_sel, 1.0)
-    if _z != _cur:
+    with st.form('font_scale_form', border=False):
+        _sel = st.radio('ขนาดตัวอักษร', _labels, index=_idx, horizontal=True,
+                        key='_font_scale_radio',
+                        help='มีผลเฉพาะจอเครื่องนี้ · จำค่าไว้แม้กด F5')
+        _ok = st.form_submit_button('บันทึก', type='primary')
+    if _ok:
+        _z = FONT_SCALES.get(_sel, 1.0)
+        if _z == _cur:
+            st.info(f'ใช้ขนาด{_sel}อยู่แล้ว')
+            return
         st.session_state['_font_scale'] = _z
         try:
             if _z == 1.0:
