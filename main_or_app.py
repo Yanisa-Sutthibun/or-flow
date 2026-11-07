@@ -409,12 +409,16 @@ def page_room_settings():
     if not _demo:
         _page_room_settings_body()
         return
-    _t1, _t2 = st.tabs(["ห้องผ่าตัดและลิงก์", "จัดเวรพรุ่งนี้"])
+    _t1, _t2, _t3 = st.tabs(["ห้องผ่าตัดและลิงก์", "จัดเวรพรุ่งนี้", "การแสดงผล"])
     with _t1:
         _page_room_settings_body()
     with _t2:
         from tomorrow_plan import render_staff_editor
         render_staff_editor()
+    with _t3:
+        # 🔠 7 พ.ย. 2026 (มุกกี้สั่ง): เลือกขนาดตัวอักษรของจอเครื่องนี้
+        from ui_theme import render_font_size_setting
+        render_font_size_setting()
 
 
 def _page_room_settings_body():

@@ -348,6 +348,55 @@ def inject_theme() -> None:
     st.markdown(THEME_CSS, unsafe_allow_html=True)
     if compact_ui():
         st.markdown(COMPACT_CSS, unsafe_allow_html=True)
+    inject_font_scale()
+
+
+# 🔠 7 พ.ย. 2026 (มุกกี้สั่ง): เลือกขนาดตัวอักษรได้ที่หน้าตั้งค่า (แอป DEMO)
+#    ขยายทั้งหน้าด้วย CSS zoom (เหมือนกด Ctrl + ในเบราว์เซอร์ แต่จำค่าไว้ใน URL ?fs=)
+#    จึงรวมแถวสด (iframe) และตัวเลขทุกจุดที่เขียนขนาดเป็น px · ค่าเป็นของ "เครื่องนี้" เท่านั้น
+FONT_SCALES = {'ปกติ': 1.0, 'ใหญ่': 1.15, 'ใหญ่มาก': 1.3}
+
+
+def font_scale() -> float:
+    """ขนาดตัวอักษรของเครื่องนี้ : session ก่อน แล้วค่อยดู ?fs= ใน URL (รอด F5)"""
+    try:
+        v = st.session_state.get('_font_scale')
+        if v is None:
+            v = float(st.query_params.get('fs', 1.0))
+        v = float(v)
+        return v if v in FONT_SCALES.values() else 1.0
+    except Exception:
+        return 1.0
+
+
+def inject_font_scale() -> None:
+    _z = font_scale()
+    if _z == 1.0:
+        return
+    st.markdown(
+        '<style>[data-testid="stMainBlockContainer"],.block-container'
+        f'{{zoom:{_z};}}</style>', unsafe_allow_html=True)
+
+
+def render_font_size_setting() -> None:
+    """ตัวเลือกขนาดตัวอักษร (หน้าตั้งค่า) · มีผลกับจอเครื่องนี้ทันที"""
+    _labels = list(FONT_SCALES)
+    _cur = font_scale()
+    _idx = next((i for i, k in enumerate(_labels) if FONT_SCALES[k] == _cur), 0)
+    _sel = st.radio('ขนาดตัวอักษร', _labels, index=_idx, horizontal=True,
+                    key='_font_scale_radio',
+                    help='มีผลเฉพาะจอเครื่องนี้ · จำค่าไว้แม้กด F5')
+    _z = FONT_SCALES.get(_sel, 1.0)
+    if _z != _cur:
+        st.session_state['_font_scale'] = _z
+        try:
+            if _z == 1.0:
+                st.query_params.pop('fs', None)
+            else:
+                st.query_params['fs'] = str(_z)
+        except Exception:
+            pass
+        st.rerun()
 
 
 def render_page_header(emoji: str, title: str, subtitle: str = "") -> None:
