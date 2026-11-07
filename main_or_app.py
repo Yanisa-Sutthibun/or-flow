@@ -399,6 +399,25 @@ def render_screen_links(room_info: dict):
 
 
 def page_room_settings():
+    """⚙️ หน้าตั้งค่า · 🗓️ 7 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO แยกเป็น 2 แท็บย่อย
+    "ห้องผ่าตัดและลิงก์" (ของเดิมทั้งหมด) | "จัดเวรพรุ่งนี้" (หัวหน้าจัดเวร → ไปแสดงที่แท็บจัดคิวพรุ่งนี้)
+    ระบบจริงเหมือนเดิมทุกอย่าง"""
+    try:
+        _demo = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        _demo = False
+    if not _demo:
+        _page_room_settings_body()
+        return
+    _t1, _t2 = st.tabs(["ห้องผ่าตัดและลิงก์", "จัดเวรพรุ่งนี้"])
+    with _t1:
+        _page_room_settings_body()
+    with _t2:
+        from tomorrow_plan import render_staff_editor
+        render_staff_editor()
+
+
+def _page_room_settings_body():
     # 👤 production 19 ก.ค. 2026: เปิด/ปิดห้อง = ทุกคนใช้ได้ (รหัสหน่วยงาน) ·
     #    เฉพาะ 📥 นำเข้าข้อมูลย้อนหลัง ที่กันด้วยบทบาทผู้ดูแล (ดูท้ายฟังก์ชัน)
     # 🩹 7 ส.ค. 2026 (มุคกี้แจ้ง): เดิมหน้านี้ copy ลิสต์ห้องมาเขียนเองแค่ 8 ห้อง
