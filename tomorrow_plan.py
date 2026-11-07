@@ -242,6 +242,38 @@ def _room_summary(cases):
     return out
 
 
+# ─────────────────────────── ตารางตัวอย่าง (DEMO) ───────────────────────────
+_SAMPLE_ROSTER = ['แก้ว', 'น้ำฝน', 'ปลา', 'มิ้นท์', 'ฝ้าย', 'จอย', 'แพร', 'ต้น', 'บีม', 'ออม',
+                  'เมย์', 'นุ่น', 'ฟ้า', 'ขวัญ', 'ปุ้ย', 'หนิง', 'ตาล', 'แนน', 'เบียร์', 'กิ๊ฟ',
+                  'โบว์', 'อ้อม', 'ปู', 'ไหม', 'ใบเตย', 'พลอย', 'ส้ม', 'แอน', 'จูน', 'ก้อย',
+                  'ป่าน', 'เอิร์ธ']
+
+
+def _is_demo_instance() -> bool:
+    try:
+        return str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        return False
+
+
+def _sample_cases():
+    """🎬 7 พ.ย. 2026 (มุกกี้สั่ง): ตารางตัวอย่างสำหรับแอป DEMO
+    ใช้ชุดสาธิตเดียวกับบอร์ด (demo_cases_data.DEMO_POOL · ผู้ป่วยทดสอบ NN / แพทย์ A-K)
+    ทำนายด้วยแบบจำลองจริงผ่าน _or_board_demo() แล้วรีเซ็ตทุกเคสเป็น "ยังไม่มา"
+    ทุกเคสติดธง _demo → ไม่ถูกเขียนลงฐานข้อมูลวิจัย"""
+    from main_or_pages import _or_board_demo
+    out = []
+    for c in _or_board_demo() or []:
+        c = dict(c)
+        for k in list(c):
+            if k.startswith('time_') or k in ('actual_duration_min', 'done_before_board'):
+                c.pop(k, None)
+        c['status'] = 'not_arrived'
+        c['_demo'] = True
+        out.append(c)
+    return out
+
+
 # ─────────────────────────── หน้าเพจ ───────────────────────────
 _CSS = (
     "<style>"
@@ -300,6 +332,27 @@ def page_tomorrow():
                     st.error('บันทึกไม่สำเร็จ : ลองใหม่อีกครั้ง')
             elif up is not None:
                 st.warning('ไม่พบเคสในไฟล์ : ตรวจหัวคอลัมน์ (hn/ชื่อ/หัตถการ/เวลา/ห้อง)')
+
+    # 🎬 DEMO: ปุ่มโหลดตารางตัวอย่าง (ผู้ทดลองใช้ไม่มีไฟล์ HIS)
+    if _is_demo_instance():
+        if st.button('โหลดตารางตัวอย่าง (สาธิต)', key='tmr_sample',
+                     help='ใช้ชุดสาธิตเดียวกับบอร์ด : ผู้ป่วยทดสอบ และแพทย์ A-K '
+                          'เวลาทำนายจากแบบจำลองจริง ไม่บันทึกลงฐานข้อมูลวิจัย'):
+            with st.spinner('กำลังสร้างตารางตัวอย่างและทำนายเวลา...'):
+                try:
+                    sample = _sample_cases()
+                except Exception as ex:
+                    sample = []
+                    st.error(f'สร้างตารางตัวอย่างไม่สำเร็จ: {ex}')
+            if sample:
+                plan['cases'] = _mask_cases(sample)
+                plan['uploaded_at'] = _now().strftime('%H:%M')
+                plan['promoted'] = False
+                if not _load_roster():
+                    _save_roster(_SAMPLE_ROSTER)
+                if save_day_plan(d, plan):
+                    st.success(f'โหลดตารางตัวอย่าง {len(sample)} เคสแล้ว')
+                    st.rerun()
 
     if not cases:
         return
