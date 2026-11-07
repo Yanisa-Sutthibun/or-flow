@@ -319,17 +319,32 @@ class ModelV2:
 
         q90 = self.conf['per_proc_group_q90'].get(group_c,
                                                   self.conf['global']['q90'])
+        # 📏 7 พ.ย. 2569 (มุกกี้สั่ง): ช่วง 90% แบบสัดส่วนบนสเกล log แทน pred±q90
+        #    เหตุผล: pred±ค่าคงที่ทำให้เคสสั้น (เช่น cystoscopy ทำนาย 23) ขอบล่างติดลบ
+        #    แล้วถูกปัดเป็น 5 นาที ซึ่งในข้อมูลจริงแทบไม่มี (ต่ำกว่า 15 นาทีมี 0.3%)
+        #    แบบสัดส่วน coverage บน test 2567 เท่าเดิม (89.6%) ไม่มีเคสขอบล่าง 5 และ
+        #    เคสยาว >150 นาที coverage ดีขึ้น 80.9 → 89.7% (ดู train/scripts/calib_floor.py)
+        #    conformal.json รุ่นเก่าไม่มี logq → ถอยไปใช้สูตรเดิมอัตโนมัติ
+        lq = (self.conf.get('per_proc_group_logq', {}).get(group_c)
+              or self.conf.get('global_logq'))
+        if lq:
+            lo, hi = pred * float(np.exp(lq[0])), pred * float(np.exp(lq[1]))
+            range_method = 'log_ratio'
+        else:
+            lo, hi = pred - q90, pred + q90
+            range_method = 'symmetric_q90'
         hits = te_hit['procedure'] + surg_known + group_known
         confidence = 'สูง' if (te_hit['procedure'] and hits == 3) else \
                      ('ปานกลาง' if hits >= 2 else 'ต่ำ')
         return {
             'predicted_min': int(round(pred)),
-            'range90': (int(max(5, round(pred - q90))), int(round(pred + q90))),
+            'range90': (int(max(5, round(lo))), int(round(hi))),
             'confidence': confidence, 'proc_n': int(proc_n),
             'model_version': 'thesis_ML_v2',
             'details': {'procedure_canon': proc, 'proc_group': group_c,
                         'สาขา': spec, 'te_hit': te_hit, 'surgeon_known': surg_known,
-                        'room_known': room_known, 'q90': round(float(q90), 1)},
+                        'room_known': room_known, 'q90': round(float(q90), 1),
+                        'range_method': range_method},
         }
 
 
