@@ -110,6 +110,8 @@ def _ov_badge_html(c) -> str:
     """ป้าย "ปรับแล้ว" (พยาบาลแก้เวลาทับ AI) — ชั้น A ย่อเป็นข้อมูลรอง 14px"""
     if not c.get('user_override_min'):
         return ''
+    if _minimal_board():
+        return ''        # 🧑‍⚕️ minimal (DEMO): ใช้ไอคอนคนแทนป้าย (ดู _who_icon)
     _fs = 14 if _compact() else 18
     return (f'<span style="background:#e3f0fb;color:#1565c0;border-radius:8px;'
             f'padding:2px 10px;font-size:{_fs}px;margin-left:6px;">ปรับแล้ว</span>')
@@ -705,6 +707,19 @@ def _popover(label, **kw):
     return st.popover(label)
 
 
+_ICON_AI, _ICON_NURSE = '🤖', '🧑‍⚕️'
+
+
+def _who_icon(c, size=17) -> str:
+    """🧑‍⚕️ gimmick (มุกกี้สั่ง 7 พ.ย. 2026 · เฉพาะ DEMO): ใครเป็นเจ้าของเวลาที่โชว์อยู่
+    ยังเป็นค่าแบบจำลอง = 🤖 · พยาบาลแก้เวลาแล้ว = 🧑‍⚕️ (ค่าทำนายเดิมยังอยู่บรรทัดล่าง)"""
+    if c.get('user_override_min'):
+        return (f'<span title="พยาบาลแก้เวลาแล้ว" style="font-size:{size}px;'
+                f'margin-right:4px;">{_ICON_NURSE}</span>')
+    return (f'<span title="ค่าจากแบบจำลอง" style="font-size:{size}px;'
+            f'margin-right:4px;">{_ICON_AI}</span>')
+
+
 def _cell_room(c, loc, fg=None):
     """ห้อง: ชื่อห้องบรรทัดบน · สาขาบรรทัดล่าง — เดิม 'OR7 · PLASTIC' บรรทัดเดียว
     ยาวจนล้นไปชนคอลัมน์ถัดไป"""
@@ -954,6 +969,10 @@ def _time_static(c, disp, eff, elapsed, now, tov_map=None):
     _tip = ('ช่วง 90% = เคสลักษณะนี้ราว 9 ใน 10 ใช้เวลาอยู่ในช่วงนี้ · '
             'ช่วงแคบ = ค่อนข้างแน่นอน · ช่วงกว้าง = เวลาแกว่งได้มาก ควรเผื่อเวลา')
     if ov:
+        if _minimal_board():
+            return (f'{_who_icon(c)}<b style="font-weight:700;color:#0f172a;">'
+                    f'ใช้ห้อง ~{_dur_str(eff)}</b>',
+                    f'พยาบาลแก้ · 🤖 ทำนาย {_dur_str(ai0) if ai0 else "?"}', _tip)
         return (f'<b style="font-weight:700;color:#0f172a;">{_dur_str(eff)}</b>',
                 f'พยาบาลแก้ · 🤖 ทำนาย {_dur_str(ai0) if ai0 else "?"}', _tip)
     # 🤖 = ค่าที่มาจากโมเดล (ไม่ใช่คนกรอก) · "ใช้ห้อง" ระบุชัดว่าเป็นเวลาครองห้อง
@@ -1008,7 +1027,10 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
             + _cell_time('<span id="t"></span>' + ov_badge,
                          # 15px (ใหญ่กว่าบรรทัดล่างมาตรฐาน 13px): ข้อความสั้น มีที่เหลือ
                          # และไอคอน 🤖 ที่ 13px จะเละเป็นก้อนสี อ่านไม่ออก
-                         sub=(f'<span style="font-size:15px;">🤖 ใช้ห้อง '
+                         sub=((f'<span style="font-size:15px;">{_who_icon(c, 15)}ใช้ห้อง '
+                               f'~{_dur_str(c.get("effective_min") or c.get("user_override_min") or c.get("ai_predicted_min") or c.get("predicted_min"))}</span>')
+                              if _minimal_board() and (c.get('user_override_min') or c.get('ai_predicted_min') or c.get('predicted_min')) else
+                              f'<span style="font-size:15px;">🤖 ใช้ห้อง '
                               f'~{_dur_str(c.get("ai_predicted_min") or c.get("predicted_min"))}</span>'
                               if (c.get('ai_predicted_min') or c.get('predicted_min')) else '')),
             bg=('#fdeeee' if emer else '#ffffff'),
@@ -1039,8 +1061,12 @@ def _inroom_row_iframe(c, loc, tlabel, eff, border_css, ov_badge, now,
                 # ผลลัพธ์ AI ที่ทีมใช้ตัดสินใจจริง ต้องเห็นบนแถว ไม่ใช่ซ่อนใน tooltip
                 # ปกติ = แถบความคืบหน้าพร้อมตัวเลขในตัว · เกินเวลา = สลับเป็นตัวเลข
                 # นาทีล้วน (JS สลับ display ให้) เพราะสัดส่วนหมดความหมายเมื่อเต็มแล้ว
-                + _cell_time(_progress_bar(0, '', wrap_id='pw', fill_id='b',
-                                           label_id='pl') + ov_badge,
+                + _cell_time(('<span style="display:flex;align-items:center;">'
+                              + _who_icon(c, 17)
+                              + '<span style="flex:1;min-width:0;">' if _minimal_board() else '')
+                             + _progress_bar(0, '', wrap_id='pw', fill_id='b',
+                                             label_id='pl')
+                             + ('</span></span>' if _minimal_board() else '') + ov_badge,
                              sub=(callnext[0] if callnext else ''),
                              title=(callnext[1] if callnext else '')),
                 bg=_bg, border_css=border_css, row_id='rw')
