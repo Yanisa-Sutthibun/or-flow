@@ -81,7 +81,11 @@ def load_day_plan(d: str) -> dict | None:
     try:
         from main_or_db import _get_app_setting
         s = _get_app_setting(_key(d), '')
-        return json.loads(s) if s else None
+        plan = json.loads(s) if s else None
+        st_ = (plan or {}).get('staff') or {}
+        if st_.get('p-rs') and not st_.get('rs-1'):
+            st_['rs-1'] = st_.pop('p-rs')     # แผนรุ่นแรกเก็บรับ-ส่งไว้ที่ p-rs
+        return plan
     except Exception as e:
         print(f"[day_plan] อ่านแผน {d} ไม่สำเร็จ: {e}")
         return None
@@ -298,6 +302,12 @@ def _sample_cases():
 
 
 # ─────────────────────────── CSS ร่วม ───────────────────────────
+_TBL_CSS = (   # ใช้ทั้งแท็บและภาพคัดลอกไป LINE
+    ".tmr-tbl{width:100%;border-collapse:collapse;font-size:15px;}"
+    ".tmr-tbl th{font-size:14px;color:#64748B;font-weight:600;text-align:left;padding:8px 10px;"
+    "border-bottom:1px solid #E2E8F0;background:#F8FAFC;}"
+    ".tmr-tbl td{padding:8px 10px;border-bottom:1px solid #F1F5F9;vertical-align:top;}"
+)
 _CSS = (
     "<style>"
     ".tmr-h{font-size:26px;font-weight:700;margin:4px 0 0;}"
@@ -307,11 +317,7 @@ _CSS = (
     ".tmr-muted{font-size:13px;color:#94A3B8;}"
     ".tmr-ops{font-size:14px;color:#475569;line-height:1.45;}"
     ".tmr-late{color:#8A5A00;font-weight:700;}"
-    ".tmr-tbl{width:100%;border-collapse:collapse;font-size:15px;}"
-    ".tmr-tbl th{font-size:14px;color:#64748B;font-weight:600;text-align:left;padding:8px 10px;"
-    "border-bottom:1px solid #E2E8F0;background:#F8FAFC;}"
-    ".tmr-tbl td{padding:8px 10px;border-bottom:1px solid #F1F5F9;vertical-align:top;}"
-    "</style>"
+    + _TBL_CSS + "</style>"
 )
 
 
@@ -418,9 +424,7 @@ def render_staff_editor():
                 f'{i}. {_html.escape(op)}' for i, op in enumerate(rm['ops'], 1)) or
                 '<span class="tmr-muted">ไม่มีเคส</span>') + '</div>', unsafe_allow_html=True)
             if rm['n']:
-                late = ' tmr-late' if rm['finish'] >= CUT_1530 - 15 else ''
-                cs[2].markdown(f'<div style="font-size:15px;">{_dur(rm["mins"])}</div>'
-                               f'<div class="tmr-muted{late}">เสร็จประมาณ {_hhmm(rm["finish"])}</div>',
+                cs[2].markdown(f'<div style="font-size:15px;">{_dur(rm["mins"])}</div>',
                                unsafe_allow_html=True)
             else:
                 cs[2].markdown('<div class="tmr-muted">-</div>', unsafe_allow_html=True)
@@ -493,38 +497,46 @@ def page_tomorrow():
     st.markdown(f'<div class="tmr-sub">ผ่าตัด {len(cases)} เคส จัดเวรเมื่อ '
                 f'{_html.escape(plan["staff_saved_at"])} น.</div>', unsafe_allow_html=True)
     rows = _room_rows(cases)
-    staff = plan.get('staff') or {}
+    info = staff_for(d)
+    st.markdown(f'<div style="overflow-x:auto">{_table_html(rows, plan)}</div>'
+                + _footer_html(info), unsafe_allow_html=True)
+    _render_copy_card(target, rows, plan, info)
+
+
+def _table_html(rows, plan, show_time=True) -> str:
+    """ตารางเวร : ห้อง | operation | ใช้เวลาโดยประมาณ | หัวหน้าห้อง | สมาชิก×3 (แถวแรก = รับ-ส่ง)
+    ใช้ทั้งในแท็บและในภาพคัดลอกไป LINE (show_time=False : ภาพ LINE ไม่โชว์เวลาทำนาย) · ไม่มีชื่อผู้ป่วย"""
     e = _html.escape
+    staff = plan.get('staff') or {}
+    n_cases = len(plan.get('cases') or [])
     dash = '<span style="color:#CBD5E1">-</span>'
 
     def _cells(prefix):
         return ''.join(f'<td>{e(staff.get(f"{prefix}-{k}", "")) or dash}</td>' for k in range(1, 5))
 
-    body = f'<tr><td><b>รับ-ส่ง</b></td><td>ทั้งหมด {len(cases)} เคส</td><td>-</td>{_cells("rs")}</tr>'
+    tcol = (lambda v: f'<td>{v}</td>') if show_time else (lambda v: '')
+    body = f'<tr><td><b>รับ-ส่ง</b></td><td>ทั้งหมด {n_cases} เคส</td>{tcol(dash)}{_cells("rs")}</tr>'
     for rm in rows:
         if not rm['n'] and not any(staff.get(f"r{rm['room_no']}-{k}") for k in range(1, 5)):
             continue                      # ห้องไม่มีเคสและไม่มีเวร ไม่ต้องโชว์
         ops = ('<br>'.join(f'{i}. {e(op)}' for i, op in enumerate(rm['ops'], 1))
                or '<span style="color:#94A3B8">ไม่มีเคส</span>')
-        if rm['n']:
-            late = 'color:#8A5A00;font-weight:700;' if rm['finish'] >= CUT_1530 - 15 else 'color:#94A3B8;'
-            tm = f'{_dur(rm["mins"])}<div style="font-size:13px;{late}">เสร็จประมาณ {_hhmm(rm["finish"])}</div>'
-        else:
-            tm = '-'
+        tm = _dur(rm['mins']) if rm['n'] else dash
         body += (f'<tr><td><b>{e(rm["code"])}</b><div style="font-size:12px;color:#94A3B8">{e(rm["spec"])}</div></td>'
-                 f'<td style="font-size:14px;color:#475569">{ops}</td><td>{tm}</td>'
+                 f'<td style="font-size:14px;color:#475569">{ops}</td>{tcol(tm)}'
                  f'{_cells("r" + str(rm["room_no"]))}</tr>')
-    head = ''.join(f'<th>{t}</th>' for t in ['ห้อง', 'operation', 'ใช้เวลาโดยประมาณ'] + SLOT_LABELS)
-    st.markdown(f'<div style="overflow-x:auto"><table class="tmr-tbl"><thead><tr>{head}</tr></thead>'
-                f'<tbody>{body}</tbody></table></div>', unsafe_allow_html=True)
+    head = ''.join(f'<th>{t}</th>' for t in ['ห้อง', 'operation'] + (['ใช้เวลาโดยประมาณ'] if show_time else []) + SLOT_LABELS)
+    return f'<table class="tmr-tbl"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>'
 
-    info = staff_for(d)
+
+def _footer_html(info) -> str:
+    """เวร HN / ทั่วไป / OT / เวรเสริม และรายชื่อลา ใต้ตาราง (2 คอลัมน์)"""
+    e = _html.escape
     lines = [f'<div><b>{e(k)}</b> : {e(v) or "-"}</div>' for k, v in info['posts'].items() if k != 'รับ-ส่ง']
     lines += [f'<div style="color:#475569"><b>{e(k)}</b> : {e(", ".join(v)) or "-"}</div>'
               for k, v in info['absences'].items()]
-    st.markdown('<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 24px;'
-                'font-size:15px;margin:16px 0 8px;">' + ''.join(lines) + '</div>', unsafe_allow_html=True)
-    _render_copy_card(target, rows, plan, info)
+    return ('<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 24px;'
+            'font-size:15px;margin:16px 0 8px;">' + ''.join(lines) + '</div>')
 
 
 def _render_copy_card(target: _date, rows, plan, info):
@@ -532,32 +544,19 @@ def _render_copy_card(target: _date, rows, plan, info):
     คัดลอกไม่ได้ (เบราว์เซอร์ไม่อนุญาต) → ดาวน์โหลดเป็นไฟล์ PNG แทน · ไม่มีชื่อผู้ป่วย"""
     import streamlit.components.v1 as components
     e = _html.escape
-    staff = plan.get('staff') or {}
-
-    def _names(prefix):
-        lst = [staff.get(f'{prefix}-{k}', '') for k in range(1, 5)]
-        return ', '.join(v for v in lst if v) or '-'
-    room_rows = f'<div><b>รับ-ส่ง</b> : {e(_names("rs"))}</div>' + ''.join(
-        f'<div><b>{e(rm["code"])}</b> <span style="color:#64748B;font-size:12px">{e(rm["spec"])}</span> : '
-        f'{e(_names("r" + str(rm["room_no"])))}</div>' for rm in rows if rm['n'])
-    post_rows = ''.join(f'<div><b>{e(k)}</b> : {e(v) or "-"}</div>'
-                        for k, v in info['posts'].items() if k != 'รับ-ส่ง')
-    abs_rows = ''.join(f'<div><b>{e(k)}</b> : {e(", ".join(v)) or "-"}</div>'
-                       for k, v in info['absences'].items())
     n_cases = len(plan.get('cases') or [])
     fname = f"เวร_{target.isoformat()}.png"
     card = f"""
-<div id="card" style="width:500px;background:#fff;border:1px solid #CBD5E1;border-radius:10px;padding:14px 16px;
+<div id="card" style="width:960px;background:#fff;border:1px solid #CBD5E1;border-radius:10px;padding:16px 18px;
  font-family:Sarabun,'Noto Sans Thai',Tahoma,sans-serif;color:#0F172A;box-sizing:border-box">
- <div style="font-size:16px;font-weight:700">เวรห้องผ่าตัดศัลยกรรมทั่วไป</div>
- <div style="font-size:13px;color:#64748B;border-bottom:1px solid #E2E8F0;padding-bottom:8px;margin-bottom:8px">
-  {e(_th_date(target))} : ผ่าตัด {n_cases} เคส</div>
- <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:14px">{room_rows}</div>
- <div style="font-size:14px;border-top:1px solid #E2E8F0;margin-top:8px;padding-top:8px">{post_rows}</div>
- <div style="font-size:14px;color:#475569;border-top:1px solid #E2E8F0;margin-top:8px;padding-top:8px">{abs_rows}</div>
+ <div style="font-size:18px;font-weight:700">เวรห้องผ่าตัดศัลยกรรมทั่วไป</div>
+ <div style="font-size:14px;color:#64748B;margin-bottom:8px">{e(_th_date(target))} : ผ่าตัด {n_cases} เคส</div>
+ {_table_html(rows, plan, show_time=False)}
+ {_footer_html(info)}
 </div>"""
     components.html(f"""
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+<style>{_TBL_CSS}</style>
 <div style="position:absolute;left:-9999px;top:0">{card}</div>
 <button id="cp" style="font-family:Sarabun,sans-serif;font-size:16px;padding:10px 18px;min-height:44px;
  border:1px solid #CBD5E1;border-radius:8px;background:#fff;cursor:pointer">คัดลอกไปวางใน LINE</button>
