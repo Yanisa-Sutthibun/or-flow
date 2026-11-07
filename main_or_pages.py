@@ -1,6 +1,7 @@
 """
 Main OR — OR Board + Statistics Pages
 """
+from contextlib import nullcontext as _nullctx
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
@@ -1494,9 +1495,55 @@ def _board_fragment():
         _compact = _compact_ui_fn()
     except Exception:
         _compact = False
-    _ctl_l, _ctl_warn, _ctl_r = st.columns([1.3, 4, 0.01] if _compact else [3, 1.5, 1],
-                                           vertical_alignment="center")
-    with _ctl_r:
+    # 🚪 โหมดจอประจำห้อง: ไม่มีสวิตช์สาธิต (กันจอห้องเผลอสลับบอร์ดทั้งตึกเป็นสาธิต)
+    _room_scope_board = (st.session_state.get('room_scope')
+                         if st.session_state.get('role') == 'room' else None)
+    # 🧹 7 พ.ย. 2026 (มุกกี้สั่ง ตาม wireframe): แอป DEMO หัวบอร์ดเหลือ วันที่ + เวลาอัปเดต
+    #    เครื่องมือที่ใช้วันละครั้ง (อัปโหลด เพิ่มเคส วิธีใช้ ปิดโหมดสาธิต) ย้ายเข้าเมนู ⋯
+    _mini_hdr = bool(_is_demo_instance and _compact and not _room_scope_board)
+    _more_tools = None
+    if _mini_hdr:
+        _demo_on = bool(st.session_state.get('_or_demo'))
+        _confirm = st.session_state.get('_demo_switch_confirm')
+        _hl, _hb, _hm = st.columns([6, 1.7, 0.55], vertical_alignment="center")
+        with _hl:
+            try:
+                from tomorrow_plan import _th_date as _thd
+                _dtxt = _thd(_now().date())
+            except Exception:
+                _dtxt = _now().strftime('%d/%m/%Y')
+            _sync = st.session_state.get('_board_last_pull_wall') or ''
+            _sub = ' · '.join(x for x in (f'อัปเดต {_sync}' if _sync else '',
+                                          'สาธิต ไม่บันทึกจริง' if _demo_on else '') if x)
+            st.markdown(
+                f'<div style="line-height:1.3;"><div style="font-size:22px;font-weight:700;'
+                f'color:#0f172a;">{_dtxt}</div>'
+                f'<div style="font-size:14px;color:#94a3b8;">{_sub}</div></div>',
+                unsafe_allow_html=True)
+        if _confirm in ('on', 'off'):
+            _demo_on = _render_demo_switch_confirm(_confirm, _demo_on)
+        elif not _demo_on:
+            with _hb:
+                if st.button("เปิดโหมดสาธิต", key="orboard_demo_on", width='stretch',
+                             help="เปิดแล้วจะมีเคสสาธิตพร้อมใช้งาน "
+                                  "กดปุ่มต่าง ๆ ได้เหมือนระบบจริง"):
+                    _demo_on = _demo_switch_pressed('on', _demo_on)
+        with _hm:
+            try:
+                _more_tools = st.popover("⋯", help="เครื่องมือ : อัปโหลดตาราง เพิ่มเคส "
+                                         "วิธีใช้ ปิดโหมดสาธิต", width='stretch')
+            except TypeError:
+                _more_tools = st.popover("⋯")
+        if _demo_on and _confirm not in ('on', 'off'):
+            with _more_tools:
+                if st.button("ปิดโหมดสาธิต", key="orboard_demo_off", width='stretch',
+                             help="ปิดแล้วเคสสาธิตทั้งหมดจะถูกล้างออกจากบอร์ด"):
+                    _demo_on = _demo_switch_pressed('off', _demo_on)
+                st.markdown("---")
+    _ctl_l, _ctl_warn, _ctl_r = ((None, None, None) if _mini_hdr else
+                                 st.columns([1.3, 4, 0.01] if _compact else [3, 1.5, 1],
+                                            vertical_alignment="center"))
+    with (_nullctx() if _mini_hdr else _ctl_r):
         # 🧹 ชั้น A: ปุ่มรีเฟรชอยู่แถวแท็บแล้ว (main_or_app: hdr_refresh) ไม่วางซ้ำ
         if (not _compact) and st.button("🔄 รีเฟรช", key="orboard_refresh", width='stretch',
                      type='primary',
@@ -1504,13 +1551,13 @@ def _board_fragment():
             st.session_state['_board_force_pull'] = True   # บังคับดึงจาก DB กลาง
             st.session_state['_board_user_pull'] = True    # ✋ คนสั่งเอง — ห้ามถูกเลื่อน
             _rerun_board()
-    with _ctl_warn:
+    with (_nullctx() if _mini_hdr else _ctl_warn):
         # ⚠️ ป้าย "อย่ากด F5" บนจอ: คู่มือ 1.5 สอนกติกานี้ในเล่มอยู่แล้ว ป้ายบนจอ
         #    กินที่แถวควบคุมทุกวัน → ชั้น A ถอดออก (ปุ่มรีเฟรชมี tooltip อยู่แล้ว)
         if not _compact:
             st.markdown("<div style=\x27text-align:right;color:#808495;font-size:var(--fs-meta);line-height:1.3;\x27>⚠️ อย่ากด F5 : ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
         # 🎨 demo: บอกเวลาซิงก์ล่าสุด — ช่องว่าง 30 วิ จะไม่ถูกอ่านว่า "ค้าง"
-        if _is_demo_instance and st.session_state.get('_board_last_pull_wall'):
+        if _is_demo_instance and (not _mini_hdr) and st.session_state.get('_board_last_pull_wall'):
             # 🧹 ชั้น A: ชิป "สาธิต · ไม่บันทึกจริง" รวมอยู่บรรทัดเดียวกับเวลาซิงก์
             #    (เดิมเป็นแถวของตัวเอง กินความสูงเพิ่มอีกแถว)
             _demo_note = (' · สาธิต ไม่บันทึกจริง'
@@ -1519,13 +1566,12 @@ def _board_fragment():
                 f"<div style='text-align:right;color:#b6c2cf;font-size:var(--fs-meta);'>"
                 f"อัปเดตล่าสุด {st.session_state['_board_last_pull_wall']}{_demo_note}</div>",
                 unsafe_allow_html=True)
-    # 🚪 โหมดจอประจำห้อง: ไม่มีสวิตช์สาธิต (กันจอห้องเผลอสลับบอร์ดทั้งตึกเป็นสาธิต)
-    _room_scope_board = (st.session_state.get('room_scope')
-                         if st.session_state.get('role') == 'room' else None)
     # 🧪 2 ส.ค. 2026 (มุคกี้สั่ง): ปุ่ม 🎬 สาธิต แสดงเฉพาะ "ระบบ DEMO"
     #    (_is_demo_instance คำนวณไว้หัว fragment แล้ว) — production ซ่อนถาวร
-    with _ctl_l:
-        if not _is_demo_instance:
+    with (_nullctx() if _mini_hdr else _ctl_l):
+        if _mini_hdr:
+            pass                      # คำนวณ _demo_on ไว้ในหัวแบบ minimal แล้ว
+        elif not _is_demo_instance:
             # 🔒 production: บังคับปิดสาธิตเสมอ (โค้ดถัดไปจะล้างเคสสาธิตค้างให้เอง)
             _demo_on = False
         elif _room_scope_board:
@@ -1602,7 +1648,7 @@ def _board_fragment():
 
     # ❓ วิธีใช้ (UX audit 3 ก.ค. 2026)
     def _board_help_md():
-        st.markdown(
+        _txt = (
             "แผนการไหลของผู้ป่วย (Patient work flow) เมื่อมารับการผ่าตัด\n\n"
             "1. ผู้ป่วยมาถึงห้องรับ-ส่ง → กด **รับเข้า**\n"
             "2. ผู้ป่วยเข้าห้องผ่าตัด → กด **เข้าห้อง** "
@@ -1633,11 +1679,34 @@ def _board_fragment():
             "   - *ช่วงกว้าง* = เวลาแกว่งได้มาก ควรเผื่อเวลาและติดตามใกล้ชิด\n\n"
             "พยาบาลสามารถปรับเวลาทับค่าที่ AI ทำนายได้เสมอ (✏️) "
             "และระบบบันทึกทั้งสองค่าไว้เปรียบเทียบ")
+        if _mini_hdr:
+            # 🧹 ตารางแบบ minimal (DEMO): ปุ่มเปลี่ยนที่ → คำอธิบายต้องตรงกับจอ
+            for _a, _b in (
+                    ("ผ่าเสร็จ → เลือกปลายทาง: **เสร็จ → รับ-ส่ง** หรือ **เสร็จ → พักฟื้น**",
+                     "ผ่าเสร็จ → กด **เสร็จ** แล้วเลือก **ไปห้องรับ-ส่ง** หรือ **ไปห้องพักฟื้น**"),
+                    ("ปุ่ม **↩️** ท้ายแถวย้อนกลับได้หนึ่งขั้น",
+                     "กด **⋯** ท้ายแถว แล้วเลือก **เลิกทำ** ย้อนกลับได้หนึ่งขั้น"),
+                    ("- **✏️** = แก้เวลาทำนายการใช้ห้องหรือย้ายห้อง",
+                     "- **⋯** ท้ายแถว = ดู HN แก้เวลาทำนายการใช้ห้องหรือย้ายห้อง"),
+                    ("ควรตรวจสอบและปรับด้วย ✏️", "ควรตรวจสอบและปรับด้วยเมนู ⋯"),
+                    ("ทับค่าที่ AI ทำนายได้เสมอ (✏️)", "ทับค่าที่ AI ทำนายได้เสมอ (เมนู ⋯)")):
+                _txt = _txt.replace(_a, _b)
+        st.markdown(_txt)
 
     # ---------- 🧰 เครื่องมือ — มุคกี้สั่ง 5 ส.ค. 2026: ยุบ 3 แถวเหลือแถวเดียว ----------
     #    (อัปโหลดใช้แค่ตอนเช้า · เพิ่มเคส/วิธีใช้นาน ๆ ครั้ง) คืนพื้นที่ให้ KPI เด่นขึ้น
     #    🚪 โหมดจอประจำห้อง: เหลือเฉพาะแท็บวิธีใช้ — อัปโหลด/เพิ่มเคส = งานจอรับ-ส่ง
-    if not _room_scope_board:
+    if _mini_hdr and _more_tools is not None:
+        with _more_tools:
+            _tb_up, _tb_add, _tb_help = st.tabs(
+                ["อัปโหลดตารางวันนี้", "เพิ่มเคส", "วิธีใช้บอร์ด"])
+            with _tb_up:
+                render_csv_upload(bare=True)
+            with _tb_add:
+                _render_add_case_form(_demo_active)
+            with _tb_help:
+                _board_help_md()
+    elif not _room_scope_board:
         with st.expander("🧰 เครื่องมือ : อัปโหลดตารางวันนี้ · เพิ่มเคส · วิธีใช้บอร์ด",
                          expanded=False):
             _tb_up, _tb_add, _tb_help = st.tabs(

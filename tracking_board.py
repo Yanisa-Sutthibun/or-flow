@@ -22,6 +22,9 @@ from main_or_core import rerun_board as _rerun_board
 _BKK = timezone(timedelta(hours=7))
 
 
+from contextlib import nullcontext as _nullctx
+
+
 def _now():
     return datetime.now(_BKK).replace(tzinfo=None)
 
@@ -284,7 +287,8 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
             if _g0 in _cnt:
                 _cnt[_g0] += 1
         _n_all = sum(_cnt.values())
-        _pill_opts = [f"ทั้งหมด {_n_all}"] + [f"{k} {v}" for k, v in _cnt.items()]
+        _pill_opts = [f"ทั้งหมด {_n_all}"] + [f"{k} {v}" for k, v in _cnt.items()
+                                             if not (_minimal_board() and k == 'จำหน่ายแล้ว')]
         fc0, fc1, fc2 = st.columns([3.4, 2, 1.1], vertical_alignment="center")
         try:
             _sel = fc0.pills("สถานะ", _pill_opts, default=_pill_opts[0],
@@ -352,20 +356,22 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     # ---------- หัวตาราง ----------
     # 📐 ต้องวางใน st.columns สัดส่วนเดียวกับแถว ([8, .8, 1.5, .8] ใน _render_row)
     #    ไม่งั้นหัวคอลัมน์จะเหลื่อมกับข้อมูลข้างล่าง (เดิมวาดเต็มความกว้าง = เหลื่อมอยู่)
-    _hc0, _hc1, _hc2, _hc3 = st.columns(_BOARD_COLS)
-    with _hc0:
-        st.markdown(
-            '<div style="display:flex;align-items:center;gap:10px;padding:2px 12px 7px;'
-            'font-size:13px;font-weight:700;color:#94a3b8;letter-spacing:.7px;'
-            'border-bottom:2px solid #e2e8f0;margin-bottom:4px;">'
-            f'<span style="width:{_COL_RM}px;flex:none;">ห้อง</span>'
-            f'<span style="width:{_COL_Q}px;flex:none;">นัด</span>'
-            f'<span style="width:{_COL_NM}px;flex:none;">ผู้ป่วย</span>'
-            '<span style="flex:1;min-width:0;">หัตถการ / ศัลยแพทย์</span>'
-            f'<span style="width:{_COL_ST}px;flex:none;text-align:center;">สถานะ</span>'
-            f'<span style="width:{_COL_TM}px;flex:none;text-align:right;">เวลา</span>'
-            '</div>',
-            unsafe_allow_html=True)
+    # 🧹 minimal (DEMO): ไม่มีหัวคอลัมน์ · หัวกลุ่ม + แถว 2 บรรทัดอ่านเองได้
+    if not _minimal_board():
+        _hc0, _hc1, _hc2, _hc3 = st.columns(_BOARD_COLS)
+        with _hc0:
+            st.markdown(
+                '<div style="display:flex;align-items:center;gap:10px;padding:2px 12px 7px;'
+                'font-size:13px;font-weight:700;color:#94a3b8;letter-spacing:.7px;'
+                'border-bottom:2px solid #e2e8f0;margin-bottom:4px;">'
+                f'<span style="width:{_COL_RM}px;flex:none;">ห้อง</span>'
+                f'<span style="width:{_COL_Q}px;flex:none;">นัด</span>'
+                f'<span style="width:{_COL_NM}px;flex:none;">ผู้ป่วย</span>'
+                '<span style="flex:1;min-width:0;">หัตถการ / ศัลยแพทย์</span>'
+                f'<span style="width:{_COL_ST}px;flex:none;text-align:center;">สถานะ</span>'
+                f'<span style="width:{_COL_TM}px;flex:none;text-align:right;">เวลา</span>'
+                '</div>',
+                unsafe_allow_html=True)
 
     # ---------- เตรียมแถว: กรอง + คำนวณสถานะแสดงผล ----------
     # เรียง ห้อง → ฉุกเฉินก่อนในห้อง → เวลานัด → ลำดับ (ลำดับนิ่ง แถวไม่ขยับเมื่อกดปุ่ม)
@@ -609,8 +615,84 @@ _COL_RM, _COL_Q, _COL_NM, _COL_ST, _COL_TM = 88, 58, 150, 108, 292
 #   เพื่อขยายคอลัมน์เวลา — เดิม 'เกินไปกี่นาที' ถูกกรอบตัดหาย
 #   ⚠️ หัวตารางกับแถวต้องใช้ค่านี้ตัวเดียวกัน ไม่งั้นหัวคอลัมน์เหลื่อมกับข้อมูล
 _BOARD_COLS = [10, 0.7, 1.35, 0.7]
+# 🧹 7 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO ใช้แถวแบบ minimal [เนื้อแถว, ปุ่มหลัก, ⋯]
+#    ✏️ และ ↩️ ย้ายเข้าเมนู ⋯ ประจำแถว · production ยังใช้ _BOARD_COLS เดิม
+_BOARD_COLS_MIN = [10, 1.35, 0.55]
 _ROW_H = 70                 # ความสูงแถว (px) — iframe ต้องสูงกว่านี้เล็กน้อย
 _ROW_IFRAME_H = _ROW_H + 8
+
+
+def _minimal_board() -> bool:
+    """🧹 7 พ.ย. 2026 (มุกกี้สั่ง ตาม wireframe): ตารางผ่าตัดแบบ minimal เฉพาะแอป DEMO
+    แถวเหลือ 5 ช่อง : ห้อง+นัด / ผู้ป่วย+หัตถการ·แพทย์ / เวลา / ปุ่มหลัก / ⋯
+    ไม่มีชิปสถานะ (หัวกลุ่มกับปุ่มบอกอยู่แล้ว) · production ไม่เปลี่ยน"""
+    try:
+        return _compact() and str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        return False
+
+
+def _cell_room_q(c, loc, tlabel, emer=False, fg=None):
+    """minimal: ห้องบรรทัดบน · เวลานัด (หรือป้ายฉุกเฉิน) บรรทัดล่าง ในช่องเดียว"""
+    fg = fg or _room_fg_default()
+    head = str(loc(c) or '').partition(' · ')[0]
+    if emer:
+        sub = ('<span style="color:#c0392b;font-weight:600;cursor:help;" '
+               'title="เคสฉุกเฉิน : อยู่นอกขอบเขตวิจัย (เก็บเฉพาะ elective ในเวลา)">'
+               '<span class="emg-dot"></span>ฉุกเฉิน</span>')
+    else:
+        sub = _sched_order_html(c, tlabel).replace('<br>', ' · ')
+    return (f'<span style="width:100px;flex:none;overflow:hidden;">'
+            f'<span style="display:block;font-size:20px;font-weight:600;color:{fg};'
+            f'line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+            f'{_esc(head)}</span>'
+            f'<span style="display:block;font-size:14px;color:#94a3b8;line-height:1.3;'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{sub}</span></span>')
+
+
+def _cell_pt_op(c, dup_badge='', fg='#0f172a'):
+    """minimal: ชื่อผู้ป่วยบรรทัดบน · หัตถการ · แพทย์ บรรทัดล่าง (HN อยู่ในเมนู ⋯)"""
+    _p = _esc(c.get('procedure') or '-')
+    _d = _esc(c.get('surgeon') or '-')
+    return (f'<span style="flex:1;min-width:0;overflow:hidden;">'
+            f'<span style="display:block;font-size:18px;font-weight:600;color:{fg};'
+            f'line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+            f'{_pt_name(c)}{dup_badge}</span>'
+            f'<span title="{_p}" style="display:block;font-size:15px;color:#64748b;'
+            f'line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+            f'cursor:help;">{_p} · {_d}</span></span>')
+
+
+def _lead_cells(c, loc, tlabel, emer, dup_badge, chip, room_fg=None,
+                name_fg='#0f172a', sub_fg='#334155'):
+    """ช่องหน้าของแถว (ก่อนช่องเวลา) · minimal = 2 ช่อง + ชิปซ่อนไว้
+    (JS ในแถวสดยังอ้าง id ของชิป ต้องมี element อยู่ ถ้าลบทิ้งสคริปต์จะพัง)"""
+    if _minimal_board():
+        return (_cell_room_q(c, loc, tlabel, emer, room_fg)
+                + _cell_pt_op(c, dup_badge, name_fg)
+                + f'<span style="display:none">{chip}</span>')
+    return (_cell_room(c, loc, fg=room_fg) + _cell_q(c, tlabel, emer)
+            + _cell_patient(c, dup_badge, fg=name_fg) + _cell_op(c, fg=sub_fg) + chip)
+
+
+def _popover(label, **kw):
+    """st.popover ที่รองรับ Streamlit หลายรุ่น (key/type/width เพิ่งมีในรุ่นใหม่)
+    รุ่นไหนไม่รู้จักพารามิเตอร์ใด ตัดทิ้งทีละตัวจนเรียกได้"""
+    kw = dict(kw)
+    for _drop in (None, 'key', 'type', 'width', 'help'):
+        if _drop:
+            if _drop == 'width' and 'width' in kw:
+                kw.pop('width')
+                try:
+                    return st.popover(label, use_container_width=True, **kw)
+                except TypeError:
+                    pass
+            kw.pop(_drop, None)
+        try:
+            return st.popover(label, **kw)
+        except TypeError:
+            continue
+    return st.popover(label)
 
 
 def _cell_room(c, loc, fg=None):
@@ -910,11 +992,8 @@ def _holding_row_iframe(c, loc, tlabel, now, dup_badge=''):
     )
     return _iframe_doc(
         _row_shell(
-            _cell_room(c, loc)
-            + _cell_q(c, tlabel, emer)
-            + _cell_patient(c, dup_badge)
-            + _cell_op(c)
-            + _cell_chip('รอผ่าตัด', '#64748b', '#f1f5f9', el_id='ch')
+            _lead_cells(c, loc, tlabel, emer, dup_badge,
+                        _cell_chip('รอผ่าตัด', '#64748b', '#f1f5f9', el_id='ch'))
             # บรรทัดล่าง = เวลาที่ AI ทำนายว่าจะใช้ห้อง (เห็นก่อนเข้าห้องจริง)
             + _cell_time('<span id="t"></span>' + ov_badge,
                          # 15px (ใหญ่กว่าบรรทัดล่างมาตรฐาน 13px): ข้อความสั้น มีที่เหลือ
@@ -944,11 +1023,8 @@ def _inroom_row_iframe(c, loc, tlabel, eff, border_css, ov_badge, now,
     return (
         _iframe_doc(
             _row_shell(
-                _cell_room(c, loc)
-                + _cell_q(c, tlabel, _emer)
-                + _cell_patient(c, dup_badge)
-                + _cell_op(c)
-                + _cell_chip('กำลังผ่า', '#1b7f4b', '#e6f6ec', el_id='ch')
+                _lead_cells(c, loc, tlabel, _emer, dup_badge,
+                            _cell_chip('กำลังผ่า', '#1b7f4b', '#e6f6ec', el_id='ch'))
                 # callnext_html = คู่ (สั้น, เต็ม) จาก _callnext_short — บรรทัดล่างคือ
                 # ผลลัพธ์ AI ที่ทีมใช้ตัดสินใจจริง ต้องเห็นบนแถว ไม่ใช่ซ่อนใน tooltip
                 # ปกติ = แถบความคืบหน้าพร้อมตัวเลขในตัว · เกินเวลา = สลับเป็นตัวเลข
@@ -1041,7 +1117,21 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     time_fg = '#b6c2cf' if muted else '#475569'
 
     # ---------- layout ต่อแถว: [แถว] [✏️] [ปุ่มหลัก] [↩] ----------
-    c0, c1, c2, c3 = st.columns(_BOARD_COLS)
+    #    🧹 minimal (DEMO): [แถว] [ปุ่มหลัก] [⋯] · เนื้อหา ✏️ และ ↩️ ไปอยู่ในเมนู ⋯ อันเดียว
+    _mb = _minimal_board()
+    if _mb:
+        c0, c2, _cm = st.columns(_BOARD_COLS_MIN)
+        with _cm:
+            _more = _popover("⋯", help="เพิ่มเติม : HN แก้เวลา ย้ายห้อง เลิกทำ",
+                             width='stretch', key=f"tb_more_{idx}")
+        with _more:
+            _meta = _pt_meta(c)
+            if _meta:
+                st.markdown(f'<div style="font-size:14px;color:#64748b;">{_meta}</div>',
+                            unsafe_allow_html=True)
+        c1 = c3 = _more
+    else:
+        c0, c1, c2, c3 = st.columns(_BOARD_COLS)
 
     with c0:
         if disp == 'holding_pre':
@@ -1068,21 +1158,22 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                            if _is_next_call and disp == 'not_arrived' else '')
             st.markdown(
                 _row_shell(
-                    _cell_room(c, loc, fg=room_fg)
-                    + _cell_q(c, tlabel, emer)
-                    + _cell_patient(c, dup_badge if not muted else '', fg=name_fg)
-                    + _cell_op(c, fg=sub_fg)
-                    + _cell_chip(label, fg, chipbg)
+                    _lead_cells(c, loc, tlabel, emer, dup_badge if not muted else '',
+                                _cell_chip(label, fg, chipbg), room_fg=room_fg,
+                                name_fg=name_fg, sub_fg=sub_fg)
                     + _cell_time(_tm_html + ov_badge, sub=_tm_sub, title=_tm_tip),
                     bg=bg, border_css=border_css, extra=_call_extra),
                 unsafe_allow_html=True)
 
     with c1:
         if disp in ('not_arrived', 'holding_pre', 'in_or', 'overrun') and _own:
-            try:
-                pop = st.popover("✏️", help=_EDIT_HELP)
-            except TypeError:
-                pop = st.popover("✏️")
+            if _mb:
+                pop = _nullctx()          # อยู่ในเมนู ⋯ แล้ว (popover ซ้อน popover ไม่ได้)
+            else:
+                try:
+                    pop = st.popover("✏️", help=_EDIT_HELP)
+                except TypeError:
+                    pop = st.popover("✏️")
             with pop:
                 # 📊 ป้ายขอบเขตวิจัย — ถ้อยคำเดียวทุกกรณี (มุคกี้ปรับ 3 ส.ค. 2026)
                 _out_scope = _is_emer(c)
@@ -1236,13 +1327,24 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 else:
                     do_enter(idx, R)
         elif disp in ('in_or', 'overrun') and _own:
+            # 🧹 minimal (DEMO): ปุ่มเสร็จปุ่มเดียว กดแล้วเลือกปลายทาง
+            if _mb:
+                with _popover("เสร็จ", type="primary", width='stretch',
+                              key=f"tb_fin_{idx}"):
+                    if st.button("ไปห้องรับ-ส่ง", key=f"tb_f_{idx}", type="primary",
+                                 width='stretch',
+                                 help="ผ่าเสร็จ · กลับห้องรับ-ส่ง เพื่อรอจำหน่าย"):
+                        do_finish(idx, R, "ห้องรับ-ส่ง")
+                    if st.button("ไปห้องพักฟื้น", key=f"tb_f2_{idx}", width='stretch',
+                                 help="ผ่าเสร็จ · ไปห้องพักฟื้น เพื่อรอจำหน่าย"):
+                        do_finish(idx, R, "ห้องพักฟื้น")
             # ⑂ ผ่าเสร็จ 2 ปลายทาง — กดครั้งเดียวจบ ไม่ต้องเปิด popover เลือก dropdown
-            if st.button("เสร็จ → รับ-ส่ง", key=f"tb_f_{idx}", type="primary",
+            elif st.button("เสร็จ → รับ-ส่ง", key=f"tb_f_{idx}", type="primary",
                          width='stretch',
                          help="ผ่าเสร็จ · กลับห้องรับ-ส่ง เพื่อรอจำหน่าย"):
                 do_finish(idx, R, "ห้องรับ-ส่ง")
-            if st.button("เสร็จ → พักฟื้น", key=f"tb_f2_{idx}", width='stretch',
-                         help="ผ่าเสร็จ · ไปห้องพักฟื้น เพื่อรอจำหน่าย"):
+            if (not _mb) and st.button("เสร็จ → พักฟื้น", key=f"tb_f2_{idx}", width='stretch',
+                                       help="ผ่าเสร็จ · ไปห้องพักฟื้น เพื่อรอจำหน่าย"):
                 do_finish(idx, R, "ห้องพักฟื้น")
         elif disp in ('holding_post', 'recovery') and _scope is None:
             if st.button("จำหน่าย", key=f"tb_d_{idx}", width='stretch'):
@@ -1268,6 +1370,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
         #    (ย้อนรับเข้า/เข้าห้อง/จำหน่าย เป็นของจอรับ-ส่ง)
         _undo_ok = (_scope is None) or (_own and disp in ('holding_post', 'recovery'))
         if disp in _UNDO_TARGET and _undo_ok:
-            if st.button("↩️", key=f"tb_un_{idx}", width='stretch',
+            if _mb:
+                st.markdown("---")
+            if st.button(f"↩️ เลิกทำ : กลับเป็น{_UNDO_TARGET[disp]}" if _mb else "↩️",
+                         key=f"tb_un_{idx}", width='stretch',
                          help=f"ย้อนกลับเป็น '{_UNDO_TARGET[disp]}' (กันกดพลาด)"):
                 do_undo(idx)
