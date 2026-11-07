@@ -249,6 +249,20 @@ _SAMPLE_ROSTER = ['แก้ว', 'น้ำฝน', 'ปลา', 'มิ้น�
                   'ป่าน', 'เอิร์ธ']
 
 
+# เวรตัวอย่าง (ชื่อเล่นสมมติ) : ห้องละ 3 คน ห้อง NEURO 4 คน + งานประจำจุด + ลา/อบรม
+_SAMPLE_STAFF = {
+    'r91-1': 'ฝ้าย', 'r91-2': 'ปุ้ย', 'r91-3': 'หนิง',
+    'r92-1': 'แพร', 'r92-2': 'ตาล', 'r92-3': 'แนน',
+    'r93-1': 'มิ้นท์', 'r93-2': 'เบียร์', 'r93-3': 'กิ๊ฟ',
+    'r94-1': 'จอย', 'r94-2': 'โบว์', 'r94-3': 'อ้อม',
+    'r95-1': 'ต้น', 'r95-2': 'ปู', 'r95-3': 'ไหม', 'r95-4': 'ใบเตย',
+    'r96-1': 'ออม', 'r96-2': 'พลอย', 'r96-3': 'ส้ม',
+    'r97-1': 'บีม', 'r97-2': 'แอน', 'r97-3': 'จูน',
+    'p-hn': 'แก้ว', 'p-gen': 'ฟ้า', 'p-rs': 'น้ำฝน', 'p-ot': 'ปลา', 'p-extra': 'เมย์',
+}
+_SAMPLE_ABSENCES = {'vac': ['นุ่น'], 'sick': ['ก้อย'], 'train': ['ป่าน']}
+
+
 def _is_demo_instance() -> bool:
     try:
         return str(st.secrets.get('instance_mode', '')).lower() == 'demo'
@@ -348,8 +362,13 @@ def page_tomorrow():
                 plan['cases'] = _mask_cases(sample)
                 plan['uploaded_at'] = _now().strftime('%H:%M')
                 plan['promoted'] = False
-                if not _load_roster():
-                    _save_roster(_SAMPLE_ROSTER)
+                # 🎬 มุกกี้สั่ง 7 พ.ย. 2026: กดแล้วต้องเห็นตารางที่จัดเวรครบเลย ไม่ต้องกรอกเอง
+                plan['staff'] = dict(_SAMPLE_STAFF)
+                plan['absences'] = {k: list(v) for k, v in _SAMPLE_ABSENCES.items()}
+                _save_roster(_load_roster() + _SAMPLE_ROSTER)
+                # ล้างค่าช่องเลือกที่ค้างใน session ไม่งั้นช่องจะโชว์ค่าเก่าแทนเวรตัวอย่าง
+                for _k in [k for k in st.session_state.keys() if str(k).startswith(f'tmr_{d}_')]:
+                    del st.session_state[_k]
                 if save_day_plan(d, plan):
                     st.success(f'โหลดตารางตัวอย่าง {len(sample)} เคสแล้ว')
                     st.rerun()
