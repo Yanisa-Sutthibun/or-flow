@@ -651,13 +651,23 @@ def _cell_room_q(c, loc, tlabel, emer=False, fg=None):
 
 
 def _cell_pt_op(c, dup_badge='', fg='#0f172a'):
-    """minimal: ชื่อผู้ป่วยบรรทัดบน · หัตถการ · แพทย์ บรรทัดล่าง (HN อยู่ในเมนู ⋯)"""
+    """minimal: ชื่อผู้ป่วย + HN จาง ๆ บรรทัดบน · หัตถการ · แพทย์ บรรทัดล่าง
+    (มุกกี้สั่ง 7 พ.ย. 2026: HN 4 ตัวท้ายต่อท้ายชื่อแบบจาง ไว้ตรวจตัวผู้ป่วย)"""
     _p = _esc(c.get('procedure') or '-')
+    _hn = ''
+    try:
+        from main_or_db import mask_hn
+        _h = mask_hn(c.get('hn') or '')
+        if _h:
+            _hn = (f'<span style="margin-left:8px;font-size:14px;font-weight:400;'
+                   f'color:#b6c2cf;">HN {_esc(_h)}</span>')
+    except Exception:
+        pass
     _d = _esc(c.get('surgeon') or '-')
     return (f'<span style="flex:1;min-width:0;overflow:hidden;">'
             f'<span style="display:block;font-size:18px;font-weight:600;color:{fg};'
             f'line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
-            f'{_pt_name(c)}{dup_badge}</span>'
+            f'{_pt_name(c)}{dup_badge}{_hn}</span>'
             f'<span title="{_p}" style="display:block;font-size:15px;color:#64748b;'
             f'line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
             f'cursor:help;">{_p} · {_d}</span></span>')
@@ -1127,7 +1137,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
         with _more:
             _meta = _pt_meta(c)
             if _meta:
-                st.markdown(f'<div style="font-size:14px;color:#64748b;">{_meta}</div>',
+                st.markdown(f'<div style="font-size:14px;color:#64748b;line-height:1.5;'
+                            f'padding-bottom:8px;margin-bottom:6px;'
+                            f'border-bottom:1px solid #eef2f6;">{_meta}</div>',
                             unsafe_allow_html=True)
         c1 = c3 = _more
     else:
