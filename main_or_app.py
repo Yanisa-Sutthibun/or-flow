@@ -1051,7 +1051,12 @@ def main():
             '<span style="background:rgba(0,0,0,0.62);color:#FFFFFF;'
             'font-size:20px;font-weight:800;letter-spacing:.5px;'
             'padding:4px 20px;border-radius:8px;white-space:nowrap;">'
-            '🖥️ ระบบสาธิตการใช้งาน OR Flow</span></div>',
+            '🖥️ ระบบสาธิตการใช้งาน OR Flow</span>'
+            # 🧪 12 พ.ย. 2026 (มุกกี้สั่ง): บอกช่วงของงานวิจัย · จบ try out แล้วแก้/ลบบรรทัดนี้
+            '<div style="margin-top:8px;"><span style="background:rgba(0,0,0,0.62);'
+            'color:#FDE68A;font-size:16px;font-weight:700;padding:3px 16px;'
+            'border-radius:8px;white-space:nowrap;">'
+            'อยู่ในช่วงทดลองใช้เครื่องมือวิจัย (try out)</span></div></div>',
             unsafe_allow_html=True)
 
     # ========================================================================
