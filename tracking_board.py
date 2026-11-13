@@ -917,8 +917,11 @@ def _row_shell(inner, bg, border_css, row_id='row', prog='', extra=''):
            f'height:{_ROW_H}px;position:relative;overflow:hidden;">{prog}{inner}</div>')
     if not extra:
         return row
+    # 🩹 13 พ.ย. 2026 (มุกกี้สั่ง): Streamlit 1.67 ใส่ margin-bottom:-1rem ให้กล่อง
+    #    markdown ทุกกล่อง (เผื่อ <p> ตัวท้าย) แถวของเราไม่มี <p> กล่องจึงเตี้ยกว่า
+    #    การ์ด 1rem = แถวถัดไปขึ้นมาทับแถบคิวถัดไปครึ่งบรรทัด → ชดเชยคืนตรงนี้
     return (f'<div style="{border_css}background:{bg};border-radius:10px;'
-            f'overflow:hidden;">{row}{extra}</div>')
+            f'overflow:hidden;margin-bottom:1rem;">{row}{extra}</div>')
 
 
 def _iframe_doc(body):
@@ -1225,7 +1228,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 if _out_scope:
                     st.caption('เคสที่ "อยู่นอกขอบเขตวิจัย" '
                                'จะไม่ถูกเก็บบันทึกเข้าข้อมูลวิจัย')
-                st.caption("เวลาทำนายใช้ห้องผ่าตัด (นาที) — แก้แทนค่า AI ได้ "
+                st.caption("เวลาทำนายใช้ห้องผ่าตัด (นาที) : แก้แทนค่า AI ได้ "
                            "(เวลาใช้ห้องตั้งแต่ room in ถึง room out)")
                 # 🤖 ที่มาของคำทำนาย — หลักฐานช่วยตัดสินใจว่าควรเชื่อ AI แค่ไหน
                 _ai0 = c.get('ai_predicted_min') or c.get('predicted_min')

@@ -263,6 +263,20 @@ THEME_CSS = (
     'border-bottom-color:var(--brand-700) !important;}'
     '.st-key-_main_page div[role="radiogroup"]>label:has(input:checked) p{'
     'color:var(--brand-700) !important;}'
+    # 🩹 13 พ.ย. 2026 (มุกกี้สั่ง): Streamlit 1.67 เปลี่ยน DOM อีกรอบ
+    #    radiogroup > div > label[data-testid=stRadioOption] > span(input ซ่อน) + div > [div วงกลม, ข้อความ]
+    #    label ไม่ใช่ลูกตรงของ radiogroup แล้ว กฎชุดบนจึงไม่ติด วงกลมโผล่กลับมา → เพิ่มกฎชุดนี้คู่กัน
+    '.st-key-_main_page [data-testid="stRadioOption"]{margin:0 !important;'
+    'padding:11px 20px !important;border-bottom:2px solid transparent;'
+    'border-radius:8px 8px 0 0;cursor:pointer;transition:background .15s;}'
+    '.st-key-_main_page [data-testid="stRadioOption"]:hover{background:var(--brand-50) !important;}'
+    '.st-key-_main_page [data-testid="stRadioOption"]>div>div:first-child{display:none !important;}'
+    '.st-key-_main_page [data-testid="stRadioOption"] p{font-size:var(--fs-body) !important;'
+    'color:var(--ink-500) !important;font-weight:600 !important;margin:0 !important;}'
+    '.st-key-_main_page [data-testid="stRadioOption"]:has(input:checked){'
+    'border-bottom-color:var(--brand-700) !important;}'
+    '.st-key-_main_page [data-testid="stRadioOption"]:has(input:checked) p{'
+    'color:var(--brand-700) !important;}'
     # 🟢 ชิปสถานะบนหัว (header status chips)
     '.or-chips{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 8px;}'
     '.or-chip{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-meta);'
@@ -312,6 +326,8 @@ COMPACT_CSS = (
     # แท็บเมนู: บางลง
     '.st-key-_main_page div[role="radiogroup"]>label{padding:7px 14px 9px !important;}'
     '.st-key-_main_page div[role="radiogroup"]>label p{font-size:16px !important;}'
+    '.st-key-_main_page [data-testid="stRadioOption"]{padding:7px 14px 9px !important;}'
+    '.st-key-_main_page [data-testid="stRadioOption"] p{font-size:16px !important;}'
     # expander เครื่องมือ: หัวเตี้ยลง
     '[data-testid="stExpander"] summary{padding:6px 12px !important;'
     'font-size:var(--fs-meta) !important;}'

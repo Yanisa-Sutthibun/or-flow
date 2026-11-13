@@ -472,15 +472,23 @@ def _render_demo_controls():
         'real_started': time.time(), 'paused_at_sim': 0.0,
     })
 
+    # 🧹 13 พ.ย. 2026 (มุกกี้สั่ง): หน้า compact มีปุ่ม 🔄 รีเฟรช ที่แถวแท็บแล้ว (hdr_refresh
+    #    ล้าง cache สถิติให้ด้วย) ปุ่มซ้ำกับป้าย F5 ในหน้านี้จึงไม่วาด · หน้าเดิมยังวาดเหมือนเดิม
+    try:
+        from ui_theme import compact_ui as _cui
+        _one_refresh = bool(_cui())
+    except Exception:
+        _one_refresh = False
     col_info, col_warn, col_rf = st.columns([2.6, 1.0, 0.8], vertical_alignment="center")
-    with col_rf:
-        if st.button("🔄 รีเฟรช", key="admin_refresh", width='stretch',
-                     type='primary',
-                     help="ดึงข้อมูลล่าสุดมาแสดง — ใช้แทนการกด F5 (ข้อมูลไม่หาย)"):
-            st.session_state['_stats_cache_ver'] = _stats_ver() + 1  # ล้าง cache สถิติ → ดึง cloud ใหม่
-            st.rerun()
-    with col_warn:
-        st.markdown("<div style=\x27text-align:right;color:#808495;font-size:18px;line-height:1.2;\x27>⚠️ อย่ากด F5 — ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
+    if not _one_refresh:
+        with col_rf:
+            if st.button("🔄 รีเฟรช", key="admin_refresh", width='stretch',
+                         type='primary',
+                         help="ดึงข้อมูลล่าสุดมาแสดง : ใช้แทนการกด F5 (ข้อมูลไม่หาย)"):
+                st.session_state['_stats_cache_ver'] = _stats_ver() + 1  # ล้าง cache สถิติ → ดึง cloud ใหม่
+                st.rerun()
+        with col_warn:
+            st.markdown("<div style=\x27text-align:right;color:#808495;font-size:18px;line-height:1.2;\x27>⚠️ อย่ากด F5 : ใช้ปุ่มนี้แทน</div>", unsafe_allow_html=True)
 
     # ---- 🎬 สาธิตจำลอง 1 วันของหน้านี้ — 🗑️ ถอดถาวรทุก instance (มุคกี้สั่ง 2 ส.ค. 2026)
     #      การสาธิตรวมศูนย์ที่ปุ่ม 🎬 หน้าตารางผ่าตัดของแอป DEMO ที่เดียว
@@ -4365,7 +4373,7 @@ def page_admin(section='today'):
             default_from = hist_floor
         default_to = today_dt
 
-        st.info("ℹ️ ข้อมูลสถิติจะปรับปรุงในวันทำการถัดไป — เคสของวันศุกร์จะอัปเดตในวันจันทร์")
+        st.info("ℹ️ ข้อมูลสถิติจะปรับปรุงในวันทำการถัดไป : เคสของวันศุกร์จะอัปเดตในวันจันทร์")
 
         # ⚡ st.form (UX fix 3 ก.ค. 2026): เลือกวันที่/ติ๊กหัวข้อกี่ครั้งก็ได้
         #    "ไม่เกิด rerun แม้แต่ครั้งเดียว" จนกดปุ่ม 📊 แสดงสถิติ — โหลดทีเดียวจบ
@@ -4383,7 +4391,7 @@ def page_admin(section='today'):
 
             st.markdown("**เลือกหัวข้อที่อยากดู** "
                         "<span style='font-weight:400;color:#888;'>"
-                        "(เลือกครบแล้วกดปุ่มเดียว — ระหว่างเลือกไม่โหลดอะไรทั้งนั้น)</span>",
+                        "(เลือกครบแล้วกดปุ่มเดียว : ระหว่างเลือกไม่โหลดอะไรทั้งนั้น)</span>",
                         unsafe_allow_html=True)
             _SEC_OPTS = [
                 # 🎯 KPI Highlights + 📋 สรุปยอดสะสม ยุบเป็นหัวข้อเดียว (14 ก.ค. 2026)

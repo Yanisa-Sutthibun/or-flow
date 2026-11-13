@@ -214,7 +214,7 @@ def render_system_status():
             st.markdown(
                 f'<div style="background:#e8f5e9;padding:10px;border-radius:8px;text-align:center;">'
                 f'<p style="margin:0;font-size:var(--fs-meta);color:#2e7d32;">'
-                f'🤖 <b>AI Model: thesis_ML_v2</b> — โมเดลวิทยานิพนธ์ 13 features '
+                f'🤖 <b>AI Model: thesis_ML_v2</b> : โมเดลวิทยานิพนธ์ 13 features '
                 f'(ตัวที่ทำนายบนบอร์ด · เริ่ม 7 ก.ค. 2569)<br>'
                 f'General XGBoost + Target Encoding · เทรน {_m2.get("n_train", "—"):,} เคส '
                 f'(พ.ศ. 2565–2566)<br>'
@@ -936,8 +936,7 @@ def _check_password():
             '<div style="font-size:24px;font-weight:700;color:#1f2937;'
             'margin-top:4px;">OR Flow</div>'
             '<div style="font-size:18px;color:#5b6b7b;margin-top:5px;'
-            'line-height:1.5;">ระบบบริหารห้องผ่าตัดและทำนายเวลาผ่าตัดด้วย '
-            'Machine Learning</div>'
+            'line-height:1.5;">ระบบบริหารห้องผ่าตัดและทำนายเวลาผ่าตัด</div>'
             '<div style="font-size:var(--fs-meta);color:#90a0ae;margin-top:7px;'
             'line-height:1.5;">วิทยานิพนธ์ หลักสูตรพยาบาลศาสตรมหาบัณฑิต '
             'สาขาการบริหารการพยาบาล<br>ห้องผ่าตัดศัลยกรรมทั่วไป · '
@@ -1011,7 +1010,7 @@ def _check_password():
                            "ข้อมูลการผ่าตัดเป็นข้อมูลสมมติ")
         except Exception:
             pass
-        st.caption("🔑 รหัสผ่านจากเจ้าของระบบ — สำหรับบุคลากรที่ได้รับอนุญาตเท่านั้น")
+        st.caption("🔑 รหัสผ่านจากเจ้าของระบบ : สำหรับบุคลากรที่ได้รับอนุญาตเท่านั้น")
 
     return False
 
@@ -1270,6 +1269,10 @@ def main():
                          help="ดึงสถานะล่าสุดจากบอร์ดกลาง (เห็นที่เครื่องอื่นกด)"):
                 st.session_state['_board_force_pull'] = True
                 st.session_state['_board_user_pull'] = True
+                # 🧹 13 พ.ย. 2026: ปุ่มนี้เป็นปุ่มรีเฟรชปุ่มเดียวของหน้าภาพรวมวันนี้ด้วย
+                #    จึงล้าง cache สถิติให้เหมือนปุ่ม admin_refresh เดิม
+                st.session_state['_stats_cache_ver'] = int(
+                    st.session_state.get('_stats_cache_ver', 0)) + 1
                 st.rerun()
     try:
         if page != _default_page:

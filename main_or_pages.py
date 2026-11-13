@@ -1730,8 +1730,8 @@ def _board_fragment():
             st.info("ยังไม่มีเคสบนบอร์ดวันนี้\n\n"
                     "- อยากลองใช้ก่อน → กดปุ่ม **🎬 เปิดโหมดสาธิต** ด้านบน "
                     "(ข้อมูลตัวอย่าง ไม่บันทึกจริง)\n"
-                    "- หรืออัปโหลดไฟล์ทดสอบที่ **🧰 เครื่องมือ** ด้านบน "
-                    "แท็บ 📤 อัปโหลดตารางวันนี้")
+                    "- หรืออัปโหลดไฟล์ทดสอบที่ปุ่ม **⋯** มุมขวาบน "
+                    "แท็บ อัปโหลดตารางวันนี้")
         else:
             st.info("ยังไม่มีเคสบนบอร์ดวันนี้\n\n"
                     "- อัปโหลดตารางจาก HIS ที่ **🧰 เครื่องมือ** ด้านบน "
@@ -2287,7 +2287,7 @@ def _room_focus_fragment(room_no):
                      None)
     if done_last is not None:
         _cu = cases[done_last]
-        if st.button(f"↩️ เลิกทำ — ดึง {mask_patient_name(_cu.get('name') or '-')} "
+        if st.button(f"↩️ เลิกทำ : ดึง {mask_patient_name(_cu.get('name') or '-')} "
                      f"กลับเป็นกำลังผ่า", key="rf_undo"):
             if apply_undo_finish(cases, done_last):
                 _save_board_snapshot(cases)
