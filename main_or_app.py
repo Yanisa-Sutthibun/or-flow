@@ -932,14 +932,14 @@ def _check_password():
             '<div style="font-size:48px;">🔐</div>'
             '<div style="display:inline-block;margin:12px 0 4px;background:#eef4ff;'
             'color:#2563eb;font-size:var(--fs-meta);font-weight:600;padding:6px 16px;'
-            'border-radius:999px;border:1px solid #d6e4ff;">🎓 ส่วนหนึ่งของงานวิจัย</div>'
+            'border-radius:999px;border:1px solid #d6e4ff;">🎓 ส่วนหนึ่งของวิทยานิพนธ์ หลักสูตรพยาบาลศาสตรมหาบัณฑิต '
+            'สาขาการบริหารการพยาบาล</div>'
             '<div style="font-size:24px;font-weight:700;color:#1f2937;'
             'margin-top:4px;">OR Flow</div>'
             '<div style="font-size:18px;color:#5b6b7b;margin-top:5px;'
             'line-height:1.5;">ระบบบริหารห้องผ่าตัดและทำนายเวลาผ่าตัด</div>'
             '<div style="font-size:var(--fs-meta);color:#90a0ae;margin-top:7px;'
-            'line-height:1.5;">วิทยานิพนธ์ หลักสูตรพยาบาลศาสตรมหาบัณฑิต '
-            'สาขาการบริหารการพยาบาล<br>ห้องผ่าตัดศัลยกรรมทั่วไป · '
+            'line-height:1.5;">ห้องผ่าตัดศัลยกรรมทั่วไป · '
             'โรงพยาบาลตำรวจ</div></div>',
             unsafe_allow_html=True)
 
@@ -1006,8 +1006,7 @@ def _check_password():
                     'padding:5px 18px;border-radius:6px;white-space:nowrap;">'
                     '🖥️ Demonstration mode</span></div>',
                     unsafe_allow_html=True)
-                st.caption("รูปแบบการใช้งานเหมือนระบบจริงทุกประการ · "
-                           "ข้อมูลการผ่าตัดเป็นข้อมูลสมมติ")
+                st.caption("ข้อมูลในระบบสาธิตเป็นข้อมูลสมมติ")
         except Exception:
             pass
         st.caption("🔑 รหัสผ่านจากเจ้าของระบบ : สำหรับบุคลากรที่ได้รับอนุญาตเท่านั้น")
