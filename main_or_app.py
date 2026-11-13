@@ -930,19 +930,23 @@ def _check_password():
         st.markdown(
             '<div style="text-align:center;margin:60px 0 24px;">'
             '<div style="font-size:48px;">🔐</div>'
-            '<div style="display:inline-block;margin:12px 0 4px;background:#eef4ff;'
-            'color:#2563eb;font-size:var(--fs-meta);font-weight:600;padding:6px 16px;'
-            'border-radius:999px;border:1px solid #d6e4ff;">🎓 ส่วนหนึ่งของวิทยานิพนธ์ หลักสูตรพยาบาลศาสตรมหาบัณฑิต '
-            'สาขาการบริหารการพยาบาล</div>'
             '<div style="font-size:24px;font-weight:700;color:#1f2937;'
             'margin-top:4px;">OR Flow</div>'
             '<div style="font-size:18px;color:#5b6b7b;margin-top:5px;'
             'line-height:1.5;">ระบบบริหารห้องผ่าตัดและทำนายเวลาผ่าตัด</div>'
             '<div style="font-size:var(--fs-meta);color:#90a0ae;margin-top:7px;'
             'line-height:1.5;">ห้องผ่าตัดศัลยกรรมทั่วไป · '
-            'โรงพยาบาลตำรวจ</div></div>',
+            'โรงพยาบาลตำรวจ</div>'
+            # 🎓 13 พ.ย. 2026 (มุกกี้สั่ง): ป้ายย้ายมาอยู่ใต้ชื่อโรงพยาบาล 2 บรรทัด
+            '<div style="display:inline-block;margin:12px 0 0;background:#eef4ff;'
+            'color:#2563eb;font-size:var(--fs-meta);font-weight:600;padding:6px 18px;'
+            'line-height:1.5;border-radius:14px;border:1px solid #d6e4ff;">'
+            '🎓 ส่วนหนึ่งของวิทยานิพนธ์<br>'
+            'หลักสูตรพยาบาลศาสตรมหาบัณฑิต สาขาการบริหารการพยาบาล</div></div>',
             unsafe_allow_html=True)
 
+        # 🔑 13 พ.ย. 2026 (มุกกี้สั่ง): บรรทัดนี้ย้ายมาอยู่เหนือกล่องกรอกรหัส
+        st.caption("🔑 รหัสผ่านจากเจ้าของระบบ : สำหรับบุคลากรที่ได้รับอนุญาตเท่านั้น")
         _lock_left = _login_lock_left()
         with st.form("login_form", clear_on_submit=False):
             pwd = st.text_input("รหัสผ่าน", type="password",
@@ -1006,10 +1010,12 @@ def _check_password():
                     'padding:5px 18px;border-radius:6px;white-space:nowrap;">'
                     '🖥️ Demonstration mode</span></div>',
                     unsafe_allow_html=True)
-                st.caption("ข้อมูลในระบบสาธิตเป็นข้อมูลสมมติ")
+                st.markdown(
+                    '<div style="text-align:center;color:#808495;'
+                    'font-size:var(--fs-meta);">ข้อมูลในระบบสาธิตเป็นข้อมูลสมมติ</div>',
+                    unsafe_allow_html=True)
         except Exception:
             pass
-        st.caption("🔑 รหัสผ่านจากเจ้าของระบบ : สำหรับบุคลากรที่ได้รับอนุญาตเท่านั้น")
 
     return False
 
