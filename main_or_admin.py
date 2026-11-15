@@ -881,6 +881,17 @@ def _render_kpi(kpi):
             <div class="kpi-label">Turnover เฉลี่ย (วันนี้)</div>
             <div class="kpi-value" style="color:#6a1b9a;">{_to_html}</div>
         </div>""", unsafe_allow_html=True)
+    # 📖 15 พ.ย. 2026 (มุกกี้สั่ง หลังซ้อม try out): อธิบาย 2 ตัวเลขที่คนอ่านไม่ออก
+    #    นิยามตรงกับที่คำนวณจริงใน live_link.kpi_from_session / main_or_db.get_kpi
+    st.markdown(
+        '<div style="font-size:15px;color:#64748b;line-height:1.6;margin-top:8px;">'
+        '<b>Utilization</b> คือ ร้อยละของเวลาราชการ (8.00 ถึง 16.00 น.) ที่ห้องผ่าตัดถูกใช้ผ่าตัดจริง '
+        'คิดจากเคสที่ผ่าเสร็จแล้วเท่านั้น ตัวเลขช่วงเช้าจึงยังต่ำและจะเพิ่มขึ้นตลอดวัน '
+        'ค่าที่นิยมใช้เป็นเป้าหมายคือร้อยละ 75 ถึง 85<br>'
+        '<b>Turnover</b> คือ เวลาตั้งแต่ผู้ป่วยรายก่อนออกจากห้อง จนผู้ป่วยรายถัดไปเข้าห้องเดียวกัน '
+        'ต้องมีเคสผ่าเสร็จต่อกันในห้องเดียวกันอย่างน้อย 2 เคสจึงคำนวณได้ ถ้ายังไม่มีจะขึ้นว่า รอเคส '
+        'ค่าที่นิยมใช้เป็นเป้าหมายคือ 20 ถึง 30 นาที</div>',
+        unsafe_allow_html=True)
 
 
 def _render_alerts(alerts):
@@ -2435,7 +2446,7 @@ def _hist_sec_room(date_from, date_to, data=None):
            'padding:9px 12px;text-align:center;">{}</th>')
     rows_html = ['<table style="width:100%;border-collapse:collapse;font-size:18px;">',
                  '<tr>' + ''.join(_th.format(h) for h in
-                                  ('ห้อง', 'เคสสะสม', 'วันที่มีเคส',
+                                  ('ห้อง', 'เคสสะสม (ราย)', 'วันที่มีเคส (วัน)',
                                    'เฉลี่ย (เคส/วัน)', 'Turnover เฉลี่ย')) + '</tr>']
     df['_rm'] = df['room_no'].astype(float).astype(int)
     for rm in NEW_BUILDING_ROOMS:
@@ -2458,6 +2469,10 @@ def _hist_sec_room(date_from, date_to, data=None):
     rows_html.append('</table>')
     st.markdown(''.join(rows_html), unsafe_allow_html=True)
     _n_to = tov.get('_n')
+    # 📖 15 พ.ย. 2026 (มุกกี้สั่ง หลังซ้อม try out): บอกว่าแต่ละคอลัมน์นับจากอะไร
+    st.caption("เคสสะสม (ราย) = จำนวนเคสที่ผ่าเสร็จของห้องนั้นในช่วงวันที่ที่เลือก · "
+               "วันที่มีเคส (วัน) = จำนวนวันในช่วงนั้นที่ห้องมีเคสผ่าเสร็จอย่างน้อย 1 เคส · "
+               "เฉลี่ย (เคส/วัน) = เคสสะสม หารด้วยวันที่มีเคส")
     st.caption(f"ช่วงข้อมูล: {_from} ถึง {date_to} · เคสเสร็จสิ้นเท่านั้น · "
                "Turnover = ค่ากลาง (median) ของช่องว่างระหว่างเคสในห้องเดียวกัน "
                "(กรอง 1–90 นาที · ห้องที่มีต่ำกว่า 5 คู่ = ข้อมูลไม่พอ)"

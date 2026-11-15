@@ -1303,11 +1303,18 @@ def main():
     #    สถิติย้อนหลัง ถูกฉีดเข้าหน้าหลัก (window.parent) จึงค้างอยู่เมื่อเปลี่ยนแท็บ
     #    แล้วบังปุ่ม รับเข้า/เข้าห้อง/เสร็จ ปุ่ม ⋯ และรีเฟรช ของตารางผ่าตัด
     #    → ออกจากหน้าสถิติเมื่อไร ลบทิ้งหนึ่งครั้ง (ธง _hist_toc_live ตั้งที่ main_or_admin)
-    if page != "📈 สถิติย้อนหลัง" and st.session_state.pop('_hist_toc_live', False):
-        components.html(
-            "<script>['hist-toc','hist-toc-mini'].forEach(function(i){"
-            "var e=window.parent.document.getElementById(i);if(e){e.remove();}});</script>",
-            height=0)
+    # 🩹 15 พ.ย. 2026 รอบ 2 (มุกกี้เจอว่ายังค้าง): เดิมลบ "ครั้งเดียว" แล้วล้างธงทันที
+    #    ถ้ารอบนั้นหน้าบอร์ดสั่ง rerun ต่อ ตัวลบยังไม่ทันขึ้นจอก็ถูกแทนที่ = ไม่ได้ลบ
+    #    → เคยเปิดหน้าสถิติแล้ว ให้วางตัวลบทุกรอบของหน้าอื่น (ธงไม่ล้าง)
+    #    ห่อด้วย container ที่ไม่กินที่ กันบอร์ดขยับลง
+    if page != "📈 สถิติย้อนหลัง" and st.session_state.get('_hist_toc_live'):
+        with st.container(key="_toc_rm"):
+            st.markdown('<style>.st-key-_toc_rm{position:absolute;height:0;overflow:hidden;}</style>',
+                        unsafe_allow_html=True)
+            components.html(
+                "<script>['hist-toc','hist-toc-mini'].forEach(function(i){"
+                "var e=window.parent.document.getElementById(i);if(e){e.remove();}});</script>",
+                height=0)
 
     if page == "📋 ตารางผ่าตัด":
         page_or_board()
