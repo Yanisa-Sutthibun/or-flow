@@ -130,6 +130,13 @@ _PACU_BTN_CSS_COMPACT = (
     'background:#eef2f6 !important;border-color:#cbd5e1 !important;}'
     # ↩️ และ ✏️ เป็นปุ่มไอคอนสีกลาง
     '[class*="st-key-tb_un_"] button{color:#64748b !important;}'
+    # 📐 15 พ.ย. 2026 (มุกกี้สั่ง): จอกว้างไม่ถึง 1250px คอลัมน์ท้ายแถวเหลือราว 32px
+    #    ลูกศรลงของปุ่ม popover กินที่จนไอคอน ✏️ และ ⋯ โดนตัดเหลือขีดเดียว
+    #    → จอแคบซ่อนลูกศร เหลือไอคอนอย่างเดียว · จอปกติหน้าตาเดิมทุกอย่าง
+    '@media (max-width:1250px){'
+    '[data-testid="stPopoverButton"]>div>div[aria-hidden="true"]{display:none !important;}'
+    '[class*="st-key-tb_more_"] [data-testid="stPopoverButton"]{'
+    'padding-left:2px !important;padding-right:2px !important;}}'
 )
 
 
@@ -330,6 +337,9 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
 
     # ห้องที่มีเคสกำลังผ่าอยู่ → ห้ามเข้าห้องซ้ำ
     busy_rooms = {rid(c) for c in cases if c['status'] == 'in_or' and rid(c)}
+    # 🩹 15 พ.ย. 2026: ห้องที่ยังมีเคส "ยังไม่มา" เหลือ (ใช้ตัดคำว่าคิวถัดไปมารอ)
+    next_rooms = {rid(c) for c in cases
+                  if c.get('status') == 'not_arrived' and rid(c)}
     tov_map = _turnover_map()
     dup_badges = _dup_name_badges(cases, loc)
     # 🔔 เคส "คิวถัดไป" ของแต่ละห้อง + เวลาที่ AI แนะนำให้ตามผู้ป่วยมารอ
@@ -468,7 +478,8 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         for idx, c, disp, eff, elapsed in rs:
             _render_row(idx, c, disp, eff, elapsed, now, rid(c), busy_rooms,
                         do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
-                        room_opts, mark_dirty, tov_map, dup_badges, call_map)
+                        room_opts, mark_dirty, tov_map, dup_badges, call_map,
+                        next_rooms)
 
     z_pre = _pick('not_arrived', 'holding_pre')
     z_or = _pick('in_or', 'overrun')
@@ -798,7 +809,7 @@ def _cell_time(main, sub='', title=''):
             f'{_sub}</span>')
 
 
-def _callnext_short(c, eff, tov_map, call_info=None):
+def _callnext_short(c, eff, tov_map, call_info=None, has_next=True):
     """ผลลัพธ์ AI แบบสั้นสำหรับบรรทัดล่างของคอลัมน์เวลา — คืน (สั้น, เต็มไว้ทำ tooltip)
     🚪 ช่วงเวลาออกห้อง (กว้างตามความยาวเคส) · ⏰ เวลาที่ควรตามเคสถัดไปขึ้นมารอ
     call_info = (เคสถัดไป, เวลาตามมารอ) จาก call_queue.next_call_map —
@@ -829,6 +840,13 @@ def _callnext_short(c, eff, tov_map, call_info=None):
                         f'แจ้งเรียกคิวถัดไปแล้ว {_ct.strftime("%H:%M")} ✓</span>')
             _cn_full = (f'ห้องนี้กดกระดิ่งแจ้งเรียกเคสถัดไปมารอแล้ว '
                         f'เมื่อ {_ct.strftime("%H:%M")} น.')
+    if not has_next:
+        # 🩹 15 พ.ย. 2026 (มุกกี้สั่ง): ห้องนี้ไม่มีเคส "ยังไม่มา" เหลือแล้ว
+        #    เดิมยังขึ้น "คิวถัดไปมารอ ~HH:MM" ทั้งที่ไม่มีใครให้เรียก → ตัดท่อนนั้นออก
+        return (f'ออกห้อง ~{lo}-{hi}',
+                f'ออกห้อง ~{lo}-{hi} น. (ช่วง ±{_hw} นาที กว้างตามความยาวเคส : '
+                f'คาลิเบรตจากเคสจริงปี 2567 ครอบราว 5-6 ใน 10 เคส) · '
+                f'ช่วงมั่นใจ 90% ของเคสนี้ดูในปุ่มแก้เวลา')
     short = f'ออกห้อง ~{lo}-{hi} · {_cn_html}'
     full = (f'ออกห้อง ~{lo}-{hi} น. (ช่วง ±{_hw} นาที กว้างตามความยาวเคส : '
             f'คาลิเบรตจากเคสจริงปี 2567 ครอบราว 5-6 ใน 10 เคส) · '
@@ -1111,12 +1129,15 @@ def _inroom_row_iframe(c, loc, tlabel, eff, border_css, ov_badge, now,
 def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
                 room_opts=None, mark_dirty=None, tov_map=None, dup_badges=None,
-                call_map=None):
+                call_map=None, next_rooms=None):
     room_opts = room_opts or []
     dup_badge = (dup_badges or {}).get(id(c), '')
     # 🔔 เคสนี้คือ "คิวถัดไปที่ต้องเรียก" ของห้องหรือเปล่า (identity เทียบ object
     #    ตรง ๆ — call_map สร้างจาก list เดียวกันในรอบ render นี้เสมอ)
     _ci = (call_map or {}).get(R)
+    # 🩹 15 พ.ย. 2026: ห้องนี้ยังมีเคส "ยังไม่มา" เหลือให้เรียกหรือไม่
+    #    (next_rooms=None = ผู้เรียกรุ่นเก่า ไม่ได้ส่งมา → ถือว่ามี พฤติกรรมเดิม)
+    _has_next = True if next_rooms is None else (R in next_rooms)
     _is_next_call = bool(_ci) and (_ci[0] is c)
     # 🚪 โหมดจอประจำห้อง ("ล็อกที่มือ ไม่ล็อกที่ตา"): เห็นทุกห้อง แต่กดได้เฉพาะ
     #    เคสห้องตัวเองตามเขตหน้าที่ — รับเข้า/เข้าห้อง/จำหน่าย/ย้ายห้อง = จอรับ-ส่ง
@@ -1188,7 +1209,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             components.html(
                 _inroom_row_iframe(c, loc, tlabel, max(int(eff), 5),
                                    border_css, ov_badge, now,
-                                   _callnext_short(c, eff, tov_map, _ci), dup_badge),
+                                   _callnext_short(c, eff, tov_map, _ci,
+                                                   has_next=_has_next),
+                                   dup_badge),
                 height=_ROW_IFRAME_H)
         else:
             # ความคืบหน้าอยู่ในแถบของคอลัมน์เวลาแล้ว (_progress_bar) ไม่ต้องมีแถบ
@@ -1355,8 +1378,8 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             if st.button("ห้องไม่ว่าง" if _busy else "เข้าห้อง", key=f"tb_e_{idx}",
                          type="secondary" if _busy else "primary",
                          width='stretch', disabled=_busy,
-                         help=("ห้องนี้มีเคสกำลังผ่าอยู่ — ต้องกด 'ผ่าเสร็จ' "
-                               "เคสแรกก่อนจึงเข้าห้องได้" if _busy else None)):
+                         help=("ห้องนี้มีเคสกำลังผ่าอยู่ : ต้องกด เสร็จ "
+                               "ที่เคสนั้นก่อนจึงเข้าห้องได้" if _busy else None)):
                 if R in busy_rooms:
                     # 🔇 หมายเหตุ: กิ่งนี้ปกติกดไม่ถึง เพราะปุ่มถูก disabled=_busy
                     # ไว้แล้วด้านบน — คงไว้เป็น defense-in-depth เผื่อ guard เปลี่ยน
