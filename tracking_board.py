@@ -276,7 +276,7 @@ def _queue_prefix_html(c, emer=False) -> str:
     คิวจากตารางเดิมมีแม่กุญแจเล็ก · คิวที่ปรับหน้างานเป็นป้ายฟ้า ไม่มีแม่กุญแจ"""
     ql = None if (emer and not c.get('q_manual')) else _queue_label(c)
     if not ql:
-        return f'<div style="height:{_ROW_H}px;"></div>'
+        return f'<div style="height:{_Q_ROW_H}px;"></div>'
     o, manual = ql
     if manual:
         _hh = _esc(c.get('q_changed_hhmm') or '')
@@ -287,7 +287,7 @@ def _queue_prefix_html(c, emer=False) -> str:
         _tip = 'ล็อคคิว : ลำดับจัดมาจากตารางผ่าตัด'
         _box = 'background:#f1f5f9;color:#0f172a;'
         _lock = '<span style="font-size:12px;margin-right:3px;">🔒</span>'
-    return (f'<div style="height:{_ROW_H}px;display:flex;align-items:flex-start;">'
+    return (f'<div style="height:{_Q_ROW_H}px;display:flex;align-items:flex-start;">'
             f'<span title="{_tip}" style="{_box}border-radius:10px;padding:7px 0;width:100%;'
             f'text-align:center;font-size:20px;font-weight:700;white-space:nowrap;'
             f'cursor:help;">{_lock}คิว {o}</span></div>')
@@ -654,7 +654,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
                 _last = rid(c)
                 st.markdown(
                     '<div style="display:flex;align-items:baseline;gap:10px;'
-                    'border-bottom:1px solid #cbd5e1;padding:0 2px 4px;margin:14px 0 8px;">'
+                    'border-bottom:1px solid #cbd5e1;padding:0 2px 4px;margin:14px 0 calc(1rem + 6px);">'
                     f'<span style="font-size:19px;font-weight:700;color:#0f172a;">{_esc(loc(c))}</span>'
                     f'<span style="font-size:14px;color:#64748b;">รอ {_cnt.get(_last, 0)} เคส</span></div>',
                     unsafe_allow_html=True)
@@ -874,10 +874,70 @@ def _cell_pt_op(c, dup_badge='', fg='#0f172a'):
             f'cursor:help;">{_lead}{_p} · {_d}</span></span>')
 
 
+# 📇 15 พ.ย. 2026 (มุกกี้สั่ง): การ์ดเคสก่อนผ่าตัด 2 บรรทัด : บนคือข้อมูลจาก HIS ล่างคือข้อมูลจากแบบจำลอง
+_Q_ROW_H = 66     # ความสูงแถวเคสก่อนผ่าตัด (px) · iframe ต้องสูงกว่านี้เล็กน้อย
+_Q_TM_W = 66      # ช่องเวลานัด (px) : บรรทัดล่างเยื้องเท่านี้ให้ตรงใต้ชื่อผู้ป่วย
+_Q_ST_W = 132     # ช่องสถานะท้ายการ์ด (px)
+
+
+def _lead_cells_pre(c, tlabel, emer, dup_badge, chip, name_fg='#0f172a'):
+    """📇 15 พ.ย. 2026 (มุกกี้สั่ง): การ์ดเคสก่อนผ่าตัด (แถวแบบ minimal ที่ห้องกับเลขคิวอยู่นอกการ์ดแล้ว)
+    บรรทัดบน = ข้อมูลพื้นฐานจาก HIS : เวลานัด ชื่อ-สกุล HN หัตถการ แพทย์
+    บรรทัดล่าง = ข้อมูลจากแบบจำลองของงานวิจัย : เวลาทำนายเป็นนาที ช่วงที่เป็นไปได้ จำนวนเคสที่ใช้อ้างอิง
+    หากพยาบาลแก้ไขเวลา บรรทัดล่างแสดงเวลาที่แก้ไขก่อน แล้วตามด้วยค่าที่แบบจำลองทำนาย"""
+    if emer:
+        _tm = ('<span style="color:#c0392b;font-weight:600;font-size:14px;">'
+               '<span class="emg-dot"></span>ฉุกเฉิน</span>')
+    else:
+        _tm = _esc(tlabel(c))
+    _eff = (c.get('effective_min') or c.get('user_override_min')
+            or c.get('ai_predicted_min') or c.get('predicted_min'))
+    _hn = ''
+    try:
+        from main_or_db import mask_hn
+        _hn = _esc(mask_hn(c.get('hn') or '') or '')
+    except Exception:
+        pass
+    _p = _esc(c.get('procedure') or '-')
+    _d = _esc(c.get('surgeon') or '-')
+    _nw = 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+    # บรรทัดล่าง = ข้อมูลจากงานวิจัย (แบบจำลองทำนาย) : เวลาทำนาย ช่วงที่เป็นไปได้ จำนวนเคสที่ใช้อ้างอิง
+    _ai = c.get('ai_predicted_min') or c.get('predicted_min')
+    _ov = c.get('user_override_min')
+    _bits = []
+    if _ov:
+        _bits.append(f'<b style="color:#0c447c;">แก้ไขเป็น {int(_ov)} น.</b>')
+        if _ai:
+            _bits.append(f'แบบจำลองทำนาย {int(_ai)} น.')
+    elif _eff:
+        _bits.append(f'<b style="color:#0c447c;">ทำนายใช้ห้อง {int(_eff)} น.</b>')
+    _rng = c.get('predicted_range')
+    if c.get('range_method') == 'conformal' and _rng:
+        _bits.append(f'ช่วง {int(_rng[0])} ถึง {int(_rng[1])} น.')
+    _n = c.get('proc_n')
+    if _n is not None:
+        _bits.append(f'จาก {int(_n)} เคส' if _n else 'ไม่มีเคสใกล้เคียง')
+    _l2 = ' · '.join(_bits)
+    return (
+        '<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;">'
+        '<span style="display:flex;align-items:baseline;gap:10px;min-width:0;">'
+        f'<span style="width:{_Q_TM_W}px;flex:none;font-size:17px;font-weight:600;color:#0f172a;{_nw}">{_tm}</span>'
+        f'<span style="flex:none;max-width:210px;font-size:18px;font-weight:600;color:{name_fg};{_nw}">'
+        f'{_pt_name(c)}{dup_badge}</span>'
+        f'<span style="flex:none;font-size:14px;color:#94a3b8;{_nw}">HN {_hn}</span>'
+        f'<span title="{_p}" style="flex:1;min-width:0;font-size:15px;color:#475569;cursor:help;{_nw}">{_p}</span>'
+        f'<span style="flex:none;font-size:15px;color:#475569;{_nw}">{_d}</span></span>'
+        f'<span style="display:block;padding-left:{_Q_TM_W + 10}px;font-size:14px;color:#64748b;{_nw}">'
+        f'<span style="margin-right:5px;">🤖</span>{_l2}</span></span>'
+        f'<span style="display:none">{chip}</span>')
+
+
 def _lead_cells(c, loc, tlabel, emer, dup_badge, chip, room_fg=None,
                 name_fg='#0f172a', sub_fg='#334155'):
     """ช่องหน้าของแถว (ก่อนช่องเวลา) · minimal = 2 ช่อง + ชิปซ่อนไว้
     (JS ในแถวสดยังอ้าง id ของชิป ต้องมี element อยู่ ถ้าลบทิ้งสคริปต์จะพัง)"""
+    if _minimal_board() and getattr(_tl, 'q_prefix', False):
+        return _lead_cells_pre(c, tlabel, emer, dup_badge, chip, name_fg)
     if _minimal_board():
         return (_cell_room_q(c, loc, tlabel, emer, room_fg)
                 + _cell_pt_op(c, dup_badge, name_fg)
@@ -987,6 +1047,10 @@ def _cell_time(main, sub='', title=''):
     tabular-nums = ตัวเลขความกว้างเท่ากัน หลักจึงตรงกันทุกแถว กวาดตาลงคอลัมน์เดียว
     รู้ทันทีว่าใครรอนานสุด"""
     _t = f' title="{title}"' if title else ''
+    if getattr(_tl, 'q_prefix', False):
+        return (f'<span{_t} style="width:{_Q_ST_W}px;flex:none;text-align:right;overflow:hidden;'
+                f'font-variant-numeric:tabular-nums;font-size:16px;color:#64748b;white-space:nowrap;">'
+                f'{main}</span>')
     _sub = (f'<span style="display:block;font-size:13px;color:#8a96a3;line-height:1.3;'
             f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{sub}</span>'
             ) if sub else ''
@@ -1118,9 +1182,10 @@ def _row_shell(inner, bg, border_css, row_id='row', prog='', extra=''):
     ⚠️ ส่ง extra ได้เฉพาะแถวที่ render ด้วย st.markdown (ยังไม่มา) — แถว iframe
     ประกาศความสูงล่วงหน้าไว้ที่ _ROW_IFRAME_H ถ้าสูงขึ้นเนื้อหาจะโดนตัดเงียบ ๆ"""
     _skin = '' if extra else f'{border_css}background:{bg};'
+    _h = _Q_ROW_H if getattr(_tl, 'q_prefix', False) else _ROW_H
     row = (f'<div id="{row_id}" style="display:flex;align-items:center;gap:10px;'
            f'{_skin}border-radius:10px;padding:8px 12px;'
-           f'height:{_ROW_H}px;position:relative;overflow:hidden;">{prog}{inner}</div>')
+           f'height:{_h}px;position:relative;overflow:hidden;">{prog}{inner}</div>')
     if not extra:
         return row
     # 🩹 13 พ.ย. 2026 (มุกกี้สั่ง): Streamlit 1.67 ใส่ margin-bottom:-1rem ให้กล่อง
@@ -1421,7 +1486,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     with c0:
         if disp == 'holding_pre':
             components.html(_holding_row_iframe(c, loc, tlabel, now, dup_badge),
-                            height=_ROW_IFRAME_H)
+                            height=(_Q_ROW_H + 8) if _qpre else _ROW_IFRAME_H)
         elif (disp in ('in_or', 'overrun')
               and c.get('time_entered_or') is not None
               and hasattr(c.get('time_entered_or'), 'timestamp')):
@@ -1439,6 +1504,8 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             # ความคืบหน้าอยู่ในแถบของคอลัมน์เวลาแล้ว (_progress_bar) ไม่ต้องมีแถบ
             # ที่ขอบล่างแถวซ้ำอีก — สองแถบบอกเรื่องเดียวกันคือความรก
             _tm_html, _tm_sub, _tm_tip = _time_static(c, disp, eff, elapsed, now, tov_map)
+            if _qpre and disp == 'not_arrived':
+                _tm_html = 'ยังไม่มา'
             # 🔔 แถบคิวถัดไป ต่อท้ายการ์ด — เฉพาะเคสคิวถัดไปของห้อง
             #    (เคสไม่ได้จัดคิว = แถบนี้ว่าง ตามที่เคาะ)
             _call_extra = (_call_line_html(c, _ci[1], now)
