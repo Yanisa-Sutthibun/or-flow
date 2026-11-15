@@ -29,14 +29,18 @@ BEGIN
   END LOOP;
 END $$;
 
--- 2) สำเนาข้อมูลตั้งต้น (ครั้งเดียว/รีเซ็ตได้): สถิติไม่ระบุตัวตน + รายชื่อบุคลากร
+-- 2) สำเนาข้อมูลตั้งต้น (ครั้งเดียว/รีเซ็ตได้): สถิติไม่ระบุตัวตนเท่านั้น
 TRUNCATE demo.cases;
 INSERT INTO demo.cases SELECT * FROM orsurg.cases;
+-- 🔐 PDPA (มุกกี้สั่ง 15 พ.ย. 2026): เลิกก็อปรายชื่อบุคลากรจริงเข้า demo
+--    แอป demo ไม่ได้อ่านตารางนี้อยู่แล้ว (staff_map_sync คืน 'demo-skip')
+--    เก็บไว้มีแต่ความเสี่ยง → ล้างให้ว่างทุกครั้งที่รันไฟล์นี้
 TRUNCATE demo.staff_map;
-INSERT INTO demo.staff_map SELECT * FROM orsurg.staff_map;
 
--- 3) ✅ ตรวจผล: จำนวนต้องเท่ากันเป็นคู่ ๆ
+-- 🧪 เคสสมมติ ก.ค. ถึง พ.ย. 2026 ของ demo ถูกล้างไปกับ TRUNCATE ข้างบนด้วย
+--    ถ้าต้องการคืน ให้รัน seed_demo_synthetic_cases.sql ตามหลังไฟล์นี้
+
+-- 3) ✅ ตรวจผล: cases ต้องเท่ากัน · demo.staff_map ต้องเป็น 0
 SELECT 'demo.cases' AS t, COUNT(*) FROM demo.cases
 UNION ALL SELECT 'orsurg.cases', COUNT(*) FROM orsurg.cases
-UNION ALL SELECT 'demo.staff_map', COUNT(*) FROM demo.staff_map
-UNION ALL SELECT 'orsurg.staff_map', COUNT(*) FROM orsurg.staff_map;
+UNION ALL SELECT 'demo.staff_map (ต้องเป็น 0)', COUNT(*) FROM demo.staff_map;

@@ -2027,6 +2027,13 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
 
     # 📑 Sticky sidebar TOC (Notion-style) — fixed มุมขวา + smooth scroll + collapse
     import streamlit.components.v1 as _hist_components
+    # 📊 15 พ.ย. 2026 (มุกกี้สั่ง · DEMO): ชื่อหัวข้อในสารบัญตรงกับหัวข้อจริง "ภาระงานห้องผ่าตัด"
+    try:
+        _toc_trend = ('📊 ภาระงานห้องผ่าตัด'
+                      if str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+                      else '📈 กราฟจำนวนเคสรายเดือน')
+    except Exception:
+        _toc_trend = '📈 กราฟจำนวนเคสรายเดือน'
     _hist_components.html("""
     <script>
     (function() {
@@ -2209,7 +2216,7 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
         sectionEls.forEach(el => observer.observe(el));
     })();
     </script>
-    """, height=0)
+    """.replace('📈 กราฟจำนวนเคสรายเดือน', _toc_trend), height=0)
 
     if 'overview' in _secs:
         _hist_sec_overview(date_from, date_to, data)
@@ -4507,11 +4514,18 @@ def page_admin(section='today'):
                         "<span style='font-weight:400;color:#888;'>"
                         "(เลือกครบแล้วกดปุ่มเดียว : ระหว่างเลือกไม่โหลดอะไรทั้งนั้น)</span>",
                         unsafe_allow_html=True)
+            try:
+                _trend_label = ('📊 ภาระงานห้องผ่าตัด'
+                                if str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+                                else '📈 กราฟจำนวนเคสรายเดือน')
+            except Exception:
+                _trend_label = '📈 กราฟจำนวนเคสรายเดือน'
             _SEC_OPTS = [
                 # 🎯 KPI Highlights + 📋 สรุปยอดสะสม ยุบเป็นหัวข้อเดียว (14 ก.ค. 2026)
                 ('overview', '📊 ภาพรวมทั้งหมด',   True),
                 ('room',  '🏥 สถิติรายห้อง',       True),
-                ('trend', '📈 กราฟจำนวนเคสรายเดือน',       False),
+                # 📊 15 พ.ย. 2026 (มุกกี้สั่ง · DEMO): ชื่อตัวเลือกตรงกับหัวข้อ "ภาระงานห้องผ่าตัด"
+                ('trend', _trend_label, False),
                 ('rank',  '🏆 อันดับยอดนิยม',     False),
                 ('eff',   '⏱️ ประสิทธิภาพ (เวลารอ/รับเวร)', False),
                 ('night', '🌙 เคสนอกเวลา',        False),
