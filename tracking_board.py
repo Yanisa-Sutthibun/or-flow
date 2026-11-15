@@ -23,6 +23,10 @@ _BKK = timezone(timedelta(hours=7))
 
 
 from contextlib import nullcontext as _nullctx
+import threading as _threading
+# 🔀 15 พ.ย. 2026: ระหว่างวาดแถวที่เลขคิวย้ายไปอยู่หน้าการ์ดแล้ว ไม่ต้องวาดเลขคิวซ้ำในการ์ด
+#    (thread-local เพราะหลาย session วาดพร้อมกันได้)
+_tl = _threading.local()
 
 
 def widget_keys(cases):
@@ -202,6 +206,8 @@ def _sched_order_html(c, tlabel):
                 f'style="cursor:help;">{base}</span>')
     if not _demo_fx_tb():
         return base
+    if getattr(_tl, 'q_prefix', False):
+        return base             # 🔀 เลขคิวตัวใหญ่อยู่หน้าการ์ดแล้ว (ดู _queue_prefix_html)
     try:
         o = int(c.get('ororder'))
     except (TypeError, ValueError):
@@ -233,6 +239,58 @@ def _sched_order_html(c, tlabel):
     return (f'{base}<br><span title="ล็อคคิว : ลำดับจัดมาจากตารางผ่าตัด" '
             f'style="font-size:14px;color:#94a3b8;'
             f'white-space:nowrap;cursor:help;">🔒 คิว {o}</span>')
+
+
+def _queue_label(c):
+    """เลขคิวของเคสตามกติกาเดียวกับ _sched_order_html : คืน (เลขคิว, ปรับหน้างานไหม) หรือ None ถ้าไม่ต้องโชว์"""
+    if c.get('is_tf'):
+        return None
+    try:
+        o = int(c.get('ororder'))
+    except (TypeError, ValueError):
+        return None
+    if not o or o == 99:
+        return None
+    if c.get('q_manual'):
+        return (o, True)
+    try:
+        orders = []
+        for x in (st.session_state.get('patient_cases') or []):
+            if x.get('room') != c.get('room') or x.get('is_tf'):
+                continue
+            try:
+                xo = int(x.get('ororder'))
+            except (TypeError, ValueError):
+                continue
+            if xo and xo != 99:
+                orders.append(xo)
+        if len(orders) != len(set(orders)):
+            return None
+    except Exception:
+        pass
+    return (o, False)
+
+
+def _queue_prefix_html(c, emer=False) -> str:
+    """🔀 15 พ.ย. 2026 (มุกกี้สั่ง): เลขคิวตัวใหญ่หน้าการ์ด : ปุ่มคิวถัดไปอยู่ช่องถัดไปติดกัน
+    คิวจากตารางเดิมมีแม่กุญแจเล็ก · คิวที่ปรับหน้างานเป็นป้ายฟ้า ไม่มีแม่กุญแจ"""
+    ql = None if emer else _queue_label(c)
+    if not ql:
+        return f'<div style="height:{_ROW_H}px;"></div>'
+    o, manual = ql
+    if manual:
+        _hh = _esc(c.get('q_changed_hhmm') or '')
+        _tip = 'คิวที่ปรับหน้างาน : ไม่ใช่ลำดับจากตารางผ่าตัดเดิม' + (f' (ปรับ {_hh} น.)' if _hh else '')
+        _box = 'background:#e6f1fb;color:#0c447c;'
+        _lock = ''
+    else:
+        _tip = 'ล็อคคิว : ลำดับจัดมาจากตารางผ่าตัด'
+        _box = 'background:#f1f5f9;color:#0f172a;'
+        _lock = '<span style="font-size:12px;margin-right:3px;">🔒</span>'
+    return (f'<div style="height:{_ROW_H}px;display:flex;align-items:flex-start;">'
+            f'<span title="{_tip}" style="{_box}border-radius:10px;padding:7px 0;width:100%;'
+            f'text-align:center;font-size:20px;font-weight:700;white-space:nowrap;'
+            f'cursor:help;">{_lock}คิว {o}</span></div>')
 
 
 def queue_make_next(cases, c, source, mark_dirty=None, force=False) -> bool:
@@ -737,6 +795,9 @@ _BOARD_COLS = [10, 0.7, 1.35, 0.7]
 # 🧹 7 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO ใช้แถวแบบ minimal [เนื้อแถว, ปุ่มหลัก, ⋯]
 #    ✏️ และ ↩️ ย้ายเข้าเมนู ⋯ ประจำแถว · production ยังใช้ _BOARD_COLS เดิม
 _BOARD_COLS_MIN = [10, 1.35, 0.55]
+# 🔀 15 พ.ย. 2026 (มุกกี้สั่ง): แถวเคสที่ยังไม่เข้าห้อง มี [เลขคิวตัวใหญ่, ปุ่มคิวถัดไป] นำหน้าการ์ด
+#    ผลรวมสัดส่วนเท่าเดิม ปุ่มหลักกับ ✏️ จึงตรงแนวกับกลุ่มอื่น
+_BOARD_COLS_MIN_Q = [0.8, 1.15, 8.05, 1.35, 0.55]
 _ROW_H = 70                 # ความสูงแถว (px) — iframe ต้องสูงกว่านี้เล็กน้อย
 _ROW_IFRAME_H = _ROW_H + 8
 
@@ -1287,8 +1348,35 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     # ---------- layout ต่อแถว: [แถว] [✏️] [ปุ่มหลัก] [↩] ----------
     #    🧹 minimal (DEMO): [แถว] [ปุ่มหลัก] [✏️] · เนื้อหา ✏️ และ ↩️ รวมอยู่ในเมนู ✏️ อันเดียว
     _mb = _minimal_board()
+    # 🔀 15 พ.ย. 2026 (มุกกี้สั่ง): เคสที่ยังไม่เข้าห้อง : เลขคิวตัวใหญ่ + ปุ่มคิวถัดไป อยู่หน้าการ์ด
+    #    (เดิมปุ่มซ่อนอยู่ในเมนู ✏️) · จอรับ-ส่งกดได้ทุกห้อง โหมดจอห้องกดได้เฉพาะห้องตัวเอง
+    _qpre = _mb and disp in ('not_arrived', 'holding_pre')
+    if _qpre:
+        _cq, _cqb, c0, c2, _cm = st.columns(_BOARD_COLS_MIN_Q)
+        with _cq:
+            st.markdown(_queue_prefix_html(c, emer), unsafe_allow_html=True)
+        try:
+            from call_queue import can_make_next as _can_qn0
+            _all0 = st.session_state.get('patient_cases') or []
+            _qn0 = _own and _can_qn0(_all0, c)
+        except Exception as _qnx:
+            print(f"[queue] ตรวจสิทธิ์เปลี่ยนคิวไม่สำเร็จ: {_qnx}")
+            _qn0 = False
+        if _qn0:
+            with _cqb:
+                if st.button("⬆️ คิวถัดไป", key=f"tb_qn_{K}", width='stretch',
+                             help="ทำเคสนี้เป็นคิวถัดไปของห้อง ที่เหลือเลื่อนลงตามลำดับเดิม"):
+                    _src = 'board' if _scope is None else f'room:{_scope}'
+                    if queue_make_next(_all0, c, _src, mark_dirty):
+                        try:
+                            from main_or_pages import _toast_ok
+                            _toast_ok("เปลี่ยนคิวถัดไปแล้ว 🔀")
+                        except Exception:
+                            pass
+                    _rerun_board()
     if _mb:
-        c0, c2, _cm = st.columns(_BOARD_COLS_MIN)
+        if not _qpre:
+            c0, c2, _cm = st.columns(_BOARD_COLS_MIN)
         with _cm:
             # ✏️ ไอคอนดินสอ ให้ตรงกับคู่มือ (มุกกี้สั่ง 7 พ.ย. 2026 · เดิม ⋯)
             _more = _popover("✏️", help="แก้เวลาทำนาย ย้ายห้อง เลิกทำ และดู HN",
@@ -1304,6 +1392,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     else:
         c0, c1, c2, c3 = st.columns(_BOARD_COLS)
 
+    _tl.q_prefix = bool(_qpre)
     with c0:
         if disp == 'holding_pre':
             components.html(_holding_row_iframe(c, loc, tlabel, now, dup_badge),
@@ -1338,6 +1427,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                     bg=bg, border_css=border_css, extra=_call_extra),
                 unsafe_allow_html=True)
 
+    _tl.q_prefix = False
     with c1:
         if disp in ('not_arrived', 'holding_pre', 'in_or', 'overrun') and _own:
             if _mb:
@@ -1457,7 +1547,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 except Exception as _qnx:
                     print(f"[queue] ตรวจสิทธิ์เปลี่ยนคิวไม่สำเร็จ: {_qnx}")
                     _qn_ok = False
-                if _qn_ok:
+                if _qn_ok and not _mb:      # minimal: ปุ่มย้ายไปอยู่ติดเลขคิวหน้าการ์ดแล้ว
                     st.caption("🔀 ลำดับคิว")
                     if st.button("⬆️ ทำเป็นคิวถัดไป", key=f"tb_qn_{K}", width='stretch',
                                  help="เคสนี้ขึ้นเป็นคิวถัดไปของห้อง ที่เหลือเลื่อนลงตามลำดับเดิม"):
