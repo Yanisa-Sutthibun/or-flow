@@ -333,6 +333,28 @@ def queue_undo(cases, mark_dirty=None) -> bool:
     return bool(_ch)
 
 
+def queue_change_label(cases) -> str:
+    """🔀 15 พ.ย. 2026 (มุกกี้สั่ง): ข้อความค้างถาวรว่าคิวของห้องนี้ถูกปรับล่าสุดกี่โมง จากจอไหน
+    (แถบแจ้งด้านบนหายเองใน 10 นาที แต่คนที่มาดูทีหลังต้องรู้ที่มาของลำดับที่เห็น)
+    cases = เคสที่ยังไม่เข้าห้องของห้องเดียว · ไม่มีการปรับ = คืน '' · ไม่มีชื่อคนกด บอกแค่จอ"""
+    best = None
+    for c in (cases or []):
+        if not c.get('q_manual'):
+            continue
+        try:
+            ts = float(c.get('q_changed_ts') or 0)
+        except (TypeError, ValueError):
+            ts = 0.0
+        if best is None or ts > best[0]:
+            best = (ts, c)
+    if best is None:
+        return ''
+    c = best[1]
+    _who = 'จอประจำห้อง' if str(c.get('q_changed_by') or '').startswith('room') else 'จอรับ-ส่ง'
+    _hh = _esc(c.get('q_changed_hhmm') or '')
+    return f'🔀 ปรับคิวล่าสุด {_hh} น. จาก{_who}' if _hh else f'🔀 ปรับคิวจาก{_who}'
+
+
 def queue_notice_html(n) -> str:
     """ข้อความแจ้งว่าห้องนี้เพิ่งเปลี่ยนคิว (ทุกจอเห็นตรงกัน) : ไม่มีชื่อคนกด บอกแค่จอไหน"""
     from room_config import room_label as _rl
@@ -645,9 +667,11 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         #    แถวข้างใต้ขึ้นต้นด้วยเลขคิว · เฉพาะแถวแบบ minimal (DEMO)
         _by = by_room and _minimal_board()
         _cnt = {}
+        _grp = {}
         if _by:
             for _r0 in rs:
                 _cnt[rid(_r0[1])] = _cnt.get(rid(_r0[1]), 0) + 1
+                _grp.setdefault(rid(_r0[1]), []).append(_r0[1])
         _last = object()
         for idx, c, disp, eff, elapsed in rs:
             if _by and rid(c) != _last:
@@ -656,7 +680,9 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
                     '<div style="display:flex;align-items:baseline;gap:10px;'
                     'border-bottom:1px solid #cbd5e1;padding:0 2px 4px;margin:14px 0 calc(1rem + 6px);">'
                     f'<span style="font-size:19px;font-weight:700;color:#0f172a;">{_esc(loc(c))}</span>'
-                    f'<span style="font-size:14px;color:#64748b;">รอ {_cnt.get(_last, 0)} เคส</span></div>',
+                    f'<span style="font-size:14px;color:#64748b;">รอ {_cnt.get(_last, 0)} เคส</span>'
+                    f'<span style="font-size:14px;color:#0c447c;font-weight:600;">'
+                    f'{queue_change_label(_grp.get(_last))}</span></div>',
                     unsafe_allow_html=True)
             _render_row(idx, c, disp, eff, elapsed, now, rid(c), busy_rooms,
                         do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
