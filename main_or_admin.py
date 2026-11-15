@@ -4554,8 +4554,25 @@ def page_admin(section='today'):
             d_from, d_to, _secs = _sub
             st.caption(f"กำลังแสดง: {d_from} ถึง {d_to} · "
                        f"{len(_secs)} หัวข้อ (เปลี่ยนตัวเลือกแล้วกด 📊 อีกครั้งเพื่ออัปเดต)")
-            with st.spinner("⏳ กำลังโหลดสถิติ…"):
+            # ⏳ 15 พ.ย. 2026 (มุกกี้สั่ง): นาฬิกาทรายกลางจอระหว่างโหลดสถิติ
+            #    ของเดิมเป็น st.spinner ตัวเล็กใต้ฟอร์ม คนกดมองไม่เห็นเลยนึกว่าค้าง
+            #    ใช้ position:fixed ให้เห็นแม้เลื่อนจออยู่ตรงไหน · โหลดเสร็จ/พัง ลบทิ้งเสมอ
+            _hg = st.empty()
+            _hg.markdown(
+                '<style>@keyframes orflow-hg{0%{transform:rotate(0)}40%{transform:rotate(180deg)}'
+                '50%{transform:rotate(180deg)}90%{transform:rotate(360deg)}100%{transform:rotate(360deg)}}</style>'
+                '<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;'
+                'background:#fff;border:1px solid #cfd8dc;border-radius:16px;padding:22px 36px;'
+                'box-shadow:0 8px 30px rgba(0,0,0,.18);text-align:center;">'
+                '<div style="font-size:54px;line-height:1;display:inline-block;'
+                'animation:orflow-hg 1.6s ease-in-out infinite;">⏳</div>'
+                '<div style="font-size:20px;font-weight:600;color:#37474f;margin-top:10px;">กำลังโหลดสถิติ</div>'
+                '<div style="font-size:15px;color:#78909c;">ระบบกำลังทำงาน กรุณารอสักครู่</div></div>',
+                unsafe_allow_html=True)
+            try:
                 _render_historical_analytics(d_from, d_to, _secs=set(_secs))
+            finally:
+                _hg.empty()
         else:
             st.caption("☝️ เลือกวันที่ + หัวข้อให้ครบ แล้วกด '📊 แสดงสถิติ' เพื่อโหลด")
 
