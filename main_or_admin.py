@@ -884,7 +884,7 @@ def _render_kpi(kpi):
     # 📖 15 พ.ย. 2026 (มุกกี้สั่ง หลังซ้อม try out): อธิบาย 2 ตัวเลขที่คนอ่านไม่ออก
     #    นิยามตรงกับที่คำนวณจริงใน live_link.kpi_from_session / main_or_db.get_kpi
     st.markdown(
-        '<div style="font-size:15px;color:#64748b;line-height:1.6;margin-top:8px;">'
+        '<div style="font-size:15px;color:#64748b;line-height:1.6;margin:8px 0 26px;">'
         '<b>Utilization</b> คือ ร้อยละของเวลาราชการ (8.00 ถึง 16.00 น.) ที่ห้องผ่าตัดถูกใช้ผ่าตัดจริง '
         'คิดจากเคสที่ผ่าเสร็จแล้วเท่านั้น ตัวเลขช่วงเช้าจึงยังต่ำและจะเพิ่มขึ้นตลอดวัน '
         'ค่าที่นิยมใช้เป็นเป้าหมายคือร้อยละ 75 ถึง 85<br>'
