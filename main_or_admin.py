@@ -810,10 +810,11 @@ def _render_hourly_load(hm, dow_counts):
              else 'ไม่มีช่วงที่ยุ่งถึง 2 เคส')
     _scope = 'เฉลี่ยทุกวันทำการ' if _sel == 'ทุกวัน' else f'เฉพาะวัน{_sel}'
     st.markdown(
-        f'<div style="font-size:20px;font-weight:700;color:#0f172a;margin:4px 0 0;">'
+        f'<div style="padding:4px 0 12px;line-height:1.5;">'
+        f'<div style="font-size:20px;font-weight:700;color:#0f172a;">'
         f'{_head} · ยุ่งสุด {_peak}:00</div>'
         f'<div style="font-size:15px;color:#64748b;">{_scope} · '
-        f'ตัวเลข = เคสที่ใช้ห้องในชั่วโมงนั้นโดยเฉลี่ย</div>', unsafe_allow_html=True)
+        f'ตัวเลข = เคสที่ใช้ห้องในชั่วโมงนั้นโดยเฉลี่ย</div></div>', unsafe_allow_html=True)
     _col = ['#E24B4A' if v >= 2 else '#EF9F27' if v >= 1 else '#B4B2A9'
             for v in _vals.values]
     _fig = go.Figure(go.Bar(
@@ -2568,10 +2569,11 @@ def _hist_sec_trend(date_from, date_to, data=None):
                        '▬ คงที่': 'เท่ากับ'}.get(_trend_label)
             _tr_line = (f' · เดือนล่าสุด{_tr_txt}เดือนก่อน' if _tr_txt else '')
             st.markdown(
-                f'<div style="font-size:20px;font-weight:700;color:#0f172a;margin:2px 0 0;">'
+                f'<div style="padding:2px 0 12px;line-height:1.5;">'
+                f'<div style="font-size:20px;font-weight:700;color:#0f172a;">'
                 f'เดือนที่หนักสุด {_peak_month} · {_peak_count} เคส</div>'
                 f'<div style="font-size:15px;color:#64748b;">รวมทั้งช่วง {_total_all:,} เคส'
-                f'{_tr_line}</div>', unsafe_allow_html=True)
+                f'{_tr_line}</div></div>', unsafe_allow_html=True)
 
         # 📈 Monthly line chart (เส้นเวลาต่อเนื่อง + peak ★)
         # ช่วงยาวหลายปี (>18 เดือน) → ลดความรก: โชว์ label เฉพาะ peak,
@@ -2779,7 +2781,8 @@ def _hist_sec_trend(date_from, date_to, data=None):
             showlegend=False,
         )
         st.plotly_chart(fig_dow_s, use_container_width=True)
-        _min_dow_s = _dow_avg_s[_dow_avg_s['n'] > 0]['n'].min()
+        _min_dow_s = _dow_avg_s[(_dow_avg_s['n'] > 0)
+                                & ((_dow_avg_s['dow'] <= 4) if _demo_trend else True)]['n'].min()
         if _min_dow_s > 0:
             _pct_heavier_s = round((_max_dow_s / _min_dow_s - 1) * 100)
             st.markdown(
