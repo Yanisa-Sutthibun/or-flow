@@ -29,7 +29,8 @@ os.chdir(_DIR)   # ให้ secrets/db path ทำงานเหมือน�
 OUT_ROOT = os.path.join(_DIR, 'backups_research')
 
 # ตารางข้อมูลวิจัย (ตารางไหนยังไม่ถูกสร้าง = ข้ามพร้อมแจ้ง)
-TABLES = ['cases', 'override_log', 'shadow_v2_log', 'prediction_log']
+# 🧭 15 พ.ย. 2026 (มุกกี้สั่ง): เพิ่ม research_case_log (ตารางวิจัยหลัก เดิมตกหล่นจากรายการ)
+TABLES = ['cases', 'research_case_log', 'override_log', 'shadow_v2_log', 'prediction_log']
 
 
 def export_table(conn, table: str, out_dir: str):

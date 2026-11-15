@@ -184,7 +184,8 @@ def _ensure_table(conn):
         #    มีค่าเฉพาะเคสที่ถูกแก้เวลาเข้าห้องภายหลัง (entered_or_at = เวลาที่แก้แล้ว)
         #    ว่าง = ไม่เคยแก้ entered_or_at คือเวลากดปุ่มตามเดิม
         for _ck, _ct in (('called_at', 'TEXT'), ('call_planned_hhmm', 'TEXT'),
-                         ('call_source', 'TEXT'), ('entered_or_pressed_at', 'TEXT')):
+                         ('call_source', 'TEXT'), ('entered_or_pressed_at', 'TEXT'),
+                         ('pred_source', 'TEXT')):   # 🧭 ชั้นที่ให้คำทำนาย (15 พ.ย. 2026)
             if _ck not in _cols:
                 conn.execute(f"ALTER TABLE research_case_log ADD COLUMN {_ck} {_ct}")
         conn.commit()
@@ -271,6 +272,7 @@ def log_case_state(case) -> bool:
             'pred_lo': lo, 'pred_hi': hi,
             'pred_confidence': case.get('confidence'),
             'pred_proc_n': _int(case.get('proc_n')),
+            'pred_source': case.get('pred_source'),   # 🧭 thesis_ML_v2 / thesis_ML / local_history / default
             'user_override_min': _int(case.get('user_override_min')),
             # 🔔 ระบบเรียกคิว: เวลาเรียกจริง (📣/🔔) + เวลาแผนที่แช่แข็งตอนกด
             #    + จอที่กด — undo การเรียกแล้ว upsert รอบถัดไปจะกลายเป็น NULL ตามจริง
@@ -289,11 +291,14 @@ def log_case_state(case) -> bool:
             #    log วิจัยของทุกเคสล้มตาม → ตัดคอลัมน์นั้นออกจากรอบนี้แล้วเขียนส่วนที่เหลือ
             try:
                 from main_or_db import _table_columns as _tcols
-                if 'entered_or_pressed_at' not in _tcols(conn, 'research_case_log'):
-                    vals.pop('entered_or_pressed_at', None)
-                    print("[research_log] ไม่มีคอลัมน์ entered_or_pressed_at : ข้ามคอลัมน์นี้")
+                _have_cols = _tcols(conn, 'research_case_log')
+                for _nk in ('entered_or_pressed_at', 'pred_source'):
+                    if _nk not in _have_cols:
+                        vals.pop(_nk, None)
+                        print(f"[research_log] ไม่มีคอลัมน์ {_nk} : ข้ามคอลัมน์นี้")
             except Exception:
                 vals.pop('entered_or_pressed_at', None)
+                vals.pop('pred_source', None)
             row = conn.execute(
                 "SELECT id, exit_to, actual_or_min, actual_source "
                 "FROM research_case_log WHERE log_date=? AND case_ref=?",

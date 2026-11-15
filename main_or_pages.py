@@ -742,6 +742,7 @@ def _or_board_demo():
     for d in DEMO_POOL:
         # 🔮 ทำนายด้วยโซ่โมเดลจริง — surgeon ส่งเป็น SURG_xxx (TE ตรงตัวจริง)
         pred, rng, conf, pn = 60, None, 'ต่ำ', 0
+        psrc = 'default'   # 🧭 ชั้นที่ให้คำทำนาย (ทำนายไม่ได้ = ค่าเริ่มต้น 60 นาที)
         if _pst is not None:
             try:
                 _r = _pst(d['procedure'], d['age'],
@@ -756,6 +757,7 @@ def _or_board_demo():
                 rng = _r.get('predicted_range')
                 conf = _r.get('confidence', 'ปานกลาง')
                 pn = int(_r.get('proc_n') or 0)
+                psrc = _r.get('source') or 'default'
             except Exception as _px:
                 print(f"[demo] ทำนายไม่ได้ ใช้ 60 นาที: {_px}")
         _emg = d.get('optype', 'Elective') != 'Elective'
@@ -778,7 +780,7 @@ def _or_board_demo():
              'predicted_min': pred, 'effective_min': pred,
              'ai_predicted_min': pred, 'predicted_range': rng,
              'range_method': ('conformal' if rng else None),
-             'proc_n': pn, 'confidence': conf,
+             'proc_n': pn, 'confidence': conf, 'pred_source': psrc,
              'is_tf': False, '_demo': True,
              'is_emergency': _emg,
              'case_type': d.get('optype', 'Elective') if _emg else 'Elective'}
@@ -1117,9 +1119,11 @@ def _render_add_case_form(demo_active):
             _pn = _pred.get('proc_n', 0)
             _rng = _pred.get('predicted_range')
             _rngm = _pred.get('range_method')
+            _psrc = _pred.get('source') or 'default'   # 🧭 ชั้นที่ให้คำทำนาย
         except Exception as _ex:
             print(f"[add_case] predict ล้มเหลว: {_ex}")
             _pm, _conf, _pn, _rng, _rngm = 60, 'ต่ำ', 0, None, None
+            _psrc = 'default'
         from fam_code import gen_fam_code
         _manual_id = f"MANUAL_{uuid.uuid4().hex[:8]}"
         case = {
@@ -1134,7 +1138,7 @@ def _render_add_case_form(demo_active):
             'sched_date': _now().date(), 'sched_hour': sched_h,
             'sched_min': sched_m, 'is_tf': is_tf, 'is_after_note': False,
             'procnote': '', 'predicted_min': _pm, 'confidence': _conf,
-            'proc_n': _pn,
+            'proc_n': _pn, 'pred_source': _psrc,
             'predicted_range': _rng, 'range_method': _rngm,   # 📏 ช่วง conformal 90%
             'status': 'not_arrived', 'ai_predicted_min': _pm,
             'user_override_min': None, 'effective_min': _pm,
@@ -1253,6 +1257,7 @@ def render_csv_upload(bare=False):
                         _ec['effective_min'] = _pr['predicted_min']
                         _ec['confidence'] = _pr['confidence']
                         _ec['proc_n'] = _pr.get('proc_n', 0)
+                        _ec['pred_source'] = _pr.get('source')   # 🧭 ชั้นที่ให้คำทำนาย
                         _ec['predicted_range'] = _pr.get('predicted_range')
                 except Exception as _px:
                     st.warning(f"เติมข้อมูล preop ไม่สำเร็จ (ใช้ค่าทำนายเดิม): {_px}")

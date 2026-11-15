@@ -744,6 +744,9 @@ def parse_schedule_csv_to_cases(uploaded_file):
         case['pred_method'] = pred['method']
         case['proc_n'] = pred.get('proc_n', 0)
         case['surg_n'] = pred.get('surg_n', 0)
+        # 🧭 15 พ.ย. 2026 (มุกกี้สั่ง): ชั้นที่ให้คำทำนายนี้ thesis_ML_v2 / thesis_ML /
+        #    local_history / default → ลง log วิจัย กัน MAE ของตัวหลักปนกับชั้นสำรองโดยไม่รู้
+        case['pred_source'] = pred.get('source')
         case['predicted_range'] = pred.get('predicted_range')      # 📏 ช่วง conformal 90%
         case['range_method'] = pred.get('range_method')
         case.update({
