@@ -2336,6 +2336,9 @@ def _room_focus_fragment(room_no):
                        + int(c.get('sched_min') or 0))
             except (TypeError, ValueError):
                 _sm = 9999
+            if c.get('q_manual'):
+                # 🔀 15 พ.ย. 2026: คิวที่คนจัดเอง เรียงตามเลขคิวล้วน
+                return (-1, 0, c.get('ororder') or 999)
             return (0 if c.get('status') == 'holding_pre' else 1,
                     _sm, c.get('ororder') or 999)
 
@@ -2349,7 +2352,8 @@ def _room_focus_fragment(room_no):
                 st.markdown(''.join(_pending_rows), unsafe_allow_html=True)
                 _pending_rows.clear()
 
-        for _w in sorted(_wait, key=_skey):
+        _wait_sorted = sorted(_wait, key=_skey)
+        for _w in _wait_sorted:
             _t = ('TF' if _w.get('is_tf') else
                   f"{int(_w.get('sched_hour') or 8):02d}:"
                   f"{int(_w.get('sched_min') or 0):02d}")
@@ -2359,6 +2363,8 @@ def _room_focus_fragment(room_no):
                 _o = None
             _q = (f'🔒 คิว {_o} · ' if (_lock_ok and _o and _o != 99
                                         and not _w.get('is_tf')) else '')
+            if _w.get('q_manual') and _o and _o != 99:
+                _q = f'คิว {_o} · '      # 🔀 คิวที่ปรับหน้างาน : ไม่มีแม่กุญแจ
             _ai = int(_w.get('effective_min') or _w.get('predicted_min') or 0)
             _ai_txt = f' · AI ~{_ai} นาที' if _ai else ''
             _is_bell_row = (_ncase is not None and _w is _ncase)
@@ -2397,16 +2403,77 @@ def _room_focus_fragment(room_no):
                 f'text-overflow:ellipsis;white-space:nowrap;">'
                 f'{(_w.get("procedure") or "-")}{_ai_txt}</span>'
                 f'{_call_txt}{_chip}</div>')
-            if _is_bell_row:
+            # 🔀 15 พ.ย. 2026 (มุกกี้สั่ง): ปุ่ม "ทำเป็นคิวถัดไป" ท้ายแถวที่ยังไม่ใช่หัวคิว
+            _can_move = (len(_wait_sorted) >= 2 and _w is not _wait_sorted[0])
+
+            def _move_btn(_case=_w):
+                if st.button("⬆️ ทำเป็นคิวถัดไป",
+                             key=f"rf_qn_{_case.get('id') or id(_case)}",
+                             width='stretch',
+                             help="เคสนี้ขึ้นเป็นคิวถัดไปของห้อง ที่เหลือเลื่อนลงตามลำดับเดิม"):
+                    from tracking_board import queue_make_next
+                    if queue_make_next(cases, _case, f'room:{room_no}', _mark_board_dirty,
+                                       force=True):
+                        _save_board_snapshot(cases)
+                        st.session_state['_board_dirty'] = False
+                        _toast_ok("เปลี่ยนคิวถัดไปแล้ว 🔀")
+                    _rerun_board()
+
+            if _is_bell_row and _can_move:
+                _flush_rows()
+                _rc1, _rc3, _rc2 = st.columns([5, 2, 1], vertical_alignment="center")
+                with _rc1:
+                    st.markdown(_row, unsafe_allow_html=True)
+                with _rc3:
+                    _move_btn()
+                with _rc2:
+                    _render_call_bell()
+            elif _is_bell_row:
                 _flush_rows()
                 _rc1, _rc2 = st.columns([6, 1], vertical_alignment="center")
                 with _rc1:
                     st.markdown(_row, unsafe_allow_html=True)
                 with _rc2:
                     _render_call_bell()
+            elif _can_move:
+                _flush_rows()
+                _rc1, _rc3 = st.columns([5, 2], vertical_alignment="center")
+                with _rc1:
+                    st.markdown(_row, unsafe_allow_html=True)
+                with _rc3:
+                    _move_btn()
             else:
                 _pending_rows.append(_row)
         _flush_rows()
+        # 🔀 15 พ.ย. 2026: แจ้งว่าห้องนี้เพิ่งเปลี่ยนคิว + ↩️ เลิกทำ (เฉพาะเครื่องที่กด)
+        try:
+            import time as _tqn
+            from call_queue import queue_notices as _q_notices
+            from call_queue import can_undo_make_next as _q_can_undo
+            from tracking_board import queue_notice_html, queue_undo
+            _qu = st.session_state.get('_q_undo') or {}
+            for _n in _q_notices(cases, _tqn.time()):
+                if _n['room'] != room_no:
+                    continue
+                _mine = (_qu.get('room') == room_no and _qu.get('ts') == _n.get('ts')
+                         and _q_can_undo(cases, _qu.get('prev')))
+                if _mine:
+                    _qa, _qb = st.columns([5, 1], vertical_alignment="center")
+                    with _qa:
+                        st.markdown(queue_notice_html(_n), unsafe_allow_html=True)
+                    with _qb:
+                        if st.button("↩️ เลิกทำ", key=f"rf_qundo_{room_no}",
+                                     width='stretch',
+                                     help="คืนลำดับคิวก่อนการเปลี่ยนครั้งนี้"):
+                            if queue_undo(cases, _mark_board_dirty):
+                                _save_board_snapshot(cases)
+                                st.session_state['_board_dirty'] = False
+                                _toast_ok("คืนลำดับคิวเดิมแล้ว ↩️")
+                            _rerun_board()
+                else:
+                    st.markdown(queue_notice_html(_n), unsafe_allow_html=True)
+        except Exception as _qnx:
+            print(f"[queue] จอห้อง: แสดงข้อความแจ้งเปลี่ยนคิวไม่สำเร็จ: {_qnx}")
         st.markdown('<span style="font-size:18px;color:#94a3b8;">'
                      'การรับเข้า/เข้าห้อง กดที่จอรับ-ส่ง · กระดิ่ง 🔔 ท้ายแถว'
                      'เคสถัดไป = เรียกมารอได้เลย ไม่ต้องรอถึงเวลา</span>',

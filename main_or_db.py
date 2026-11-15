@@ -2129,6 +2129,19 @@ def _log_audit(conn, case_id: int, action: str, old_val: str = None, new_val: st
         pass  # audit log should never break main flow
 
 
+def log_queue_change(room, source, action, old_val=None, new_val=None):
+    """🔀 15 พ.ย. 2026: จดประวัติการเปลี่ยนคิวระหว่างวันลง audit_log
+    เก็บแค่ ห้อง · จอที่กด · ลำดับรหัสเคสก่อน/หลัง : ไม่มีชื่อผู้ป่วยและไม่มีชื่อคนกด
+    พลาดไม่กระทบบอร์ด (จดไม่ได้ก็ให้เปลี่ยนคิวได้ตามปกติ)"""
+    try:
+        with db_session() as conn:
+            _log_audit(conn, None, f'queue_{action}', old_val, new_val,
+                       f'room={room};source={source}')
+            conn.commit()
+    except Exception as _qx:
+        print(f"[queue_log] จดการเปลี่ยนคิวไม่สำเร็จ: {_qx}")
+
+
 def mark_arrived(case_id: int):
     """Patient arrived at OR waiting area."""
     with db_session() as conn:

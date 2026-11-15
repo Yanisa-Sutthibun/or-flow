@@ -208,6 +208,11 @@ def _sched_order_html(c, tlabel):
         return base
     if not o or o == 99:
         return base
+    if c.get('q_manual'):
+        # 🔀 15 พ.ย. 2026: คิวที่ปรับหน้างาน (ทำเป็นคิวถัดไป) : ไม่มีแม่กุญแจ เพราะไม่ใช่ลำดับจากตารางเดิมแล้ว
+        return (f'{base}<br><span title="คิวที่ปรับหน้างาน : ไม่ใช่ลำดับจากตารางผ่าตัดเดิม" '
+                f'style="font-size:14px;color:#94a3b8;'
+                f'white-space:nowrap;cursor:help;">คิว {o}</span>')
     # ลำดับ "มีความหมาย" เมื่อเลขในห้องไม่ซ้ำกัน — O(n) ต่อแถว บอร์ด ≤ ~30 เคส
     try:
         orders = []
@@ -228,6 +233,59 @@ def _sched_order_html(c, tlabel):
     return (f'{base}<br><span title="ล็อคคิว : ลำดับจัดมาจากตารางผ่าตัด" '
             f'style="font-size:14px;color:#94a3b8;'
             f'white-space:nowrap;cursor:help;">🔒 คิว {o}</span>')
+
+
+def queue_make_next(cases, c, source, mark_dirty=None, force=False) -> bool:
+    """🔀 15 พ.ย. 2026 (มุกกี้สั่ง): ทำเคสนี้เป็นคิวถัดไปของห้อง แล้วทำเครื่องหมายทุกเคสที่เลขคิวเปลี่ยน
+    ให้เซฟขึ้นบอร์ดกลาง · เก็บค่าก่อนหน้าไว้ใน session ให้เครื่องที่กด ↩️ เลิกทำได้หนึ่งขั้น"""
+    import time as _tq
+    from call_queue import apply_make_next
+    res = apply_make_next(cases, c, source, _now().strftime('%H:%M'), _tq.time(),
+                          force=force)
+    if not res:
+        return False
+    for _x in res['changed']:
+        if mark_dirty:
+            mark_dirty(_x)
+    st.session_state['_q_undo'] = {'room': res['room'], 'prev': res['prev'],
+                                   'ts': res['ts']}
+    try:
+        from main_or_db import log_queue_change
+        log_queue_change(res['room'], source, 'make_next', res['old'], res['new'])
+    except Exception as _qx:
+        print(f"[queue] จดประวัติเปลี่ยนคิวไม่สำเร็จ: {_qx}")
+    return True
+
+
+def queue_undo(cases, mark_dirty=None) -> bool:
+    """↩️ เลิกทำการเปลี่ยนคิวครั้งล่าสุดของเครื่องนี้ (หนึ่งขั้น ตามกติกาเดียวกับปุ่มอื่น)"""
+    from call_queue import apply_undo_make_next
+    _u = st.session_state.pop('_q_undo', None)
+    if not _u:
+        return False
+    _ch = apply_undo_make_next(cases, _u.get('prev'))
+    for _x in _ch:
+        if mark_dirty:
+            mark_dirty(_x)
+    try:
+        from main_or_db import log_queue_change
+        log_queue_change(_u.get('room'), 'undo', 'undo')
+    except Exception as _qx:
+        print(f"[queue] จดประวัติเลิกทำไม่สำเร็จ: {_qx}")
+    return bool(_ch)
+
+
+def queue_notice_html(n) -> str:
+    """ข้อความแจ้งว่าห้องนี้เพิ่งเปลี่ยนคิว (ทุกจอเห็นตรงกัน) : ไม่มีชื่อคนกด บอกแค่จอไหน"""
+    from room_config import room_label as _rl
+    _who = 'จอห้อง' if str(n.get('by') or '').startswith('room') else 'จอรับ-ส่ง'
+    _txt = (f"{_esc(_rl(n['room']))} เปลี่ยนคิวถัดไปเป็น {_pt_name(n['case'])} "
+            f"({_who} {_esc(n.get('hhmm') or '')} น.)")
+    if n.get('called') is not None:
+        _txt += f" · {_pt_name(n['called'])} ถูกแจ้งเรียกไว้ก่อนแล้ว"
+    return ('<div style="background:#e6f1fb;border:1px solid #b5d4f4;border-radius:10px;'
+            'padding:9px 14px;color:#0c447c;font-size:17px;font-weight:600;">'
+            f'🔀 {_txt}</div>')
 
 
 def _esc(v) -> str:
@@ -406,6 +464,13 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     # ---------- เตรียมแถว: กรอง + คำนวณสถานะแสดงผล ----------
     # เรียง ห้อง → ฉุกเฉินก่อนในห้อง → เวลานัด → ลำดับ (ลำดับนิ่ง แถวไม่ขยับเมื่อกดปุ่ม)
     ordered = list(enumerate(cases))
+
+    def _qk(c):
+        # 🔀 15 พ.ย. 2026: คิวที่คนจัดเอง (q_manual) เรียงตามเลขคิวก่อนเวลานัด
+        if c.get('q_manual'):
+            return (1, -1, c.get('ororder') or 999)
+        return (0 if _is_emer(c) else 1, (sched_min(c) or 9999),
+                c.get('ororder') or 999)
     # 🎨 เคสรอเกิน 60 นาทีลอยขึ้นบนสุด — ยกเข้า production แล้ว (4 ส.ค. 2026
     #    ตาม _demo_fx_tb: function เหมือน demo ทุกจุด)
     _demo_float = _demo_fx_tb()
@@ -425,14 +490,9 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
             0 if _crit(t[1]) else 1,
             -_wait_m(t[1]) if _crit(t[1]) else 0,
             (rid(t[1]) or 999),
-            (0 if _is_emer(t[1]) else 1),
-            (sched_min(t[1]) or 9999),
-            t[1].get('ororder') or 999))
+            *_qk(t[1])))
     else:
-        ordered.sort(key=lambda t: ((rid(t[1]) or 999),
-                                    (0 if _is_emer(t[1]) else 1),
-                                    (sched_min(t[1]) or 9999),
-                                    t[1].get('ororder') or 999))
+        ordered.sort(key=lambda t: ((rid(t[1]) or 999), *_qk(t[1])))
     rows = []
     for idx, c in ordered:
         if c.get('status') == 'removed':
@@ -467,6 +527,34 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     if not rows:
         st.caption("ไม่พบเคสตามเงื่อนไขที่กรอง")
         return
+
+    # 🔀 15 พ.ย. 2026: แจ้งทุกจอเมื่อมีห้องเพิ่งเปลี่ยนคิว (10 นาทีล่าสุด) · เครื่องที่กดมีปุ่ม ↩️ เลิกทำ
+    try:
+        import time as _tqn
+        from call_queue import queue_notices as _q_notices
+        from call_queue import can_undo_make_next as _q_can_undo
+        _qu = st.session_state.get('_q_undo') or {}
+        for _n in _q_notices(cases, _tqn.time()):
+            _mine = (_qu.get('room') == _n['room'] and _qu.get('ts') == _n.get('ts')
+                     and _q_can_undo(cases, _qu.get('prev')))
+            if _mine:
+                _qa, _qb = st.columns([6, 1], vertical_alignment="center")
+                with _qa:
+                    st.markdown(queue_notice_html(_n), unsafe_allow_html=True)
+                with _qb:
+                    if st.button("↩️ เลิกทำ", key=f"tb_qundo_{_n['room']}",
+                                 width='stretch', help="คืนลำดับคิวก่อนการเปลี่ยนครั้งนี้"):
+                        queue_undo(cases, mark_dirty)
+                        try:
+                            from main_or_pages import _toast_ok
+                            _toast_ok("คืนลำดับคิวเดิมแล้ว ↩️")
+                        except Exception:
+                            pass
+                        _rerun_board()
+            else:
+                st.markdown(queue_notice_html(_n), unsafe_allow_html=True)
+    except Exception as _qnx:
+        print(f"[queue] แสดงข้อความแจ้งเปลี่ยนคิวไม่สำเร็จ: {_qnx}")
 
     def _pick(*statuses):
         return [r for r in rows if r[2] in statuses]
@@ -1357,6 +1445,29 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                             _toast_ok("บันทึกแล้ว ✓")
                         except Exception:
                             pass
+                        _rerun_board()
+
+                # 🔀 15 พ.ย. 2026 (มุกกี้สั่ง): ทำเป็นคิวถัดไป : แพทย์เปลี่ยนลำดับระหว่างวัน
+                #    จอรับ-ส่งกดได้ทุกห้อง · โหมดจอห้องกดได้เฉพาะเคสห้องตัวเอง
+                try:
+                    from call_queue import can_make_next as _can_qn
+                    _all_cases = st.session_state.get('patient_cases') or []
+                    _qn_ok = ((_scope is None or _scope == R)
+                              and _can_qn(_all_cases, c))
+                except Exception as _qnx:
+                    print(f"[queue] ตรวจสิทธิ์เปลี่ยนคิวไม่สำเร็จ: {_qnx}")
+                    _qn_ok = False
+                if _qn_ok:
+                    st.caption("🔀 ลำดับคิว")
+                    if st.button("⬆️ ทำเป็นคิวถัดไป", key=f"tb_qn_{K}", width='stretch',
+                                 help="เคสนี้ขึ้นเป็นคิวถัดไปของห้อง ที่เหลือเลื่อนลงตามลำดับเดิม"):
+                        _src = 'board' if _scope is None else f'room:{_scope}'
+                        if queue_make_next(_all_cases, c, _src, mark_dirty):
+                            try:
+                                from main_or_pages import _toast_ok
+                                _toast_ok("เปลี่ยนคิวถัดไปแล้ว 🔀")
+                            except Exception:
+                                pass
                         _rerun_board()
 
                 # 🕒 15 พ.ย. 2026 (มุกกี้สั่ง): กดเข้าห้องช้ากว่าความจริง แก้เวลาเข้าห้องได้

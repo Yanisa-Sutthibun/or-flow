@@ -36,6 +36,13 @@ CALL_LEAD_MIN = 30
 # 🔔 กดกระดิ่งเร็วกว่าเวลาแนะนำเกินกี่นาที ให้เตือนว่าผู้ป่วยอาจรอเกิน 1 ชม.
 CALL_EARLY_WARN_MIN = 45
 
+# 🔀 15 พ.ย. 2026: สถานะ "ยังไม่เข้าห้อง" = เคสที่ยังสลับคิวได้
+PENDING = ('not_arrived', 'holding_pre')
+# ฟิลด์ที่การเปลี่ยนคิวแตะ (เก็บค่าก่อนหน้าไว้ให้ ↩️ เลิกทำ)
+_Q_FIELDS = ('ororder', 'ororder_his', 'q_manual', 'q_changed_hhmm',
+             'q_changed_ts', 'q_changed_by')
+_Q_MISSING = '__missing__'
+
 _DEF_TURNOVER = 15   # เตรียมห้อง (นาที) เมื่อไม่มีข้อมูล turnover จริงของห้อง
 
 
@@ -97,12 +104,20 @@ def fmt_hhmm(dt) -> str | None:
 def is_queued(c) -> bool:
     """เคส "จัดคิวแล้ว" = มีลำดับคิวจริงจากตารางผ่าตัด · TF/Manual(99)/ฉุกเฉิน
     ไม่นับ (ตามที่เคาะ: เคสไม่ได้จัดคิว แถบคิวถัดไปว่าง)"""
+    if (c or {}).get('q_manual'):
+        # 🔀 15 พ.ย. 2026: คิวที่คนจัดหน้างาน (ทำเป็นคิวถัดไป) = จัดคิวแล้วเสมอ แม้เป็น TF/เพิ่มเอง
+        return _ord(c) is not None
     return (_ord(c) is not None) and not c.get('is_tf') and not _is_emer(c)
 
 
 def _room_queue_trusted(cases, room) -> bool:
     """เลขคิวในห้อง "ไม่ซ้ำกัน" ถึงถือว่าเชื่อได้ — กติกาเดียวกับป้าย 🔒 ล็อคคิว
     (_sched_order_html): HIS ส่งมา 1 ทั้งห้อง = ยังไม่จัดคิวจริง จะจัดหน้างาน"""
+    # 🔀 15 พ.ย. 2026: ห้องที่คนจัดคิวเองแล้ว เชื่อเลขคิวของเคสที่ยังรออยู่ (ระบบออกเลขให้ไม่ซ้ำ)
+    _man = [_ord(x) for x in cases
+            if _rid(x) == room and x.get('q_manual') and x.get('status') in PENDING]
+    if _man:
+        return None not in _man and len(_man) == len(set(_man))
     orders = []
     for x in cases:
         if _rid(x) != room or x.get('is_tf'):
@@ -154,7 +169,10 @@ def suggested_call_dt(cases, case, now, tov_map=None):
     my_ord = _ord(case)
     ahead = [x for x in cases
              if x is not case and _rid(x) == room and (
-                 x.get('status') == 'holding_pre'
+                 (x.get('status') == 'holding_pre'
+                  # 🔀 คิวที่คนจัดเอง: เคสรอผ่าตัดที่ถูกจัดไว้ "หลัง" เคสนี้ ไม่นับว่าคั่นหน้า
+                  and not (x.get('q_manual') and case.get('q_manual')
+                           and my_ord is not None and (_ord(x) or 0) > my_ord))
                  or (x.get('status') == 'not_arrived' and is_queued(x)
                      and my_ord is not None and (_ord(x) or 0) < my_ord))]
     if t is None:
@@ -218,4 +236,138 @@ def merge_call_forward(out, theirs):
                 out[k] = theirs.get(k)
     except Exception:
         pass
+    return out
+
+
+# ─────────────── 🔀 เปลี่ยนคิวระหว่างวัน (มุกกี้สั่ง 15 พ.ย. 2026) ───────────────
+# แพทย์เปลี่ยนลำดับระหว่างวันได้ และรู้ได้ 2 ทาง (ในห้องผ่าตัด / รับ-ส่งโทรถาม)
+# → ทั้งจอประจำห้องและจอรับ-ส่งกด "ทำเป็นคิวถัดไป" ได้ · กดครั้งเดียว เคสนั้นขึ้นหัวคิว
+# ที่เหลือเลื่อนลงตามลำดับเดิม · เลขคิวใหม่เขียนทับ ororder (ของเดิมเก็บใน ororder_his)
+# ทุกส่วนที่อ่าน ororder อยู่แล้ว (คิวถัดไป/กระดิ่ง/ป้ายคิว) จึงตามเองโดยไม่ต้องแก้
+
+def _ckey(c):
+    """คีย์ระบุเคสในรายการเดียวกัน (id ก่อน ไม่มีค่อยใช้ตัววัตถุ)"""
+    cid = (c or {}).get('id')
+    return f"id:{cid}" if cid not in (None, '') else f"obj:{id(c)}"
+
+
+def _sched_m(c):
+    try:
+        return int(c.get('sched_hour')) * 60 + int(c.get('sched_min') or 0)
+    except (TypeError, ValueError):
+        return 9999
+
+
+def pending_order(cases, room):
+    """เคสที่ยังไม่เข้าห้องของห้องนี้ เรียงตามลำดับที่จะได้ทำ
+    คิวที่คนจัดเอง (q_manual) มาก่อนตามเลขคิว · ที่เหลือ ฉุกเฉิน → เวลานัด → เลขคิว"""
+    pend = [x for x in cases
+            if _rid(x) == room and x.get('status') in PENDING]
+
+    def _k(x):
+        if x.get('q_manual'):
+            return (0, 0, 0, _ord(x) or 999)
+        return (1, 0 if _is_emer(x) else 1, _sched_m(x), _ord(x) or 999)
+    return sorted(pend, key=_k)
+
+
+def can_make_next(cases, case, force=False) -> bool:
+    """กด "ทำเป็นคิวถัดไป" ที่เคสนี้ได้ไหม : ต้องยังไม่เข้าห้อง มีห้องจริง
+    ห้องมีเคสรออย่างน้อย 2 เคส และเคสนี้ยังไม่ได้เป็นหัวคิวอยู่แล้ว
+    force=True (จอประจำห้อง ซึ่งเรียงรายการคนละแบบกับตารางผ่าตัด เช่นไม่ดันเคสฉุกเฉินขึ้นก่อน):
+    ยอมให้กดที่เคสที่เป็นหัวคิวตามกติกาอัตโนมัติได้ เพื่อ "ยืนยันลำดับ" ให้เป็นคิวที่คนจัดเอง
+    จะปฏิเสธเฉพาะเมื่อเคสนั้นเป็นหัวคิวที่คนจัดไว้แล้วจริง ๆ"""
+    room = _rid(case)
+    if room is None or (case or {}).get('status') not in PENDING:
+        return False
+    pend = pending_order(cases, room)
+    if len(pend) < 2:
+        return False
+    if pend[0] is case:
+        return bool(force) and not case.get('q_manual')
+    return True
+
+
+def apply_make_next(cases, case, source, hhmm, ts, force=False):
+    """🔀 ทำเคสนี้เป็นคิวถัดไปของห้อง · คืน None ถ้าทำไม่ได้/ไม่มีอะไรเปลี่ยน
+    คืน {'room','changed':[เคสที่ถูกแก้],'prev':{คีย์:ค่าก่อนหน้า},'ts','old','new'}
+    source = 'board' (จอรับ-ส่ง) หรือ 'room:<เลขห้อง>' · hhmm/ts = เวลาที่กด"""
+    if not can_make_next(cases, case, force=force):
+        return None
+    room = _rid(case)
+    pend = pending_order(cases, room)
+    new = [case] + [x for x in pend if x is not case]
+    # เลขคิวใหม่ต่อจากจำนวนเคสของห้องที่เข้า flow ไปแล้ว (ผ่าอยู่/ผ่าเสร็จ)
+    base = sum(1 for x in cases
+               if _rid(x) == room
+               and x.get('status') not in PENDING + ('removed',))
+    prev = {}
+    for x in pend:
+        prev[_ckey(x)] = {k: x.get(k, _Q_MISSING) for k in _Q_FIELDS}
+    for i, x in enumerate(new):
+        if 'ororder_his' not in x:
+            x['ororder_his'] = x.get('ororder')
+        x['ororder'] = base + i + 1
+        x['q_manual'] = True
+    case['q_changed_hhmm'] = hhmm
+    case['q_changed_ts'] = ts
+    case['q_changed_by'] = source
+    return {'room': room, 'changed': new, 'prev': prev, 'ts': ts,
+            'old': ','.join(_ckey(x) for x in pend),
+            'new': ','.join(_ckey(x) for x in new)}
+
+
+def can_undo_make_next(cases, prev) -> bool:
+    """เลิกทำได้เมื่อทุกเคสในชุดที่ถูกสลับยังไม่เข้าห้อง (ยังอยู่บนบอร์ดและยังรออยู่)"""
+    if not prev:
+        return False
+    seen = 0
+    for x in cases:
+        if _ckey(x) in prev:
+            if x.get('status') not in PENDING:
+                return False
+            seen += 1
+    return seen == len(prev)
+
+
+def apply_undo_make_next(cases, prev):
+    """↩️ คืนค่าคิวก่อนการกดครั้งล่าสุด (prev จาก apply_make_next) · คืนรายการเคสที่ถูกแก้
+    ถ้ามีเคสในชุดนั้นเข้าห้องไปแล้ว = ลำดับเกิดขึ้นจริงแล้ว เลิกทำไม่ได้ (คืน [] ไม่แตะอะไร)
+    กันเลขคิวซ้ำกับเคสที่เดินหน้าไปแล้ว"""
+    if not can_undo_make_next(cases, prev):
+        return []
+    changed = []
+    for x in cases:
+        p = (prev or {}).get(_ckey(x))
+        if p is None:
+            continue
+        for k, v in p.items():
+            if v == _Q_MISSING:
+                x.pop(k, None)
+            else:
+                x[k] = v
+        changed.append(x)
+    return changed
+
+
+def queue_notices(cases, now_ts, window_s=600):
+    """ข้อความแจ้ง "ห้องนี้เพิ่งเปลี่ยนคิว" ให้ทุกจอเห็นตรงกัน (อ่านจากเคสบนบอร์ดกลาง)
+    คืน [{'room','case','hhmm','by','ts','called'}] ต่อห้อง 1 รายการ = การเปลี่ยนล่าสุด
+    ภายใน window_s วินาที และเคสนั้นยังเป็นหัวคิวที่รออยู่ · called = เคสอื่นในห้อง
+    ที่ถูกกดกระดิ่งเรียกไว้ก่อนแล้ว (ผู้ป่วยอาจกำลังมา ต้องให้คนเห็น)"""
+    out = []
+    for room in sorted({_rid(c) for c in cases} - {None}):
+        pend = pending_order(cases, room)
+        if not pend:
+            continue
+        head = pend[0]
+        ts = head.get('q_changed_ts')
+        try:
+            if ts is None or (float(now_ts) - float(ts)) > window_s:
+                continue
+        except (TypeError, ValueError):
+            continue
+        called = next((x for x in pend[1:] if x.get('call_time') is not None), None)
+        out.append({'room': room, 'case': head, 'hhmm': head.get('q_changed_hhmm'),
+                    'by': head.get('q_changed_by'), 'ts': ts, 'called': called})
     return out
