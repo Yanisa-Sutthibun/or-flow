@@ -160,8 +160,11 @@ def _ensure_table(conn):
         # 🔔 ระบบเรียกคิว (13 ส.ค. 2026): เวลาเรียกจริง + เวลาแผน + จอที่กด —
         #    ตอบตัวชี้วัด "เรียกแล้วผู้ป่วยรอไม่เกิน 60 นาที" ได้ตรง ๆ
         #    (called_at → arrived_holding_at → entered_or_at อยู่แถวเดียวกัน)
+        # 🕒 15 พ.ย. 2026 (มุกกี้สั่ง): entered_or_pressed_at = เวลาที่กดปุ่มเข้าห้องจริง
+        #    มีค่าเฉพาะเคสที่ถูกแก้เวลาเข้าห้องภายหลัง (entered_or_at = เวลาที่แก้แล้ว)
+        #    ว่าง = ไม่เคยแก้ entered_or_at คือเวลากดปุ่มตามเดิม
         for _ck, _ct in (('called_at', 'TEXT'), ('call_planned_hhmm', 'TEXT'),
-                         ('call_source', 'TEXT')):
+                         ('call_source', 'TEXT'), ('entered_or_pressed_at', 'TEXT')):
             if _ck not in _cols:
                 conn.execute(f"ALTER TABLE research_case_log ADD COLUMN {_ck} {_ct}")
         conn.commit()
@@ -194,7 +197,12 @@ def log_case_state(case) -> bool:
 
         from main_or_db import (get_conn, _mask_staff_for_log, _now,
                                 current_actor)
-        now = _now()
+        # 🐛 15 พ.ย. 2026 (เจอระหว่างทดสอบ แจ้งมุกกี้แล้ว): main_or_db._now() คืน "ข้อความ"
+        #    ไม่ใช่ datetime → now.date() ล้มทุกครั้ง ถูก except ด้านล่างกลืน คืน False เงียบ ๆ
+        #    = research_case_log ไม่เคยถูกเขียนจากปุ่มบนบอร์ดเลยตั้งแต่ 18 ก.ค. 2026
+        #    แก้: ใช้ datetime เวลาไทยตรงนี้เอง (รูปแบบเดียวกับ time_* ของเคสบนบอร์ด)
+        from datetime import datetime as _dtm, timezone as _tzc, timedelta as _tdl
+        now = _dtm.now(_tzc(_tdl(hours=7)))
         log_date = now.date().isoformat()
 
         # ── เตรียมค่าจาก case dict (ความจริงล่าสุด รวมผล undo แล้ว) ──
@@ -233,6 +241,7 @@ def log_case_state(case) -> bool:
             'sched_time': sched,
             'arrived_holding_at': _iso(arrived),
             'entered_or_at': _iso(entered),
+            'entered_or_pressed_at': _iso(case.get('time_entered_or_pressed')),
             'exited_or_at': _iso(exited),
             'discharged_at': _iso(disch),
             'wait_holding_min': _mins(arrived, entered),
@@ -256,6 +265,15 @@ def log_case_state(case) -> bool:
         conn = get_conn()
         try:
             _ensure_table(conn)
+            # 🛟 15 พ.ย. 2026: ถ้าเติมคอลัมน์ใหม่ไม่สำเร็จ (สิทธิ์ ALTER บน cloud) อย่าให้
+            #    log วิจัยของทุกเคสล้มตาม → ตัดคอลัมน์นั้นออกจากรอบนี้แล้วเขียนส่วนที่เหลือ
+            try:
+                from main_or_db import _table_columns as _tcols
+                if 'entered_or_pressed_at' not in _tcols(conn, 'research_case_log'):
+                    vals.pop('entered_or_pressed_at', None)
+                    print("[research_log] ไม่มีคอลัมน์ entered_or_pressed_at : ข้ามคอลัมน์นี้")
+            except Exception:
+                vals.pop('entered_or_pressed_at', None)
             row = conn.execute(
                 "SELECT id, exit_to, actual_or_min, actual_source "
                 "FROM research_case_log WHERE log_date=? AND case_ref=?",

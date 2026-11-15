@@ -366,6 +366,47 @@ def apply_finish(cases, idx, R, dest):
     return True
 
 
+def apply_edit_entered(c, new_t, now=None):
+    """🕒 15 พ.ย. 2026 (มุกกี้สั่ง): แก้เวลาเข้าห้องเมื่อกดปุ่มช้ากว่าความจริง
+    new_t = datetime.time (ชั่วโมง:นาที ของวันเดียวกับที่กดเข้าห้อง)
+    คืน '' ถ้าสำเร็จ หรือข้อความเหตุผลถ้าไม่รับ (ไม่แตะเคสเลย)
+    กติกา: เฉพาะเคสกำลังผ่า · ไม่เกินเวลาปัจจุบัน · ไม่ก่อนเวลารับเข้า
+    เวลาที่กดปุ่มจริงครั้งแรกเก็บไว้ที่ time_entered_or_pressed (ไม่ถูกทับเมื่อแก้ซ้ำ)
+    แล้ว upsert research_case_log ให้มีทั้งเวลาที่แก้และเวลาที่กดจริง"""
+    if c.get('status') != 'in_or':
+        return 'แก้เวลาเข้าห้องได้เฉพาะเคสที่กำลังผ่า'
+    ent = c.get('time_entered_or')
+    if ent is None or not hasattr(ent, 'hour'):
+        return 'เคสนี้ยังไม่มีเวลาเข้าห้อง'
+    now = now or _now()
+    new_dt = ent.replace(hour=new_t.hour, minute=new_t.minute, second=0, microsecond=0)
+    if (new_dt.hour, new_dt.minute) == (ent.hour, ent.minute):
+        return ''
+    if new_dt > now:
+        return 'เวลาเข้าห้องต้องไม่เกินเวลาปัจจุบัน'
+    arr = c.get('time_arrived_holding')
+    if arr is not None and hasattr(arr, 'hour'):
+        if new_dt < arr.replace(second=0, microsecond=0):
+            return f'เวลาเข้าห้องต้องไม่ก่อนเวลารับเข้า ({arr.strftime("%H:%M")} น.)'
+    elif (ent - new_dt) > timedelta(minutes=180):
+        return 'ย้อนเวลาเข้าห้องได้ไม่เกิน 3 ชั่วโมง'
+    c.setdefault('time_entered_or_pressed', ent)
+    c['time_entered_or'] = new_dt
+    try:
+        _rk = c.get('or_room_assigned') or 1
+        _rm = st.session_state.or_rooms.get(_rk)
+        if isinstance(_rm, dict):
+            _rm['start_time'] = new_dt
+    except Exception:
+        pass
+    try:
+        from research_log import log_case_state
+        log_case_state(c)
+    except Exception as _rx:
+        print(f"[research_log] ข้าม: {_rx}")
+    return ''
+
+
 def apply_undo_finish(cases, idx):
     """↩️ state machine กลาง: ย้อนผลการกดเสร็จ (holding_post/recovery → in_or)
     สกัดจาก _do_undo (2 ส.ค. 2026) — บอร์ดและจอโฟกัส (demo) ใช้เส้นทางเดียวกัน
@@ -1445,8 +1486,10 @@ def _board_fragment():
         #    กด 🔄 เอง (_board_user_pull) = ดึงเสมอ ไม่ถูกเลื่อน
         def _editing_in_progress():
             try:
+                from tracking_board import widget_keys as _wk   # 🔑 คีย์ชุดเดียวกับบอร์ด
+                _wkm = _wk(cases)
                 for _i, _c in enumerate(cases):
-                    _v = st.session_state.get(f'tb_ov_{_i}')
+                    _v = st.session_state.get(f'tb_ov_{_wkm.get(_i, _i)}')
                     if _v is None:
                         continue
                     _e = (_c.get('effective_min') or _c.get('ai_predicted_min')
@@ -1903,6 +1946,7 @@ def _board_fragment():
         elif s == 'in_or':
             c['status'] = 'holding_pre'
             c['time_entered_or'] = None
+            c.pop('time_entered_or_pressed', None)   # 🕒 ย้อนเข้าห้อง = ล้างเวลากดจริงด้วย
             _rk = c.get('or_room_assigned') or 1
             st.session_state.or_rooms.setdefault(_rk, {}).update(
                 {'status': 'ว่าง', 'current_case': None, 'start_time': None})
@@ -2346,15 +2390,36 @@ def _room_focus_fragment(room_no):
                       if _r(cases[i]) == room_no
                       and cases[i].get('status') in ('holding_post', 'recovery')),
                      None)
-    if done_last is not None:
+    # 🩹 15 พ.ย. 2026 (มุกกี้สั่ง): (1) ห้องมีเคสใหม่กำลังผ่าแล้ว = ไม่ให้ย้อนเคสก่อนหน้า
+    #    (เดิมย้อนได้ → ห้องเดียวมีเคสกำลังผ่า 2 ราย) (2) ต้องกดยืนยันอีกครั้ง กันแตะพลาด
+    #    ปุ่มนี้ค้างบนจอทั้งวันและกดด้วยถุงมือ · คำยืนยันผูกกับรหัสเคส ไม่ค้างข้ามเคส
+    _room_busy_now = any(_r(_x) == room_no and _x.get('status') == 'in_or'
+                         for _x in cases)
+    if done_last is not None and not _room_busy_now:
         _cu = cases[done_last]
-        if st.button(f"↩️ เลิกทำ : ดึง {mask_patient_name(_cu.get('name') or '-')} "
-                     f"กลับเป็นกำลังผ่า", key="rf_undo"):
-            if apply_undo_finish(cases, done_last):
-                _save_board_snapshot(cases)
-                st.session_state['_board_dirty'] = False
-                _toast_ok("ย้อนสถานะแล้ว ↩️")
-            _rerun_board()
+        _uk = str(_cu.get('id') or done_last)
+        if st.session_state.get('_rf_undo_ask') != _uk:
+            if st.button(f"↩️ เลิกทำ : ดึง {mask_patient_name(_cu.get('name') or '-')} "
+                         f"กลับเป็นกำลังผ่า", key="rf_undo"):
+                st.session_state['_rf_undo_ask'] = _uk
+                _rerun_board()
+        else:
+            st.warning(f"ยืนยันดึง {mask_patient_name(_cu.get('name') or '-')} "
+                       f"กลับเป็นกำลังผ่า")
+            _u1, _u2 = st.columns(2)
+            if _u1.button("ยืนยัน เลิกทำ", key="rf_undo_ok", type="primary",
+                          width='stretch'):
+                st.session_state.pop('_rf_undo_ask', None)
+                if apply_undo_finish(cases, done_last):
+                    _save_board_snapshot(cases)
+                    st.session_state['_board_dirty'] = False
+                    _toast_ok("ย้อนสถานะแล้ว ↩️")
+                _rerun_board()
+            if _u2.button("ยกเลิก", key="rf_undo_no", width='stretch'):
+                st.session_state.pop('_rf_undo_ask', None)
+                _rerun_board()
+    else:
+        st.session_state.pop('_rf_undo_ask', None)
 
     if st.session_state.get('_board_last_pull_wall'):
         st.caption(f"อัปเดตล่าสุด {st.session_state['_board_last_pull_wall']} · "
