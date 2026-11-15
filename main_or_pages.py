@@ -1400,7 +1400,7 @@ def _render_tryout_intro():
         'background:#fff;max-width:900px;">'
         '<div style="font-size:22px;font-weight:700;color:#0f172a;">'
         'ยินดีต้อนรับสู่การทดลองใช้เครื่องมือวิจัย (try out)</div>'
-        '<div style="font-size:16px;color:#64748b;margin:2px 0 4px;">' + 'ข้อมูลประกอบคำชี้แจง : รู้จักระบบ OR Flow และการทดลองใช้ครั้งนี้' + '</div>'
+        '<div style="font-size:16px;color:#64748b;margin:2px 0 4px;">' + 'ข้อมูลประกอบคำชี้แจง: รู้จักระบบ OR Flow และการทดลองใช้ครั้งนี้' + '</div>'
         + _sec_html +
         '<div style="font-size:18px;font-weight:700;color:#0f172a;margin:14px 0 2px;">'
         'ขั้นตอนทดลองใช้ (ประมาณ 15 นาที)</div>'

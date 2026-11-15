@@ -364,7 +364,7 @@ def queue_notice_html(n) -> str:
     if n.get('called') is not None:
         _txt += f" · {_pt_name(n['called'])} ถูกแจ้งเรียกไว้ก่อนแล้ว"
     return ('<div style="background:#e6f1fb;border:1px solid #b5d4f4;border-radius:10px;'
-            'padding:9px 14px;color:#0c447c;font-size:17px;font-weight:600;">'
+            'padding:9px 14px;margin-bottom:1rem;color:#0c447c;font-size:17px;font-weight:600;">'
             f'🔀 {_txt}</div>')
 
 
