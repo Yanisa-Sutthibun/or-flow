@@ -910,7 +910,7 @@ def _render_alerts(alerts):
         <div class="alert-card {css_class}">
             {_pdot}<span style="font-size:18px;">{icon}</span>
             <div>
-                <div style="font-size:18px;font-weight:600;">{room_label(a['room_no'])} — {_esc(a['procedure'] or '-')}</div>
+                <div style="font-size:18px;font-weight:600;">{room_label(a['room_no'])} : {_esc(a['procedure'] or '-')}</div>
                 <div style="font-size:18px;color:#666;">{_esc(a['name'] or '-')} | {_esc(a['message'])}</div>
             </div>
         </div>
@@ -1166,7 +1166,7 @@ def _render_ai_research_tab():
     def _render_year_block(num, year_be, title, plain, accent, bg, stat, empty_note=None):
         st.markdown(
             f'<div style="border-left:3px solid {accent};padding-left:12px;margin:16px 0 6px;">'
-            f'<div style="font-size:18px;font-weight:600;color:#222;">{num} ปี {year_be} — {title}</div>'
+            f'<div style="font-size:18px;font-weight:600;color:#222;">{num} ปี {year_be} : {title}</div>'
             f'<div style="font-size:18px;color:#777;margin-top:1px;">{plain}</div></div>',
             unsafe_allow_html=True)
         if stat is None:
@@ -2027,6 +2027,8 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
 
     # 📑 Sticky sidebar TOC (Notion-style) — fixed มุมขวา + smooth scroll + collapse
     import streamlit.components.v1 as _hist_components
+    # 🧹 15 พ.ย. 2026: บอก main_or_app ว่ามีสารบัญลอยค้างอยู่ ออกจากหน้านี้ต้องลบทิ้ง
+    st.session_state['_hist_toc_live'] = True
     # 📊 15 พ.ย. 2026 (มุกกี้สั่ง · DEMO): ชื่อหัวข้อในสารบัญตรงกับหัวข้อจริง "ภาระงานห้องผ่าตัด"
     try:
         _toc_trend = ('📊 ภาระงานห้องผ่าตัด'
@@ -2266,7 +2268,7 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
                 csv_bytes = df_export.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
                 fname_csv = f"main_or_data_{_now_bkk().strftime('%Y%m%d_%H%M')}.csv"
                 st.download_button(
-                    label=f"📥 ข้อมูลดิบ (CSV — {len(df_export)} เคส)",
+                    label=f"📥 ข้อมูลดิบ (CSV : {len(df_export)} เคส)",
                     data=csv_bytes,
                     file_name=fname_csv,
                     mime='text/csv',
@@ -3735,12 +3737,12 @@ def _render_after_hours_admin(op_date: str):
             st.markdown("**หัตถการนอกเวลา**")
             proc_counts = done_aft['procedure_name'].str.upper().value_counts().head(5)
             for proc_name, n in proc_counts.items():
-                st.markdown(f"- {proc_name} — {n} ราย")
+                st.markdown(f"- {proc_name} : {n} ราย")
         with col_r:
             st.markdown("**แพทย์นอกเวลา**")
             surg_counts = done_aft['surgeon_name'].value_counts().head(5)
             for surg, n in surg_counts.items():
-                st.markdown(f"- {surg} — {n} ราย")
+                st.markdown(f"- {surg} : {n} ราย")
 
 
 def _render_daily_summary():

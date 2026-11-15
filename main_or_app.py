@@ -1299,6 +1299,16 @@ def main():
     # ========================================================================
     # PAGE ROUTING — เรียกหน้าตามที่ user เลือกจากแท็บบนสุด
     # ========================================================================
+    # 🧹 15 พ.ย. 2026 (เจอตอนซ้อม try out · มุกกี้สั่งทดสอบระบบ): สารบัญลอยของหน้า
+    #    สถิติย้อนหลัง ถูกฉีดเข้าหน้าหลัก (window.parent) จึงค้างอยู่เมื่อเปลี่ยนแท็บ
+    #    แล้วบังปุ่ม รับเข้า/เข้าห้อง/เสร็จ ปุ่ม ⋯ และรีเฟรช ของตารางผ่าตัด
+    #    → ออกจากหน้าสถิติเมื่อไร ลบทิ้งหนึ่งครั้ง (ธง _hist_toc_live ตั้งที่ main_or_admin)
+    if page != "📈 สถิติย้อนหลัง" and st.session_state.pop('_hist_toc_live', False):
+        components.html(
+            "<script>['hist-toc','hist-toc-mini'].forEach(function(i){"
+            "var e=window.parent.document.getElementById(i);if(e){e.remove();}});</script>",
+            height=0)
+
     if page == "📋 ตารางผ่าตัด":
         page_or_board()
     elif page == "🗓️ จัดคิว AI":
