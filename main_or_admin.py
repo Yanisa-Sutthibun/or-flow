@@ -2458,12 +2458,20 @@ def _hist_sec_trend(date_from, date_to, data=None):
     # ════════════════════════════════════════════════════════════════
     # 3️⃣  📈 กราฟจำนวนเคสรายเดือน — เคสรายวัน + heatmap (เห็น pattern)
     # ════════════════════════════════════════════════════════════════
-    st.markdown('<div id="sec-trend" class="group-header purple">📈 กราฟจำนวนเคสรายเดือน</div>',
-                unsafe_allow_html=True)
+    # 📊 15 พ.ย. 2026 (มุกกี้สั่ง · DEMO): รวบเป็น "ภาระงานห้องผ่าตัด" 3 ชั้น
+    #    เดือนไหน → วันไหน → ช่วงเวลาไหน ใช้กราฟแท่งชุดสีเดียวกัน · production เดิม
+    try:
+        _demo_trend = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        _demo_trend = False
+    st.markdown('<div id="sec-trend" class="group-header purple">'
+                + ('📊 ภาระงานห้องผ่าตัด' if _demo_trend else '📈 กราฟจำนวนเคสรายเดือน')
+                + '</div>', unsafe_allow_html=True)
 
     # 📅 รายเดือน — Monthly trend (main view) + KPI cards + expander Heatmap
-    st.markdown('<div class="sub-title">📅 จำนวนเคสรายเดือน</div>',
-                unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">'
+                + ('📅 เดือนไหนงานหนัก' if _demo_trend else '📅 จำนวนเคสรายเดือน')
+                + '</div>', unsafe_allow_html=True)
     daily = data['daily_total']
     if not daily.empty:
         # เตรียม monthly aggregation
@@ -2521,38 +2529,49 @@ def _hist_sec_trend(date_from, date_to, data=None):
             _trend_sub = 'ข้อมูลไม่พอ'
 
         # 🎴 3 KPI cards (รวม · เดือนเยอะสุด · แนวโน้ม)
-        k1, k2, k3 = st.columns(3)
-        with k1:
+        if not _demo_trend:
+            k1, k2, k3 = st.columns(3)
+            with k1:
+                st.markdown(
+                    f'<div style="background:#e3f2fd;border-radius:10px;'
+                    f'padding:14px 16px;border-left:5px solid #1976d2;">'
+                    f'<div style="font-size:18px;color:#1565c0;">รวมทั้งช่วง</div>'
+                    f'<div style="font-size:32px;font-weight:600;color:#0d47a1;'
+                    f'line-height:1;margin:4px 0;">{_total_all:,}</div>'
+                    f'<div style="font-size:18px;color:#1565c0;">เคส</div>'
+                    f'</div>', unsafe_allow_html=True)
+            with k2:
+                st.markdown(
+                    f'<div style="background:#ffebee;border-radius:10px;'
+                    f'padding:14px 16px;border-left:5px solid #c62828;">'
+                    f'<div style="font-size:18px;color:#b71c1c;">เดือนเยอะสุด</div>'
+                    f'<div style="font-size:32px;font-weight:600;color:#c62828;'
+                    f'line-height:1;margin:4px 0;">{_peak_month}</div>'
+                    f'<div style="font-size:18px;color:#b71c1c;">'
+                    f'{_peak_count} เคส</div>'
+                    f'</div>', unsafe_allow_html=True)
+            with k3:
+                st.markdown(
+                    f'<div style="background:{_trend_bg};border-radius:10px;'
+                    f'padding:14px 16px;border-left:5px solid {_trend_color};">'
+                    f'<div style="font-size:18px;color:{_trend_text_color};">'
+                    f'แนวโน้มล่าสุด</div>'
+                    f'<div style="font-size:32px;font-weight:600;'
+                    f'color:{_trend_color};line-height:1;margin:4px 0;">'
+                    f'{_trend_label}</div>'
+                    f'<div style="font-size:18px;color:{_trend_text_color};">'
+                    f'{_trend_sub}</div>'
+                    f'</div>', unsafe_allow_html=True)
+
+        if _demo_trend:
+            _tr_txt = {'▼ ลด': 'ลดลงจาก', '▲ เพิ่ม': 'เพิ่มขึ้นจาก',
+                       '▬ คงที่': 'เท่ากับ'}.get(_trend_label)
+            _tr_line = (f' · เดือนล่าสุด{_tr_txt}เดือนก่อน' if _tr_txt else '')
             st.markdown(
-                f'<div style="background:#e3f2fd;border-radius:10px;'
-                f'padding:14px 16px;border-left:5px solid #1976d2;">'
-                f'<div style="font-size:18px;color:#1565c0;">รวมทั้งช่วง</div>'
-                f'<div style="font-size:32px;font-weight:600;color:#0d47a1;'
-                f'line-height:1;margin:4px 0;">{_total_all:,}</div>'
-                f'<div style="font-size:18px;color:#1565c0;">เคส</div>'
-                f'</div>', unsafe_allow_html=True)
-        with k2:
-            st.markdown(
-                f'<div style="background:#ffebee;border-radius:10px;'
-                f'padding:14px 16px;border-left:5px solid #c62828;">'
-                f'<div style="font-size:18px;color:#b71c1c;">เดือนเยอะสุด</div>'
-                f'<div style="font-size:32px;font-weight:600;color:#c62828;'
-                f'line-height:1;margin:4px 0;">{_peak_month}</div>'
-                f'<div style="font-size:18px;color:#b71c1c;">'
-                f'{_peak_count} เคส</div>'
-                f'</div>', unsafe_allow_html=True)
-        with k3:
-            st.markdown(
-                f'<div style="background:{_trend_bg};border-radius:10px;'
-                f'padding:14px 16px;border-left:5px solid {_trend_color};">'
-                f'<div style="font-size:18px;color:{_trend_text_color};">'
-                f'แนวโน้มล่าสุด</div>'
-                f'<div style="font-size:32px;font-weight:600;'
-                f'color:{_trend_color};line-height:1;margin:4px 0;">'
-                f'{_trend_label}</div>'
-                f'<div style="font-size:18px;color:{_trend_text_color};">'
-                f'{_trend_sub}</div>'
-                f'</div>', unsafe_allow_html=True)
+                f'<div style="font-size:20px;font-weight:700;color:#0f172a;margin:2px 0 0;">'
+                f'เดือนที่หนักสุด {_peak_month} · {_peak_count} เคส</div>'
+                f'<div style="font-size:15px;color:#64748b;">รวมทั้งช่วง {_total_all:,} เคส'
+                f'{_tr_line}</div>', unsafe_allow_html=True)
 
         # 📈 Monthly line chart (เส้นเวลาต่อเนื่อง + peak ★)
         # ช่วงยาวหลายปี (>18 เดือน) → ลดความรก: โชว์ label เฉพาะ peak,
@@ -2573,20 +2592,30 @@ def _hist_sec_trend(date_from, date_to, data=None):
             for v in _monthly['total']
         ]
         fig_m_main = go.Figure()
-        fig_m_main.add_trace(go.Scatter(
-            x=_monthly['month_th'], y=_monthly['total'],
-            mode='lines+markers+text',
-            line=dict(color='#1976d2', width=2 if _many_m else 3),
-            marker=dict(size=_marker_sizes, color=_marker_colors,
-                        line=dict(width=2, color='white')),
-            text=_text_labels,
-            textposition='top center',
-            textfont=dict(size=14, color='#0d47a1'),
-            fill='tozeroy',
-            fillcolor='rgba(25, 118, 210, 0.10)',
-            hovertemplate='<b>%{x}</b><br>%{y} เคส<extra></extra>',
-            cliponaxis=False,  # ไม่ตัด label เมื่อชน edge
-        ))
+        if not _demo_trend:
+            fig_m_main.add_trace(go.Scatter(
+                x=_monthly['month_th'], y=_monthly['total'],
+                mode='lines+markers+text',
+                line=dict(color='#1976d2', width=2 if _many_m else 3),
+                marker=dict(size=_marker_sizes, color=_marker_colors,
+                            line=dict(width=2, color='white')),
+                text=_text_labels,
+                textposition='top center',
+                textfont=dict(size=14, color='#0d47a1'),
+                fill='tozeroy',
+                fillcolor='rgba(25, 118, 210, 0.10)',
+                hovertemplate='<b>%{x}</b><br>%{y} เคส<extra></extra>',
+                cliponaxis=False,  # ไม่ตัด label เมื่อชน edge
+            ))
+        if _demo_trend:
+            fig_m_main.add_trace(go.Bar(
+                x=_monthly['month_th'], y=_monthly['total'],
+                marker_color=['#c62828' if v == _peak_count else '#4fc3f7'
+                              for v in _monthly['total']],
+                text=[(f'{v}' if (not _many_m or v == _peak_count) else '')
+                      for v in _monthly['total']],
+                textposition='outside', cliponaxis=False,
+                hovertemplate='<b>%{x}</b><br>%{y} เคส<extra></extra>'))
         _xaxis_m = dict(title='', tickfont=dict(size=11 if _many_m else 14))
         if _many_m:
             _xaxis_m['dtick'] = 6   # โชว์ tick ทุก 6 เดือน
@@ -2601,12 +2630,14 @@ def _hist_sec_trend(date_from, date_to, data=None):
         )
         st.plotly_chart(fig_m_main, use_container_width=True)
         st.caption(
+            "💡 แท่งแดง = เดือนที่เคสเยอะสุด · ชี้ที่แท่งเพื่อดูจำนวนเคส"
+            if _demo_trend else
             "💡 จุดแดง ★ = เดือนที่เคสเยอะสุด · "
             "พื้นที่ฟ้าอ่อน = ระดับเคส · "
             "hover ดูจำนวนเคส")
 
         # ⤵️ ซ่อน Calendar Heatmap ใน expander — แยกเดือน + wk 1-4
-        with st.expander("📅 ดูแนวโน้มรายวัน (กราฟเส้น)"):
+        with st.expander("📅 ดูรายวัน" if _demo_trend else "📅 ดูแนวโน้มรายวัน (กราฟเส้น)"):
             # Stat summary
             _max_n_d = int(_daily_h['n_cases'].max())
             _max_date_d = _daily_h.loc[_daily_h['n_cases'].idxmax(), 'op_date']
@@ -2635,29 +2666,36 @@ def _hist_sec_trend(date_from, date_to, data=None):
             fig_line.add_trace(go.Bar(
                 x=_cal_df_wd['_dt'], y=_cal_df_wd['n_cases'],
                 name='เคสต่อวัน',
-                marker=dict(color='#bbdefb', line=dict(width=0)),
+                marker=dict(color=(['#c62828' if v == _max_n_d else '#4fc3f7'
+                                    for v in _cal_df_wd['n_cases']]
+                                   if _demo_trend else '#bbdefb'), line=dict(width=0)),
                 hovertemplate='<b>%{x|%d %b %Y (%a)}</b><br>%{y} เคส<extra></extra>',
             ))
-            # Line (rolling avg) — main signal
-            fig_line.add_trace(go.Scatter(
-                x=_cal_df_wd['_dt'], y=_cal_df_wd['rolling_avg'],
-                name='ค่าเฉลี่ย 7 วัน',
-                mode='lines',
-                line=dict(color='#1565c0', width=3),
-                hovertemplate='<b>%{x|%d %b %Y}</b><br>เฉลี่ย 7 วัน: %{y:.1f} เคส<extra></extra>',
-            ))
-            # Mark peak day
-            _peak_dt = pd.to_datetime(_max_date_d)
-            fig_line.add_trace(go.Scatter(
-                x=[_peak_dt], y=[_max_n_d],
-                name=f'⭐ Peak ({_max_n_d} เคส)',
-                mode='markers+text',
-                marker=dict(size=14, color='#d32f2f',
-                            line=dict(color='white', width=2)),
-                text=[f'{_max_n_d}'], textposition='top center',
-                textfont=dict(color='#d32f2f', size=11, family='Inter'),
-                hovertemplate=f'<b>วันที่เคสเยอะสุด</b><br>{_max_date_th_d}<br>{_max_n_d} เคส<extra></extra>',
-            ))
+            if not _demo_trend:
+                # Line (rolling avg) — main signal
+                fig_line.add_trace(go.Scatter(
+                    x=_cal_df_wd['_dt'], y=_cal_df_wd['rolling_avg'],
+                    name='ค่าเฉลี่ย 7 วัน',
+                    mode='lines',
+                    line=dict(color='#1565c0', width=3),
+                    hovertemplate='<b>%{x|%d %b %Y}</b><br>เฉลี่ย 7 วัน: %{y:.1f} เคส<extra></extra>',
+                ))
+                # Mark peak day
+                _peak_dt = pd.to_datetime(_max_date_d)
+                fig_line.add_trace(go.Scatter(
+                    x=[_peak_dt], y=[_max_n_d],
+                    name=f'⭐ Peak ({_max_n_d} เคส)',
+                    mode='markers+text',
+                    marker=dict(size=14, color='#d32f2f',
+                                line=dict(color='white', width=2)),
+                    text=[f'{_max_n_d}'], textposition='top center',
+                    textfont=dict(color='#d32f2f', size=11, family='Inter'),
+                    hovertemplate=f'<b>วันที่เคสเยอะสุด</b><br>{_max_date_th_d}<br>{_max_n_d} เคส<extra></extra>',
+                ))
+            if _demo_trend:
+                fig_line.add_hline(y=_avg_per_day_d, line_dash='dash', line_color='#64748b',
+                                   annotation_text=f'เฉลี่ย {_avg_per_day_d} เคส/วัน',
+                                   annotation_position='top left')
             fig_line.update_layout(
                 height=340,
                 margin=dict(t=20, b=40, l=40, r=20),
@@ -2683,6 +2721,9 @@ def _hist_sec_trend(date_from, date_to, data=None):
                 f'เฉลี่ย/วัน {_avg_per_day_d} เคส</span></div>',
                 unsafe_allow_html=True)
             st.caption(
+                "💡 แต่ละแท่ง = จำนวนเคสของวันนั้น · แท่งแดง = วันที่เคสเยอะสุด · "
+                "เส้นประ = ค่าเฉลี่ยต่อวัน · เฉพาะวันธรรมดา (จ-ศ)"
+                if _demo_trend else
                 "💡 แท่งฟ้าอ่อน = จำนวนเคสจริงของวันนั้น · "
                 "เส้นน้ำเงิน = ค่าเฉลี่ยเคลื่อนที่ 7 วัน (smooth trend) · "
                 "★ จุดแดง = peak day · เฉพาะวันธรรมดา (จ-ศ)")
@@ -2697,9 +2738,10 @@ def _hist_sec_trend(date_from, date_to, data=None):
         (_df_dow_section['op_date'] <= date_to) &
         (_df_dow_section['status'] != 'cancelled')]
     if not _df_dow_section.empty:
-        st.markdown('<div class="sub-title">📊 เฉลี่ยเคสตามวันในสัปดาห์ '
-                    '(วันไหนงานหนักสุด)</div>',
-                    unsafe_allow_html=True)
+        st.markdown('<div class="sub-title">'
+                    + ('📆 วันไหนงานหนัก' if _demo_trend else
+                       '📊 เฉลี่ยเคสตามวันในสัปดาห์ (วันไหนงานหนักสุด)')
+                    + '</div>', unsafe_allow_html=True)
         _dow_df = _df_dow_section.copy()
         _dow_df['_dt'] = pd.to_datetime(_dow_df['op_date'])
         _dow_df['dow'] = _dow_df['_dt'].dt.dayofweek
