@@ -271,23 +271,6 @@ def _queue_label(c):
     return (o, False)
 
 
-def _room_prefix_html(c, loc, tlabel, emer=False) -> str:
-    """🏠 15 พ.ย. 2026 (มุกกี้สั่ง): ช่องห้องผ่าตัดอยู่ซ้ายสุดนอกการ์ด : ลำดับช่อง = ห้อง / คิว / คิวถัดไป / การ์ด / ปุ่ม / ดินสอ
-    ห้องบรรทัดบน · เวลานัด (หรือป้ายฉุกเฉิน) บรรทัดล่าง"""
-    head = str(loc(c) or '').partition(' · ')[0]
-    if emer:
-        sub = ('<span style="color:#c0392b;font-weight:600;cursor:help;" '
-               'title="เคสฉุกเฉิน : อยู่นอกขอบเขตวิจัย (เก็บเฉพาะ elective ในเวลา)">'
-               '<span class="emg-dot"></span>ฉุกเฉิน</span>')
-    else:
-        sub = _esc(tlabel(c))
-    return (f'<div style="height:{_ROW_H}px;padding:4px 0 0 6px;overflow:hidden;">'
-            f'<span style="display:block;font-size:20px;font-weight:600;color:{_room_fg_default()};'
-            f'line-height:1.15;white-space:nowrap;">{_esc(head)}</span>'
-            f'<span style="display:block;font-size:14px;color:#94a3b8;line-height:1.3;'
-            f'white-space:nowrap;">{sub}</span></div>')
-
-
 def _queue_prefix_html(c, emer=False) -> str:
     """🔀 15 พ.ย. 2026 (มุกกี้สั่ง): เลขคิวตัวใหญ่หน้าการ์ด : ปุ่มคิวถัดไปอยู่ช่องถัดไปติดกัน
     คิวจากตารางเดิมมีแม่กุญแจเล็ก · คิวที่ปรับหน้างานเป็นป้ายฟ้า ไม่มีแม่กุญแจ"""
@@ -657,8 +640,24 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         st.markdown(f'<div style="font-size:var(--fs-meta);color:#94a3b8;'
                     f'margin:6px 0 0 4px;">{txt}</div>', unsafe_allow_html=True)
 
-    def _rows(rs):
+    def _rows(rs, by_room=False):
+        # 🏠 15 พ.ย. 2026 (มุกกี้เลือกแบบ ก): กลุ่มก่อนผ่าตัดมีหัวห้องคั่น ชื่อห้องขึ้นครั้งเดียว
+        #    แถวข้างใต้ขึ้นต้นด้วยเลขคิว · เฉพาะแถวแบบ minimal (DEMO)
+        _by = by_room and _minimal_board()
+        _cnt = {}
+        if _by:
+            for _r0 in rs:
+                _cnt[rid(_r0[1])] = _cnt.get(rid(_r0[1]), 0) + 1
+        _last = object()
         for idx, c, disp, eff, elapsed in rs:
+            if _by and rid(c) != _last:
+                _last = rid(c)
+                st.markdown(
+                    '<div style="display:flex;align-items:baseline;gap:10px;'
+                    'border-bottom:1px solid #cbd5e1;padding:0 2px 4px;margin:14px 0 8px;">'
+                    f'<span style="font-size:19px;font-weight:700;color:#0f172a;">{_esc(loc(c))}</span>'
+                    f'<span style="font-size:14px;color:#64748b;">รอ {_cnt.get(_last, 0)} เคส</span></div>',
+                    unsafe_allow_html=True)
             _render_row(idx, c, disp, eff, elapsed, now, rid(c), busy_rooms,
                         do_arrive, do_enter, do_finish, do_undo, loc, tlabel,
                         room_opts, mark_dirty, tov_map, dup_badges, call_map,
@@ -699,7 +698,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
                 _free_txt = 'ห้องว่าง: ' + ' · '.join(_esc(x) for x in _free)
         if z_pre:
             _zh('ก่อนผ่าตัด', 'Preoperative', len(z_pre))
-            _rows(z_pre)
+            _rows(z_pre, by_room=True)
         _zh('ระยะผ่าตัด', 'Intraoperative', len(z_or), right=_free_txt)
         if z_or:
             _rows(z_or)
@@ -815,8 +814,8 @@ _BOARD_COLS = [10, 0.7, 1.35, 0.7]
 #    ✏️ และ ↩️ ย้ายเข้าเมนู ⋯ ประจำแถว · production ยังใช้ _BOARD_COLS เดิม
 _BOARD_COLS_MIN = [10, 1.35, 0.55]
 # 🔀 15 พ.ย. 2026 (มุกกี้สั่ง): แถวเคสที่ยังไม่เข้าห้อง มี [เลขคิวตัวใหญ่, ปุ่มคิวถัดไป] นำหน้าการ์ด
-#    ลำดับช่อง: ห้อง / คิว / คิวถัดไป / การ์ด / ปุ่มหลัก / ✏️ · ผลรวมสัดส่วนเท่าเดิม ปุ่มหลักกับ ✏️ จึงตรงแนวกับกลุ่มอื่น
-_BOARD_COLS_MIN_Q = [0.85, 0.8, 1.15, 7.2, 1.35, 0.55]
+#    หัวห้องคั่นแต่ละห้อง (ดู _rows) แล้วลำดับช่อง: คิว / คิวถัดไป / การ์ด / ปุ่มหลัก / ✏️ · ผลรวมสัดส่วนเท่าเดิม ปุ่มหลักกับ ✏️ จึงตรงแนวกับกลุ่มอื่น
+_BOARD_COLS_MIN_Q = [0.8, 1.15, 8.05, 1.35, 0.55]
 _ROW_H = 70                 # ความสูงแถว (px) — iframe ต้องสูงกว่านี้เล็กน้อย
 _ROW_IFRAME_H = _ROW_H + 8
 
@@ -834,7 +833,7 @@ def _minimal_board() -> bool:
 def _cell_room_q(c, loc, tlabel, emer=False, fg=None):
     """minimal: ห้องบรรทัดบน · เวลานัด (หรือป้ายฉุกเฉิน) บรรทัดล่าง ในช่องเดียว"""
     if getattr(_tl, 'q_prefix', False):
-        return ''               # 🏠 ห้องกับเลขคิวย้ายไปอยู่หน้าการ์ดแล้ว (ดู _room_prefix_html)
+        return ''               # 🏠 ห้องอยู่ที่หัวห้องคั่น เลขคิวอยู่หน้าการ์ด เวลานัดย้ายไปบรรทัดล่างของชื่อ
     fg = fg or _room_fg_default()
     head = str(loc(c) or '').partition(' · ')[0]
     if emer:
@@ -865,13 +864,14 @@ def _cell_pt_op(c, dup_badge='', fg='#0f172a'):
     except Exception:
         pass
     _d = _esc(c.get('surgeon') or '-')
+    _lead = getattr(_tl, 'q_lead', '') if getattr(_tl, 'q_prefix', False) else ''
     return (f'<span style="flex:1;min-width:0;overflow:hidden;">'
             f'<span style="display:block;font-size:18px;font-weight:600;color:{fg};'
             f'line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
             f'{_pt_name(c)}{dup_badge}{_hn}</span>'
             f'<span title="{_p}" style="display:block;font-size:15px;color:#64748b;'
             f'line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
-            f'cursor:help;">{_p} · {_d}</span></span>')
+            f'cursor:help;">{_lead}{_p} · {_d}</span></span>')
 
 
 def _lead_cells(c, loc, tlabel, emer, dup_badge, chip, room_fg=None,
@@ -1373,9 +1373,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     #    (เดิมปุ่มซ่อนอยู่ในเมนู ✏️) · จอรับ-ส่งกดได้ทุกห้อง โหมดจอห้องกดได้เฉพาะห้องตัวเอง
     _qpre = _mb and disp in ('not_arrived', 'holding_pre')
     if _qpre:
-        _crm, _cq, _cqb, c0, c2, _cm = st.columns(_BOARD_COLS_MIN_Q)
-        with _crm:
-            st.markdown(_room_prefix_html(c, loc, tlabel, emer), unsafe_allow_html=True)
+        _cq, _cqb, c0, c2, _cm = st.columns(_BOARD_COLS_MIN_Q)
         with _cq:
             st.markdown(_queue_prefix_html(c, emer), unsafe_allow_html=True)
         try:
@@ -1416,6 +1414,10 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
         c0, c1, c2, c3 = st.columns(_BOARD_COLS)
 
     _tl.q_prefix = bool(_qpre)
+    if _qpre:
+        _tl.q_lead = ('<span style="color:#c0392b;font-weight:600;">'
+                      '<span class="emg-dot"></span>ฉุกเฉิน</span> · ' if emer
+                      else f'{_esc(tlabel(c))} · ')
     with c0:
         if disp == 'holding_pre':
             components.html(_holding_row_iframe(c, loc, tlabel, now, dup_badge),
