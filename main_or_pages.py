@@ -761,7 +761,13 @@ def _or_board_demo():
         _emg = d.get('optype', 'Elective') != 'Elective'
         from fam_code import gen_fam_code
         _demo_seed = f"{d['hn']}|{d['room']}|{d['ororder']}"
-        c = {'status': 'not_arrived', 'ororder': d['ororder'],
+        # 🔑 15 พ.ย. 2026 (มุกกี้สั่ง): เคสสาธิตมีรหัสเคสเหมือนเคสจริง (เดิมไม่มี id เลย)
+        #    → ใช้เส้นทางเดียวกับระบบจริงครบ: merge ราย-เคส, คีย์ปุ่มผูกรหัสเคส,
+        #    และ log วิจัยโหมดซ้อม (log_case_state ข้ามเคสที่ไม่มี id)
+        #    รหัสคงที่ต่อเคส (จาก seed เดียวกับ fam_code) เครื่องไหนสร้างก็ได้ตัวเดียวกัน
+        import hashlib as _hl_demo
+        c = {'id': 'DEMO_' + _hl_demo.md5(_demo_seed.encode('utf-8')).hexdigest()[:10],
+             'status': 'not_arrived', 'ororder': d['ororder'],
              'fam_code': gen_fam_code(_demo_seed),
              'sched_hour': d['sched_h'], 'sched_min': d['sched_m'],
              'name': d['name'], 'hn': d['hn'], 'age': d['age'],

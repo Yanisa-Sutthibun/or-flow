@@ -28,6 +28,24 @@ import os
 
 # ─────────────────────────── helpers ───────────────────────────
 
+def rehearsal_on() -> bool:
+    """🎭 15 พ.ย. 2026 (มุกกี้สั่ง): โหมดซ้อมบันทึก ให้เคสสาธิตผ่านประตูวิจัยได้
+    เพื่อซ้อมเส้นทางบันทึกทั้งสาย (research_case_log / override_log / shadow_v2_log)
+    ระหว่าง try out · ที่มา: บั๊กนาฬิกาทำให้ research_case_log ว่างมา 4 เดือนโดยไม่มีใครรู้
+    เพราะเคสสาธิตถูกกันออกเสมอ จึงไม่เคยมีการซ้อมที่ไปถึงตาราง
+    เปิดได้เมื่อครบ 3 เงื่อนไขใน secrets เท่านั้น (ขาดข้อใด = ปิด):
+      instance_mode = "demo"  ·  db_schema = "demo"  ·  research_log_rehearsal = true
+    ระบบจริง (schema orsurg) ไม่มีทางเข้าเงื่อนไขนี้ ประตูทำงานเหมือนเดิมทุกอย่าง
+    ⚠️ ข้อมูลที่ได้เป็นการตรวจระบบ ไม่ใช่ข้อมูลวิจัย ห้ามนำไปรายงานในเล่ม"""
+    try:
+        import streamlit as _st
+        _g = lambda k: str(_st.secrets.get(k, '')).strip().lower()
+        return (_g('instance_mode') == 'demo' and _g('db_schema') == 'demo'
+                and _g('research_log_rehearsal') in ('1', 'true', 'yes', 'on'))
+    except Exception:
+        return False
+
+
 def in_research_scope(case) -> bool:
     """🚪 ประตูข้อมูลวิจัย — เกณฑ์คัดเข้าบังคับด้วยซอฟต์แวร์:
     ① ไม่ใช่เคสสาธิต/ทดสอบ (_demo) ② เป็น elective เท่านั้น
@@ -37,7 +55,9 @@ def in_research_scope(case) -> bool:
       เพราะ 23:55 เป็นแค่ placeholder เรียงท้ายคิว)
     เคสนอกขอบเขตทุกชนิดใช้บอร์ด/AI ได้ครบ แต่ไม่ทิ้งรอยใน log วิจัยใด ๆ
     (research_case_log / override_log / shadow_v2_log ใช้ประตูนี้ร่วมกัน)"""
-    if case is None or case.get('_demo'):
+    if case is None:
+        return False
+    if case.get('_demo') and not rehearsal_on():   # 🎭 เคสสาธิตผ่านได้เฉพาะโหมดซ้อมของแอป DEMO
         return False
     if case.get('is_emergency'):
         return False
