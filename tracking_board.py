@@ -271,10 +271,27 @@ def _queue_label(c):
     return (o, False)
 
 
+def _room_prefix_html(c, loc, tlabel, emer=False) -> str:
+    """🏠 15 พ.ย. 2026 (มุกกี้สั่ง): ช่องห้องผ่าตัดอยู่ซ้ายสุดนอกการ์ด : ลำดับช่อง = ห้อง / คิว / คิวถัดไป / การ์ด / ปุ่ม / ดินสอ
+    ห้องบรรทัดบน · เวลานัด (หรือป้ายฉุกเฉิน) บรรทัดล่าง"""
+    head = str(loc(c) or '').partition(' · ')[0]
+    if emer:
+        sub = ('<span style="color:#c0392b;font-weight:600;cursor:help;" '
+               'title="เคสฉุกเฉิน : อยู่นอกขอบเขตวิจัย (เก็บเฉพาะ elective ในเวลา)">'
+               '<span class="emg-dot"></span>ฉุกเฉิน</span>')
+    else:
+        sub = _esc(tlabel(c))
+    return (f'<div style="height:{_ROW_H}px;padding:4px 0 0 6px;overflow:hidden;">'
+            f'<span style="display:block;font-size:20px;font-weight:600;color:{_room_fg_default()};'
+            f'line-height:1.15;white-space:nowrap;">{_esc(head)}</span>'
+            f'<span style="display:block;font-size:14px;color:#94a3b8;line-height:1.3;'
+            f'white-space:nowrap;">{sub}</span></div>')
+
+
 def _queue_prefix_html(c, emer=False) -> str:
     """🔀 15 พ.ย. 2026 (มุกกี้สั่ง): เลขคิวตัวใหญ่หน้าการ์ด : ปุ่มคิวถัดไปอยู่ช่องถัดไปติดกัน
     คิวจากตารางเดิมมีแม่กุญแจเล็ก · คิวที่ปรับหน้างานเป็นป้ายฟ้า ไม่มีแม่กุญแจ"""
-    ql = None if emer else _queue_label(c)
+    ql = None if (emer and not c.get('q_manual')) else _queue_label(c)
     if not ql:
         return f'<div style="height:{_ROW_H}px;"></div>'
     o, manual = ql
@@ -531,7 +548,9 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
                 c.get('ororder') or 999)
     # 🎨 เคสรอเกิน 60 นาทีลอยขึ้นบนสุด — ยกเข้า production แล้ว (4 ส.ค. 2026
     #    ตาม _demo_fx_tb: function เหมือน demo ทุกจุด)
-    _demo_float = _demo_fx_tb()
+    # 🏠 15 พ.ย. 2026 (มุกกี้สั่ง): เรียงตามห้องผ่าตัดอย่างเดียว เลิกดันเคสรอเกิน 60 นาทีขึ้นบนสุด
+    #    (แถบเหลืองกับนาฬิกาเวลารอยังบอกอยู่ในแถว) : ห้องเดียวกันอยู่ติดกัน คิวอ่านต่อเนื่องไม่งง
+    _demo_float = False
     if _demo_float:
         # 🎨 มุคกี้ปรับ 3 ส.ค. 2026 รอบ 2: เด้งขึ้นบนสุด "เฉพาะ" เคสรอเกิน 60 นาที
         #    (แถวอื่นคงลำดับนิ่งตามหลักเดิมของบอร์ด)
@@ -796,8 +815,8 @@ _BOARD_COLS = [10, 0.7, 1.35, 0.7]
 #    ✏️ และ ↩️ ย้ายเข้าเมนู ⋯ ประจำแถว · production ยังใช้ _BOARD_COLS เดิม
 _BOARD_COLS_MIN = [10, 1.35, 0.55]
 # 🔀 15 พ.ย. 2026 (มุกกี้สั่ง): แถวเคสที่ยังไม่เข้าห้อง มี [เลขคิวตัวใหญ่, ปุ่มคิวถัดไป] นำหน้าการ์ด
-#    ผลรวมสัดส่วนเท่าเดิม ปุ่มหลักกับ ✏️ จึงตรงแนวกับกลุ่มอื่น
-_BOARD_COLS_MIN_Q = [0.8, 1.15, 8.05, 1.35, 0.55]
+#    ลำดับช่อง: ห้อง / คิว / คิวถัดไป / การ์ด / ปุ่มหลัก / ✏️ · ผลรวมสัดส่วนเท่าเดิม ปุ่มหลักกับ ✏️ จึงตรงแนวกับกลุ่มอื่น
+_BOARD_COLS_MIN_Q = [0.85, 0.8, 1.15, 7.2, 1.35, 0.55]
 _ROW_H = 70                 # ความสูงแถว (px) — iframe ต้องสูงกว่านี้เล็กน้อย
 _ROW_IFRAME_H = _ROW_H + 8
 
@@ -814,6 +833,8 @@ def _minimal_board() -> bool:
 
 def _cell_room_q(c, loc, tlabel, emer=False, fg=None):
     """minimal: ห้องบรรทัดบน · เวลานัด (หรือป้ายฉุกเฉิน) บรรทัดล่าง ในช่องเดียว"""
+    if getattr(_tl, 'q_prefix', False):
+        return ''               # 🏠 ห้องกับเลขคิวย้ายไปอยู่หน้าการ์ดแล้ว (ดู _room_prefix_html)
     fg = fg or _room_fg_default()
     head = str(loc(c) or '').partition(' · ')[0]
     if emer:
@@ -1352,7 +1373,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     #    (เดิมปุ่มซ่อนอยู่ในเมนู ✏️) · จอรับ-ส่งกดได้ทุกห้อง โหมดจอห้องกดได้เฉพาะห้องตัวเอง
     _qpre = _mb and disp in ('not_arrived', 'holding_pre')
     if _qpre:
-        _cq, _cqb, c0, c2, _cm = st.columns(_BOARD_COLS_MIN_Q)
+        _crm, _cq, _cqb, c0, c2, _cm = st.columns(_BOARD_COLS_MIN_Q)
+        with _crm:
+            st.markdown(_room_prefix_html(c, loc, tlabel, emer), unsafe_allow_html=True)
         with _cq:
             st.markdown(_queue_prefix_html(c, emer), unsafe_allow_html=True)
         try:
