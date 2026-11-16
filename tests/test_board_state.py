@@ -975,18 +975,22 @@ def test_tutorial_waits_for_user_every_step():
     assert P.tutorial_view(4, 'board', cs)['mode'] == 'do'
     cs[1].update(q_manual=True, q_changed_hhmm='10:15')
     assert P.tutorial_view(4, 'board', cs)['mode'] == 'done'
+    assert P.tutorial_view(5, 'board', cs)['btn'] == 'เสร็จ'
     cs[0]['status'] = 'holding_post'
-    assert P.tutorial_view(7, 'board', cs)['next'] == 'เสร็จสิ้น'
+    assert P.tutorial_view(5, 'board', cs)['mode'] == 'done'
     assert P.tutorial_step(99, cs) == P._TUT_N + 1
 
 
 def test_tutorial_points_to_the_right_page():
     """ขั้นที่ทำอีกหน้า การ์ดต้องบอกให้กดแท็บนั้น และไม่มีปุ่มไปต่อจนกว่าจะไปถึง"""
     cs = _tut_cases()
-    v = P.tutorial_view(5, 'board', cs)
+    # 🔀 รอบ 4: ขั้น 1-5 อยู่หน้า ตารางผ่าตัด ทั้งหมด แล้วค่อยไป ภาพรวมวันนี้ (6) สถิติย้อนหลัง (7)
+    assert all(P.tutorial_view(k, 'board', cs)['mode'] != 'goto' for k in range(1, 6))
+    v = P.tutorial_view(6, 'board', cs)
     assert v['mode'] == 'goto' and v['tab'] == 'ภาพรวมวันนี้' and not v['next']
-    assert P.tutorial_view(5, 'today', cs)['next']
-    assert P.tutorial_view(7, 'history', cs)['tab'] == 'ตารางผ่าตัด'
+    assert P.tutorial_view(6, 'today', cs)['next']
+    assert P.tutorial_view(7, 'today', cs)['tab'] == 'สถิติย้อนหลัง'
+    assert P.tutorial_view(7, 'history', cs)['mode'] == 'look'
     assert P.tutorial_view(8, 'board', cs)['btn'] == '⋯'
     assert P.tutorial_view(8, 'today', cs)['tab'] == 'ตารางผ่าตัด'
 
