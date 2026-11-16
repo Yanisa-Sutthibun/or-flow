@@ -1549,6 +1549,57 @@ _TUT_JS = r"""<script>
 </script>"""
 
 
+# คำอธิบายสั้นของแต่ละขั้น ใช้ในกล่องถามก่อนเริ่มโหมดสอน (ขั้นนี้คืออะไร ไม่ใช่วิธีกด)
+_TUT_WHAT = {
+    1: 'ดูว่าแบบจำลองทำนายเวลาใช้ห้องผ่าตัดของเคสไว้เท่าไร',
+    2: 'บันทึกว่าผู้ป่วยมาถึงห้องผ่าตัดแล้ว ระบบเริ่มจับเวลารอ',
+    3: 'บันทึกว่าผู้ป่วยเข้าห้องผ่าตัดแล้ว ระบบเริ่มนับเวลาเทียบกับที่ทำนาย',
+    4: 'เลื่อนเคสขึ้นมาผ่าตัดก่อน เมื่อแพทย์ขอสลับคิว',
+    5: 'ดูไทม์ไลน์และจำนวนเคสของทุกห้องในวันนี้',
+    6: 'ดูจำนวนเคสและสถิติของแต่ละห้องย้อนหลัง',
+    7: 'บันทึกว่าผ่าตัดเสร็จ แล้วปิดโหมดสาธิต',
+}
+
+
+def _render_tutorial_ask():
+    """🙋 กล่องถามกลางจอหลังกดเปิดโหมดสาธิต : เริ่มโหมดสอนการใช้หรือไม่ + อธิบายว่าแต่ละขั้นคืออะไร
+    ใช้กล่องในหน้าแทน st.dialog เหตุผลเดียวกับ _render_demo_switch_confirm (บอร์ดอยู่ใน fragment)"""
+    ss = st.session_state
+    _rows = ''.join(
+        '<div style="display:flex;gap:10px;align-items:flex-start;margin-top:7px;">'
+        '<span style="flex:0 0 28px;height:28px;border-radius:50%;background:#2563eb;color:#fff;'
+        f'font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;">{n}</span>'
+        f'<span style="font-size:16px;color:#334155;line-height:1.45;"><b style="color:#0f172a;">{t}</b>'
+        f' : {_TUT_WHAT[int(n)]}</span></div>'
+        for n, t, _x in TRYOUT_STEPS)
+    with st.container(key='tutask'):
+        st.markdown(
+            '<style>'
+            '.st-key-tutask{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);'
+            'width:min(680px,94vw);max-height:92vh;overflow:auto;z-index:999985;background:#ffffff;'
+            'border:3px solid #2563eb;border-radius:18px;padding:20px 24px 18px;'
+            'box-shadow:0 0 0 9999px rgba(15,23,42,.55);}'
+            '.st-key-tutask button{min-height:56px;}'
+            '.st-key-tutask button p{font-size:19px;font-weight:700;}'
+            '</style>'
+            '<div style="margin-bottom:1rem;">'
+            '<div style="font-size:24px;font-weight:800;color:#0f172a;">🎓 เริ่มโหมดสอนการใช้หรือไม่</div>'
+            '<div style="font-size:16px;color:#475569;margin-top:4px;line-height:1.5;">'
+            f'ระบบจะพาทำทีละขั้นรวม {_TUT_N} ขั้นตอน บอกว่าต้องกดตรงไหน และมีนิ้วชี้ปุ่มที่ต้องกดให้</div>'
+            f'{_rows}</div>',
+            unsafe_allow_html=True)
+        _y, _n = st.columns(2)
+        with _y:
+            if st.button("ใช่ เริ่มโหมดสอน", key="tut_ask_yes", type='primary', width='stretch'):
+                ss['_tut_on'], ss['_tut_step'] = True, 1
+                _rerun_board()
+        with _n:
+            if st.button("ไม่ ใช้งานเอง", key="tut_ask_no", width='stretch',
+                         help="เปิดโหมดสอนทีหลังได้จากปุ่ม ⋯ มุมขวาบนของหน้า ตารางผ่าตัด"):
+                ss['_tut_on'] = False
+                _rerun_board()
+
+
 def render_tutorial(page_key, cases=None):
     """🎓 การ์ดโหมดสอนการใช้ (ลอยติดขอบล่างจอ) · page_key = 'board' | 'today' | 'history'
     คืน (เคสเป้าหมาย, '') ให้หน้าตารางผ่าตัดวางหมุดหน้าแถว · หน้าอื่น/ไม่แสดง = (None, '')"""
@@ -1558,10 +1609,17 @@ def render_tutorial(page_key, cases=None):
             return None, ''
     except Exception:
         return None, ''
-    if ss.get('role') == 'room' or not ss.get('_or_demo') or not ss.get('_tut_on', True):
+    # 🙋 16 พ.ย. 2026 รอบ 3 (มุกกี้สั่ง): ไม่เปิดโหมดสอนเอง · กดเปิดโหมดสาธิตก่อน แล้วถามว่าจะเริ่มหรือไม่
+    #    _tut_on : 'ask' = เพิ่งเปิดโหมดสาธิต รอคำตอบ · True = กำลังสอน · False/ไม่มีค่า = ไม่สอน
+    _on = ss.get('_tut_on', False)
+    if ss.get('role') == 'room' or not ss.get('_or_demo') or not _on:
         return None, ''
     cases = cases if cases is not None else (ss.get('patient_cases') or [])
     if not any(c.get('_demo') for c in cases):
+        return None, ''
+    if _on == 'ask':
+        if page_key == 'board':
+            _render_tutorial_ask()
         return None, ''
     step = tutorial_step(ss.get('_tut_step', 1), cases)
     ss['_tut_step'] = step
@@ -1927,7 +1985,7 @@ def _board_fragment():
                              help="ปิดแล้วเคสสาธิตทั้งหมดจะถูกล้างออกจากบอร์ด"):
                     _demo_on = _demo_switch_pressed('off', _demo_on)
                 # 🎓 16 พ.ย. 2026: เปิดแถบโหมดสอนการใช้คืน หลังกด ปิดโหมดสอน
-                if not st.session_state.get('_tut_on', True):
+                if st.session_state.get('_tut_on', False) is not True:
                     if st.button("เปิดโหมดสอนการใช้", key="orboard_tut_on", width='stretch',
                                  help="แสดงแถบบอกขั้นตอนทดลองใช้ทีละขั้นอีกครั้ง"):
                         st.session_state['_tut_on'] = True
@@ -1994,7 +2052,7 @@ def _board_fragment():
         st.session_state.patient_cases = _or_board_demo()
         st.session_state['_or_demo'] = True
         st.session_state['_tut_step'] = 1      # 🎓 ชุดสาธิตใหม่ = เริ่มโหมดสอนขั้นที่ 1
-        st.session_state['_tut_on'] = True
+        st.session_state['_tut_on'] = 'ask'    # 🙋 รอบ 3: ถามก่อนว่าจะเริ่มโหมดสอนหรือไม่
         if _is_demo_instance:
             # 🖥️ ดันเคสสาธิตขึ้นบอร์ดกลาง (schema demo) ทันที —
             #    จอญาติ/จอห้อง demo เห็นภายในรอบ refresh ถัดไป
