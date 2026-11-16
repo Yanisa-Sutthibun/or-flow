@@ -995,6 +995,17 @@ def test_tutorial_points_to_the_right_page():
     assert P.tutorial_view(8, 'today', cs)['tab'] == 'ตารางผ่าตัด'
 
 
+def test_tutorial_tour_comes_before_practice():
+    """🧭 รอบ 5: ขั้น 0 = แนะนำระบบ เดินทีละป้าย ป้ายสุดท้ายพาเข้าการฝึกกด"""
+    assert P.tutorial_step(0, _tut_cases()) == 0
+    n = len(P._TUT_TOUR)
+    assert P.tutorial_tour_view(0, 'board')['next'] == 'ถัดไป'
+    assert P.tutorial_tour_view(n - 1, 'board')['next'] == 'เริ่มฝึกกด'
+    assert P.tutorial_tour_view(99, 'board')['next'] == 'เริ่มฝึกกด'      # เกินช่วง = ป้ายสุดท้าย
+    assert P.tutorial_tour_view(2, 'today')['tab'] == 'ตารางผ่าตัด'       # อยู่ผิดหน้า = ชี้กลับ
+    assert all('—' not in t + x for t, x, _g in P._TUT_TOUR)
+
+
 def test_tutorial_ignores_non_demo_cases():
     """เคสจริงที่ HN ลงท้ายเหมือนกัน ต้องไม่ทำให้ขั้นของโหมดสอนถือว่าทำสำเร็จ"""
     cs = [{'hn': '560000002', 'status': 'in_or'}]

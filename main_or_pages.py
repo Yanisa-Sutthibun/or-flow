@@ -1431,7 +1431,48 @@ def tutorial_step(step, cases) -> int:
     """ตัวชี้ขั้นปัจจุบัน (1.._TUT_N · _TUT_N + 1 = ครบทุกขั้น)
     🎮 รอบ 2: ไม่เลื่อนผ่านขั้นที่ทำเสร็จเองอีกแล้ว ผู้ใช้ต้องกดปุ่มในการ์ดเองทุกขั้น
     (ขั้นที่ข้ามเองทำให้คนตามไม่ทัน ไม่ทันได้สังเกตผลของสิ่งที่เพิ่งกด)"""
-    return min(max(1, int(step or 1)), _TUT_N + 1)
+    return min(max(0, int(step if step is not None else 1)), _TUT_N + 1)
+
+
+# 🧭 16 พ.ย. 2026 รอบ 5 (มุกกี้สั่ง จากความเห็นผู้ทดลองใช้ : "ถ้าไม่มีคนมาบอก ก็ไม่รู้ว่าระบบทำงานอย่างไร")
+#    การแนะนำระบบก่อนฝึกกด = ขั้น 0 ของโหมดสอน เดินทีละป้ายด้วยปุ่ม ถัดไป / ย้อนกลับ
+#    แต่ละป้าย : (หัวข้อ, คำอธิบาย, เป้าที่ฉายไฟ) · เป้า : tabs = แถบแท็บ · head = หัวกลุ่มบนตาราง
+#    row = แถวของเคส (4 หลักท้าย HN) · btn = ปุ่มในแถวนั้น
+_TUT_TOUR = [
+    ('OR Flow คืออะไร',
+     'OR Flow คือกระดานติดตามผู้ป่วยของห้องผ่าตัด ผู้ป่วย 1 คนคือ 1 แถว พยาบาลกดปุ่มเมื่อผู้ป่วยเปลี่ยนสถานะ '
+     'ระบบจะบันทึกเวลาให้เอง และแบบจำลองจะทำนายว่าแต่ละเคสใช้ห้องผ่าตัดนานเท่าไร', {}),
+    ('ระบบมี 3 หน้า',
+     'เปลี่ยนหน้าได้จากแท็บด้านบน ตารางผ่าตัด คือหน้าทำงานหลัก ใช้กดบันทึกสถานะผู้ป่วย '
+     'ภาพรวมวันนี้ คือสรุปสถานการณ์ของทุกห้องในวันนี้ สถิติย้อนหลัง คือตัวเลขสรุปของวันที่ผ่านมา', {'tabs': 1}),
+    ('ช่วงที่ 1 : ก่อนผ่าตัด',
+     'ตารางผ่าตัดแบ่งเป็น 3 ช่วงเรียงจากบนลงล่าง ช่วงแรกคือ ก่อนผ่าตัด เป็นเคสที่ผู้ป่วยยังไม่มา '
+     'หรือมาถึงแล้วและกำลังรอ จัดกลุ่มตามห้องผ่าตัด', {'head': 'ก่อนผ่าตัด'}),
+    ('หนึ่งแถวคือผู้ป่วยหนึ่งคน',
+     'ในแถวจะเห็นคิว เวลานัด ชื่อผู้ป่วย หัตถการ แพทย์ และสถานะ '
+     'บรรทัดล่างที่มีรูปหุ่นยนต์คือเวลาที่แบบจำลองทำนายว่าเคสนี้จะใช้ห้องผ่าตัด', {'row': '0002'}),
+    ('ปุ่มท้ายแถว',
+     'ปุ่มนี้คือสิ่งที่ต้องกดเมื่อผู้ป่วยเปลี่ยนสถานะ ชื่อปุ่มจะเปลี่ยนไปตามลำดับ คือ รับเข้า เข้าห้อง เสร็จ และจำหน่าย '
+     'ทุกครั้งที่กด ระบบบันทึกเวลาให้เอง ไม่ต้องพิมพ์ (ตอนนี้ยังไม่ต้องกด)', {'row': '0002', 'btn': 'รับเข้า'}),
+    ('ช่วงที่ 2 : ระยะผ่าตัด',
+     'เป็นเคสที่กำลังผ่าตัดอยู่ มีแถบแสดงเวลาที่ผ่านไปเทียบกับเวลาที่แบบจำลองทำนาย '
+     'ถ้าแถวเป็นสีเหลืองแปลว่าใช้เวลาเกินที่ทำนายแล้ว', {'head': 'ระยะผ่าตัด'}),
+    ('ช่วงที่ 3 : หลังผ่าตัด',
+     'เป็นเคสที่ผ่าตัดเสร็จแล้วและรอจำหน่าย เมื่อกดจำหน่าย เคสจะย้ายไปอยู่ในรายการ จำหน่ายแล้ววันนี้ '
+     f'ต่อจากนี้จะเป็นการฝึกกดจริง {_TUT_N} ขั้นตอน', {'head': 'หลังผ่าตัด'}),
+]
+
+
+def tutorial_tour_view(idx, page_key) -> dict:
+    """สิ่งที่การ์ดต้องแสดงในป้ายแนะนำระบบที่ idx (logic ล้วน) · โครงเดียวกับ tutorial_view"""
+    idx = min(max(0, int(idx or 0)), len(_TUT_TOUR) - 1)
+    if page_key != 'board':
+        return {'mode': 'goto', 'title': 'แนะนำระบบ', 'next': '', 'tab': 'ตารางผ่าตัด', 'btn': '', 'row': None,
+                'head': '', 'tabs': 0, 'text': 'กดแท็บ ตารางผ่าตัด ที่กะพริบอยู่ด้านบนสุดของหน้าจอ'}
+    title, text, tg = _TUT_TOUR[idx]
+    return {'mode': 'tour', 'title': title, 'text': text, 'tab': '', 'btn': tg.get('btn', ''),
+            'row': tg.get('row'), 'head': tg.get('head', ''), 'tabs': tg.get('tabs', 0),
+            'next': 'เริ่มฝึกกด' if idx == len(_TUT_TOUR) - 1 else 'ถัดไป'}
 
 
 def tutorial_view(step, page_key, cases) -> dict:
@@ -1469,12 +1510,15 @@ _TUT_CSS = (
     '.st-key-tutcard.tut-ok,.st-key-tutcard:has(.tut-ok){border-color:#16a34a;background:#f0fdf4;}'
     '.st-key-tutcard button[kind="primary"]{min-height:56px;}'
     '.st-key-tutcard button[kind="primary"] p{font-size:20px;font-weight:700;}'
-    '.st-key-tutcard button[kind="secondary"]{min-height:34px;border:none;background:transparent;}'
-    '.st-key-tutcard button[kind="secondary"] p{font-size:14px;color:#64748b;text-decoration:underline;}'
+    '.st-key-tutcard button:not([kind="primary"]){min-height:34px;border:none !important;'
+    'background:transparent !important;box-shadow:none !important;}'
+    '.st-key-tutcard button:not([kind="primary"]) p{font-size:14px;color:#64748b;text-decoration:underline;}'
     '.st-key-tutcard iframe{display:none;}'
     '.stMain .block-container,[data-testid="stMainBlockContainer"]{padding-bottom:300px !important;}'
-    '.tut-spot{position:relative;z-index:60;background:#ffffff;border-radius:12px;'
+    '.tut-spot{position:relative;z-index:60;background:#ffffff;border-radius:12px;scroll-margin-top:90px;'
     'outline:4px solid #2563eb;outline-offset:5px;box-shadow:0 0 0 9999px rgba(15,23,42,.38);}'
+    '.tut-head{outline:4px solid #2563eb;outline-offset:6px;border-radius:10px;scroll-margin-top:90px;'
+    'animation:tutpulse 1.1s infinite;}'
     '@keyframes tutpulse{0%{box-shadow:0 0 0 0 rgba(37,99,235,.75);}'
     '70%{box-shadow:0 0 0 16px rgba(37,99,235,0);}100%{box-shadow:0 0 0 0 rgba(37,99,235,0);}}'
     '.tut-btn{animation:tutpulse 1.1s infinite;outline:4px solid #2563eb !important;'
@@ -1506,6 +1550,13 @@ _TUT_JS = r"""<script>
             || n.matches('[data-testid="stHorizontalBlock"]')))) n = n.nextElementSibling;
       spot = n;
     }
+    if(CFG.head){
+      const hs = Array.from(d.querySelectorAll('[data-testid="stElementContainer"]'));
+      spot = hs.find(e => e.offsetParent && e.innerText.trim().indexOf(CFG.head) === 0) || null;
+    }
+    if(CFG.tabs){
+      spot = d.querySelector('[data-testid="stRadio"] [role="radiogroup"]') || d.querySelector('[role="radiogroup"]');
+    }
     if(CFG.tab){
       const ls = Array.from(d.querySelectorAll('[data-testid="stRadio"] label, [role="radiogroup"] label'));
       btn = ls.find(l => l.innerText.indexOf(CFG.tab) >= 0) || null;
@@ -1520,9 +1571,10 @@ _TUT_JS = r"""<script>
                    .find(b => b.offsetParent && b.innerText.indexOf(CFG.pick) >= 0);
       if(pb) btn = pb;
     }
-    d.querySelectorAll('.tut-spot').forEach(e => { if(e !== spot) e.classList.remove('tut-spot'); });
+    const SC = CFG.head ? 'tut-head' : 'tut-spot';   // หัวกลุ่ม : ตีกรอบอย่างเดียว ไม่หรี่จอ (ต้องเห็นแถวข้างใต้ชัด)
+    d.querySelectorAll('.tut-spot,.tut-head').forEach(e => { if(e !== spot || !e.classList.contains(SC)) e.classList.remove('tut-spot','tut-head'); });
     d.querySelectorAll('.tut-btn').forEach(e => { if(e !== btn) e.classList.remove('tut-btn'); });
-    if(spot && !spot.classList.contains('tut-spot')) spot.classList.add('tut-spot');
+    if(spot && !spot.classList.contains(SC)) spot.classList.add(SC);
     if(btn && !btn.classList.contains('tut-btn')) btn.classList.add('tut-btn');
     let f = d.getElementById('tut-finger');
     if(btn){
@@ -1537,13 +1589,13 @@ _TUT_JS = r"""<script>
     const tgt = btn || spot;
     if(!scrolled && tgt && Date.now() - t0 > 500){
       scrolled = true;
-      try{ tgt.scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){}
+      try{ tgt.scrollIntoView({block: CFG.head ? 'start' : 'center', behavior:'smooth'}); }catch(e){}
     }
   }
   const iv = setInterval(tick, 400); tick();
   window.addEventListener('unload', function(){
     clearInterval(iv);
-    d.querySelectorAll('.tut-spot').forEach(e => e.classList.remove('tut-spot'));
+    d.querySelectorAll('.tut-spot,.tut-head').forEach(e => e.classList.remove('tut-spot','tut-head'));
     d.querySelectorAll('.tut-btn').forEach(e => e.classList.remove('tut-btn'));
     const f = d.getElementById('tut-finger'); if(f) f.remove();
   });
@@ -1587,16 +1639,18 @@ def _render_tutorial_ask():
             '<div style="margin-bottom:1rem;">'
             '<div style="font-size:24px;font-weight:800;color:#0f172a;">🎓 เริ่มโหมดสอนการใช้หรือไม่</div>'
             '<div style="font-size:16px;color:#475569;margin-top:4px;line-height:1.5;">'
-            f'ระบบจะพาทำทีละขั้นรวม {_TUT_N} ขั้นตอน บอกว่าต้องกดตรงไหน และมีนิ้วชี้ปุ่มที่ต้องกดให้</div>'
+            f'ระบบจะแนะนำหน้าจอของ OR Flow ก่อน แล้วพาฝึกกดทีละขั้นรวม {_TUT_N} ขั้นตอน '
+            'โดยมีนิ้วชี้ปุ่มที่ต้องกดให้</div>'
             f'{_rows}</div>',
             unsafe_allow_html=True)
         _y, _n = st.columns(2)
         with _y:
-            if st.button("ใช่ เริ่มโหมดสอน", key="tut_ask_yes", type='primary', width='stretch'):
-                ss['_tut_on'], ss['_tut_step'] = True, 1
+            if st.button("ใช่", key="tut_ask_yes", type='primary', width='stretch'):
+                # 🧭 รอบ 5: เริ่มที่การแนะนำระบบ (ขั้น 0) ก่อนเข้าการฝึกกด
+                ss['_tut_on'], ss['_tut_step'], ss['_tut_tour'] = True, 0, 0
                 _rerun_board()
         with _n:
-            if st.button("ไม่ ใช้งานเอง", key="tut_ask_no", width='stretch',
+            if st.button("ไม่", key="tut_ask_no", width='stretch',
                          help="เปิดโหมดสอนทีหลังได้จากปุ่ม ⋯ มุมขวาบนของหน้า ตารางผ่าตัด"):
                 ss['_tut_on'] = False
                 _rerun_board()
@@ -1623,16 +1677,20 @@ def render_tutorial(page_key, cases=None):
         if page_key == 'board':
             _render_tutorial_ask()
         return None, ''
-    step = tutorial_step(ss.get('_tut_step', 1), cases)
+    step = tutorial_step(ss.get('_tut_step', 0), cases)   # ยังไม่เคยเริ่ม = เริ่มที่การแนะนำระบบ (ขั้น 0)
     ss['_tut_step'] = step
-    v = tutorial_view(step, page_key, cases)
+    _tour = (step == 0)
+    _ti = min(max(0, int(ss.get('_tut_tour', 0) or 0)), len(_TUT_TOUR) - 1)
+    v = tutorial_tour_view(_ti, page_key) if _tour else tutorial_view(step, page_key, cases)
     _ok = v['mode'] == 'done'
-    _badge = 'ครบแล้ว' if v['mode'] == 'end' else f'ขั้นที่ {step} จาก {_TUT_N}'
+    _pos, _tot = (_ti + 1, len(_TUT_TOUR)) if _tour else (step, _TUT_N)
+    _badge = ('ครบแล้ว' if v['mode'] == 'end' else
+              f'แนะนำระบบ {_pos} จาก {_tot}' if _tour else f'ฝึกกด ขั้นที่ {step} จาก {_TUT_N}')
     _dots = ''.join(
         f'<span style="width:26px;height:8px;border-radius:4px;'
-        f'background:{"#2563eb" if k < step else "#60a5fa" if k == step else "#dbeafe"};"></span>'
-        for k in range(1, _TUT_N + 1))
-    _icon = '✅' if _ok else '🎉' if v['mode'] == 'end' else '👉'
+        f'background:{"#2563eb" if k < _pos else "#60a5fa" if k == _pos else "#dbeafe"};"></span>'
+        for k in range(1, _tot + 1))
+    _icon = '✅' if _ok else '🎉' if v['mode'] == 'end' else '🧭' if v['mode'] == 'tour' else '👉'
     _col = '#15803d' if _ok else '#1d4ed8'
     with st.container(key='tutcard'):
         st.markdown(
@@ -1643,9 +1701,12 @@ def render_tutorial(page_key, cases=None):
             'font-size:14px;font-weight:700;">โหมดสอนการใช้</span>'
             f'<span style="font-size:15px;color:#1e3a8a;font-weight:700;">{_badge}</span>'
             f'<span style="display:flex;gap:4px;">{_dots}</span></div>'
-            f'<div style="font-size:17px;font-weight:700;color:#475569;margin-top:6px;">{v["title"]}</div>'
-            f'<div style="font-size:21px;font-weight:700;color:{_col};line-height:1.45;margin-top:2px;">'
-            f'{_icon} {"ทำสำเร็จ : " if _ok else ""}{v["text"]}</div>'
+            + (f'<div style="font-size:21px;font-weight:800;color:#0f172a;margin-top:6px;">{_icon} {v["title"]}</div>'
+               f'<div style="font-size:18px;color:#334155;line-height:1.6;margin-top:2px;">{v["text"]}</div>'
+               if v['mode'] == 'tour' else
+               f'<div style="font-size:17px;font-weight:700;color:#475569;margin-top:6px;">{v["title"]}</div>'
+               f'<div style="font-size:21px;font-weight:700;color:{_col};line-height:1.45;margin-top:2px;">'
+               f'{_icon} {"ทำสำเร็จ : " if _ok else ""}{v["text"]}</div>')
             + ('<div style="font-size:15px;color:#64748b;margin-top:4px;">'
                'ทำตามข้อความด้านบนก่อน แล้วปุ่มไปขั้นถัดไปจะขึ้นมาตรงนี้</div>'
                if v['mode'] in ('do', 'goto') else '')
@@ -1653,13 +1714,25 @@ def render_tutorial(page_key, cases=None):
             unsafe_allow_html=True)
         if v['next']:
             if st.button(v['next'], key=f"tut_next_{page_key}", type='primary', width='stretch'):
+                if _tour and _ti < len(_TUT_TOUR) - 1:
+                    ss['_tut_tour'] = _ti + 1
+                else:
+                    ss['_tut_step'] = step + 1
+                _rerun_board()
+        _c1, _c2, _c3, _c4 = st.columns([1, 1.2, 1, 0.8])
+        with _c1:
+            if _tour:
+                if _ti > 0 and st.button("ย้อนกลับ", key=f"tut_back_{page_key}"):
+                    ss['_tut_tour'] = _ti - 1
+                    _rerun_board()
+            elif step <= _TUT_N and st.button("ข้ามขั้นนี้", key=f"tut_skip_{page_key}",
+                                              help="ข้ามไปขั้นถัดไปโดยไม่ต้องทำขั้นนี้"):
                 ss['_tut_step'] = step + 1
                 _rerun_board()
-        _c1, _c2, _c3 = st.columns([1, 1, 2])
-        with _c1:
-            if step <= _TUT_N and st.button("ข้ามขั้นนี้", key=f"tut_skip_{page_key}",
-                                            help="ข้ามไปขั้นถัดไปโดยไม่ต้องทำขั้นนี้"):
-                ss['_tut_step'] = step + 1
+        with _c3:
+            if _tour and st.button("ข้ามการแนะนำ", key=f"tut_skiptour_{page_key}",
+                                   help="ไปที่การฝึกกดขั้นที่ 1 เลย"):
+                ss['_tut_step'] = 1
                 _rerun_board()
         with _c2:
             if st.button("ปิดโหมดสอน", key=f"tut_off_{page_key}",
@@ -1669,7 +1742,8 @@ def render_tutorial(page_key, cases=None):
         import json as _json
         import streamlit.components.v1 as _stc
         _stc.html(_TUT_JS.replace('__CFG__', _json.dumps(
-            {'k': f'{step}-{v["mode"]}-{page_key}', 'tab': v['tab'], 'btn': v['btn'],
+            {'k': f'{step}-{_ti if _tour else ""}-{v["mode"]}-{page_key}', 'tab': v['tab'], 'btn': v['btn'],
+             'head': v.get('head', ''), 'tabs': v.get('tabs', 0),
              'pick': {'เสร็จ': 'ไปห้องรับ-ส่ง', '⋯': 'ปิดโหมดสาธิต'}.get(v['btn'], '')},
             ensure_ascii=False)), height=0)
     if page_key == 'board' and v['row']:
@@ -2053,7 +2127,8 @@ def _board_fragment():
     if _demo_on and not st.session_state.get('_or_demo'):
         st.session_state.patient_cases = _or_board_demo()
         st.session_state['_or_demo'] = True
-        st.session_state['_tut_step'] = 1      # 🎓 ชุดสาธิตใหม่ = เริ่มโหมดสอนขั้นที่ 1
+        st.session_state['_tut_step'] = 0      # 🎓 ชุดสาธิตใหม่ = เริ่มโหมดสอนที่การแนะนำระบบ (ขั้น 0)
+        st.session_state['_tut_tour'] = 0
         st.session_state['_tut_on'] = 'ask'    # 🙋 รอบ 3: ถามก่อนว่าจะเริ่มโหมดสอนหรือไม่
         if _is_demo_instance:
             # 🖥️ ดันเคสสาธิตขึ้นบอร์ดกลาง (schema demo) ทันที —
