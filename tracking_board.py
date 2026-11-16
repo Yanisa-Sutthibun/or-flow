@@ -1417,11 +1417,10 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     #    ได้ป้ายชี้เหนือแถว + กรอบน้ำเงิน (main_or_pages ตั้ง _tl.tut_target ก่อนวาดบอร์ด)
     _tut_hit = getattr(_tl, 'tut_target', None) is c
     if _tut_hit:
-        st.markdown(
-            '<div style="margin:6px 0 1rem;"><span style="display:inline-block;background:#2563eb;'
-            'color:#fff;font-size:15px;font-weight:700;padding:3px 14px;border-radius:999px;">'
-            f'👉 {_esc(getattr(_tl, "tut_hint", ""))}</span></div>',
-            unsafe_allow_html=True)
+        # 🎮 รอบ 2: เหลือแค่หมุดล่องหน สคริปต์ของการ์ดโหมดสอน (main_or_pages._TUT_JS)
+        #    ใช้หมุดนี้หาแถวถัดไปแล้วฉายไฟ + ทำให้ปุ่มที่ต้องกดกะพริบ
+        st.markdown('<span class="tut-anchor" style="display:block;height:10px;"></span>',
+                    unsafe_allow_html=True)
     # 🔔 เคสนี้คือ "คิวถัดไปที่ต้องเรียก" ของห้องหรือเปล่า (identity เทียบ object
     #    ตรง ๆ — call_map สร้างจาก list เดียวกันในรอบ render นี้เสมอ)
     _ci = (call_map or {}).get(R)

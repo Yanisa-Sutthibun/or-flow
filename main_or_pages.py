@@ -1373,18 +1373,30 @@ _TUT_N = len(TRYOUT_STEPS)
 _TUT_CASE = {1: '0002', 2: '0002', 3: '0002', 4: '0008', 7: '0002'}   # 4 หลักท้าย HN ของเคสเป้าหมาย
 _TUT_PAGE = {5: 'today', 6: 'history'}                                 # ขั้นที่ทำนอกหน้าตารางผ่าตัด
 _TUT_PAGE_NAME = {'board': 'ตารางผ่าตัด', 'today': 'ภาพรวมวันนี้', 'history': 'สถิติย้อนหลัง'}
-_TUT_ROW_HINT = {1: 'อ่านเวลาที่ทำนายในแถวนี้', 2: 'กดปุ่ม รับเข้า ที่แถวนี้',
-                 3: 'กดปุ่ม เข้าห้อง ที่แถวนี้', 4: 'กดปุ่ม คิวถัดไป ที่แถวนี้',
-                 7: 'กดปุ่ม เสร็จ ที่แถวนี้'}
-_TUT_WHERE = {
-    1: 'เลื่อนลงไปที่แถวที่มีป้ายสีน้ำเงินชี้อยู่ อ่านบรรทัดล่างของการ์ดที่ขึ้นต้นว่า ทำนายใช้ห้อง แล้วกดปุ่ม ทำแล้ว ไปขั้นถัดไป',
-    2: 'กดปุ่ม รับเข้า ท้ายแถวที่มีป้ายสีน้ำเงินชี้อยู่',
-    3: 'กดปุ่ม เข้าห้อง ท้ายแถวที่มีป้ายสีน้ำเงินชี้อยู่',
-    4: 'กดปุ่ม คิวถัดไป ที่อยู่ถัดจากเลขคิว ในแถวที่มีป้ายสีน้ำเงินชี้อยู่',
-    5: 'ดูครบแล้วกดปุ่ม ทำแล้ว ไปขั้นถัดไป',
-    6: 'กดปุ่ม แสดงสถิติ ดูหัวข้อ สถิติรายห้อง แล้วกดปุ่ม ทำแล้ว ไปขั้นถัดไป',
-    7: 'กดปุ่ม เสร็จ ท้ายแถวที่มีป้ายสีน้ำเงินชี้อยู่ แล้วเลือก ไปห้องรับ-ส่ง',
+# 🎮 16 พ.ย. 2026 รอบ 2 (มุกกี้สั่ง: "ทำให้เหมือน tutorial เกม คนที่ไม่เก่งคอมเลยก็ทำได้")
+#    แถบบนสุดอย่างเดียวไม่พอ เลื่อนลงแล้วมองไม่เห็นและไม่รู้ว่าต้องกดอะไรต่อ
+#    → การ์ดลอยติดขอบล่างจอ (ตามไปทุกที่) + ฉายไฟแถวเป้าหมาย + ปุ่มที่ต้องกดกะพริบ
+#    → ทุกขั้นต้องกดปุ่มในการ์ดเองจึงจะไปขั้นถัดไป (ไม่ข้ามเองอีกแล้ว)
+#      ขั้นที่ต้องกดปุ่มบนตาราง : พอกดถูก การ์ดเปลี่ยนเป็นสีเขียว บอกว่าให้สังเกตอะไร แล้วค่อยไปต่อ
+# _TUT_DO = สิ่งที่ต้องทำ (ประโยคเดียว ทำทีละอย่าง) · _TUT_SEE = สิ่งที่ให้สังเกตหลังทำสำเร็จ
+# _TUT_BTN = ข้อความบนปุ่มของตารางที่ต้องกด (ใช้หาปุ่มมาทำให้กะพริบ)
+_TUT_DO = {
+    1: 'ดูแถวที่มีกรอบสีน้ำเงิน (เคส ทดสอบ 2 ห้อง OR8) แล้วอ่านบรรทัดที่ขึ้นต้นว่า ทำนายใช้ห้อง',
+    2: 'สมมติว่าผู้ป่วย ทดสอบ 2 มาถึงห้องผ่าตัดแล้ว ให้กดปุ่ม รับเข้า ที่กะพริบอยู่ในแถวกรอบสีน้ำเงิน',
+    3: 'กดปุ่ม เข้าห้อง ที่กะพริบอยู่ในแถวกรอบสีน้ำเงิน',
+    4: 'สมมติว่าแพทย์ขอผ่าตัดผู้ป่วย สมมติ 8 ห้อง OR2 ก่อน ให้กดปุ่ม คิวถัดไป ที่กะพริบอยู่ในแถวกรอบสีน้ำเงิน',
+    5: 'ดูไทม์ไลน์ว่าห้อง OR8 มีแถบกำลังผ่าตัดหรือไม่ และดูตัวเลขของวันว่ามีเคสทั้งหมด ผ่าเสร็จแล้ว และกำลังผ่าตัดกี่เคส',
+    6: 'กดปุ่ม แสดงสถิติ แล้วดูหัวข้อ สถิติรายห้อง ว่าห้องใดมีจำนวนเคสมากที่สุด',
+    7: 'กดปุ่ม เสร็จ ที่กะพริบอยู่ในแถวกรอบสีน้ำเงิน (เคส ทดสอบ 2) แล้วเลือก ไปห้องรับ-ส่ง',
 }
+_TUT_SEE = {
+    2: 'รับผู้ป่วยเข้าแล้ว สังเกตว่าปุ่มเปลี่ยนเป็น เข้าห้อง และมีนาฬิกาเวลารอขึ้นมา',
+    3: 'ผู้ป่วยเข้าห้องผ่าตัดแล้ว สังเกตแถบความคืบหน้าเทียบกับเวลาที่แบบจำลองทำนาย',
+    4: 'เปลี่ยนคิวแล้ว สังเกตว่าเลขคิวของเคสนี้เปลี่ยนเป็น คิว 1 และมีแถบแจ้งการเปลี่ยนคิวขึ้นมาด้านบนของตาราง',
+    7: 'ผ่าตัดเสร็จแล้ว สังเกตว่าสถานะของเคสเปลี่ยนเป็น ห้องรับ-ส่ง',
+}
+_TUT_BTN = {2: 'รับเข้า', 3: 'เข้าห้อง', 4: 'คิวถัดไป', 7: 'เสร็จ'}
+_TUT_NEXT = {1: 'อ่านแล้ว ไปขั้นถัดไป', 5: 'ดูแล้ว ไปขั้นถัดไป', 6: 'ดูแล้ว ไปขั้นถัดไป'}
 
 
 def _tut_case(cases, tail):
@@ -1414,16 +1426,132 @@ def tutorial_auto_done(step, cases) -> bool:
 
 
 def tutorial_step(step, cases) -> int:
-    """เลื่อนตัวชี้ผ่านขั้นที่ทำเสร็จแล้ว · เดินหน้าอย่างเดียว · คืน _TUT_N + 1 = ครบทุกขั้น"""
-    step = max(1, int(step or 1))
-    while step <= _TUT_N and tutorial_auto_done(step, cases):
-        step += 1
-    return step
+    """ตัวชี้ขั้นปัจจุบัน (1.._TUT_N · _TUT_N + 1 = ครบทุกขั้น)
+    🎮 รอบ 2: ไม่เลื่อนผ่านขั้นที่ทำเสร็จเองอีกแล้ว ผู้ใช้ต้องกดปุ่มในการ์ดเองทุกขั้น
+    (ขั้นที่ข้ามเองทำให้คนตามไม่ทัน ไม่ทันได้สังเกตผลของสิ่งที่เพิ่งกด)"""
+    return min(max(1, int(step or 1)), _TUT_N + 1)
+
+
+def tutorial_view(step, page_key, cases) -> dict:
+    """สิ่งที่การ์ดโหมดสอนต้องแสดงในขั้นนี้ (logic ล้วน ทดสอบได้โดยไม่มี UI)
+    mode : 'do' = รอให้ทำ · 'done' = ทำสำเร็จแล้ว รอกดไปต่อ · 'goto' = ต้องไปอีกหน้าก่อน
+           'look' = ขั้นอ่าน/ดู กดไปต่อเอง · 'end' = ครบทุกขั้น"""
+    if step > _TUT_N:
+        return {'mode': 'end', 'title': f'ทำครบทั้ง {_TUT_N} ขั้นตอนแล้ว',
+                'text': ('กดปุ่ม ⋯ ที่กะพริบอยู่มุมขวาบน แล้วกด ปิดโหมดสาธิต (ถ้ามีกล่องยืนยันขึ้นมา ให้กด ยืนยัน) '
+                         'จากนั้นโปรดตอบแบบสอบถาม SUS ที่ผู้วิจัยแจกให้') if page_key == 'board' else
+                        'กดแท็บ ตารางผ่าตัด ที่กะพริบอยู่ด้านบนสุดของหน้าจอ',
+                'next': '', 'tab': '' if page_key == 'board' else 'ตารางผ่าตัด',
+                'btn': '⋯' if page_key == 'board' else '', 'row': None}
+    title = TRYOUT_STEPS[step - 1][1]
+    need = _TUT_PAGE.get(step, 'board')
+    if need != page_key:
+        return {'mode': 'goto', 'title': title, 'next': '', 'tab': _TUT_PAGE_NAME[need], 'btn': '', 'row': None,
+                'text': f'กดแท็บ {_TUT_PAGE_NAME[need]} ที่กะพริบอยู่ด้านบนสุดของหน้าจอ'}
+    row = _TUT_CASE.get(step)
+    if step in _TUT_SEE:
+        if tutorial_auto_done(step, cases):
+            return {'mode': 'done', 'title': title, 'text': _TUT_SEE[step], 'tab': '', 'btn': '', 'row': row,
+                    'next': 'เสร็จสิ้น' if step == _TUT_N else 'ไปขั้นถัดไป'}
+        return {'mode': 'do', 'title': title, 'text': _TUT_DO[step], 'next': '', 'tab': '',
+                'btn': _TUT_BTN[step], 'row': row}
+    return {'mode': 'look', 'title': title, 'text': _TUT_DO[step], 'next': _TUT_NEXT[step], 'tab': '',
+            'btn': '', 'row': row}
+
+
+_TUT_CSS = (
+    '<style>'
+    '.st-key-tutcard{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);'
+    'width:min(760px,94vw);z-index:999980;background:#ffffff;border:3px solid #2563eb;'
+    'border-radius:16px;box-shadow:0 10px 36px rgba(15,23,42,.35);padding:14px 18px 12px;gap:.5rem;}'
+    '.st-key-tutcard.tut-ok,.st-key-tutcard:has(.tut-ok){border-color:#16a34a;background:#f0fdf4;}'
+    '.st-key-tutcard button[kind="primary"]{min-height:56px;}'
+    '.st-key-tutcard button[kind="primary"] p{font-size:20px;font-weight:700;}'
+    '.st-key-tutcard button[kind="secondary"]{min-height:34px;border:none;background:transparent;}'
+    '.st-key-tutcard button[kind="secondary"] p{font-size:14px;color:#64748b;text-decoration:underline;}'
+    '.st-key-tutcard iframe{display:none;}'
+    '.stMain .block-container,[data-testid="stMainBlockContainer"]{padding-bottom:300px !important;}'
+    '.tut-spot{position:relative;z-index:60;background:#ffffff;border-radius:12px;'
+    'outline:4px solid #2563eb;outline-offset:5px;box-shadow:0 0 0 9999px rgba(15,23,42,.38);}'
+    '@keyframes tutpulse{0%{box-shadow:0 0 0 0 rgba(37,99,235,.75);}'
+    '70%{box-shadow:0 0 0 16px rgba(37,99,235,0);}100%{box-shadow:0 0 0 0 rgba(37,99,235,0);}}'
+    '.tut-btn{animation:tutpulse 1.1s infinite;outline:4px solid #2563eb !important;'
+    'outline-offset:2px;border-radius:10px;position:relative;z-index:61;}'
+    '@keyframes tutbob{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}'
+    '.tut-finger{position:absolute;z-index:62;font-size:34px;line-height:1;pointer-events:none;'
+    'animation:tutbob .8s infinite;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));}'
+    '</style>')
+
+# สคริปต์ชี้เป้า : รันใน iframe ซ่อน แล้วแต่งหน้าหลัก (ฉายไฟแถว · ปุ่ม/แท็บกะพริบ · นิ้วชี้ · เลื่อนจอไปหา)
+#   วนทุก 0.4 วิ เพราะบอร์ดวาดใหม่ทุก 30 วิ class ที่ใส่ไว้จะหายตาม · iframe ตายเมื่อขั้นเปลี่ยน
+_TUT_JS = r"""<script>
+(function(){
+  const CFG = __CFG__;
+  const d = window.parent.document;
+  let scrolled = false, t0 = Date.now();
+  function findBtn(root, label){
+    if(!label) return null;
+    const bs = Array.from(root.querySelectorAll('button'));
+    return bs.find(b => b.offsetParent && b.innerText.trim().replace(/\s+/g,' ').indexOf(label) >= 0) || null;
+  }
+  function tick(){
+    let spot = null, btn = null;
+    const a = d.querySelector('.tut-anchor');
+    if(a){
+      let ec = a.closest('[data-testid="stElementContainer"]') || a.closest('.element-container');
+      let n = ec ? ec.nextElementSibling : null;
+      while(n && !(n.querySelector && (n.querySelector('button') || n.querySelector('iframe')
+            || n.matches('[data-testid="stHorizontalBlock"]')))) n = n.nextElementSibling;
+      spot = n;
+    }
+    if(CFG.tab){
+      const ls = Array.from(d.querySelectorAll('[data-testid="stRadio"] label, [role="radiogroup"] label'));
+      btn = ls.find(l => l.innerText.indexOf(CFG.tab) >= 0) || null;
+    } else if(CFG.btn === '⋯'){
+      btn = Array.from(d.querySelectorAll('[data-testid="stPopoverButton"], [data-testid="stPopover"] button'))
+              .find(b => b.offsetParent && b.innerText.indexOf('⋯') >= 0) || null;
+    } else if(CFG.btn && spot){
+      btn = findBtn(spot, CFG.btn);
+    }
+    if(btn && CFG.pick){   // กล่องตัวเลือกเปิดอยู่ → ย้ายไปชี้ตัวเลือกที่ต้องกดแทน
+      const pb = Array.from(d.querySelectorAll('[data-testid="stPopoverBody"] button'))
+                   .find(b => b.offsetParent && b.innerText.indexOf(CFG.pick) >= 0);
+      if(pb) btn = pb;
+    }
+    d.querySelectorAll('.tut-spot').forEach(e => { if(e !== spot) e.classList.remove('tut-spot'); });
+    d.querySelectorAll('.tut-btn').forEach(e => { if(e !== btn) e.classList.remove('tut-btn'); });
+    if(spot && !spot.classList.contains('tut-spot')) spot.classList.add('tut-spot');
+    if(btn && !btn.classList.contains('tut-btn')) btn.classList.add('tut-btn');
+    let f = d.getElementById('tut-finger');
+    if(btn){
+      if(!f){ f = d.createElement('div'); f.id = 'tut-finger'; f.className = 'tut-finger';
+              f.textContent = '👆'; d.body.appendChild(f); }
+      const r = btn.getBoundingClientRect();
+      f.style.position = 'fixed';
+      f.style.left = (r.left + r.width/2 - 17) + 'px';
+      f.style.top = (r.bottom + 6) + 'px';
+      f.style.display = (r.bottom < 0 || r.top > window.parent.innerHeight) ? 'none' : 'block';
+    } else if(f){ f.remove(); }
+    const tgt = btn || spot;
+    if(!scrolled && tgt && Date.now() - t0 > 500){
+      scrolled = true;
+      try{ tgt.scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){}
+    }
+  }
+  const iv = setInterval(tick, 400); tick();
+  window.addEventListener('unload', function(){
+    clearInterval(iv);
+    d.querySelectorAll('.tut-spot').forEach(e => e.classList.remove('tut-spot'));
+    d.querySelectorAll('.tut-btn').forEach(e => e.classList.remove('tut-btn'));
+    const f = d.getElementById('tut-finger'); if(f) f.remove();
+  });
+})();
+</script>"""
 
 
 def render_tutorial(page_key, cases=None):
-    """🎓 แถบภารกิจของโหมดสอนการใช้ · page_key = 'board' | 'today' | 'history'
-    คืน (เคสเป้าหมาย, ข้อความป้ายชี้แถว) ให้หน้าตารางผ่าตัดตีกรอบ · หน้าอื่น/ไม่แสดง = (None, '')"""
+    """🎓 การ์ดโหมดสอนการใช้ (ลอยติดขอบล่างจอ) · page_key = 'board' | 'today' | 'history'
+    คืน (เคสเป้าหมาย, '') ให้หน้าตารางผ่าตัดวางหมุดหน้าแถว · หน้าอื่น/ไม่แสดง = (None, '')"""
     ss = st.session_state
     try:
         if str(st.secrets.get('instance_mode', '')).lower() != 'demo':
@@ -1437,59 +1565,55 @@ def render_tutorial(page_key, cases=None):
         return None, ''
     step = tutorial_step(ss.get('_tut_step', 1), cases)
     ss['_tut_step'] = step
-    _need = _TUT_PAGE.get(step, 'board')
-    _here = (_need == page_key)
-    if step > _TUT_N:
-        _title = f'ทำครบทั้ง {_TUT_N} ขั้นตอนแล้ว'
-        _text = ('กดปุ่ม ⋯ มุมขวาบนของหน้า ตารางผ่าตัด แล้วกด ปิดโหมดสาธิต '
-                 'จากนั้นโปรดตอบแบบสอบถาม SUS ที่ผู้วิจัยแจกให้')
-        _where, _badge = '', 'ครบแล้ว'
-    else:
-        _n, _title, _text = TRYOUT_STEPS[step - 1]
-        _where = (_TUT_WHERE.get(step, '') if _here else
-                  f'ขั้นนี้ทำที่หน้า {_TUT_PAGE_NAME[_need]} : กดแท็บ {_TUT_PAGE_NAME[_need]} ด้านบน')
-        _badge = f'ขั้นที่ {step} จาก {_TUT_N}'
+    v = tutorial_view(step, page_key, cases)
+    _ok = v['mode'] == 'done'
+    _badge = 'ครบแล้ว' if v['mode'] == 'end' else f'ขั้นที่ {step} จาก {_TUT_N}'
     _dots = ''.join(
-        f'<span style="width:22px;height:6px;border-radius:3px;'
-        f'background:{"#2563eb" if k < step else "#bfdbfe"};"></span>'
+        f'<span style="width:26px;height:8px;border-radius:4px;'
+        f'background:{"#2563eb" if k < step else "#60a5fa" if k == step else "#dbeafe"};"></span>'
         for k in range(1, _TUT_N + 1))
-    st.markdown(
-        '<div style="border:2px solid #2563eb;border-radius:12px;background:#eff6ff;'
-        'padding:12px 16px;margin:2px 0 1rem;">'
-        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-        '<span style="background:#2563eb;color:#fff;border-radius:999px;padding:2px 12px;'
-        'font-size:14px;font-weight:700;">โหมดสอนการใช้</span>'
-        f'<span style="font-size:15px;color:#1e3a8a;font-weight:700;">{_badge}</span>'
-        f'<span style="display:flex;gap:4px;">{_dots}</span></div>'
-        f'<div style="font-size:19px;font-weight:700;color:#0f172a;margin-top:6px;">{_title}</div>'
-        f'<div style="font-size:16px;color:#334155;line-height:1.55;">{_text}</div>'
-        + (f'<div style="font-size:16px;color:#1d4ed8;font-weight:700;margin-top:4px;">'
-           f'👉 {_where}</div>' if _where else '') + '</div>',
-        unsafe_allow_html=True)
-    _manual = step <= _TUT_N and step not in (2, 3, 4, 7)
-    # ปุ่มเรียงชิดซ้ายเสมอ : ขั้นที่ระบบตรวจเองไม่มีปุ่ม "ทำแล้ว" จึงไม่เว้นช่องว่างไว้
-    _btns = ([('next', 2.2)] if (_manual and _here) else []) \
-        + ([('skip', 1.3)] if step <= _TUT_N else []) + [('off', 1.4)]
-    _cols = st.columns([w for _, w in _btns] + [10 - sum(w for _, w in _btns)])
-    for (_kind, _w), _col in zip(_btns, _cols):
-        with _col:
-            if _kind == 'next':
-                if st.button("ทำแล้ว ไปขั้นถัดไป", key=f"tut_next_{page_key}", type='primary',
-                             width='stretch'):
-                    ss['_tut_step'] = step + 1
-                    _rerun_board()
-            elif _kind == 'skip':
-                if st.button("ข้ามขั้นนี้", key=f"tut_skip_{page_key}", width='stretch',
-                             help="ข้ามไปขั้นถัดไปโดยไม่ต้องทำขั้นนี้"):
-                    ss['_tut_step'] = step + 1
-                    _rerun_board()
-            else:
-                if st.button("ปิดโหมดสอน", key=f"tut_off_{page_key}", width='stretch',
-                             help="ซ่อนแถบนี้ เปิดใหม่ได้จากปุ่ม ⋯ มุมขวาบนของหน้า ตารางผ่าตัด"):
-                    ss['_tut_on'] = False
-                    _rerun_board()
-    if page_key == 'board' and _here and step in _TUT_CASE:
-        return _tut_case(cases, _TUT_CASE[step]), f'ขั้นที่ {step} : {_TUT_ROW_HINT[step]}'
+    _icon = '✅' if _ok else '🎉' if v['mode'] == 'end' else '👉'
+    _col = '#15803d' if _ok else '#1d4ed8'
+    with st.container(key='tutcard'):
+        st.markdown(
+            _TUT_CSS
+            + f'<div class="{"tut-ok" if _ok else "tut-do"}" style="margin-bottom:1rem;">'
+            '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+            '<span style="background:#2563eb;color:#fff;border-radius:999px;padding:2px 12px;'
+            'font-size:14px;font-weight:700;">โหมดสอนการใช้</span>'
+            f'<span style="font-size:15px;color:#1e3a8a;font-weight:700;">{_badge}</span>'
+            f'<span style="display:flex;gap:4px;">{_dots}</span></div>'
+            f'<div style="font-size:17px;font-weight:700;color:#475569;margin-top:6px;">{v["title"]}</div>'
+            f'<div style="font-size:21px;font-weight:700;color:{_col};line-height:1.45;margin-top:2px;">'
+            f'{_icon} {"ทำสำเร็จ : " if _ok else ""}{v["text"]}</div>'
+            + ('<div style="font-size:15px;color:#64748b;margin-top:4px;">'
+               'ทำตามข้อความด้านบนก่อน แล้วปุ่มไปขั้นถัดไปจะขึ้นมาตรงนี้</div>'
+               if v['mode'] in ('do', 'goto') else '')
+            + '</div>',
+            unsafe_allow_html=True)
+        if v['next']:
+            if st.button(v['next'], key=f"tut_next_{page_key}", type='primary', width='stretch'):
+                ss['_tut_step'] = step + 1
+                _rerun_board()
+        _c1, _c2, _c3 = st.columns([1, 1, 2])
+        with _c1:
+            if step <= _TUT_N and st.button("ข้ามขั้นนี้", key=f"tut_skip_{page_key}",
+                                            help="ข้ามไปขั้นถัดไปโดยไม่ต้องทำขั้นนี้"):
+                ss['_tut_step'] = step + 1
+                _rerun_board()
+        with _c2:
+            if st.button("ปิดโหมดสอน", key=f"tut_off_{page_key}",
+                         help="ซ่อนการ์ดนี้ เปิดใหม่ได้จากปุ่ม ⋯ มุมขวาบนของหน้า ตารางผ่าตัด"):
+                ss['_tut_on'] = False
+                _rerun_board()
+        import json as _json
+        import streamlit.components.v1 as _stc
+        _stc.html(_TUT_JS.replace('__CFG__', _json.dumps(
+            {'k': f'{step}-{v["mode"]}-{page_key}', 'tab': v['tab'], 'btn': v['btn'],
+             'pick': {'เสร็จ': 'ไปห้องรับ-ส่ง', '⋯': 'ปิดโหมดสาธิต'}.get(v['btn'], '')},
+            ensure_ascii=False)), height=0)
+    if page_key == 'board' and v['row']:
+        return _tut_case(cases, v['row']), ''
     return None, ''
 
 

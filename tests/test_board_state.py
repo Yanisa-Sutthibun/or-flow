@@ -962,26 +962,39 @@ def _tut_cases():
             {'_demo': True, 'hn': '99000016', 'status': 'in_or'}]
 
 
-def test_tutorial_steps_follow_board_state():
-    """ขั้นที่ระบบดูผลได้เอง ต้องผ่านเมื่อสถานะเคสถึง และไม่ข้ามขั้นที่ผู้ใช้ต้องกดเอง"""
+def test_tutorial_waits_for_user_every_step():
+    """🎮 รอบ 2 (16 พ.ย. 2026): ทำสำเร็จแล้วก็ไม่ข้ามขั้นเอง การ์ดเปลี่ยนเป็น 'done' รอผู้ใช้กดไปต่อ"""
     cs = _tut_cases()
-    assert P.tutorial_step(1, cs) == 1          # ขั้น 1 เป็นการอ่าน ระบบไม่ข้ามให้
-    assert P.tutorial_step(2, cs) == 2
-    cs[0]['status'] = 'holding_pre'
-    assert P.tutorial_step(2, cs) == 3
-    cs[0]['status'] = 'in_or'
-    assert P.tutorial_step(2, cs) == 4          # รับเข้า + เข้าห้อง ผ่านรวด
+    assert P.tutorial_view(1, 'board', cs)['mode'] == 'look'
+    v = P.tutorial_view(2, 'board', cs)
+    assert v['mode'] == 'do' and v['btn'] == 'รับเข้า' and not v['next']
+    cs[0]['status'] = 'in_or'                    # รับเข้า + เข้าห้อง ไปแล้ว
+    assert P.tutorial_step(2, cs) == 2           # ยังอยู่ขั้นเดิม ไม่ผ่านรวด
+    v = P.tutorial_view(2, 'board', cs)
+    assert v['mode'] == 'done' and v['next'] == 'ไปขั้นถัดไป' and not v['btn']
+    assert P.tutorial_view(4, 'board', cs)['mode'] == 'do'
     cs[1].update(q_manual=True, q_changed_hhmm='10:15')
-    assert P.tutorial_step(4, cs) == 5          # ขั้น 5 และ 6 เป็นการดู รอผู้ใช้กด
-    assert P.tutorial_step(7, cs) == 7
+    assert P.tutorial_view(4, 'board', cs)['mode'] == 'done'
     cs[0]['status'] = 'holding_post'
-    assert P.tutorial_step(7, cs) == P._TUT_N + 1
+    assert P.tutorial_view(7, 'board', cs)['next'] == 'เสร็จสิ้น'
+    assert P.tutorial_step(99, cs) == P._TUT_N + 1
+
+
+def test_tutorial_points_to_the_right_page():
+    """ขั้นที่ทำอีกหน้า การ์ดต้องบอกให้กดแท็บนั้น และไม่มีปุ่มไปต่อจนกว่าจะไปถึง"""
+    cs = _tut_cases()
+    v = P.tutorial_view(5, 'board', cs)
+    assert v['mode'] == 'goto' and v['tab'] == 'ภาพรวมวันนี้' and not v['next']
+    assert P.tutorial_view(5, 'today', cs)['next']
+    assert P.tutorial_view(7, 'history', cs)['tab'] == 'ตารางผ่าตัด'
+    assert P.tutorial_view(8, 'board', cs)['btn'] == '⋯'
+    assert P.tutorial_view(8, 'today', cs)['tab'] == 'ตารางผ่าตัด'
 
 
 def test_tutorial_ignores_non_demo_cases():
-    """เคสจริงที่ HN ลงท้ายเหมือนกัน ต้องไม่ทำให้ขั้นของโหมดสอนขยับ"""
+    """เคสจริงที่ HN ลงท้ายเหมือนกัน ต้องไม่ทำให้ขั้นของโหมดสอนถือว่าทำสำเร็จ"""
     cs = [{'hn': '560000002', 'status': 'in_or'}]
-    assert P.tutorial_step(2, cs) == 2
+    assert P.tutorial_view(2, 'board', cs)['mode'] == 'do'
 
 
 def test_tutorial_steps_match_intro_count():
