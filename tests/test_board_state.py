@@ -1006,6 +1006,13 @@ def test_tutorial_tour_comes_before_practice():
     assert all('—' not in t + x for t, x, _g in P._TUT_TOUR)
 
 
+def test_tutorial_overview_page_explains_sections_first():
+    """🗂️ รอบ 6: ขั้นดูภาพรวมของวัน ต้องอธิบาย 3 ส่วนของหน้าก่อน แล้วจึงขึ้นโจทย์"""
+    heads = [P.tutorial_sub_view(6, k)['head'] for k in range(3)]
+    assert heads == ['ต้องจัดการตอนนี้', 'สถานการณ์ห้องผ่าตัด', 'ตัวเลขของวัน']
+    assert P.tutorial_sub_view(6, 3) is None and P.tutorial_sub_view(2, 0) is None
+
+
 def test_tutorial_ignores_non_demo_cases():
     """เคสจริงที่ HN ลงท้ายเหมือนกัน ต้องไม่ทำให้ขั้นของโหมดสอนถือว่าทำสำเร็จ"""
     cs = [{'hn': '560000002', 'status': 'in_or'}]

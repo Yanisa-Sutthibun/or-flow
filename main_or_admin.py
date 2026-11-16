@@ -3864,19 +3864,47 @@ def _render_today_lean(rooms, kpi, live_cases, op_date):
         _msg = str(a.get('message') or '').replace(' — ', ' : ').replace('—', ':')
         _room = _rl(a.get('room_no')).replace(' · ', ' ')
         _txt = f"{_room} : {a.get('procedure') or '-'} | {a.get('name') or '-'} | {_msg}"
-        _items.append((_sty.get(a.get('type'), _sty['long_wait']), _txt))
+        _items.append((_sty.get(a.get('type'), _sty['long_wait']), _txt,
+                       f"{a.get('type')}|{a.get('room_no')}|{a.get('name')}"))
+    import re as _re_ack
     for kind, txt in notes:
         if kind == 'late':
-            _items.append((_sty['late'], txt))
+            _items.append((_sty['late'], txt, 'late|' + _re_ack.sub(r'\d+', '', txt)))
     for kind, txt in notes:
         if kind == 'idle':
-            _items.append((_sty['idle'], txt))
+            _items.append((_sty['idle'], txt, 'idle|' + _re_ack.sub(r'\d+', '', txt)))
     if _items:
-        st.markdown(
-            '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;">'
-            + ''.join(f'<div style="padding:8px 14px;border-radius:8px;font-size:17px;'
-                      f'font-weight:600;{sty}">{_esc(t)}</div>' for sty, t in _items)
-            + '</div>', unsafe_allow_html=True)
+        # ✅ 16 พ.ย. 2026 (มุกกี้สั่ง): ปุ่ม รับทราบ ท้ายแถบแจ้งเตือน กดแล้วแถบเป็นสีเทา
+        #    จำไว้ต่อเครื่องใน session (คีย์ = วัน + ชนิด + ห้อง + ผู้ป่วย ไม่ผูกกับจำนวนนาทีที่เปลี่ยนตลอด)
+        #    ไม่ลงฐานข้อมูล : เป็นเครื่องหมายช่วยจำของคนที่ดูจอนี้ ไม่ใช่ข้อมูลวิจัย
+        _acks = st.session_state.setdefault('_today_acks', {})
+        _ack_sty = 'background:#F1F5F9;color:#64748b;border:1px solid #E2E8F0;'
+
+        def _ack_set(_k, _on):
+            if _on:
+                st.session_state.setdefault('_today_acks', {})[_k] = _now_bkk().strftime('%H:%M')
+            else:
+                st.session_state.setdefault('_today_acks', {}).pop(_k, None)
+
+        for _i, (sty, t, _key) in enumerate(_items):
+            _k = f"{op_date}|{_key}"
+            _at = _acks.get(_k)
+            _c_txt, _c_btn = st.columns([8.6, 1.4])
+            with _c_txt:
+                st.markdown(
+                    f'<div style="padding:8px 14px;border-radius:8px;font-size:17px;font-weight:600;'
+                    f'margin-bottom:1rem;{_ack_sty if _at else sty}">{_esc(t)}'
+                    + (f' | รับทราบแล้ว {_at} น.' if _at else '') + '</div>',
+                    unsafe_allow_html=True)
+            with _c_btn:
+                if _at:
+                    st.button("ยกเลิก", key=f"today_unack_{_i}_{_key}", width='stretch',
+                              help="ยกเลิกการรับทราบ แถบจะกลับเป็นสีเดิม",
+                              on_click=_ack_set, args=(_k, False))
+                else:
+                    st.button("รับทราบ", key=f"today_ack_{_i}_{_key}", width='stretch',
+                              help="กดเมื่อรับทราบเรื่องนี้แล้ว แถบจะเปลี่ยนเป็นสีเทา",
+                              on_click=_ack_set, args=(_k, True))
     else:
         st.markdown(
             '<div style="padding:10px 14px;border-radius:8px;background:#E1F5EE;'
