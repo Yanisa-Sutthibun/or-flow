@@ -1413,6 +1413,15 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     # 🔑 15 พ.ย. 2026: K = คีย์ประจำเคส (ดู widget_keys) · ไม่ได้ส่งมา = ใช้ลำดับแบบเดิม
     K = (wkeys or {}).get(idx, idx)
     dup_badge = (dup_badges or {}).get(id(c), '')
+    # 🎓 16 พ.ย. 2026 (มุกกี้สั่ง): โหมดสอนการใช้ของแอป DEMO : แถวเป้าหมายของขั้นปัจจุบัน
+    #    ได้ป้ายชี้เหนือแถว + กรอบน้ำเงิน (main_or_pages ตั้ง _tl.tut_target ก่อนวาดบอร์ด)
+    _tut_hit = getattr(_tl, 'tut_target', None) is c
+    if _tut_hit:
+        st.markdown(
+            '<div style="margin:6px 0 1rem;"><span style="display:inline-block;background:#2563eb;'
+            'color:#fff;font-size:15px;font-weight:700;padding:3px 14px;border-radius:999px;">'
+            f'👉 {_esc(getattr(_tl, "tut_hint", ""))}</span></div>',
+            unsafe_allow_html=True)
     # 🔔 เคสนี้คือ "คิวถัดไปที่ต้องเรียก" ของห้องหรือเปล่า (identity เทียบ object
     #    ตรง ๆ — call_map สร้างจาก list เดียวกันในรอบ render นี้เสมอ)
     _ci = (call_map or {}).get(R)
@@ -1446,6 +1455,8 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
         _bar = '#e2e8f0'
     border_css = ('border:1px solid #f5c6c5;border-left:5px solid #e0312e;'
                   if emer else f'border:1px solid #eef2f6;border-left:5px solid {_bar};')
+    if _tut_hit:
+        border_css = 'border:2px solid #2563eb;border-left:5px solid #2563eb;'
     # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026): แถบสี = ภาษาปัญหาเท่านั้น
     #    ฉุกเฉิน = แถบแดงอ่อน · เกินเวลา = แถบเหลืองครีม · แถวปกติพื้นขาว
     #    (แถบเขียว/ครีมประจำสถานะเอาออก) · จำหน่ายแล้วคงเทาหรี่ · production เดิม

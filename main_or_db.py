@@ -621,6 +621,10 @@ def mask_patient_name(name) -> str:
     if name.strip().startswith('ผู้ป่วยทดสอบ'):
         return ' '.join(name.split())
     parts = ' '.join(name.split()).split()
+    # 🎬 16 พ.ย. 2026 (มุกกี้สั่ง): ชื่อสาธิตรุ่นใหม่ "สมชาย 2" นามสกุลเป็นเลข ไม่ใช่ชื่อคนจริง
+    #    → คงเลขไว้ทั้งตัว (ไม่งั้น 10-19 ย่อเหลือ "1." ซ้ำกันหมด) · นามสกุลจริงไม่มีทางเป็นเลขล้วน
+    if len(parts) >= 2 and parts[-1].isdigit():
+        return ' '.join(parts)
     title_parts = []
     # 1) เก็บยศ/คำนำหน้าแบบแยกคำ (เช่น 'ว่าที่ ร.ต.' = 2 คำ) — เหลือชื่อจริงอย่างน้อย 1 คำ
     while len(parts) >= 2 and len(title_parts) < 3 and _is_title_token(parts[0]):

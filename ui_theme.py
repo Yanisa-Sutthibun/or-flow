@@ -409,7 +409,7 @@ def _font_preview_html(label: str, z: float, cur: float) -> str:
         f'<span style="display:block;font-size:14px;color:#94a3b8;">08:30</span></span>'
         f'<span style="flex:1;min-width:0;overflow:hidden;">'
         f'<span style="display:block;font-size:18px;font-weight:600;color:#0f172a;'
-        f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">ผู้ป่วยทดสอบ 09'
+        f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">สมศรี 9'
         f'<span style="margin-left:8px;font-size:14px;font-weight:400;color:#b6c2cf;">'
         f'HN …0005</span></span>'
         f'<span style="display:block;font-size:15px;color:#64748b;white-space:nowrap;'

@@ -955,6 +955,59 @@ def test_merge_call_forward_survives_phase_merge():
     assert out['call_time'] == {'__dt__': '2026-08-13T10:05:00'}
 
 
+# 🎓 โหมดสอนการใช้ + ชื่อเคสสาธิตรุ่น 16 พ.ย. 2026 (มุกกี้สั่ง หลัง try out คนแรก)
+def _tut_cases():
+    return [{'_demo': True, 'hn': '99000002', 'status': 'not_arrived'},
+            {'_demo': True, 'hn': '…0008', 'status': 'not_arrived'},
+            {'_demo': True, 'hn': '99000016', 'status': 'in_or'}]
+
+
+def test_tutorial_steps_follow_board_state():
+    """ขั้นที่ระบบดูผลได้เอง ต้องผ่านเมื่อสถานะเคสถึง และไม่ข้ามขั้นที่ผู้ใช้ต้องกดเอง"""
+    cs = _tut_cases()
+    assert P.tutorial_step(1, cs) == 1          # ขั้น 1 เป็นการอ่าน ระบบไม่ข้ามให้
+    assert P.tutorial_step(2, cs) == 2
+    cs[0]['status'] = 'holding_pre'
+    assert P.tutorial_step(2, cs) == 3
+    cs[0]['status'] = 'in_or'
+    assert P.tutorial_step(2, cs) == 4          # รับเข้า + เข้าห้อง ผ่านรวด
+    cs[1].update(q_manual=True, q_changed_hhmm='10:15')
+    assert P.tutorial_step(4, cs) == 5          # ขั้น 5 และ 6 เป็นการดู รอผู้ใช้กด
+    assert P.tutorial_step(7, cs) == 7
+    cs[0]['status'] = 'holding_post'
+    assert P.tutorial_step(7, cs) == P._TUT_N + 1
+
+
+def test_tutorial_ignores_non_demo_cases():
+    """เคสจริงที่ HN ลงท้ายเหมือนกัน ต้องไม่ทำให้ขั้นของโหมดสอนขยับ"""
+    cs = [{'hn': '560000002', 'status': 'in_or'}]
+    assert P.tutorial_step(2, cs) == 2
+
+
+def test_tutorial_steps_match_intro_count():
+    assert P._TUT_N == 7 and all(len(x) == 3 for x in P.TRYOUT_STEPS)
+    assert set(P._TUT_CASE) | set(P._TUT_PAGE) == set(range(1, 8))
+
+
+def test_mask_keeps_numeric_surname_of_demo_names():
+    """ชื่อสาธิต 'สมบัติ 10' ต้องไม่ถูกย่อเป็น 'สมบัติ 1.' (จะซ้ำกับ 11-19) · ชื่อจริงยังย่อเหมือนเดิม"""
+    assert D.mask_patient_name('สมบัติ 10') == 'สมบัติ 10'
+    assert D.mask_patient_name('สมชาย 2') == 'สมชาย 2'
+    assert D.mask_patient_name('นางสาว ญาณิศา สุทธิบูรณ์') == 'น.ส. ญาณิศา ส.'
+
+
+def test_demo_patient_names_are_name_plus_number():
+    """ชื่อผู้ป่วยสาธิตต้องเป็น ชื่อสมมติ + เลข ตรงกับ 2 หลักท้ายของ HN ปลอม
+    (ยกเว้นเคส 16 ที่ตั้งใจให้ชื่อซ้ำกับเคส 3 ไว้สาธิตป้ายชื่อซ้ำ)"""
+    import re as _re
+    from demo_cases_data import DEMO_POOL
+    for d in DEMO_POOL:
+        m = _re.fullmatch(r'[ก-๙]+ (\d{1,2})', d['name'])
+        assert m, f"ชื่อ '{d['name']}' ไม่ใช่รูปแบบ ชื่อ + เลข"
+        if d['hn'] != '99000016':
+            assert int(m.group(1)) == int(d['hn'][-2:]), d['name']
+
+
 # ═════════════════════════════ runner ═════════════════════════════
 
 def _run_all():

@@ -315,7 +315,14 @@ _CSS = (
     ".tmr-hd{font-size:14px;color:#64748B;font-weight:600;border-bottom:1px solid #E2E8F0;padding-bottom:6px;}"
     ".tmr-code{font-size:17px;font-weight:700;line-height:1.2;}"
     ".tmr-muted{font-size:13px;color:#94A3B8;}"
-    ".tmr-ops{font-size:14px;color:#475569;line-height:1.45;}"
+    # 🩹 16 พ.ย. 2026 (มุกกี้สั่ง): ห้องที่มี 3 เคสขึ้นไป บรรทัดหัตถการล้นไปทับแถวถัดไป
+    #    (กล่อง markdown ของ Streamlit 1.67 ติด margin-bottom:-1rem แถวจึงสูงไม่พอ)
+    #    → เรียงหัตถการต่อกัน ตัดที่ 2 บรรทัด ที่เหลือขึ้น ... ชี้เมาส์เห็นรายการเต็ม
+    #    และชดเชย margin คืน 1rem ให้ข้อความอยู่กลางแถว
+    ".tmr-ops{font-size:14px;color:#475569;line-height:1.45;margin-bottom:1rem;"
+    "display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}"
+    ".tmr-ops .op{margin-right:14px;}"
+    ".tmr-cell{margin-bottom:1rem;}"
     ".tmr-late{color:#8A5A00;font-weight:700;}"
     + _TBL_CSS + "</style>"
 )
@@ -411,23 +418,24 @@ def render_staff_editor():
 
         # แถวรับ-ส่ง : operation = จำนวนเคสทั้งหมด
         cs = st.columns(W, vertical_alignment='center')
-        cs[0].markdown('<div class="tmr-code">รับ-ส่ง</div>', unsafe_allow_html=True)
+        cs[0].markdown('<div class="tmr-cell"><div class="tmr-code">รับ-ส่ง</div></div>', unsafe_allow_html=True)
         cs[1].markdown(f'<div class="tmr-ops">ทั้งหมด {len(cases)} เคส</div>', unsafe_allow_html=True)
-        cs[2].markdown('<div class="tmr-muted">-</div>', unsafe_allow_html=True)
+        cs[2].markdown('<div class="tmr-cell tmr-muted">-</div>', unsafe_allow_html=True)
         _slots('rs', 'รับ-ส่ง', cs[3:])
 
         for rm in rows:
             cs = st.columns(W, vertical_alignment='center')
-            cs[0].markdown(f'<div class="tmr-code">{_html.escape(rm["code"])}</div>'
-                           f'<div class="tmr-muted">{_html.escape(rm["spec"])}</div>', unsafe_allow_html=True)
-            cs[1].markdown('<div class="tmr-ops">' + ('<br>'.join(
-                f'{i}. {_html.escape(op)}' for i, op in enumerate(rm['ops'], 1)) or
+            cs[0].markdown(f'<div class="tmr-cell"><div class="tmr-code">{_html.escape(rm["code"])}</div>'
+                           f'<div class="tmr-muted">{_html.escape(rm["spec"])}</div></div>', unsafe_allow_html=True)
+            _ops_tip = _html.escape('\n'.join(f'{i}. {op}' for i, op in enumerate(rm['ops'], 1)), quote=True)
+            cs[1].markdown(f'<div class="tmr-ops" title="{_ops_tip}">' + (' '.join(
+                f'<span class="op">{i}.&nbsp;{_html.escape(op)}</span>' for i, op in enumerate(rm['ops'], 1)) or
                 '<span class="tmr-muted">ไม่มีเคส</span>') + '</div>', unsafe_allow_html=True)
             if rm['n']:
-                cs[2].markdown(f'<div style="font-size:15px;">{_dur(rm["mins"])}</div>',
+                cs[2].markdown(f'<div class="tmr-cell" style="font-size:15px;">{_dur(rm["mins"])}</div>',
                                unsafe_allow_html=True)
             else:
-                cs[2].markdown('<div class="tmr-muted">-</div>', unsafe_allow_html=True)
+                cs[2].markdown('<div class="tmr-cell tmr-muted">-</div>', unsafe_allow_html=True)
             _slots(f"r{rm['room_no']}", rm['code'], cs[3:])
 
         st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)

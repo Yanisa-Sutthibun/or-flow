@@ -952,7 +952,11 @@ def _check_password():
         st.caption("🔑 รหัสผ่านจากเจ้าของระบบ : สำหรับบุคลากรที่ได้รับอนุญาตเท่านั้น")
         _lock_left = _login_lock_left()
         with st.form("login_form", clear_on_submit=False):
+            # 🔑 16 พ.ย. 2026 (เจอตอน try out · มุกกี้สั่ง): ไม่ระบุ autocomplete = Streamlit ใส่
+            #    "new-password" ให้เอง Chrome จึงเสนอสร้างรหัสผ่านใหม่ทุกครั้งจนผู้ใช้งง
+            #    → บอกเบราว์เซอร์ว่าเป็นช่องกรอกรหัสเดิม
             pwd = st.text_input("รหัสผ่าน", type="password",
+                                autocomplete="current-password",
                                 placeholder="••••••••",
                                 label_visibility='collapsed',
                                 disabled=bool(_lock_left))
@@ -1245,6 +1249,17 @@ def main():
             _page_options = ["📋 ตารางผ่าตัด", "📊 ภาพรวมวันนี้", "📈 สถิติย้อนหลัง",
                              "🗓️ จัดคิวพรุ่งนี้ (DEMO)", "🗓️ จัดคิว AI (DEMO)",
                              "⚙️ ตั้งค่าห้องผ่าตัด"]
+            # 🧹 16 พ.ย. 2026 (มุกกี้สั่ง หลัง try out คนแรก): ผู้ทดลองใช้เห็นแค่ 3 แท็บที่ใช้ใน
+            #    งานวิจัย ลดความสับสน · แท็บที่เหลือยังอยู่ครบ เปิดได้ 2 ทาง คือเข้าด้วยรหัส
+            #    ผู้ดูแลระบบ หรือเติม ?menu=all ต่อท้ายลิงก์ (จำไว้ตลอด session นั้น)
+            try:
+                if str(st.query_params.get('menu', '')).lower() == 'all':
+                    st.session_state['_all_tabs'] = True
+            except Exception:
+                pass
+            if not (st.session_state.get('role') == 'admin'
+                    or st.session_state.get('_all_tabs')):
+                _page_options = _page_options[:3]
     except Exception:
         pass
     # 🚪 โหมดจอประจำห้อง: เหลือ 3 แท็บ (ทำงาน + รับรู้สถานการณ์ + ดูสถิติ)
@@ -1316,6 +1331,15 @@ def main():
                 "var e=window.parent.document.getElementById(i);if(e){e.remove();}});</script>",
                 height=0)
 
+    def _render_tutorial_bar(_pk):
+        """🎓 16 พ.ย. 2026 (มุกกี้สั่ง): แถบโหมดสอนการใช้ของแอป DEMO บนหน้าที่ไม่ใช่บอร์ด
+        (หน้าตารางผ่าตัดวางแถบเองใน _board_fragment เพื่อให้ขยับตามปุ่มทันที)"""
+        try:
+            from main_or_pages import render_tutorial
+            render_tutorial(_pk)
+        except Exception as _tx:
+            print(f"[tutorial] แสดงแถบโหมดสอนไม่สำเร็จ: {_tx}")
+
     if page == "📋 ตารางผ่าตัด":
         page_or_board()
     elif page == "🗓️ จัดคิว AI":
@@ -1325,8 +1349,10 @@ def main():
         from tomorrow_plan import page_tomorrow
         page_tomorrow()
     elif page == "📊 ภาพรวมวันนี้":
+        _render_tutorial_bar('today')
         page_admin('today')
     elif page == "📈 สถิติย้อนหลัง":
+        _render_tutorial_bar('history')
         page_admin('history')
     elif page == "🤖 ผลวิจัย AI":
         page_admin('ai')

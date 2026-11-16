@@ -714,7 +714,7 @@ def _or_board_demo():
     ═══════════════════════════════════════════════════════════════════
     ที่มา: ตารางผ่าตัดจริง 5 วัน (13-17 ก.ค. 69) mix แบบ "ห้องละหนึ่งวัน"
     → คง pattern แพทย์ประจำวัน · mask ครบ (แพทย์ = รหัส "แพทย์ A-K" /
-    ผู้ป่วย = รหัส "ผู้ป่วยทดสอบ NN" / HN ปลอม — เปลี่ยนเป็นรหัส 26 ต.ค. 2026 ตาม IRB ข้อ 14)
+    ผู้ป่วย = ชื่อสมมติ + นามสกุลเป็นเลข เช่น "สมชาย 3" / HN ปลอม — 16 พ.ย. 2026 มุกกี้สั่ง · เดิมรหัส "ผู้ป่วยทดสอบ NN")
     แต่หัตถการ+วินิจฉัย+ASA/BMI คงจริง → ทำนายด้วยโมเดลจริง
     ตอนเปิดสาธิต (ส่ง SURG_xxx เข้าโมเดล) — ตัวเลข AI จึงเท่า production
 
@@ -1341,6 +1341,158 @@ def _render_clear_board_body():
         st.rerun()
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# 🎓 โหมดสอนการใช้ (มุกกี้สั่ง 16 พ.ย. 2026 หลัง try out คนแรก)
+# ───────────────────────────────────────────────────────────────────────
+# ทำไมต้องมี: ผู้ทดลองใช้คนแรกทำตามใบขั้นตอนเองไม่ได้ ต้องให้ผู้วิจัยยืนอธิบาย
+# → แถบภารกิจบนจอ บอกทีละขั้นว่าต้องทำอะไรที่ไหน มีป้ายชี้แถวที่ต้องกด
+#   ขั้นที่ระบบดูผลได้เอง (รับเข้า เข้าห้อง เปลี่ยนคิว เสร็จ) ผ่านอัตโนมัติ
+#   ขั้นที่เป็นการอ่าน/ดู (1, 5, 6) ผู้ใช้กด "ทำแล้ว ไปขั้นถัดไป" เอง
+# ขอบเขต: แอป DEMO ตอนเปิดโหมดสาธิตเท่านั้น · ตัวชี้ขั้นเก็บใน session (ต่อเครื่อง)
+# ข้อความของแต่ละขั้น = TRYOUT_STEPS ชุดเดียวกับหน้าต้อนรับและใบขั้นตอนในเอกสาร
+#   try out : แก้เอกสารเมื่อไรต้องแก้ที่ TRYOUT_STEPS ด้วย
+# ═══════════════════════════════════════════════════════════════════════
+TRYOUT_STEPS = [
+    ('1', 'อ่านตารางผ่าตัด',
+     'มองหาเคส ทดสอบ 2 ห้อง OR8 บนตารางผ่าตัด แล้วอ่านว่าแบบจำลองทำนายว่าเคสนี้จะใช้ห้องผ่าตัดนานประมาณเท่าไร'),
+    ('2', 'รับผู้ป่วยเข้า',
+     'สมมติว่าผู้ป่วย ทดสอบ 2 มาถึงห้องผ่าตัดแล้ว ให้กดปุ่ม รับเข้า ที่แถวของเคสนี้ แล้วสังเกตว่าปุ่มเปลี่ยนเป็น เข้าห้อง และมีนาฬิกาเวลารอขึ้นมา'),
+    ('3', 'นำผู้ป่วยเข้าห้อง',
+     'กดปุ่ม เข้าห้อง ที่เคสเดิม แล้วสังเกตแถบความคืบหน้าเทียบกับเวลาที่แบบจำลองทำนาย'),
+    ('4', 'เปลี่ยนคิวถัดไป',
+     'สมมติว่าแพทย์ขอผ่าตัดผู้ป่วย สมมติ 8 ห้อง OR2 ก่อน ให้กดปุ่ม คิวถัดไป ที่แถวของเคสนี้ แล้วสังเกตว่าเลขคิวของเคสนี้เปลี่ยนเป็น คิว 1 และมีแถบแจ้งการเปลี่ยนคิวขึ้นมาด้านบนของตาราง'),
+    ('5', 'ดูภาพรวมของวัน',
+     'ไปที่หน้า ภาพรวมวันนี้ ดูไทม์ไลน์ห้องผ่าตัดว่าห้อง OR8 มีแถบกำลังผ่าตัดหรือไม่ และดูตัวเลขของวันว่ามีเคสทั้งหมด ผ่าเสร็จแล้ว และกำลังผ่าตัดกี่เคส'),
+    ('6', 'ดูสถิติย้อนหลัง',
+     'ไปที่หน้า สถิติย้อนหลัง กดปุ่ม แสดงสถิติ โดยใช้ช่วงวันที่ที่ระบบตั้งไว้ แล้วดูหัวข้อ สถิติรายห้อง ว่าห้องใดมีจำนวนเคสมากที่สุด'),
+    ('7', 'ผ่าตัดเสร็จและปิดระบบสาธิต',
+     'กลับไปหน้า ตารางผ่าตัด กดปุ่ม เสร็จ ที่เคส ทดสอบ 2 แล้วเลือก ไปห้องรับ-ส่ง จากนั้นกดปุ่ม ⋯ มุมขวาบน กด ปิดโหมดสาธิต (ถ้ามีกล่องยืนยันขึ้นมา ให้กด ยืนยัน) และออกจากระบบ'),
+]
+
+_TUT_N = len(TRYOUT_STEPS)
+_TUT_CASE = {1: '0002', 2: '0002', 3: '0002', 4: '0008', 7: '0002'}   # 4 หลักท้าย HN ของเคสเป้าหมาย
+_TUT_PAGE = {5: 'today', 6: 'history'}                                 # ขั้นที่ทำนอกหน้าตารางผ่าตัด
+_TUT_PAGE_NAME = {'board': 'ตารางผ่าตัด', 'today': 'ภาพรวมวันนี้', 'history': 'สถิติย้อนหลัง'}
+_TUT_ROW_HINT = {1: 'อ่านเวลาที่ทำนายในแถวนี้', 2: 'กดปุ่ม รับเข้า ที่แถวนี้',
+                 3: 'กดปุ่ม เข้าห้อง ที่แถวนี้', 4: 'กดปุ่ม คิวถัดไป ที่แถวนี้',
+                 7: 'กดปุ่ม เสร็จ ที่แถวนี้'}
+_TUT_WHERE = {
+    1: 'เลื่อนลงไปที่แถวที่มีป้ายสีน้ำเงินชี้อยู่ อ่านบรรทัดล่างของการ์ดที่ขึ้นต้นว่า ทำนายใช้ห้อง แล้วกดปุ่ม ทำแล้ว ไปขั้นถัดไป',
+    2: 'กดปุ่ม รับเข้า ท้ายแถวที่มีป้ายสีน้ำเงินชี้อยู่',
+    3: 'กดปุ่ม เข้าห้อง ท้ายแถวที่มีป้ายสีน้ำเงินชี้อยู่',
+    4: 'กดปุ่ม คิวถัดไป ที่อยู่ถัดจากเลขคิว ในแถวที่มีป้ายสีน้ำเงินชี้อยู่',
+    5: 'ดูครบแล้วกดปุ่ม ทำแล้ว ไปขั้นถัดไป',
+    6: 'กดปุ่ม แสดงสถิติ ดูหัวข้อ สถิติรายห้อง แล้วกดปุ่ม ทำแล้ว ไปขั้นถัดไป',
+    7: 'กดปุ่ม เสร็จ ท้ายแถวที่มีป้ายสีน้ำเงินชี้อยู่ แล้วเลือก ไปห้องรับ-ส่ง',
+}
+
+
+def _tut_case(cases, tail):
+    """หาเคสสาธิตจาก 4 หลักท้ายของ HN (ใน session HN อาจเต็มหรือถูก mask เป็น …0002 แล้ว)"""
+    import re as _re
+    for c in cases or []:
+        if c.get('_demo') and _re.sub(r'\D', '', str(c.get('hn') or ''))[-4:] == tail:
+            return c
+    return None
+
+
+def tutorial_auto_done(step, cases) -> bool:
+    """ขั้นนี้ทำเสร็จแล้วหรือยัง ดูจากสถานะเคสบนบอร์ด (logic ล้วน ทดสอบได้โดยไม่มี UI)
+    ขั้นที่เป็นการอ่าน/ดู (1, 5, 6) ระบบดูเองไม่ได้ → คืน False เสมอ ผู้ใช้กดไปต่อเอง"""
+    c2 = _tut_case(cases, '0002') or {}
+    s2 = c2.get('status')
+    if step == 2:
+        return s2 in ('holding_pre', 'in_or', 'holding_post', 'recovery', 'discharged')
+    if step == 3:
+        return s2 in ('in_or', 'holding_post', 'recovery', 'discharged')
+    if step == 4:
+        c8 = _tut_case(cases, '0008') or {}
+        return bool(c8.get('q_manual') and c8.get('q_changed_hhmm'))
+    if step == 7:
+        return s2 in ('holding_post', 'recovery', 'discharged')
+    return False
+
+
+def tutorial_step(step, cases) -> int:
+    """เลื่อนตัวชี้ผ่านขั้นที่ทำเสร็จแล้ว · เดินหน้าอย่างเดียว · คืน _TUT_N + 1 = ครบทุกขั้น"""
+    step = max(1, int(step or 1))
+    while step <= _TUT_N and tutorial_auto_done(step, cases):
+        step += 1
+    return step
+
+
+def render_tutorial(page_key, cases=None):
+    """🎓 แถบภารกิจของโหมดสอนการใช้ · page_key = 'board' | 'today' | 'history'
+    คืน (เคสเป้าหมาย, ข้อความป้ายชี้แถว) ให้หน้าตารางผ่าตัดตีกรอบ · หน้าอื่น/ไม่แสดง = (None, '')"""
+    ss = st.session_state
+    try:
+        if str(st.secrets.get('instance_mode', '')).lower() != 'demo':
+            return None, ''
+    except Exception:
+        return None, ''
+    if ss.get('role') == 'room' or not ss.get('_or_demo') or not ss.get('_tut_on', True):
+        return None, ''
+    cases = cases if cases is not None else (ss.get('patient_cases') or [])
+    if not any(c.get('_demo') for c in cases):
+        return None, ''
+    step = tutorial_step(ss.get('_tut_step', 1), cases)
+    ss['_tut_step'] = step
+    _need = _TUT_PAGE.get(step, 'board')
+    _here = (_need == page_key)
+    if step > _TUT_N:
+        _title = f'ทำครบทั้ง {_TUT_N} ขั้นตอนแล้ว'
+        _text = ('กดปุ่ม ⋯ มุมขวาบนของหน้า ตารางผ่าตัด แล้วกด ปิดโหมดสาธิต '
+                 'จากนั้นโปรดตอบแบบสอบถาม SUS ที่ผู้วิจัยแจกให้')
+        _where, _badge = '', 'ครบแล้ว'
+    else:
+        _n, _title, _text = TRYOUT_STEPS[step - 1]
+        _where = (_TUT_WHERE.get(step, '') if _here else
+                  f'ขั้นนี้ทำที่หน้า {_TUT_PAGE_NAME[_need]} : กดแท็บ {_TUT_PAGE_NAME[_need]} ด้านบน')
+        _badge = f'ขั้นที่ {step} จาก {_TUT_N}'
+    _dots = ''.join(
+        f'<span style="width:22px;height:6px;border-radius:3px;'
+        f'background:{"#2563eb" if k < step else "#bfdbfe"};"></span>'
+        for k in range(1, _TUT_N + 1))
+    st.markdown(
+        '<div style="border:2px solid #2563eb;border-radius:12px;background:#eff6ff;'
+        'padding:12px 16px;margin:2px 0 1rem;">'
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+        '<span style="background:#2563eb;color:#fff;border-radius:999px;padding:2px 12px;'
+        'font-size:14px;font-weight:700;">โหมดสอนการใช้</span>'
+        f'<span style="font-size:15px;color:#1e3a8a;font-weight:700;">{_badge}</span>'
+        f'<span style="display:flex;gap:4px;">{_dots}</span></div>'
+        f'<div style="font-size:19px;font-weight:700;color:#0f172a;margin-top:6px;">{_title}</div>'
+        f'<div style="font-size:16px;color:#334155;line-height:1.55;">{_text}</div>'
+        + (f'<div style="font-size:16px;color:#1d4ed8;font-weight:700;margin-top:4px;">'
+           f'👉 {_where}</div>' if _where else '') + '</div>',
+        unsafe_allow_html=True)
+    _manual = step <= _TUT_N and step not in (2, 3, 4, 7)
+    # ปุ่มเรียงชิดซ้ายเสมอ : ขั้นที่ระบบตรวจเองไม่มีปุ่ม "ทำแล้ว" จึงไม่เว้นช่องว่างไว้
+    _btns = ([('next', 2.2)] if (_manual and _here) else []) \
+        + ([('skip', 1.3)] if step <= _TUT_N else []) + [('off', 1.4)]
+    _cols = st.columns([w for _, w in _btns] + [10 - sum(w for _, w in _btns)])
+    for (_kind, _w), _col in zip(_btns, _cols):
+        with _col:
+            if _kind == 'next':
+                if st.button("ทำแล้ว ไปขั้นถัดไป", key=f"tut_next_{page_key}", type='primary',
+                             width='stretch'):
+                    ss['_tut_step'] = step + 1
+                    _rerun_board()
+            elif _kind == 'skip':
+                if st.button("ข้ามขั้นนี้", key=f"tut_skip_{page_key}", width='stretch',
+                             help="ข้ามไปขั้นถัดไปโดยไม่ต้องทำขั้นนี้"):
+                    ss['_tut_step'] = step + 1
+                    _rerun_board()
+            else:
+                if st.button("ปิดโหมดสอน", key=f"tut_off_{page_key}", width='stretch',
+                             help="ซ่อนแถบนี้ เปิดใหม่ได้จากปุ่ม ⋯ มุมขวาบนของหน้า ตารางผ่าตัด"):
+                    ss['_tut_on'] = False
+                    _rerun_board()
+    if page_key == 'board' and _here and step in _TUT_CASE:
+        return _tut_case(cases, _TUT_CASE[step]), f'ขั้นที่ {step} : {_TUT_ROW_HINT[step]}'
+    return None, ''
+
+
 def _render_tryout_intro():
     """🧪 คำอธิบายการทดลองใช้เครื่องมือวิจัย (try out) บนหน้าว่างของแอป DEMO
     📄 15 พ.ย. 2026 (มุกกี้สั่ง): ข้อความยกมาจากชุดเอกสาร try out คำต่อคำ
@@ -1365,22 +1517,7 @@ def _render_tryout_intro():
         ]),
         # ข้อ 4 (ส่วนอื่นของระบบที่ไม่ได้ให้ทดลอง) มีในเอกสาร Word เท่านั้น : มุกกี้สั่งเอาออกจากหน้าจอ 15 พ.ย. 2026
     ]
-    _steps = [
-        ('1', 'อ่านตารางผ่าตัด',
-         'มองหาเคส ผู้ป่วยทดสอบ 02 ห้อง OR8 บนตารางผ่าตัด แล้วอ่านว่าแบบจำลองทำนายว่าเคสนี้จะใช้ห้องผ่าตัดนานประมาณเท่าไร'),
-        ('2', 'รับผู้ป่วยเข้า',
-         'สมมติว่าผู้ป่วยทดสอบ 02 มาถึงห้องผ่าตัดแล้ว ให้กดปุ่ม รับเข้า ที่แถวของเคสนี้ แล้วสังเกตว่าปุ่มเปลี่ยนเป็น เข้าห้อง และมีนาฬิกาเวลารอขึ้นมา'),
-        ('3', 'นำผู้ป่วยเข้าห้อง',
-         'กดปุ่ม เข้าห้อง ที่เคสเดิม แล้วสังเกตแถบความคืบหน้าเทียบกับเวลาที่แบบจำลองทำนาย'),
-        ('4', 'เปลี่ยนคิวถัดไป',
-         'สมมติว่าแพทย์ขอผ่าตัดผู้ป่วยทดสอบ 08 ห้อง OR2 ก่อน ให้กดปุ่ม คิวถัดไป ที่แถวของเคสนี้ แล้วสังเกตว่าเลขคิวของเคสนี้เปลี่ยนเป็น คิว 1 และมีแถบแจ้งการเปลี่ยนคิวขึ้นมาด้านบนของตาราง'),
-        ('5', 'ดูภาพรวมของวัน',
-         'ไปที่หน้า ภาพรวมวันนี้ ดูไทม์ไลน์ห้องผ่าตัดว่าห้อง OR8 มีแถบกำลังผ่าตัดหรือไม่ และดูตัวเลขของวันว่ามีเคสทั้งหมด ผ่าเสร็จแล้ว และกำลังผ่าตัดกี่เคส'),
-        ('6', 'ดูสถิติย้อนหลัง',
-         'ไปที่หน้า สถิติย้อนหลัง กดปุ่ม แสดงสถิติ โดยใช้ช่วงวันที่ที่ระบบตั้งไว้ แล้วดูหัวข้อ สถิติรายห้อง ว่าห้องใดมีจำนวนเคสมากที่สุด'),
-        ('7', 'ผ่าตัดเสร็จและปิดระบบสาธิต',
-         'กลับไปหน้า ตารางผ่าตัด กดปุ่ม เสร็จ ที่เคสผู้ป่วยทดสอบ 02 แล้วเลือก ไปห้องรับ-ส่ง จากนั้นกดปุ่ม ⋯ มุมขวาบน กด ปิดโหมดสาธิต (ถ้ามีกล่องยืนยันขึ้นมา ให้กด ยืนยัน) และออกจากระบบ'),
-    ]
+    _steps = TRYOUT_STEPS
     _sec_html = ''.join(
         f'<div style="font-size:17px;font-weight:700;color:#0f172a;margin:12px 0 2px;">{h}</div>'
         + ''.join(f'<div style="font-size:16px;color:#334155;line-height:1.6;padding-left:14px;'
@@ -1407,7 +1544,8 @@ def _render_tryout_intro():
         + _rows +
         '<div style="margin-top:12px;padding:10px 14px;border-radius:8px;background:#f1f5f9;'
         'font-size:16px;color:#0f172a;">เริ่มได้เลย : กดปุ่ม <b>เปิดโหมดสาธิต</b> มุมขวาบน '
-        'ระบบจะโหลดเคสสมมติขึ้นมาแทนหน้านี้<br>' + 'เมื่อทำครบทั้ง 7 ขั้นตอนแล้ว โปรดตอบแบบสอบถาม SUS ที่ผู้วิจัยแจกให้ โดยประเมินจากความรู้สึกต่อระบบที่เพิ่งทดลองใช้ ไม่มีคำตอบถูกหรือผิด' + '</div>'
+        'ระบบจะโหลดเคสสมมติขึ้นมาแทนหน้านี้ พร้อมแถบสีน้ำเงิน <b>โหมดสอนการใช้</b> '
+        'ที่บอกขั้นตอนทีละขั้นและชี้แถวที่ต้องกด<br>' + 'เมื่อทำครบทั้ง 7 ขั้นตอนแล้ว โปรดตอบแบบสอบถาม SUS ที่ผู้วิจัยแจกให้ โดยประเมินจากความรู้สึกต่อระบบที่เพิ่งทดลองใช้ ไม่มีคำตอบถูกหรือผิด' + '</div>'
         '</div>',
         unsafe_allow_html=True)
 
@@ -1664,6 +1802,12 @@ def _board_fragment():
                 if st.button("ปิดโหมดสาธิต", key="orboard_demo_off", width='stretch',
                              help="ปิดแล้วเคสสาธิตทั้งหมดจะถูกล้างออกจากบอร์ด"):
                     _demo_on = _demo_switch_pressed('off', _demo_on)
+                # 🎓 16 พ.ย. 2026: เปิดแถบโหมดสอนการใช้คืน หลังกด ปิดโหมดสอน
+                if not st.session_state.get('_tut_on', True):
+                    if st.button("เปิดโหมดสอนการใช้", key="orboard_tut_on", width='stretch',
+                                 help="แสดงแถบบอกขั้นตอนทดลองใช้ทีละขั้นอีกครั้ง"):
+                        st.session_state['_tut_on'] = True
+                        _rerun_board()
                 st.markdown("---")
     _ctl_l, _ctl_warn, _ctl_r = ((None, None, None) if _mini_hdr else
                                  st.columns([1.3, 4, 0.01] if _compact else [3, 1.5, 1],
@@ -1725,6 +1869,8 @@ def _board_fragment():
     if _demo_on and not st.session_state.get('_or_demo'):
         st.session_state.patient_cases = _or_board_demo()
         st.session_state['_or_demo'] = True
+        st.session_state['_tut_step'] = 1      # 🎓 ชุดสาธิตใหม่ = เริ่มโหมดสอนขั้นที่ 1
+        st.session_state['_tut_on'] = True
         if _is_demo_instance:
             # 🖥️ ดันเคสสาธิตขึ้นบอร์ดกลาง (schema demo) ทันที —
             #    จอญาติ/จอห้อง demo เห็นภายในรอบ refresh ถัดไป
@@ -1868,6 +2014,15 @@ def _board_fragment():
                     "- หรือเพิ่มเคสเองที่แท็บ **➕ เพิ่มเคส (Manual)**")
         return
 
+    # 🎓 16 พ.ย. 2026 (มุกกี้สั่ง): โหมดสอนการใช้ของแอป DEMO : แถบภารกิจเหนือบอร์ด
+    #    อยู่ใน fragment เพื่อให้กดปุ่มบนบอร์ดแล้วแถบขยับขั้นทันที
+    _tut_row, _tut_hint = (None, '')
+    if _is_demo_instance and _mini_hdr:
+        try:
+            _tut_row, _tut_hint = render_tutorial('board', cases)
+        except Exception as _tx:
+            print(f"[tutorial] แสดงแถบโหมดสอนไม่สำเร็จ: {_tx}")
+
     # ---------- counters ----------
     n_not = sum(1 for c in cases if c['status'] == 'not_arrived')
     n_hold = sum(1 for c in cases if c['status'] == 'holding_pre')
@@ -1992,10 +2147,17 @@ def _board_fragment():
 
     # ---------- กระดานติดตาม (production tracking board) ----------
     from tracking_board import render_tracking_board
-    render_tracking_board(cases, _do_arrive, _do_enter, _do_finish, _do_undo,
-                          _loc, _rid, _tlabel, _sched_min,
-                          room_opts=_enabled_room_options(),
-                          mark_dirty=_mark_board_dirty)
+    import tracking_board as _tbm
+    # 🎓 โหมดสอนการใช้ : บอกแถวเป้าหมายผ่านตัวแปรประจำเธรด แล้วล้างทันทีหลังวาด
+    #    (เธรดถูกใช้ซ้ำข้าม session ถ้าไม่ล้าง กรอบจะไปโผล่บนจอคนอื่น)
+    _tbm._tl.tut_target, _tbm._tl.tut_hint = _tut_row, _tut_hint
+    try:
+        render_tracking_board(cases, _do_arrive, _do_enter, _do_finish, _do_undo,
+                              _loc, _rid, _tlabel, _sched_min,
+                              room_opts=_enabled_room_options(),
+                              mark_dirty=_mark_board_dirty)
+    finally:
+        _tbm._tl.tut_target, _tbm._tl.tut_hint = None, ''
 
     # 💾 บันทึก snapshot บอร์ดปัจจุบัน — เฉพาะตอน "เครื่องนี้เพิ่งแก้จริง" (CR-2)
     #    เลิกเซฟทุก rerun แล้ว → กัน rerun เฉย ๆ (เปิด popover/refresh) เขียนทับเครื่องอื่น
