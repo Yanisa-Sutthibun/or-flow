@@ -2089,6 +2089,14 @@ def _board_fragment():
                              help="เปิดแล้วจะมีเคสสาธิตพร้อมใช้งาน "
                                   "กดปุ่มต่าง ๆ ได้เหมือนระบบจริง"):
                     _demo_on = _demo_switch_pressed('on', _demo_on)
+        elif not st.session_state.get('_tut_on', False):
+            # 🎓 16 พ.ย. 2026 รอบ 7 (มุกกี้สั่ง): ปุ่มเปิดโหมดสอนอยู่บนหัวบอร์ดเลย ไม่ต้องเข้าเมนู ⋯
+            #    ขึ้นเฉพาะตอนเปิดโหมดสาธิตอยู่และยังไม่ได้เปิดโหมดสอน (ช่องเดียวกับปุ่ม เปิดโหมดสาธิต)
+            with _hb:
+                if st.button("🎓 เปิดโหมดสอนการใช้", key="orboard_tut_on_hdr", width='stretch',
+                             help="ระบบจะแนะนำหน้าจอ แล้วพาฝึกกดทีละขั้น"):
+                    st.session_state['_tut_on'] = True
+                    _rerun_board()
         with _hm:
             try:
                 _more_tools = st.popover("⋯", help="เครื่องมือ : อัปโหลดตาราง เพิ่มเคส "
