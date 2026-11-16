@@ -1816,7 +1816,9 @@ def _render_nurse_progress_history(date_from: str, date_to: str):
         pc1, pc2 = st.columns([3, 1])
         with pc1:
             # 🔑 16 พ.ย. 2026: กัน Chrome เสนอสร้างรหัสผ่านใหม่ (ดู main_or_app ช่องรหัสผ่าน)
-            pin_input = st.text_input("รหัส PIN", type="password", autocomplete="off",
+            st.markdown('<style>input[aria-label="รหัส PIN"]{-webkit-text-security:disc;}</style>',
+                        unsafe_allow_html=True)   # 🔑 16 พ.ย. 2026 รอบ 2: พรางด้วย CSS แทน type=password (ดู main_or_app)
+            pin_input = st.text_input("รหัส PIN", type="default", autocomplete="off",
                                       key="nurse_pin_hist", placeholder="กรอก PIN")
         with pc2:
             st.markdown('<div style="height:28px;"></div>', unsafe_allow_html=True)
@@ -1932,7 +1934,9 @@ def _render_nurse_progress(op_date: str):
             return
         pc1, pc2 = st.columns([3, 1])
         with pc1:
-            pin_input = st.text_input("รหัส PIN", type="password", autocomplete="off",
+            st.markdown('<style>input[aria-label="รหัส PIN"]{-webkit-text-security:disc;}</style>',
+                        unsafe_allow_html=True)   # 🔑 16 พ.ย. 2026 รอบ 2: พรางด้วย CSS แทน type=password (ดู main_or_app)
+            pin_input = st.text_input("รหัส PIN", type="default", autocomplete="off",
                                        key="nurse_pin_input",
                                        placeholder="กรอก PIN")
         with pc2:

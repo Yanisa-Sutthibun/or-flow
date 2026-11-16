@@ -955,8 +955,14 @@ def _check_password():
             # 🔑 16 พ.ย. 2026 (เจอตอน try out · มุกกี้สั่ง): ไม่ระบุ autocomplete = Streamlit ใส่
             #    "new-password" ให้เอง Chrome จึงเสนอสร้างรหัสผ่านใหม่ทุกครั้งจนผู้ใช้งง
             #    → บอกเบราว์เซอร์ว่าเป็นช่องกรอกรหัสเดิม
-            pwd = st.text_input("รหัสผ่าน", type="password",
-                                autocomplete="current-password",
+            # 🔑 16 พ.ย. 2026 รอบ 2 (มุกกี้แจ้ง: ใส่ current-password แล้ว Chrome ยังเสนอสร้างรหัส)
+            #    Chrome เสนอสร้างรหัสกับช่อง type=password เท่านั้น → ใช้ช่องข้อความธรรมดา
+            #    แล้วพรางตัวอักษรเป็นจุดด้วย CSS แทน เบราว์เซอร์จึงไม่มองว่าเป็นช่องรหัสผ่าน
+            #    (ไม่เสนอสร้าง ไม่เสนอบันทึก) · autocomplete=off กันรายการที่เคยพิมพ์เด้งขึ้นมา
+            st.markdown('<style>input[aria-label="รหัสผ่าน"]{-webkit-text-security:disc;}</style>',
+                        unsafe_allow_html=True)
+            pwd = st.text_input("รหัสผ่าน", type="default",
+                                autocomplete="off",
                                 placeholder="••••••••",
                                 label_visibility='collapsed',
                                 disabled=bool(_lock_left))
