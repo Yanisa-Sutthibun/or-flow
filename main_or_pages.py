@@ -1554,8 +1554,13 @@ _TUT_CSS = (
     '.tut-btn{animation:tutpulse 1.1s infinite;outline:4px solid #2563eb !important;'
     'outline-offset:2px;border-radius:10px;position:relative;z-index:61;}'
     '@keyframes tutbob{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}'
-    '.tut-finger{position:absolute;z-index:62;font-size:34px;line-height:1;pointer-events:none;'
+    # 👆 17 พ.ย. 2026 (เจอตอนทดสอบบนแอปจริง): Chrome จริงไม่ยิง unload ตอน iframe สคริปต์ถูกถอด
+    #    นิ้วชี้จึงค้างบนจอหลังปิดโหมดสอน → ให้นิ้วมีตัวตนจาก CSS ชุดนี้เท่านั้น (รูปนิ้วมาจาก ::before
+    #    ตำแหน่ง fixed ก็มาจากตรงนี้) พอการ์ดหาย CSS หายตาม นิ้วที่ค้างจะกลายเป็นกล่องว่างมองไม่เห็นเอง
+    '.tut-finger{position:fixed;z-index:62;font-size:34px;line-height:1;pointer-events:none;'
     'animation:tutbob .8s infinite;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));}'
+    '.tut-finger::before{content:"👆";}'
+    '.tut-finger.tut-off{display:none;}'
     '</style>')
 
 # สคริปต์ชี้เป้า : รันใน iframe ซ่อน แล้วแต่งหน้าหลัก (ฉายไฟแถว · ปุ่ม/แท็บกะพริบ · นิ้วชี้ · เลื่อนจอไปหา)
@@ -1610,12 +1615,11 @@ _TUT_JS = r"""<script>
     let f = d.getElementById('tut-finger');
     if(btn){
       if(!f){ f = d.createElement('div'); f.id = 'tut-finger'; f.className = 'tut-finger';
-              f.textContent = '👆'; d.body.appendChild(f); }
+              d.body.appendChild(f); }
       const r = btn.getBoundingClientRect();
-      f.style.position = 'fixed';
       f.style.left = (r.left + r.width/2 - 17) + 'px';
       f.style.top = (r.bottom + 6) + 'px';
-      f.style.display = (r.bottom < 0 || r.top > window.parent.innerHeight) ? 'none' : 'block';
+      f.classList.toggle('tut-off', r.bottom < 0 || r.top > window.parent.innerHeight);
     } else if(f){ f.remove(); }
     const tgt = btn || spot;
     if(!scrolled && tgt && Date.now() - t0 > 500){
@@ -1624,12 +1628,13 @@ _TUT_JS = r"""<script>
     }
   }
   const iv = setInterval(tick, 400); tick();
-  window.addEventListener('unload', function(){
+  const bye = function(){
     clearInterval(iv);
     d.querySelectorAll('.tut-spot,.tut-head').forEach(e => e.classList.remove('tut-spot','tut-head'));
     d.querySelectorAll('.tut-btn').forEach(e => e.classList.remove('tut-btn'));
     const f = d.getElementById('tut-finger'); if(f) f.remove();
-  });
+  };
+  window.addEventListener('pagehide', bye); window.addEventListener('unload', bye);
 })();
 </script>"""
 
