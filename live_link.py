@@ -226,8 +226,10 @@ def workload_from_session(cases):
     }
 
 
-def alerts_from_session(cases, now=None):
-    """โครงเดียวกับ get_delay_alerts() แต่คิดจากเคสสดบนกระดาน."""
+def alerts_from_session(cases, now=None, wait_min=60):
+    """โครงเดียวกับ get_delay_alerts() แต่คิดจากเคสสดบนกระดาน.
+    wait_min = รอเกินกี่นาทีจึงแจ้ง long_wait (ค่าเดิม 60 · หน้าภาพรวม DEMO ส่ง 45 เพื่อเตือนล่วงหน้า
+    มุกกี้สั่ง 17 พ.ย. 2026) · ทุกรายการ long_wait มี 'wait' = นาทีที่รอ ให้ผู้เรียกแบ่งระดับสีเอง"""
     cases = [c for c in cases if c.get("status") != "removed"]   # 🗑️ tombstone
     now = now or datetime.now()
     alerts = []
@@ -250,9 +252,9 @@ def alerts_from_session(cases, now=None):
         elif (s == 'holding_pre' and c.get('time_arrived_holding') is not None
                 and hasattr(c.get('time_arrived_holding'), 'hour')):
             wait = (now - c['time_arrived_holding']).total_seconds() / 60
-            if wait > 60:
+            if wait > wait_min:
                 alerts.append({
-                    'type': 'long_wait',
+                    'type': 'long_wait', 'wait': int(wait),
                     'severity': 'high' if wait > 120 else 'medium',
                     'room_no': _rid(c), 'case_id': c.get('id'),
                     'name': _mask_nm(c.get('name')), 'procedure': c.get('procedure'),

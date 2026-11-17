@@ -3842,7 +3842,7 @@ def _render_today_lean(rooms, kpi, live_cases, op_date):
     try:
         if live_cases:
             from live_link import alerts_from_session
-            alerts = alerts_from_session(live_cases, _now)
+            alerts = alerts_from_session(live_cases, _now, wait_min=45)
         else:
             alerts = get_delay_alerts(op_date)
     except Exception as _ax:
@@ -3860,11 +3860,19 @@ def _render_today_lean(rooms, kpi, live_cases, op_date):
             'late': 'background:#FDF3DD;color:#6B4600;border:1px solid #EBD39C;',
             'idle': 'background:#EEF4FB;color:#1E3A5F;border:1px solid #C9D9EC;'}
     _items = []
+    # 🔕 17 พ.ย. 2026 (มุกกี้สั่ง): ส่วนนี้แจ้งเตือนเฉพาะผู้ป่วยที่มารอผ่าตัดนาน
+    #    เคสที่ผ่าตัดเกินเวลาที่ทำนายไม่ต้องเตือนตรงนี้ (ยังเห็นได้จากแถบสีแดงบนไทม์ไลน์ด้านล่าง)
+    #    ข้อความ คาดเลิกหลัง 15:30 และ ห้องว่างแล้ว ก็ไม่ขึ้นในส่วนนี้เช่นกัน
+    #    🟥🟨 สองระดับ (มุกกี้เคาะ 17 พ.ย. 2026): การ์ดสีแดง = รอนานเกิน 60 นาที · การ์ดสีเหลือง = รอนานเกิน 45 นาที
+    #    รายการจากฐานข้อมูล (ไม่มีบอร์ดสด) ไม่มี 'wait' และตัดที่ 60 นาทีอยู่แล้ว → ถือเป็นสีแดง
+    alerts = [a for a in alerts if a.get('type') == 'long_wait']
+    alerts.sort(key=lambda a: -int(a.get('wait') or 61))
+    notes = []
     for a in alerts:
         _msg = str(a.get('message') or '').replace(' — ', ' : ').replace('—', ':')
         _room = _rl(a.get('room_no')).replace(' · ', ' ')
         _txt = f"{_room} : {a.get('procedure') or '-'} | {a.get('name') or '-'} | {_msg}"
-        _items.append((_sty.get(a.get('type'), _sty['long_wait']), _txt,
+        _items.append((_sty['overrun'] if int(a.get('wait') or 61) > 60 else _sty['long_wait'], _txt,
                        f"{a.get('type')}|{a.get('room_no')}|{a.get('name')}"))
     import re as _re_ack
     for kind, txt in notes:
@@ -3909,7 +3917,7 @@ def _render_today_lean(rooms, kpi, live_cases, op_date):
         st.markdown(
             '<div style="padding:10px 14px;border-radius:8px;background:#E1F5EE;'
             'color:#085041;font-size:17px;font-weight:600;">ไม่มีเรื่องต้องจัดการ : '
-            'ทุกห้องเป็นไปตามเวลาที่ทำนาย</div>', unsafe_allow_html=True)
+            'ไม่มีผู้ป่วยที่รอผ่าตัดนาน</div>', unsafe_allow_html=True)
 
     # ── ชั้น 2 : สถานการณ์ห้อง ──
     st.markdown('<div class="section-title">🛏️ สถานการณ์ห้องผ่าตัด</div>',
