@@ -1265,7 +1265,9 @@ def main():
                 pass
             if not (st.session_state.get('role') == 'admin'
                     or st.session_state.get('_all_tabs')):
-                _page_options = _page_options[:3]
+                # ⚙️ 17 พ.ย. 2026 (มุกกี้สั่ง): แท็บตั้งค่าต้องใช้ระหว่าง try out → เปิดคืนให้ทุกคน
+                #    เหลือซ่อนแค่ จัดคิว AI กับ จอญาติ
+                _page_options = _page_options[:3] + [p for p in _page_options[3:] if 'ตั้งค่า' in p]
     except Exception:
         pass
     # 🚪 โหมดจอประจำห้อง: เหลือ 3 แท็บ (ทำงาน + รับรู้สถานการณ์ + ดูสถิติ)
