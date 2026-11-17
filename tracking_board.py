@@ -846,6 +846,16 @@ _ROW_H = 70                 # ความสูงแถว (px) — iframe ต
 _ROW_IFRAME_H = _ROW_H + 8
 
 
+def _quiet_overrun() -> bool:
+    """🔕 17 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO เคสที่ผ่าตัดนานเกินเวลาที่ทำนาย ไม่ทำแถวสีเหลือง
+    เหตุผล : ตัวเลขทำนายเป็นงานวิจัย ไม่ต้องเด่น · สีเหลืองสงวนให้ตัวชี้วัดของห้องผ่าตัด = ผู้ป่วยรอผ่าตัดนาน
+    (แถบความคืบหน้ายังบอกว่าเกินไปเท่าไรเหมือนเดิม) · production ไม่เปลี่ยน"""
+    try:
+        return str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        return False
+
+
 def _minimal_board() -> bool:
     """🧹 7 พ.ย. 2026 (มุกกี้สั่ง ตาม wireframe): ตารางผ่าตัดแบบ minimal เฉพาะแอป DEMO
     แถวเหลือ 5 ช่อง : ห้อง+นัด / ผู้ป่วย+หัตถการ·แพทย์ / เวลา / ปุ่มหลัก / ⋯
@@ -1162,6 +1172,19 @@ def _call_line_html(c, dt, now):
     _tip = (f'เวลา = คาดว่าห้องจะพร้อมรับ - {_CALL_LEAD_MIN} นาที (เผื่อโทร/'
             f'เดินทาง) : ผู้ป่วยขึ้นมารอไม่เกิน 1 ชั่วโมง · ขยับตามสถานการณ์'
             f'จริงเอง · ถ้าห้องผ่าตัดกดกระดิ่ง = เรียกมารอได้เลย ไม่ต้องรอถึงเวลา')
+    _demo_inst = False
+    try:
+        _demo_inst = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        pass
+    if diff < 0 and _demo_inst:
+        # 🔕 17 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO เลยเวลาเรียกคิวแล้วไม่ต้องเตือน ไม่ทำแถบสี
+        #    เหลือเป็นบรรทัดเรียบแบบเดียวกับตอนยังไม่ถึงเวลา (สีเหลืองบนบอร์ดเหลือความหมายเดียว = รอผ่าตัดนาน)
+        #    ระบบจริงยังเป็นแถบเหลืองตามคู่มือ 1.7 ฉบับเดิม
+        return (f'<div style="{_base}background:#fafcff;">⏭️ '
+                f'<span style="color:#2f7d52;font-weight:700;">คิวถัดไป : '
+                f'ตามผู้ป่วยมารอได้ตั้งแต่ ~{dt.strftime("%H:%M")}</span>'
+                f'<span style="cursor:help;" title="{_tip}">ⓘ</span></div>')
     if diff < 0:
         # ⏰ เลยเวลา — เหลืองทั้งแถบ (ภาษาสี: ปัญหาเวลา) ให้เห็นข้ามห้อง
         return (f'<div style="{_base}background:#fff8e1;">⏰ '
@@ -1395,7 +1418,8 @@ def _inroom_row_iframe(c, loc, tlabel, eff, border_css, ov_badge, now,
         'ch.textContent="เกินเวลา";ch.style.background="#fbe9e8";ch.style.color="#c0392b";'
         # 🎨 demo (มุคกี้เคาะ 4 ส.ค. 2026): ผ่าเกินเวลา = แถบเหลืองครีม
         #    (ภาษาเดียวกับรอนาน) · เคสฉุกเฉินคงแถบแดงไว้ ไม่ทับ · production เดิม
-        + ('if(!emer){rw.style.background="#fff8e1";'
+        + ('' if _quiet_overrun() else
+           'if(!emer){rw.style.background="#fff8e1";'
            'rw.style.border="1px solid #f0deb0";'
            'rw.style.borderLeft="3px solid #e3920b";}'
            if _demo_fx_tb() else
@@ -1448,7 +1472,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     _bar = {'holding_pre': '#cbd5e1', 'in_or': '#22a565', 'overrun': '#e3920b',
             'holding_post': '#1565c0', 'recovery': '#a855f7',
             'discharged': '#e2e8f0'}.get(disp, '#cbd5e1')
-    if _compact() and disp != 'overrun':
+    if _compact() and (disp != 'overrun' or _quiet_overrun()):
         # 🧹 ชั้น A: สี = ความเร่งด่วนเท่านั้น — แถบซ้ายประจำสถานะ (เขียว/น้ำเงิน/ม่วง)
         #    ซ้ำกับชิปสถานะอยู่แล้ว เหลือแดง = ฉุกเฉิน · เหลือง = เกินเวลา
         _bar = '#e2e8f0'
@@ -1461,7 +1485,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     #    (แถบเขียว/ครีมประจำสถานะเอาออก) · จำหน่ายแล้วคงเทาหรี่ · production เดิม
     if _demo_fx_tb() and not muted:
         bg = ('#fdeeee' if emer
-              else '#fff8e1' if disp == 'overrun' else '#ffffff')
+              else '#fff8e1' if (disp == 'overrun' and not _quiet_overrun()) else '#ffffff')
     room_fg = '#b6c2cf' if muted else _room_fg_default()
     name_fg = '#94a3b8' if muted else '#0f172a'
     sub_fg = '#b6c2cf' if muted else '#64748b'
