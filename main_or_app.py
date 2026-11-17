@@ -409,12 +409,20 @@ def page_room_settings():
     if not _demo:
         _page_room_settings_body()
         return
-    _t1, _t2, _t3 = st.tabs(["ห้องผ่าตัดและลิงก์", "จัดเวรพรุ่งนี้", "การแสดงผล"])
+    # 🙈 17 พ.ย. 2026 (มุกกี้สั่ง): ซ่อนแท็บย่อย จัดเวรพรุ่งนี้ ช่วง try out (คู่กับแท็บ จัดคิวพรุ่งนี้ ที่ซ่อนไปแล้ว)
+    #    ยังเปิดได้ทางเดิม : เข้าด้วยรหัสผู้ดูแลระบบ หรือเติม ?menu=all ต่อท้ายลิงก์
+    _full = (st.session_state.get('role') == 'admin' or st.session_state.get('_all_tabs'))
+    if _full:
+        _t1, _t2, _t3 = st.tabs(["ห้องผ่าตัดและลิงก์", "จัดเวรพรุ่งนี้", "การแสดงผล"])
+    else:
+        _t1, _t3 = st.tabs(["ห้องผ่าตัดและลิงก์", "การแสดงผล"])
+        _t2 = None
     with _t1:
         _page_room_settings_body()
-    with _t2:
-        from tomorrow_plan import render_staff_editor
-        render_staff_editor()
+    if _t2 is not None:
+        with _t2:
+            from tomorrow_plan import render_staff_editor
+            render_staff_editor()
     with _t3:
         # 🔠 7 พ.ย. 2026 (มุกกี้สั่ง): เลือกขนาดตัวอักษรของจอเครื่องนี้
         from ui_theme import render_font_size_setting
