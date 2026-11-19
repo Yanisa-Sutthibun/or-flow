@@ -64,6 +64,20 @@ def _ca_summary(date_from, date_to, _v):
 
 
 @st.cache_data(ttl=900, show_spinner=False)
+def _ca_cases_range(date_from, date_to, _v):
+    # ⚡ 19 พ.ย. 2026: ตารางเคสของช่วงวันที่ที่เลือก ดึงครั้งเดียวใช้ร่วมกันทุกหัวข้อ และจำไว้ 15 นาที
+    #    (เดิมแต่ละหัวข้อดึงตาราง cases ทั้งตารางเองทุกครั้งที่จอวาดใหม่ ไม่มีการจำ)
+    from main_or_db import get_cases_range
+    return get_cases_range(date_from, date_to)
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def _ca_room_turnover(date_from, date_to, _v):
+    from main_or_db import get_room_turnover_map
+    return get_room_turnover_map(date_from, date_to)
+
+
+@st.cache_data(ttl=900, show_spinner=False)
 def _ca_handover(date_from, date_to, _v):
     return get_handover_stats(date_from, date_to)
 
@@ -2349,7 +2363,7 @@ def _hist_sec_overview(date_from, date_to, data=None):
 
     # ⚠️ ระดับความเร่งด่วน — Elective (มี breakdown นัดหมาย/Walk-in) / Urgent / Emergency
     # 🆕 Filter เฉพาะเคสที่ผ่าตัดสำเร็จ (consistent กับ "เคสสะสม" 701)
-    df_op = get_cases()
+    df_op = _ca_cases_range(str(date_from), str(date_to), _stats_ver())
     df_op = df_op[(df_op['op_date'] >= date_from)
                   & (df_op['op_date'] <= date_to)
                   & (df_op['status'].isin(['post_op', 'discharged', 'done']))]
@@ -2428,7 +2442,7 @@ def _hist_sec_room(date_from, date_to, data=None):
         st.caption(f"ℹ️ สถิติรายห้องนับจากวันย้ายตึกใหม่ ({MOVE_DATE}) เป็นต้นไป — "
                    "ผังห้องก่อนหน้านั้นเป็นตึกเก่า เทียบกันไม่ได้")
 
-    df = get_cases()
+    df = _ca_cases_range(str(date_from), str(date_to), _stats_ver())
     df = df[(df['op_date'] >= _from) & (df['op_date'] <= str(date_to))
             & (df['status'].isin(['post_op', 'discharged', 'done']))]
     try:
@@ -2439,8 +2453,7 @@ def _hist_sec_room(date_from, date_to, data=None):
         st.info("ยังไม่มีเคสเสร็จสิ้นในช่วงที่เลือก (หลังย้ายตึกใหม่)")
         return
 
-    from main_or_db import get_room_turnover_map
-    tov = get_room_turnover_map(_from, str(date_to)) or {}
+    tov = _ca_room_turnover(_from, str(date_to), _stats_ver()) or {}
 
     _td = 'padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center;'
     _th = ('<th style="background:#eef4fb;color:#0d47a1;font-size:18px;'
@@ -3478,7 +3491,7 @@ def _hist_sec_night(date_from, date_to, data=None):
     # ════════════════════════════════════════════════════════════════
     st.markdown('<div id="sec-night" class="group-header indigo">🌙 เคสนอกเวลา (สะสม)</div>',
                 unsafe_allow_html=True)
-    df_range = get_cases()
+    df_range = _ca_cases_range(str(date_from), str(date_to), _stats_ver())
     df_range = df_range[
         (df_range['op_date'] >= date_from) &
         (df_range['op_date'] <= date_to)

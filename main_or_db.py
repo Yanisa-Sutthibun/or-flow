@@ -2240,6 +2240,18 @@ def get_cases(op_date: str = None, status: str = None) -> pd.DataFrame:
         return _unmask_display(df)  # 🎭 SURG_xxx → ชื่อจริง สำหรับ UI
 
 
+def get_cases_range(date_from: str, date_to: str) -> pd.DataFrame:
+    """เคสในช่วงวันที่ที่กำหนด (กรองที่ฐานข้อมูล) · โครงคอลัมน์เดียวกับ get_cases()
+    ⚡ 19 พ.ย. 2026 (มุกกี้แจ้ง: หน้าสถิติย้อนหลังช้าทุกครั้ง): หน้าสถิติเคยเรียก get_cases() เปล่า ๆ
+    ซึ่งดึงตาราง cases ทั้งตารางมาแล้วค่อยกรองวันที่ในเครื่อง ทำซ้ำทุกหัวข้อและทุกครั้งที่จอวาดใหม่
+    → ให้ฐานข้อมูลกรองช่วงวันที่ให้ก่อน (มี index op_date อยู่แล้ว) ข้อมูลที่วิ่งข้ามเครือข่ายจึงเหลือเท่าที่ใช้"""
+    with db_session() as conn:
+        df = pd.read_sql_query(
+            "SELECT * FROM cases WHERE op_date >= ? AND op_date <= ? ORDER BY case_id",
+            conn, params=[str(date_from), str(date_to)])
+        return _unmask_display(df)  # 🎭 เหมือน get_cases()
+
+
 def update_case(case_id: int, **kwargs):
     """Update case fields â with column whitelist to prevent SQL injection."""
     # Filter to only allowed columns
