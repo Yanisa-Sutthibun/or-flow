@@ -1653,9 +1653,11 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                                       if lbl == _sel_lbl), _cur_rn)
 
                 _room_changed = (_new_room is not None and _new_room != _cur_rn)
-                if ((int(new_t) != eff or _room_changed)
-                        and st.button("💾 บันทึก", key=f"tb_sv_{K}",
-                                      width='stretch')):
+                # 💾 19 พ.ย. 2026 (มุกกี้แจ้ง): ปุ่มบันทึกแสดงตลอด · เดิมปุ่มโผล่หลังค่าถูกยืนยันแล้วเท่านั้น
+                #    คนพิมพ์ตัวเลขใหม่จึงต้องกด Enter ก่อน 1 ครั้งปุ่มถึงขึ้น ตอนนี้พิมพ์แล้วกดบันทึกได้เลย
+                #    (กดโดยไม่ได้แก้อะไร = ไม่เกิดอะไรขึ้น)
+                _sv_clicked = st.button("💾 บันทึก", key=f"tb_sv_{K}", width='stretch')
+                if _sv_clicked and (int(new_t) != eff or _room_changed):
                     # ✏️ กันพิมพ์ผิดหลัก (30 → 300) ก่อนค่าจะชนะ AI บนบอร์ด
                     #    และก่อนไหลลง override_log ซึ่งเป็นข้อมูลวิจัย
                     _ovk = f"_ov_confirm_{c.get('id') or idx}"
