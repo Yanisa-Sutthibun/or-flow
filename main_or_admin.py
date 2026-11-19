@@ -4735,6 +4735,9 @@ def page_admin(section='today'):
             default_from = datetime.strptime(_MV, '%Y-%m-%d').date()
         except Exception:
             default_from = hist_floor
+        # ⚡ 19 พ.ย. 2026 (มุกกี้เห็นด้วย): เปิดหน้ามาแสดง 90 วันล่าสุด (ราว 3 เดือน) โหลดเร็วกว่าดึงตั้งแต่วันย้ายตึก
+        #    อยากดูยาวกว่านั้น เลื่อนวันที่เริ่มต้นย้อนเองได้ถึง hist_floor
+        default_from = max(default_from, today_dt - timedelta(days=90))
         default_to = today_dt
 
         st.info("ℹ️ ข้อมูลสถิติจะปรับปรุงในวันทำการถัดไป : เคสของวันศุกร์จะอัปเดตในวันจันทร์")
