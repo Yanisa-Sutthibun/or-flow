@@ -2378,7 +2378,9 @@ def _hist_sec_overview(date_from, date_to, data=None):
     # แถวแรก: ตัวเลขหลัก 5 การ์ด (ยกเลิก/OPD/IPD ยุบเป็นบรรทัดรองใต้ตัวเลข)
     # 🚪 19 พ.ย. 2026 (มุกกี้สั่ง): การ์ดห้องผ่าตัดที่เปิดใช้งานมากที่สุด = ห้องที่มีวันที่มีเคสผ่าเสร็จมากที่สุด
     #    เกณฑ์เดียวกับตารางสถิติรายห้อง (ตึกใหม่ · เคสเสร็จสิ้น)
+    #    + การ์ดห้องที่ใช้ชั่วโมงต่อวันมากที่สุด (สูตรเดียวกับคอลัมน์ ใช้ห้องเฉลี่ย ในตารางรายห้อง)
     _top_room_lbl, _top_room_sub = '—', ''
+    _top_hr_lbl, _top_hr_sub = '—', ''
     try:
         from room_config import MOVE_DATE as _MV, NEW_BUILDING_ROOMS as _NBR, room_label as _rlbl
         _rdf = _ca_cases_range(str(date_from), str(date_to), _stats_ver())
@@ -2391,13 +2393,30 @@ def _hist_sec_overview(date_from, date_to, data=None):
                    .sort_values(['days', 'n'], ascending=False))
             _top_room_lbl = _rlbl(int(_rg.index[0]))
             _top_room_sub = f"เปิด {int(_rg['days'].iloc[0])} วัน รวม {int(_rg['n'].iloc[0]):,} เคส"
+            _rmin = pd.to_numeric(_rdf.get('actual_duration_min'), errors='coerce')
+            if 'in_or_at' in _rdf.columns and 'op_end_at' in _rdf.columns:
+                _rcalc = (pd.to_datetime(_rdf['op_end_at'], errors='coerce')
+                          - pd.to_datetime(_rdf['in_or_at'], errors='coerce')).dt.total_seconds() / 60
+                _rmin = _rmin.where(_rmin > 0, _rcalc)
+            _rh = (_rdf.assign(_rm=pd.to_numeric(_rdf['room_no'], errors='coerce').astype(int),
+                               _min=_rmin.where((_rmin >= 1) & (_rmin <= 720)))
+                   .groupby('_rm').agg(days=('op_date', 'nunique'), mins=('_min', 'sum')))
+            _rh = _rh[_rh['mins'] > 0]
+            if not _rh.empty:
+                _rh['hr'] = _rh['mins'] / 60 / _rh['days']
+                _rh = _rh.sort_values('hr', ascending=False)
+                _top_hr_lbl = _rlbl(int(_rh.index[0]))
+                _top_hr_sub = f"เฉลี่ย {_rh['hr'].iloc[0]:.1f} ชั่วโมงต่อวัน"
     except Exception as _e_room:
         try:
             from logger_setup import get_logger
             get_logger(__name__).warning("overview top room card failed: %s", _e_room)
         except Exception:
             pass
-    k1, k2, k3, k4, k5 = st.columns(5)
+    # 6 การ์ด จัด 2 แถว แถวละ 3
+    k1, k2, k3 = st.columns(3)
+    st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+    k4, k5, k6 = st.columns(3)
     with k1:
         st.markdown(_stat_card(
             "📊 เคสทั้งหมด", s_all['total'],
@@ -2431,6 +2450,11 @@ def _hist_sec_overview(date_from, date_to, data=None):
     with k5:
         st.markdown(_stat_card(
             "🚪 ห้องที่เปิดใช้งานมากที่สุด", _top_room_lbl, _top_room_sub,
+            value_color='#1565c0', value_size='19px'),
+            unsafe_allow_html=True)
+    with k6:
+        st.markdown(_stat_card(
+            "⏱️ ห้องที่ใช้ชั่วโมงมากที่สุด", _top_hr_lbl, _top_hr_sub,
             value_color='#1565c0', value_size='19px'),
             unsafe_allow_html=True)
 
