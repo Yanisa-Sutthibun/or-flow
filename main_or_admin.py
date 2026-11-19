@@ -2619,14 +2619,14 @@ def _hist_sec_room(date_from, date_to, data=None):
     # 🔦 19 พ.ย. 2026 (มุกกี้สั่ง): ค่าสูงสุดของแต่ละคอลัมน์เป็นตัวหนาบนพื้นฟ้าอ่อน ให้เด่นออกมาจากตาราง
     _rows = []
     for rm in NEW_BUILDING_ROOMS:
+        # 🚪 19 พ.ย. 2026 (มุกกี้สั่ง): แสดงครบทุกห้องเสมอ ห้องที่ไม่มีเคสในช่วงนี้ขึ้นแถว 0 เคส
+        #    (เดิมข้ามห้องที่ไม่มีเคส คนดูเข้าใจว่าห้องหาย)
         g = df[df['_rm'] == rm]
-        if g.empty:
-            continue
         n = len(g)
         days = g['op_date'].nunique()
-        avg = n / days if days else 0
+        avg = n / days if days else None
         _hr = g['_room_min'].sum() / 60 / days if (days and g['_room_min'].notna().any()) else None
-        _rows.append(dict(rm=rm, n=n, days=days, avg=round(avg, 1),
+        _rows.append(dict(rm=rm, n=n, days=days, avg=(round(avg, 1) if avg is not None else None),
                           hr=(round(_hr, 1) if _hr is not None else None), tv=tov.get(rm)))
     _mx = {k: max([r[k] for r in _rows if r[k] is not None], default=None)
            for k in ('n', 'days', 'avg', 'hr')}
@@ -2637,15 +2637,16 @@ def _hist_sec_room(date_from, date_to, data=None):
         return f'<td style="{_td}{_hi if _on else ""}">{txt}</td>'
 
     for r in _rows:
-        hr_txt = (f"{r['hr']:.1f}" if r['hr'] is not None
-                  else '<span style="color:#94a3b8;">ข้อมูลไม่พอ</span>')
-        tv_txt = (f"{r['tv']:.0f} นาที" if r['tv'] is not None
-                  else '<span style="color:#94a3b8;">ข้อมูลไม่พอ</span>')
+        _na = ('<span style="color:#94a3b8;">ไม่มีเคส</span>' if r['n'] == 0
+               else '<span style="color:#94a3b8;">ข้อมูลไม่พอ</span>')
+        hr_txt = f"{r['hr']:.1f}" if r['hr'] is not None else _na
+        tv_txt = f"{r['tv']:.0f} นาที" if r['tv'] is not None else _na
+        avg_txt = f"{r['avg']:.1f}" if r['avg'] is not None else _na
         rows_html.append(
             f'<tr><td style="{_td}text-align:left;font-weight:600;color:#1565c0;">'
             f'{room_label(r["rm"])}</td>'
             + _cell(r, 'n', f"{r['n']:,}") + _cell(r, 'days', r['days'])
-            + _cell(r, 'avg', f"{r['avg']:.1f}") + _cell(r, 'hr', hr_txt)
+            + _cell(r, 'avg', avg_txt) + _cell(r, 'hr', hr_txt)
             + f'<td style="{_td}">{tv_txt}</td></tr>')
     rows_html.append('</table>')
     st.markdown(''.join(rows_html), unsafe_allow_html=True)
