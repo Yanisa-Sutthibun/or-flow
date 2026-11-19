@@ -53,6 +53,46 @@ def _stats_ver() -> int:
     return int(st.session_state.get('_stats_cache_ver', 0))
 
 
+# 📊 กราฟเล่าเรื่อง (มุกกี้สั่ง 19 พ.ย. 2026 · หลัก สรุป-สวย-สื่อ)
+#    แท่งพื้นเป็นสีเทาอ่อน เน้นสีเฉพาะแท่งที่เป็นประเด็น · ตัดเส้น grid และตัวเลขแกนออก
+#    (มีป้ายค่าบนแท่งแล้ว) · ชื่อหมวดวางแนวนอน · ช่องว่างไม่เกินครึ่งความกว้างแท่ง
+_STORY_BASE = '#CBD5E1'
+
+
+def _story_axes(fig, horizontal: bool, keep_angle: bool = False):
+    """จัดแกนของกราฟแท่งให้สะอาด: ไม่มี grid ไม่มีตัวเลขแกนค่า ชื่อหมวดไม่เอียง"""
+    _val = dict(showgrid=False, showticklabels=False, zeroline=False, title_text='')
+    _cat = dict(showgrid=False, title_text='')
+    if not keep_angle:
+        _cat['tickangle'] = 0
+    if horizontal:
+        fig.update_xaxes(**_val)
+        fig.update_yaxes(**_cat)
+    else:
+        fig.update_yaxes(**_val)
+        fig.update_xaxes(**_cat)
+    fig.update_layout(bargap=0.33, showlegend=False)
+    return fig
+
+
+def _story_bars(fig, values, accent: str, horizontal: bool, keep_angle: bool = False):
+    """กราฟแท่งชุดเดียว: แท่งที่ค่าสูงสุดใช้สี accent ที่เหลือเทาอ่อน (values เรียงตามลำดับเดียวกับข้อมูลในกราฟ)"""
+    _vals = [float(v or 0) for v in values]
+    _mx = max(_vals) if _vals else 0
+    fig.update_traces(
+        marker_color=[accent if (v == _mx and v > 0) else _STORY_BASE for v in _vals],
+        marker_line_width=0, textposition='outside', cliponaxis=False)
+    fig.update_layout(plot_bgcolor='white')
+    return _story_axes(fig, horizontal, keep_angle)
+
+
+def _story_head(text: str):
+    """บรรทัดข้อสรุปเหนือกราฟ (ชื่อกราฟ = คำตอบ ไม่ใช่ป้ายหัวข้อ)"""
+    st.markdown(
+        f'<div style="font-size:18px;font-weight:600;color:#1e293b;margin:6px 0 10px;">{text}</div>',
+        unsafe_allow_html=True)
+
+
 @st.cache_data(ttl=900, show_spinner="กำลังโหลดสถิติจาก cloud (ครั้งแรกช้าหน่อย)…")
 def _ca_historical(date_from, date_to, _v):
     return get_historical_analytics(date_from, date_to)
@@ -2771,8 +2811,7 @@ def _hist_sec_trend(date_from, date_to, data=None):
         st.caption("ยังไม่มีข้อมูลรายวัน")
 
     # 📊 เฉลี่ยเคสตามวันในสัปดาห์ — ย้ายมาก่อน 🔥 heatmap
-    from main_or_db import get_cases as _get_cases_for_dow
-    _df_dow_section = _get_cases_for_dow()
+    _df_dow_section = _ca_cases_range(str(date_from), str(date_to), _stats_ver())  # ⚡ 19 พ.ย. 2026 ใช้ชุดที่จำไว้
     _df_dow_section = _df_dow_section[
         (_df_dow_section['op_date'] >= date_from) &
         (_df_dow_section['op_date'] <= date_to) &
@@ -2804,7 +2843,7 @@ def _hist_sec_trend(date_from, date_to, data=None):
         fig_dow_s = px.bar(_dow_avg_s, x='day_name', y='n', text='n',
                            color='color_flag',
                            color_discrete_map={
-                               'peak': '#c62828', 'normal': '#4fc3f7'},
+                               'peak': '#c62828', 'normal': _STORY_BASE},
                            labels={'day_name': '', 'n': 'เคสเฉลี่ย/วัน'},
                            category_orders={'day_name': _THAI_DAY_S})
         fig_dow_s.update_traces(
@@ -2818,6 +2857,7 @@ def _hist_sec_trend(date_from, date_to, data=None):
                        range=[0, _y_max_dow_s * 1.25]),
             showlegend=False,
         )
+        _story_axes(fig_dow_s, horizontal=False)
         st.plotly_chart(fig_dow_s, use_container_width=True)
         _min_dow_s = _dow_avg_s[(_dow_avg_s['n'] > 0)
                                 & ((_dow_avg_s['dow'] <= 4) if _demo_trend else True)]['n'].min()
@@ -2992,7 +3032,7 @@ def _hist_sec_rank(date_from, date_to, data=None):
     # ════════════════════════════════════════════════════════════════
     # 4️⃣  🏆 อันดับยอดนิยม — สาขา + Top หัตถการ + Top แพทย์
     # ════════════════════════════════════════════════════════════════
-    # Header + Toggle V/H ขวาบน (default = แนวตั้ง)
+    # Header + Toggle V/H ขวาบน (default = แนวนอน : มุกกี้สั่ง 19 พ.ย. 2026 ชื่อสาขายาว อ่านง่ายกว่า)
     _hdr_l, _hdr_r = st.columns([3, 1])
     with _hdr_l:
         st.markdown('<div id="sec-rank" class="group-header orange">🏆 อันดับยอดนิยม</div>',
@@ -3001,7 +3041,7 @@ def _hist_sec_rank(date_from, date_to, data=None):
         st.markdown('<div style="height:24px;"></div>', unsafe_allow_html=True)
         _bar_orient = st.radio(
             "ทิศทางกราฟ",
-            options=['แนวตั้ง', 'แนวนอน'],
+            options=['แนวตั้ง', 'แนวนอน'], index=1,
             horizontal=True, label_visibility='collapsed',
             key='ranking_bar_orient',
         )
@@ -3020,6 +3060,13 @@ def _hist_sec_rank(date_from, date_to, data=None):
     if not div_df.empty:
         _div_show = div_df.head(8).copy()
         _div_show['division_short'] = _div_show['division_name'].apply(_short_div)
+        _div_total = int(div_df['n'].sum())
+        if _div_total > 0:
+            _story_head(
+                f"สาขา{_div_show['division_short'].iloc[0]}ผ่าตัดมากที่สุด "
+                f"{int(_div_show['n'].iloc[0]):,} เคส"
+                + (f" คิดเป็นร้อยละ {round(int(_div_show['n'].iloc[0]) * 100 / _div_total)} ของทุกสาขา"
+                   if len(div_df) > 1 else ""))
         if _is_v:
             _y_max_div = max(int(_div_show['n'].max()) * 1.20, 5)
             fig = px.bar(_div_show, x='division_short', y='n', text='n',
@@ -3045,10 +3092,12 @@ def _hist_sec_rank(date_from, date_to, data=None):
                 textposition='outside',
                 hovertemplate='<b>%{customdata[0]}</b><br>%{x} เคส<extra></extra>')
             fig.update_layout(
-                margin=dict(t=10, b=30, l=10, r=40), height=300,
+                margin=dict(t=10, b=30, l=10, r=40),
+                height=max(140, 60 + len(_div_show) * 32),
                 yaxis=dict(autorange='reversed'),
                 xaxis=dict(range=[0, _x_max_div]),
             )
+        _story_bars(fig, _div_show['n'], '#7e57c2', horizontal=not _is_v, keep_angle=_is_v)
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.caption("ยังไม่มีข้อมูลสาขา")
@@ -3057,8 +3106,7 @@ def _hist_sec_rank(date_from, date_to, data=None):
     #    + ตาราง Excel แยกสาขา (ชื่อดิบ ไม่รวม fuzzy)
     st.markdown('<div class="sub-title">🔬 Top หัตถการที่ทำบ่อยของแต่ละสาขา</div>',
                 unsafe_allow_html=True)
-    from main_or_db import get_cases as _get_cases_proc
-    _dfp = _get_cases_proc()
+    _dfp = _ca_cases_range(str(date_from), str(date_to), _stats_ver())  # ⚡ 19 พ.ย. 2026 ใช้ชุดที่จำไว้
     _dfp = _dfp[(_dfp['op_date'] >= date_from) & (_dfp['op_date'] <= date_to)
                 & (_dfp['status'] != 'cancelled')].copy()
     _dfp['_pname'] = (_dfp['procedure_name'].fillna('').astype(str).str.strip())
@@ -3112,6 +3160,9 @@ def _hist_sec_rank(date_from, date_to, data=None):
                 yaxis=dict(tickfont=dict(size=12)),
                 plot_bgcolor='white',
             )
+            _story_bars(fig, _fz.iloc[::-1]['n'], '#1D9E75', horizontal=True)
+            _story_head(f"หัตถการที่ทำบ่อยที่สุด : {_fz['label'].iloc[0]} "
+                        f"{int(_fz['n'].iloc[0]):,} เคส")
             _scope_lbl = ('ทุกสาขา' if _sel_div == 'ทุกสาขา' else _sel_div)
             st.caption(f"🔬 {_scope_lbl} · แสดง {len(_fz)} อันดับแรก · "
                        f"รวม {int(_scope.shape[0]):,} เคส · "
@@ -3305,6 +3356,7 @@ def _hist_sec_rank(date_from, date_to, data=None):
                     yaxis=dict(autorange='reversed'),
                     xaxis=dict(range=[0, _x_max_p]),
                 )
+                _story_bars(fig_p, _top_proc['n_cases'], '#00838f', horizontal=True)
                 st.plotly_chart(fig_p, use_container_width=True)
             else:
                 st.caption("ยังไม่มีหัตถการที่ทำจริง (intraop) สำหรับแพทย์คนนี้")
@@ -3387,7 +3439,7 @@ def _hist_sec_eff(date_from, date_to, data=None):
             fig_dow = px.bar(
                 dow_summary, x='day_name', y='n_cases',
                 text='n_cases', color='color_flag',
-                color_discrete_map={'peak': '#d84315', 'normal': '#ef6c00'},
+                color_discrete_map={'peak': '#d84315', 'normal': _STORY_BASE},
                 labels={'day_name': '', 'n_cases': 'เคส'},
             )
             fig_dow.update_traces(textposition='outside')
@@ -3403,6 +3455,7 @@ def _hist_sec_eff(date_from, date_to, data=None):
                 showlegend=False,
                 plot_bgcolor='#fff8f0',
             )
+            _story_axes(fig_dow, horizontal=False)
             st.plotly_chart(fig_dow, use_container_width=True)
 
         # 🅱️ Monthly Bar — จำนวนเคสรับเวรต่อเดือน (สีต่างจาก A ให้รู้ว่าคนละ chart)
@@ -3602,7 +3655,7 @@ def _hist_sec_night(date_from, date_to, data=None):
             fig_aft_dow = px.bar(
                 _aft_dow_avg, x='day_name', y='n', text='n',
                 color='color_flag',
-                color_discrete_map={'peak': '#5e35b1', 'normal': '#b39ddb'},
+                color_discrete_map={'peak': '#5e35b1', 'normal': _STORY_BASE},
                 labels={'day_name': '', 'n': 'เคสนอกเวลาเฉลี่ย/วัน'},
                 category_orders={'day_name': _THAI_DAY_AFT})
             fig_aft_dow.update_traces(
@@ -3616,6 +3669,7 @@ def _hist_sec_night(date_from, date_to, data=None):
                            range=[0, _y_max_aft * 1.25]),
                 showlegend=False, plot_bgcolor='white',
             )
+            _story_axes(fig_aft_dow, horizontal=False)
             st.plotly_chart(fig_aft_dow, use_container_width=True,
                             config={'displayModeBar': False})
 
@@ -3690,6 +3744,9 @@ def _hist_sec_night(date_from, date_to, data=None):
                 xaxis=dict(gridcolor='#f0f0f0'),
                 yaxis=dict(tickfont=dict(size=13)),
             )
+            _story_bars(fig_ho, _div_ho.sort_values('n')['n'], '#1565c0', horizontal=True)
+            _story_head(f"สาขา{_div_ho['สาขา'].iloc[0].replace('ศัลยกรรม', '') or _div_ho['สาขา'].iloc[0]}"
+                        f"รับเวรมากที่สุด {int(_div_ho['n'].iloc[0]):,} เคส")
             st.plotly_chart(fig_ho, use_container_width=True,
                             config={'displayModeBar': False})
 
