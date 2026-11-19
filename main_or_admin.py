@@ -60,6 +60,52 @@ _STORY_BASE = '#CBD5E1'   # เทาอ่อน : แท่งทั่วไ�
 _STORY_TOP = '#29A3E8'    # ฟ้า : แท่งอันดับ 1 (มุกกี้สั่ง 19 พ.ย. 2026 ใช้สีเดียวกันทุกกราฟ)
 
 
+def _story_bold_top(fig, horizontal: bool, bold_ticks: bool = True):
+    """🔦 19 พ.ย. 2026 (มุกกี้สั่ง): ป้ายค่าและชื่อหมวดของแท่งที่สูงสุดเป็นตัวหนา ตัวใหญ่ขึ้น สีเข้ม
+    ใช้ได้กับกราฟแท่งทุกแบบ (ชุดเดียวหรือหลายชุด) · ค่าเท่ากันหลายแท่ง = หนาทุกแท่งที่เท่ากัน"""
+    _bars = [t for t in fig.data if getattr(t, 'type', '') == 'bar']
+    _get = lambda t: list(t.x if horizontal else t.y)
+    _all = []
+    for t in _bars:
+        for v in _get(t):
+            try:
+                _all.append(float(v))
+            except (TypeError, ValueError):
+                pass
+    if not _all or max(_all) <= 0:
+        return fig
+    _mx = max(_all)
+    _top_cats, _cats = [], []
+    for t in _bars:
+        _vals = _get(t)
+        _names = list(t.y if horizontal else t.x)
+        _txt = list(t.text) if t.text is not None else list(_vals)
+        # ตัวเลขจาก pandas มาเป็น float (126.0) → แสดงแบบสั้น (126 / 1.9) เหมือนที่ plotly แสดงเดิม
+        _txt = [x if isinstance(x, str)
+                else (f'{int(x):,}' if float(x).is_integer() else f'{float(x):.1f}')
+                for x in _txt]
+        _is = []
+        for v in _vals:
+            try:
+                _is.append(float(v) == _mx)
+            except (TypeError, ValueError):
+                _is.append(False)
+        t.text = [f'<b>{x}</b>' if (b and str(x) != '') else x for x, b in zip(_txt, _is)]
+        t.texttemplate = None
+        t.textfont = dict(size=[17 if b else 12 for b in _is],
+                          color=['#0f172a' if b else '#64748b' for b in _is])
+        _cats += [c for c in _names if c not in _cats]
+        _top_cats += [c for c, b in zip(_names, _is) if b]
+    if bold_ticks and _cats:
+        _ax = dict(tickmode='array', tickvals=_cats,
+                   ticktext=[f'<b>{c}</b>' if c in _top_cats else str(c) for c in _cats])
+        if horizontal:
+            fig.update_yaxes(**_ax)
+        else:
+            fig.update_xaxes(**_ax)
+    return fig
+
+
 def _story_axes(fig, horizontal: bool, keep_angle: bool = False, cats=None):
     """จัดแกนของกราฟแท่งให้สะอาด: ไม่มี grid ไม่มีตัวเลขแกนค่า ชื่อหมวดไม่เอียง
     cats = ลำดับหมวดจากบนลงล่าง (ใช้กับกราฟแนวนอนที่หมวดมีลำดับของตัวเอง เช่น วันในสัปดาห์)"""
@@ -77,7 +123,7 @@ def _story_axes(fig, horizontal: bool, keep_angle: bool = False, cats=None):
         fig.update_yaxes(categoryorder='array', categoryarray=list(cats)[::-1],
                          autorange=True, tickfont=dict(size=13))
     fig.update_layout(bargap=0.33, showlegend=False, plot_bgcolor='white')
-    return fig
+    return _story_bold_top(fig, horizontal)
 
 
 def _story_bars(fig, values, accent: str, horizontal: bool, keep_angle: bool = False):
@@ -888,6 +934,7 @@ def _render_hourly_load(hm, dow_counts):
                                   range=[0, max(float(_vals.max()), 1) * 1.25],
                                   gridcolor='#f0f0f0'),
                        xaxis=dict(title=''), plot_bgcolor='white', showlegend=False)
+    _story_bold_top(_fig, horizontal=False)
     st.plotly_chart(_fig, use_container_width=True, config={'displayModeBar': False})
     _sw = ('<span style="display:inline-block;width:12px;height:12px;border-radius:3px;'
            'background:{c};margin-right:6px;"></span>')
@@ -2789,6 +2836,8 @@ def _hist_sec_trend(date_from, date_to, data=None):
             showlegend=False,
             plot_bgcolor='white',
         )
+        if _demo_trend:
+            _story_bold_top(fig_m_main, horizontal=False, bold_ticks=not _many_m)
         st.plotly_chart(fig_m_main, use_container_width=True)
         st.caption(
             "💡 แท่งแดง = เดือนที่เคสเยอะสุด · ชี้ที่แท่งเพื่อดูจำนวนเคส"
