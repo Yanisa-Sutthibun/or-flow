@@ -3193,9 +3193,7 @@ def _hist_sec_rank(date_from, date_to, data=None):
         if _div_total > 0:
             _story_head(
                 f"สาขา{_div_show['division_short'].iloc[0]}ผ่าตัดมากที่สุด "
-                f"{int(_div_show['n'].iloc[0]):,} เคส"
-                + (f" คิดเป็นร้อยละ {round(int(_div_show['n'].iloc[0]) * 100 / _div_total)} ของทุกสาขา"
-                   if len(div_df) > 1 else ""))
+                f"{int(_div_show['n'].iloc[0]):,} เคส")  # ร้อยละเอาออก (มุกกี้สั่ง 19 พ.ย. 2026 : อ่านแล้วงง)
         if _is_v:
             _y_max_div = max(int(_div_show['n'].max()) * 1.20, 5)
             fig = px.bar(_div_show, x='division_short', y='n', text='n',
