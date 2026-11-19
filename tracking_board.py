@@ -964,7 +964,9 @@ def _lead_cells_pre(c, tlabel, emer, dup_badge, chip, name_fg='#0f172a'):
         f'<span title="{_p}" style="flex:1;min-width:0;font-size:15px;color:#475569;cursor:help;{_nw}">{_p}</span>'
         f'<span style="flex:none;font-size:15px;color:#475569;{_nw}">{_d}</span></span>'
         f'<span style="display:block;padding-left:{_Q_TM_W + 10}px;font-size:14px;color:#64748b;{_nw}">'
-        f'<span style="margin-right:5px;">🤖</span>{_l2}</span></span>'
+        # 🧑‍⚕️ 19 พ.ย. 2026 (มุกกี้แจ้ง: แก้เวลาแล้วไอคอนพยาบาลไม่ขึ้น): การ์ดก่อนผ่าตัดเคยฝังรูปหุ่นยนต์ตายตัว
+        #    → ใช้ _who_icon ตัวเดียวกับแถวอื่น (พยาบาลแก้เวลาแล้ว = 🧑‍⚕️ · ยังเป็นค่าแบบจำลอง = 🤖)
+        f'{_who_icon(c, 14)}{_l2}</span></span>'
         f'<span style="display:none">{chip}</span>')
 
 
@@ -1525,7 +1527,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             c0, c2, _cm = st.columns(_BOARD_COLS_MIN)
         with _cm:
             # ✏️ ไอคอนดินสอ ให้ตรงกับคู่มือ (มุกกี้สั่ง 7 พ.ย. 2026 · เดิม ⋯)
-            _more = _popover("✏️", help="แก้เวลาทำนาย ย้ายห้อง เลิกทำ และดู HN",
+            _more = _popover("✏️", help="ย้อนกลับเมื่อกดผิด แก้เวลาทำนาย ย้ายห้อง และดู HN",
                              width='stretch', key=f"tb_more_{K}")
         with _more:
             _meta = _pt_meta(c)
@@ -1534,6 +1536,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                             f'padding-bottom:8px;margin-bottom:6px;'
                             f'border-bottom:1px solid #eef2f6;">{_meta}</div>',
                             unsafe_allow_html=True)
+            # ↩️ 19 พ.ย. 2026 (มุกกี้แจ้ง: หาปุ่มย้อนกลับไม่เจอ): เดิมปุ่มเลิกทำอยู่ล่างสุดของเมนู ต้องเลื่อนผ่านทุกอย่าง
+            #    → จองที่ไว้บนสุดของเมนู ✏️ แล้วให้บล็อกเลิกทำ (ท้ายฟังก์ชัน) มาวาดลงช่องนี้
+            _undo_slot = st.container()
         c1 = c3 = _more
     else:
         c0, c1, c2, c3 = st.columns(_BOARD_COLS)
@@ -1842,8 +1847,11 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
         _undo_ok = (_scope is None) or (_own and disp in ('holding_post', 'recovery'))
         if disp in _UNDO_TARGET and _undo_ok:
             if _mb:
-                st.markdown("---")
-            if st.button(f"↩️ เลิกทำ : กลับเป็น{_UNDO_TARGET[disp]}" if _mb else "↩️",
-                         key=f"tb_un_{K}", width='stretch',
-                         help=f"ย้อนกลับเป็น '{_UNDO_TARGET[disp]}' (กันกดพลาด)"):
+                with _undo_slot:      # บนสุดของเมนู ✏️ (ดูที่จองช่องไว้ด้านบน)
+                    if st.button(f"↩️ เลิกทำ : ย้อนกลับเป็น{_UNDO_TARGET[disp]}",
+                                 key=f"tb_un_{K}", width='stretch',
+                                 help=f"กดปุ่มผิด ย้อนกลับเป็น '{_UNDO_TARGET[disp]}' ได้ 1 ขั้น"):
+                        do_undo(idx)
+            elif st.button("↩️", key=f"tb_un_{K}", width='stretch',
+                           help=f"ย้อนกลับเป็น '{_UNDO_TARGET[disp]}' (กันกดพลาด)"):
                 do_undo(idx)
