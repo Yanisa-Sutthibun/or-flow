@@ -56,11 +56,13 @@ def _stats_ver() -> int:
 # 📊 กราฟเล่าเรื่อง (มุกกี้สั่ง 19 พ.ย. 2026 · หลัก สรุป-สวย-สื่อ)
 #    แท่งพื้นเป็นสีเทาอ่อน เน้นสีเฉพาะแท่งที่เป็นประเด็น · ตัดเส้น grid และตัวเลขแกนออก
 #    (มีป้ายค่าบนแท่งแล้ว) · ชื่อหมวดวางแนวนอน · ช่องว่างไม่เกินครึ่งความกว้างแท่ง
-_STORY_BASE = '#CBD5E1'
+_STORY_BASE = '#CBD5E1'   # เทาอ่อน : แท่งทั่วไป
+_STORY_TOP = '#29A3E8'    # ฟ้า : แท่งอันดับ 1 (มุกกี้สั่ง 19 พ.ย. 2026 ใช้สีเดียวกันทุกกราฟ)
 
 
-def _story_axes(fig, horizontal: bool, keep_angle: bool = False):
-    """จัดแกนของกราฟแท่งให้สะอาด: ไม่มี grid ไม่มีตัวเลขแกนค่า ชื่อหมวดไม่เอียง"""
+def _story_axes(fig, horizontal: bool, keep_angle: bool = False, cats=None):
+    """จัดแกนของกราฟแท่งให้สะอาด: ไม่มี grid ไม่มีตัวเลขแกนค่า ชื่อหมวดไม่เอียง
+    cats = ลำดับหมวดจากบนลงล่าง (ใช้กับกราฟแนวนอนที่หมวดมีลำดับของตัวเอง เช่น วันในสัปดาห์)"""
     _val = dict(showgrid=False, showticklabels=False, zeroline=False, title_text='')
     _cat = dict(showgrid=False, title_text='')
     if not keep_angle:
@@ -71,12 +73,17 @@ def _story_axes(fig, horizontal: bool, keep_angle: bool = False):
     else:
         fig.update_yaxes(**_val)
         fig.update_xaxes(**_cat)
-    fig.update_layout(bargap=0.33, showlegend=False)
+    if horizontal and cats:
+        fig.update_yaxes(categoryorder='array', categoryarray=list(cats)[::-1],
+                         autorange=True, tickfont=dict(size=13))
+    fig.update_layout(bargap=0.33, showlegend=False, plot_bgcolor='white')
     return fig
 
 
 def _story_bars(fig, values, accent: str, horizontal: bool, keep_angle: bool = False):
-    """กราฟแท่งชุดเดียว: แท่งที่ค่าสูงสุดใช้สี accent ที่เหลือเทาอ่อน (values เรียงตามลำดับเดียวกับข้อมูลในกราฟ)"""
+    """กราฟแท่งชุดเดียว: แท่งที่ค่าสูงสุดเป็นสีฟ้า ที่เหลือเทาอ่อน (values เรียงตามลำดับเดียวกับข้อมูลในกราฟ)
+    accent = สีเดิมของหัวข้อ เก็บพารามิเตอร์ไว้เผื่อย้อนกลับ ปัจจุบันใช้ _STORY_TOP ทุกกราฟ"""
+    accent = _STORY_TOP
     _vals = [float(v or 0) for v in values]
     _mx = max(_vals) if _vals else 0
     fig.update_traces(
@@ -2501,8 +2508,17 @@ def _hist_sec_room(date_from, date_to, data=None):
     rows_html = ['<table style="width:100%;border-collapse:collapse;font-size:18px;">',
                  '<tr>' + ''.join(_th.format(h) for h in
                                   ('ห้อง', 'เคสสะสม (ราย)', 'วันที่มีเคส (วัน)',
-                                   'เฉลี่ย (เคส/วัน)', 'Turnover เฉลี่ย')) + '</tr>']
+                                   'เฉลี่ย (เคส/วัน)', 'ใช้ห้องเฉลี่ย (ชม./วัน)',
+                                   'Turnover เฉลี่ย')) + '</tr>']
     df['_rm'] = df['room_no'].astype(float).astype(int)
+    # ⏱️ 19 พ.ย. 2026 (มุกกี้สั่ง): ชั่วโมงใช้ห้องเฉลี่ยต่อวัน = เวลาครองห้องรวมทุกเคส หารด้วยวันที่มีเคส
+    #    ใช้ actual_duration_min ก่อน ถ้าไม่มีคิดจาก in_or_at ถึง op_end_at (กรอง 1-720 นาที กันเวลาเพี้ยน)
+    _mins = pd.to_numeric(df.get('actual_duration_min'), errors='coerce')
+    if 'in_or_at' in df.columns and 'op_end_at' in df.columns:
+        _calc = (pd.to_datetime(df['op_end_at'], errors='coerce')
+                 - pd.to_datetime(df['in_or_at'], errors='coerce')).dt.total_seconds() / 60
+        _mins = _mins.where(_mins > 0, _calc)
+    df['_room_min'] = _mins.where((_mins >= 1) & (_mins <= 720))
     for rm in NEW_BUILDING_ROOMS:
         g = df[df['_rm'] == rm]
         if g.empty:
@@ -2510,6 +2526,9 @@ def _hist_sec_room(date_from, date_to, data=None):
         n = len(g)
         days = g['op_date'].nunique()
         avg = n / days if days else 0
+        _hr = g['_room_min'].sum() / 60 / days if (days and g['_room_min'].notna().any()) else None
+        hr_txt = (f"{_hr:.1f}" if _hr is not None
+                  else '<span style="color:#94a3b8;">ข้อมูลไม่พอ</span>')
         _tv = tov.get(rm)
         tv_txt = (f"{_tv:.0f} นาที" if _tv is not None
                   else '<span style="color:#94a3b8;">ข้อมูลไม่พอ</span>')
@@ -2519,6 +2538,7 @@ def _hist_sec_room(date_from, date_to, data=None):
             f'<td style="{_td}">{n:,}</td>'
             f'<td style="{_td}">{days}</td>'
             f'<td style="{_td}">{avg:.1f}</td>'
+            f'<td style="{_td}">{hr_txt}</td>'
             f'<td style="{_td}">{tv_txt}</td></tr>')
     rows_html.append('</table>')
     st.markdown(''.join(rows_html), unsafe_allow_html=True)
@@ -2526,7 +2546,8 @@ def _hist_sec_room(date_from, date_to, data=None):
     # 📖 15 พ.ย. 2026 (มุกกี้สั่ง หลังซ้อม try out): บอกว่าแต่ละคอลัมน์นับจากอะไร
     st.caption("เคสสะสม (ราย) = จำนวนเคสที่ผ่าเสร็จของห้องนั้นในช่วงวันที่ที่เลือก · "
                "วันที่มีเคส (วัน) = จำนวนวันในช่วงนั้นที่ห้องมีเคสผ่าเสร็จอย่างน้อย 1 เคส · "
-               "เฉลี่ย (เคส/วัน) = เคสสะสม หารด้วยวันที่มีเคส")
+               "เฉลี่ย (เคส/วัน) = เคสสะสม หารด้วยวันที่มีเคส · "
+               "ใช้ห้องเฉลี่ย (ชม./วัน) = เวลาที่ผู้ป่วยอยู่ในห้องผ่าตัดรวมทุกเคส หารด้วยวันที่มีเคส")
     st.caption(f"ช่วงข้อมูล: {_from} ถึง {date_to} · เคสเสร็จสิ้นเท่านั้น · "
                "Turnover = ค่ากลาง (median) ของช่องว่างระหว่างเคสในห้องเดียวกัน "
                "(กรอง 1–90 นาที · ห้องที่มีต่ำกว่า 5 คู่ = ข้อมูลไม่พอ)"
@@ -2840,24 +2861,20 @@ def _hist_sec_trend(date_from, date_to, data=None):
         _dow_avg_s['color_flag'] = _dow_avg_s['n'].apply(
             lambda v: 'peak' if v == _max_dow_s and v > 0 else 'normal')
 
-        fig_dow_s = px.bar(_dow_avg_s, x='day_name', y='n', text='n',
+        fig_dow_s = px.bar(_dow_avg_s, x='n', y='day_name', orientation='h', text='n',
                            color='color_flag',
                            color_discrete_map={
-                               'peak': '#c62828', 'normal': _STORY_BASE},
-                           labels={'day_name': '', 'n': 'เคสเฉลี่ย/วัน'},
-                           category_orders={'day_name': _THAI_DAY_S})
+                               'peak': _STORY_TOP, 'normal': _STORY_BASE},
+                           labels={'day_name': '', 'n': 'เคสเฉลี่ย/วัน'})
         fig_dow_s.update_traces(
-            textposition='outside',
-            hovertemplate='<b>%{x}</b><br>เฉลี่ย %{y} เคส/วัน<extra></extra>')
+            textposition='outside', cliponaxis=False,
+            hovertemplate='<b>%{y}</b><br>เฉลี่ย %{x} เคส/วัน<extra></extra>')
         _y_max_dow_s = max(float(_dow_avg_s['n'].max()), 1.0)
         fig_dow_s.update_layout(
-            margin=dict(t=40, b=30, l=40, r=10), height=240,
-            xaxis_title='',
-            yaxis=dict(title='เคสเฉลี่ย/วัน',
-                       range=[0, _y_max_dow_s * 1.25]),
-            showlegend=False,
+            margin=dict(t=10, b=10, l=10, r=40), height=290,
+            xaxis=dict(range=[0, _y_max_dow_s * 1.15]),
         )
-        _story_axes(fig_dow_s, horizontal=False)
+        _story_axes(fig_dow_s, horizontal=True, cats=_THAI_DAY_S)
         st.plotly_chart(fig_dow_s, use_container_width=True)
         _min_dow_s = _dow_avg_s[(_dow_avg_s['n'] > 0)
                                 & ((_dow_avg_s['dow'] <= 4) if _demo_trend else True)]['n'].min()
@@ -3433,29 +3450,23 @@ def _hist_sec_eff(date_from, date_to, data=None):
             st.markdown(
                 '<div style="font-size:18px;color:#666;margin:10px 0 4px;'
                 'font-weight:500;border-left:3px solid #ef6c00;padding-left:8px;">'
-                '🗓️ <b>A.</b> รับเวรตามวันในสัปดาห์ '
-                '<span style="color:#999;font-weight:400;">(สีส้ม)</span></div>',
+                '🗓️ <b>A.</b> รับเวรตามวันในสัปดาห์</div>',
                 unsafe_allow_html=True)
             fig_dow = px.bar(
-                dow_summary, x='day_name', y='n_cases',
+                dow_summary, x='n_cases', y='day_name', orientation='h',
                 text='n_cases', color='color_flag',
-                color_discrete_map={'peak': '#d84315', 'normal': _STORY_BASE},
+                color_discrete_map={'peak': _STORY_TOP, 'normal': _STORY_BASE},
                 labels={'day_name': '', 'n_cases': 'เคส'},
             )
-            fig_dow.update_traces(textposition='outside')
+            fig_dow.update_traces(textposition='outside', cliponaxis=False)
             _y_max_ho = max(float(dow_summary['n_cases'].max()), 1.0)
             fig_dow.update_layout(
-                margin=dict(t=30, b=30, l=30, r=10), height=220,
-                xaxis_title='',
-                # 📅 26 ก.ค. 2026: บังคับเรียง จ→ศ (เดิมเรียงตามลำดับข้อมูล → สลับมั่ว)
-                xaxis=dict(categoryorder='array',
-                           categoryarray=['จันทร์', 'อังคาร', 'พุธ',
-                                          'พฤหัสฯ', 'ศุกร์']),
-                yaxis=dict(title='', range=[0, _y_max_ho * 1.25]),
-                showlegend=False,
-                plot_bgcolor='#fff8f0',
+                margin=dict(t=10, b=10, l=10, r=40), height=230,
+                xaxis=dict(range=[0, _y_max_ho * 1.15]),
             )
-            _story_axes(fig_dow, horizontal=False)
+            # 📅 เรียง จ→ศ จากบนลงล่างเสมอ (ไม่เรียงตามลำดับข้อมูล)
+            _story_axes(fig_dow, horizontal=True,
+                        cats=['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์'])
             st.plotly_chart(fig_dow, use_container_width=True)
 
         # 🅱️ Monthly Bar — จำนวนเคสรับเวรต่อเดือน (สีต่างจาก A ให้รู้ว่าคนละ chart)
@@ -3653,23 +3664,19 @@ def _hist_sec_night(date_from, date_to, data=None):
                 lambda v: 'peak' if v == _max_dow_aft and v > 0 else 'normal')
 
             fig_aft_dow = px.bar(
-                _aft_dow_avg, x='day_name', y='n', text='n',
+                _aft_dow_avg, x='n', y='day_name', orientation='h', text='n',
                 color='color_flag',
-                color_discrete_map={'peak': '#5e35b1', 'normal': _STORY_BASE},
-                labels={'day_name': '', 'n': 'เคสนอกเวลาเฉลี่ย/วัน'},
-                category_orders={'day_name': _THAI_DAY_AFT})
+                color_discrete_map={'peak': _STORY_TOP, 'normal': _STORY_BASE},
+                labels={'day_name': '', 'n': 'เคสนอกเวลาเฉลี่ย/วัน'})
             fig_aft_dow.update_traces(
-                textposition='outside',
-                hovertemplate='<b>%{x}</b><br>เฉลี่ย %{y} เคส/วัน<extra></extra>')
+                textposition='outside', cliponaxis=False,
+                hovertemplate='<b>%{y}</b><br>เฉลี่ย %{x} เคส/วัน<extra></extra>')
             _y_max_aft = max(float(_aft_dow_avg['n'].max()), 1.0)
             fig_aft_dow.update_layout(
-                margin=dict(t=40, b=30, l=40, r=10), height=260,
-                xaxis_title='',
-                yaxis=dict(title='เคสนอกเวลาเฉลี่ย/วัน',
-                           range=[0, _y_max_aft * 1.25]),
-                showlegend=False, plot_bgcolor='white',
+                margin=dict(t=10, b=10, l=10, r=40), height=290,
+                xaxis=dict(range=[0, _y_max_aft * 1.15]),
             )
-            _story_axes(fig_aft_dow, horizontal=False)
+            _story_axes(fig_aft_dow, horizontal=True, cats=_THAI_DAY_AFT)
             st.plotly_chart(fig_aft_dow, use_container_width=True,
                             config={'displayModeBar': False})
 
