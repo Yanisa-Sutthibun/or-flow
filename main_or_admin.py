@@ -2375,8 +2375,29 @@ def _hist_sec_overview(date_from, date_to, data=None):
             f'</div>'
         )
 
-    # แถวแรก: ตัวเลขหลัก 4 การ์ด (ยกเลิก/OPD/IPD ยุบเป็นบรรทัดรองใต้ตัวเลข)
-    k1, k2, k3, k4 = st.columns(4)
+    # แถวแรก: ตัวเลขหลัก 5 การ์ด (ยกเลิก/OPD/IPD ยุบเป็นบรรทัดรองใต้ตัวเลข)
+    # 🚪 19 พ.ย. 2026 (มุกกี้สั่ง): การ์ดห้องผ่าตัดที่เปิดใช้งานมากที่สุด = ห้องที่มีวันที่มีเคสผ่าเสร็จมากที่สุด
+    #    เกณฑ์เดียวกับตารางสถิติรายห้อง (ตึกใหม่ · เคสเสร็จสิ้น)
+    _top_room_lbl, _top_room_sub = '—', ''
+    try:
+        from room_config import MOVE_DATE as _MV, NEW_BUILDING_ROOMS as _NBR, room_label as _rlbl
+        _rdf = _ca_cases_range(str(date_from), str(date_to), _stats_ver())
+        _rdf = _rdf[(_rdf['op_date'] >= max(str(date_from), _MV)) & (_rdf['op_date'] <= str(date_to))
+                    & (_rdf['status'].isin(['post_op', 'discharged', 'done']))]
+        _rdf = _rdf[pd.to_numeric(_rdf['room_no'], errors='coerce').isin(_NBR)]
+        if not _rdf.empty:
+            _rg = (_rdf.assign(_rm=pd.to_numeric(_rdf['room_no'], errors='coerce').astype(int))
+                   .groupby('_rm').agg(days=('op_date', 'nunique'), n=('op_date', 'size'))
+                   .sort_values(['days', 'n'], ascending=False))
+            _top_room_lbl = _rlbl(int(_rg.index[0]))
+            _top_room_sub = f"เปิด {int(_rg['days'].iloc[0])} วัน รวม {int(_rg['n'].iloc[0]):,} เคส"
+    except Exception as _e_room:
+        try:
+            from logger_setup import get_logger
+            get_logger(__name__).warning("overview top room card failed: %s", _e_room)
+        except Exception:
+            pass
+    k1, k2, k3, k4, k5 = st.columns(5)
     with k1:
         st.markdown(_stat_card(
             "📊 เคสทั้งหมด", s_all['total'],
@@ -2406,6 +2427,11 @@ def _hist_sec_overview(date_from, date_to, data=None):
             f"{(data or {}).get('top_div_count', 0)} เคส "
             f"({(data or {}).get('top_div_pct', 0)}%)",
             value_color='#6a1b9a', value_size='18px'),
+            unsafe_allow_html=True)
+    with k5:
+        st.markdown(_stat_card(
+            "🚪 ห้องที่เปิดใช้งานมากที่สุด", _top_room_lbl, _top_room_sub,
+            value_color='#1565c0', value_size='19px'),
             unsafe_allow_html=True)
 
     # ⚠️ ระดับความเร่งด่วน — Elective (มี breakdown นัดหมาย/Walk-in) / Urgent / Emergency
@@ -2519,6 +2545,8 @@ def _hist_sec_room(date_from, date_to, data=None):
                  - pd.to_datetime(df['in_or_at'], errors='coerce')).dt.total_seconds() / 60
         _mins = _mins.where(_mins > 0, _calc)
     df['_room_min'] = _mins.where((_mins >= 1) & (_mins <= 720))
+    # 🔦 19 พ.ย. 2026 (มุกกี้สั่ง): ค่าสูงสุดของแต่ละคอลัมน์เป็นตัวหนาบนพื้นฟ้าอ่อน ให้เด่นออกมาจากตาราง
+    _rows = []
     for rm in NEW_BUILDING_ROOMS:
         g = df[df['_rm'] == rm]
         if g.empty:
@@ -2527,19 +2555,27 @@ def _hist_sec_room(date_from, date_to, data=None):
         days = g['op_date'].nunique()
         avg = n / days if days else 0
         _hr = g['_room_min'].sum() / 60 / days if (days and g['_room_min'].notna().any()) else None
-        hr_txt = (f"{_hr:.1f}" if _hr is not None
+        _rows.append(dict(rm=rm, n=n, days=days, avg=round(avg, 1),
+                          hr=(round(_hr, 1) if _hr is not None else None), tv=tov.get(rm)))
+    _mx = {k: max([r[k] for r in _rows if r[k] is not None], default=None)
+           for k in ('n', 'days', 'avg', 'hr')}
+    _hi = 'font-weight:800;color:#0d47a1;background:#dbeafe;'
+
+    def _cell(r, k, txt):
+        _on = (len(_rows) > 1 and r[k] is not None and r[k] == _mx[k])
+        return f'<td style="{_td}{_hi if _on else ""}">{txt}</td>'
+
+    for r in _rows:
+        hr_txt = (f"{r['hr']:.1f}" if r['hr'] is not None
                   else '<span style="color:#94a3b8;">ข้อมูลไม่พอ</span>')
-        _tv = tov.get(rm)
-        tv_txt = (f"{_tv:.0f} นาที" if _tv is not None
+        tv_txt = (f"{r['tv']:.0f} นาที" if r['tv'] is not None
                   else '<span style="color:#94a3b8;">ข้อมูลไม่พอ</span>')
         rows_html.append(
             f'<tr><td style="{_td}text-align:left;font-weight:600;color:#1565c0;">'
-            f'{room_label(rm)}</td>'
-            f'<td style="{_td}">{n:,}</td>'
-            f'<td style="{_td}">{days}</td>'
-            f'<td style="{_td}">{avg:.1f}</td>'
-            f'<td style="{_td}">{hr_txt}</td>'
-            f'<td style="{_td}">{tv_txt}</td></tr>')
+            f'{room_label(r["rm"])}</td>'
+            + _cell(r, 'n', f"{r['n']:,}") + _cell(r, 'days', r['days'])
+            + _cell(r, 'avg', f"{r['avg']:.1f}") + _cell(r, 'hr', hr_txt)
+            + f'<td style="{_td}">{tv_txt}</td></tr>')
     rows_html.append('</table>')
     st.markdown(''.join(rows_html), unsafe_allow_html=True)
     _n_to = tov.get('_n')
@@ -2738,96 +2774,99 @@ def _hist_sec_trend(date_from, date_to, data=None):
             "hover ดูจำนวนเคส")
 
         # ⤵️ ซ่อน Calendar Heatmap ใน expander — แยกเดือน + wk 1-4
-        with st.expander("📅 ดูรายวัน" if _demo_trend else "📅 ดูแนวโน้มรายวัน (กราฟเส้น)"):
-            # Stat summary
-            _max_n_d = int(_daily_h['n_cases'].max())
-            _max_date_d = _daily_h.loc[_daily_h['n_cases'].idxmax(), 'op_date']
-            _max_date_th_d = pd.to_datetime(_max_date_d).strftime('%d/%m/%Y')
-            _avg_per_day_d = round(_daily_h['n_cases'].mean(), 1)
+        # 🙈 19 พ.ย. 2026 (มุกกี้สั่งเอาออก): ซ่อนกราฟรายวัน · โค้ดเก็บไว้ครบ ตั้ง _SHOW_DAILY_TREND = True เพื่อเปิดคืน
+        _SHOW_DAILY_TREND = False
+        if _SHOW_DAILY_TREND:
+            with st.expander("📅 ดูรายวัน" if _demo_trend else "📅 ดูแนวโน้มรายวัน (กราฟเส้น)"):
+                # Stat summary
+                _max_n_d = int(_daily_h['n_cases'].max())
+                _max_date_d = _daily_h.loc[_daily_h['n_cases'].idxmax(), 'op_date']
+                _max_date_th_d = pd.to_datetime(_max_date_d).strftime('%d/%m/%Y')
+                _avg_per_day_d = round(_daily_h['n_cases'].mean(), 1)
 
-            # เติม full date range (กัน gap)
-            _full_dates = pd.date_range(date_from, date_to)
-            _cal_df = pd.DataFrame({'_dt': _full_dates})
-            _cal_df['op_date'] = _cal_df['_dt'].dt.strftime('%Y-%m-%d')
-            _cal_df = _cal_df.merge(
-                _daily_h[['op_date', 'n_cases']], on='op_date',
-                how='left').fillna(0)
-            _cal_df['n_cases'] = _cal_df['n_cases'].astype(int)
-            # exclude weekends (Sat=5, Sun=6)
-            _cal_df['dow'] = _cal_df['_dt'].dt.dayofweek
-            _cal_df_wd = _cal_df[_cal_df['dow'].between(0, 4)].copy()
-            _cal_df_wd['date_label'] = _cal_df_wd['_dt'].dt.strftime('%d %b')
-            # 7-day rolling average
-            _cal_df_wd['rolling_avg'] = (
-                _cal_df_wd['n_cases'].rolling(window=7, min_periods=1).mean()
-            )
+                # เติม full date range (กัน gap)
+                _full_dates = pd.date_range(date_from, date_to)
+                _cal_df = pd.DataFrame({'_dt': _full_dates})
+                _cal_df['op_date'] = _cal_df['_dt'].dt.strftime('%Y-%m-%d')
+                _cal_df = _cal_df.merge(
+                    _daily_h[['op_date', 'n_cases']], on='op_date',
+                    how='left').fillna(0)
+                _cal_df['n_cases'] = _cal_df['n_cases'].astype(int)
+                # exclude weekends (Sat=5, Sun=6)
+                _cal_df['dow'] = _cal_df['_dt'].dt.dayofweek
+                _cal_df_wd = _cal_df[_cal_df['dow'].between(0, 4)].copy()
+                _cal_df_wd['date_label'] = _cal_df_wd['_dt'].dt.strftime('%d %b')
+                # 7-day rolling average
+                _cal_df_wd['rolling_avg'] = (
+                    _cal_df_wd['n_cases'].rolling(window=7, min_periods=1).mean()
+                )
 
-            fig_line = go.Figure()
-            # Bar (actual daily cases) — subtle
-            fig_line.add_trace(go.Bar(
-                x=_cal_df_wd['_dt'], y=_cal_df_wd['n_cases'],
-                name='เคสต่อวัน',
-                marker=dict(color=(['#c62828' if v == _max_n_d else '#4fc3f7'
-                                    for v in _cal_df_wd['n_cases']]
-                                   if _demo_trend else '#bbdefb'), line=dict(width=0)),
-                hovertemplate='<b>%{x|%d %b %Y (%a)}</b><br>%{y} เคส<extra></extra>',
-            ))
-            if not _demo_trend:
-                # Line (rolling avg) — main signal
-                fig_line.add_trace(go.Scatter(
-                    x=_cal_df_wd['_dt'], y=_cal_df_wd['rolling_avg'],
-                    name='ค่าเฉลี่ย 7 วัน',
-                    mode='lines',
-                    line=dict(color='#1565c0', width=3),
-                    hovertemplate='<b>%{x|%d %b %Y}</b><br>เฉลี่ย 7 วัน: %{y:.1f} เคส<extra></extra>',
+                fig_line = go.Figure()
+                # Bar (actual daily cases) — subtle
+                fig_line.add_trace(go.Bar(
+                    x=_cal_df_wd['_dt'], y=_cal_df_wd['n_cases'],
+                    name='เคสต่อวัน',
+                    marker=dict(color=(['#c62828' if v == _max_n_d else '#4fc3f7'
+                                        for v in _cal_df_wd['n_cases']]
+                                       if _demo_trend else '#bbdefb'), line=dict(width=0)),
+                    hovertemplate='<b>%{x|%d %b %Y (%a)}</b><br>%{y} เคส<extra></extra>',
                 ))
-                # Mark peak day
-                _peak_dt = pd.to_datetime(_max_date_d)
-                fig_line.add_trace(go.Scatter(
-                    x=[_peak_dt], y=[_max_n_d],
-                    name=f'⭐ Peak ({_max_n_d} เคส)',
-                    mode='markers+text',
-                    marker=dict(size=14, color='#d32f2f',
-                                line=dict(color='white', width=2)),
-                    text=[f'{_max_n_d}'], textposition='top center',
-                    textfont=dict(color='#d32f2f', size=11, family='Inter'),
-                    hovertemplate=f'<b>วันที่เคสเยอะสุด</b><br>{_max_date_th_d}<br>{_max_n_d} เคส<extra></extra>',
-                ))
-            if _demo_trend:
-                fig_line.add_hline(y=_avg_per_day_d, line_dash='dash', line_color='#64748b',
-                                   annotation_text=f'เฉลี่ย {_avg_per_day_d} เคส/วัน',
-                                   annotation_position='top left')
-            fig_line.update_layout(
-                height=340,
-                margin=dict(t=20, b=40, l=40, r=20),
-                xaxis=dict(title='', showgrid=False,
-                           tickformat='%d %b'),
-                yaxis=dict(title='จำนวนเคส', gridcolor='#f0f0f0'),
-                plot_bgcolor='white',
-                hovermode='x unified',
-                legend=dict(orientation='h', yanchor='bottom', y=1.02,
-                            xanchor='right', x=1, bgcolor='rgba(0,0,0,0)'),
-            )
-            st.plotly_chart(fig_line, use_container_width=True,
-                            config={'displayModeBar': False})
+                if not _demo_trend:
+                    # Line (rolling avg) — main signal
+                    fig_line.add_trace(go.Scatter(
+                        x=_cal_df_wd['_dt'], y=_cal_df_wd['rolling_avg'],
+                        name='ค่าเฉลี่ย 7 วัน',
+                        mode='lines',
+                        line=dict(color='#1565c0', width=3),
+                        hovertemplate='<b>%{x|%d %b %Y}</b><br>เฉลี่ย 7 วัน: %{y:.1f} เคส<extra></extra>',
+                    ))
+                    # Mark peak day
+                    _peak_dt = pd.to_datetime(_max_date_d)
+                    fig_line.add_trace(go.Scatter(
+                        x=[_peak_dt], y=[_max_n_d],
+                        name=f'⭐ Peak ({_max_n_d} เคส)',
+                        mode='markers+text',
+                        marker=dict(size=14, color='#d32f2f',
+                                    line=dict(color='white', width=2)),
+                        text=[f'{_max_n_d}'], textposition='top center',
+                        textfont=dict(color='#d32f2f', size=11, family='Inter'),
+                        hovertemplate=f'<b>วันที่เคสเยอะสุด</b><br>{_max_date_th_d}<br>{_max_n_d} เคส<extra></extra>',
+                    ))
+                if _demo_trend:
+                    fig_line.add_hline(y=_avg_per_day_d, line_dash='dash', line_color='#64748b',
+                                       annotation_text=f'เฉลี่ย {_avg_per_day_d} เคส/วัน',
+                                       annotation_position='top left')
+                fig_line.update_layout(
+                    height=340,
+                    margin=dict(t=20, b=40, l=40, r=20),
+                    xaxis=dict(title='', showgrid=False,
+                               tickformat='%d %b'),
+                    yaxis=dict(title='จำนวนเคส', gridcolor='#f0f0f0'),
+                    plot_bgcolor='white',
+                    hovermode='x unified',
+                    legend=dict(orientation='h', yanchor='bottom', y=1.02,
+                                xanchor='right', x=1, bgcolor='rgba(0,0,0,0)'),
+                )
+                st.plotly_chart(fig_line, use_container_width=True,
+                                config={'displayModeBar': False})
 
-            # Summary card
-            st.markdown(
-                f'<div style="background:#fff3e0;border-radius:10px;'
-                f'padding:12px 16px;border-left:4px solid #c62828;'
-                f'margin-top:10px;">'
-                f'<span style="font-size:18px;color:#bf360c;">'
-                f'<b>📈 วันที่เคสเยอะสุด:</b> {_max_n_d} เคส · '
-                f'วันที่ {_max_date_th_d} · '
-                f'เฉลี่ย/วัน {_avg_per_day_d} เคส</span></div>',
-                unsafe_allow_html=True)
-            st.caption(
-                "💡 แต่ละแท่ง = จำนวนเคสของวันนั้น · แท่งแดง = วันที่เคสเยอะสุด · "
-                "เส้นประ = ค่าเฉลี่ยต่อวัน · เฉพาะวันธรรมดา (จ-ศ)"
-                if _demo_trend else
-                "💡 แท่งฟ้าอ่อน = จำนวนเคสจริงของวันนั้น · "
-                "เส้นน้ำเงิน = ค่าเฉลี่ยเคลื่อนที่ 7 วัน (smooth trend) · "
-                "★ จุดแดง = peak day · เฉพาะวันธรรมดา (จ-ศ)")
+                # Summary card
+                st.markdown(
+                    f'<div style="background:#fff3e0;border-radius:10px;'
+                    f'padding:12px 16px;border-left:4px solid #c62828;'
+                    f'margin-top:10px;">'
+                    f'<span style="font-size:18px;color:#bf360c;">'
+                    f'<b>📈 วันที่เคสเยอะสุด:</b> {_max_n_d} เคส · '
+                    f'วันที่ {_max_date_th_d} · '
+                    f'เฉลี่ย/วัน {_avg_per_day_d} เคส</span></div>',
+                    unsafe_allow_html=True)
+                st.caption(
+                    "💡 แต่ละแท่ง = จำนวนเคสของวันนั้น · แท่งแดง = วันที่เคสเยอะสุด · "
+                    "เส้นประ = ค่าเฉลี่ยต่อวัน · เฉพาะวันธรรมดา (จ-ศ)"
+                    if _demo_trend else
+                    "💡 แท่งฟ้าอ่อน = จำนวนเคสจริงของวันนั้น · "
+                    "เส้นน้ำเงิน = ค่าเฉลี่ยเคลื่อนที่ 7 วัน (smooth trend) · "
+                    "★ จุดแดง = peak day · เฉพาะวันธรรมดา (จ-ศ)")
     else:
         st.caption("ยังไม่มีข้อมูลรายวัน")
 
