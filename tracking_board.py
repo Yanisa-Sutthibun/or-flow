@@ -122,6 +122,15 @@ def _compact() -> bool:
         return True
 
 
+def _tryout_ui() -> bool:
+    """🚀 20 พ.ย. 2026 (มุกกี้สั่ง): หน้าตาชุด try out ใช้ทั้งสองแอป · สวิตช์เดียวอยู่ที่ ui_theme.tryout_ui"""
+    try:
+        from ui_theme import tryout_ui
+        return tryout_ui()
+    except Exception:
+        return True
+
+
 def _room_fg_default() -> str:
     """สีรหัสห้อง: ชั้น A = ดำ (สี = ความเร่งด่วนเท่านั้น) · เดิม = น้ำเงิน"""
     return '#0f172a' if _compact() else '#1565c0'
@@ -849,21 +858,17 @@ _ROW_IFRAME_H = _ROW_H + 8
 def _quiet_overrun() -> bool:
     """🔕 17 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO เคสที่ผ่าตัดนานเกินเวลาที่ทำนาย ไม่ทำแถวสีเหลือง
     เหตุผล : ตัวเลขทำนายเป็นงานวิจัย ไม่ต้องเด่น · สีเหลืองสงวนให้ตัวชี้วัดของห้องผ่าตัด = ผู้ป่วยรอผ่าตัดนาน
-    (แถบความคืบหน้ายังบอกว่าเกินไปเท่าไรเหมือนเดิม) · production ไม่เปลี่ยน"""
-    try:
-        return str(st.secrets.get('instance_mode', '')).lower() == 'demo'
-    except Exception:
-        return False
+    (แถบความคืบหน้ายังบอกว่าเกินไปเท่าไรเหมือนเดิม)
+    🚀 20 พ.ย. 2026 (มุกกี้สั่ง): ยกขึ้นระบบจริงแล้ว (ui_theme.tryout_ui)"""
+    return _tryout_ui()
 
 
 def _minimal_board() -> bool:
     """🧹 7 พ.ย. 2026 (มุกกี้สั่ง ตาม wireframe): ตารางผ่าตัดแบบ minimal เฉพาะแอป DEMO
     แถวเหลือ 5 ช่อง : ห้อง+นัด / ผู้ป่วย+หัตถการ·แพทย์ / เวลา / ปุ่มหลัก / ⋯
-    ไม่มีชิปสถานะ (หัวกลุ่มกับปุ่มบอกอยู่แล้ว) · production ไม่เปลี่ยน"""
-    try:
-        return _compact() and str(st.secrets.get('instance_mode', '')).lower() == 'demo'
-    except Exception:
-        return False
+    ไม่มีชิปสถานะ (หัวกลุ่มกับปุ่มบอกอยู่แล้ว)
+    🚀 20 พ.ย. 2026 (มุกกี้สั่ง): ยกขึ้นระบบจริงแล้ว (ui_theme.tryout_ui)"""
+    return _compact() and _tryout_ui()
 
 
 def _cell_room_q(c, loc, tlabel, emer=False, fg=None):
@@ -1174,11 +1179,8 @@ def _call_line_html(c, dt, now):
     _tip = (f'เวลา = คาดว่าห้องจะพร้อมรับ - {_CALL_LEAD_MIN} นาที (เผื่อโทร/'
             f'เดินทาง) : ผู้ป่วยขึ้นมารอไม่เกิน 1 ชั่วโมง · ขยับตามสถานการณ์'
             f'จริงเอง · ถ้าห้องผ่าตัดกดกระดิ่ง = เรียกมารอได้เลย ไม่ต้องรอถึงเวลา')
-    _demo_inst = False
-    try:
-        _demo_inst = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
-    except Exception:
-        pass
+    # 🚀 20 พ.ย. 2026 (มุกกี้สั่ง): ใช้ทั้งสองแอป (ui_theme.tryout_ui)
+    _demo_inst = _tryout_ui()
     if diff < 0 and _demo_inst:
         # 🔕 17 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO เลยเวลาเรียกคิวแล้วไม่ต้องเตือน ไม่ทำแถบสี
         #    เหลือเป็นบรรทัดเรียบแบบเดียวกับตอนยังไม่ถึงเวลา (สีเหลืองบนบอร์ดเหลือความหมายเดียว = รอผ่าตัดนาน)

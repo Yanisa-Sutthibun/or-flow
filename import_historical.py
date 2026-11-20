@@ -66,9 +66,13 @@ def _classify_case_category(req_iso, op_iso):
 
 
 def _norm_date(d):
-    """Convert '6/5/2026 00:00:00' -> '2026-05-06'"""
+    """Convert '6/5/2026 00:00:00' -> '2026-05-06'
+    📄 20 พ.ย. 2026: ค่าที่เป็น ISO อยู่แล้ว ('2026-05-06') คืนตามเดิม (his_csv แปลงมาให้แล้ว)"""
     if pd.isna(d):
         return None
+    _s = str(d).strip()
+    if len(_s) >= 10 and _s[4] == '-' and _s[7] == '-':
+        return _s[:10]
     parts = str(d).split(' ')[0].split('/')
     if len(parts) == 3:
         return f"{int(parts[2]):04d}-{int(parts[1]):02d}-{int(parts[0]):02d}"
@@ -101,7 +105,12 @@ def _duration_to_min(d):
         return None
     parts = str(d).split(':')
     if len(parts) >= 2:
-        return int(parts[0]) * 60 + int(parts[1])
+        try:
+            _m = int(parts[0]) * 60 + int(parts[1])
+        except ValueError:
+            return None
+        # 📄 20 พ.ย. 2026: HIS มีค่าติดลบ (เช่น '-12:-5:00' เคสข้ามเที่ยงคืน) = ใช้ไม่ได้ ไม่เก็บ
+        return _m if _m >= 0 and '-' not in str(d) else None
     return None
 
 
@@ -460,8 +469,34 @@ def reimport_timestamps(intra_path: str, dry_run: bool = False):
     intra = None
     last_err = None
 
+    # 0. 📄 20 พ.ย. 2026 (มุกกี้สั่ง): CSV จาก HIS อ่านผ่าน his_csv ก่อน
+    #    (ต่อแถวที่แตกบรรทัดในช่อง t_surgstf + ตรวจว่าวันที่เป็น วัน/เดือน หรือ เดือน/วัน)
+    #    วันที่ถูกแปลงเป็น ISO ตั้งแต่ตรงนี้ → _norm_date ด้านล่างรับ ISO ได้ (ดู _norm_date)
+    if _ext == '.csv':
+        try:
+            import his_csv as HC
+            _hdr, _rows, _info = HC.read_table(intra_path)
+            _seen, _cols = {}, []
+            for _h in _hdr:                       # ชื่อซ้ำ → name, name.1 แบบเดียวกับ pandas
+                _k = _seen.get(_h, 0)
+                _seen[_h] = _k + 1
+                _cols.append(_h if _k == 0 else f"{_h}.{_k}")
+            _df = pd.DataFrame(_rows, columns=_cols, dtype=object)
+            if 'opedate' in _df.columns and 'orroom' in _df.columns and len(_df):
+                _order = HC.detect_date_order(_df['opedate'])
+                _df['opedate'] = [HC.to_iso(v, _order) for v in _df['opedate']]
+                _df = _df.apply(lambda s: s.map(
+                    lambda v: None if (v is None or str(v).strip() == '') else v))
+                for _c in ('arrivtime', 'roomtimein', 'roomtimeout', 'orroom'):
+                    if _c in _df.columns:
+                        _df[_c] = pd.to_numeric(_df[_c], errors='coerce')
+                intra = _df
+        except Exception as e:
+            last_err = e
+            intra = None
+
     # 1. CSV — ลองหลาย encoding
-    if _ext == '.csv' or intra is None:
+    if intra is None and (_ext == '.csv' or intra is None):
         for enc in ('utf-16', 'utf-8', 'utf-8-sig', 'cp874', 'tis-620'):
             try:
                 intra = pd.read_csv(intra_path, encoding=enc)

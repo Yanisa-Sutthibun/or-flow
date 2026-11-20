@@ -80,8 +80,22 @@ def _parse_schedule(src) -> pd.DataFrame:
 
 
 def _parse_intraop(src) -> pd.DataFrame:
-    """intraop.xls (HIS) → เวลาจริง (duration) + ห้อง + opesttime"""
-    xl = pd.read_excel(src, engine="xlrd", dtype=str)
+    """intraop.xls (HIS) → เวลาจริง (duration) + ห้อง + opesttime
+    📄 20 พ.ย. 2026 (มุกกี้สั่ง): รับ .csv ด้วย (ไฟล์ .xls ที่ HIS export ชุดปี 69 เปิดไม่ได้)
+       อ่านผ่าน his_csv : ต่อแถวที่แตกบรรทัด และตรวจรูปแบบวันที่จากข้อมูลเอง"""
+    _name = str(getattr(src, "name", src)).lower()
+    if _name.endswith(".csv"):
+        import his_csv as HC
+        _hdr, _rows, _info = HC.read_table(src)
+        _need = ["hn", "opedate", "orroom", "roomtimein", "roomtimeout", "opesttime",
+                 "nursurgnm", "nurcircunm"]
+        _ix = {c: HC.col(_hdr, c) for c in _need}
+        _order = HC.detect_date_order(r[_ix["opedate"]] for r in _rows)
+        xl = pd.DataFrame({c: [(r[i].strip() if i >= 0 else "") for r in _rows]
+                           for c, i in _ix.items()}, dtype=str)
+        xl["opedate"] = [HC.to_iso(v, _order) for v in xl["opedate"]]
+    else:
+        xl = pd.read_excel(src, engine="xlrd", dtype=str)
     d = pd.DataFrame()
     d["hn"] = xl["hn"].astype(str).str.strip()
     d["opedate_norm"] = pd.to_datetime(xl["opedate"], errors="coerce").dt.strftime("%Y-%m-%d")

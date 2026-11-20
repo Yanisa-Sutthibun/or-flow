@@ -311,6 +311,24 @@ def compact_ui() -> bool:
     return True
 
 
+def tryout_ui() -> bool:
+    """🚀 หน้าตาชุด try out (ตารางผ่าตัดแบบ minimal หัวบอร์ดสั้น ภาพรวมวันนี้ 3 ชั้น
+    สถิติภาระงานแบบกราฟแท่ง สีเหลืองเฉพาะรอผ่าตัดนาน เมนู 3 แท็บวิจัย + ตั้งค่า)
+    ✅ 20 พ.ย. 2026 (มุกกี้สั่ง): ยกขึ้นระบบจริง ให้หน้าตาเดียวกับแอป DEMO ที่ผู้ร่วมวิจัยฝึกมา
+       แอป DEMO เปิดเสมอ · ระบบจริงไม่ตั้ง secrets = เปิด · ถอยกลับหน้าตาเดิมได้ด้วย ui_tryout=false
+    ของเฉพาะแอป DEMO (แถบเหลืองดำ ปุ่มโหมดสาธิต โหมดสอนการใช้ หน้าอธิบาย try out
+    จัดคิวพรุ่งนี้ รายชื่อแพทย์สมมุติ) ไม่ผ่านสวิตช์นี้ ยังผูก instance_mode เหมือนเดิม"""
+    try:
+        if str(st.secrets.get('instance_mode', '')).lower() == 'demo':
+            return True
+        _v = st.secrets.get('ui_tryout', None)
+        if _v is not None:
+            return str(_v).strip().lower() in ('1', 'true', 'yes', 'on')
+    except Exception:
+        pass
+    return True
+
+
 # 🧹 ชั้น A: CSS เสริมเมื่อ compact_ui() — ลดความสูงปุ่ม/แท็บ/ช่องว่างแนวตั้งของแถบหัว
 #    (ปุ่มในตารางบอร์ดมี CSS ของตัวเองใน tracking_board ไม่แตะ)
 COMPACT_CSS = (

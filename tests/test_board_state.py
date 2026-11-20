@@ -1043,6 +1043,36 @@ def test_demo_patient_names_are_name_plus_number():
             assert int(m.group(1)) == int(d['hn'][-2:]), d['name']
 
 
+# ═══ 🚀 หน้าตาชุด try out ยกขึ้นระบบจริง (มุกกี้สั่ง 20 พ.ย. 2026) ═══
+# สวิตช์เดียว ui_theme.tryout_ui : ระบบจริงเปิดเป็นค่าเริ่มต้น ถอยได้ด้วย ui_tryout=false
+# แอป DEMO เปิดเสมอ · ของเฉพาะ DEMO (ปุ่มสาธิต โหมดสอน) ต้องไม่หลุดมาระบบจริง
+
+def test_tryout_ui_switch_defaults_on_and_can_roll_back():
+    import ui_theme as U
+    import tracking_board as TB
+    try:
+        st.secrets = {}
+        assert U.tryout_ui() is True, "ระบบจริงไม่ตั้ง secrets ต้องได้หน้าตาชุด try out"
+        assert TB._minimal_board() and TB._quiet_overrun()
+        st.secrets = {'ui_tryout': 'false'}
+        assert U.tryout_ui() is False, "ui_tryout=false ต้องถอยกลับหน้าตาเดิมได้"
+        assert not TB._minimal_board() and not TB._quiet_overrun()
+        st.secrets = {'instance_mode': 'demo', 'ui_tryout': 'false'}
+        assert U.tryout_ui() is True, "แอป DEMO ต้องเปิดเสมอ"
+    finally:
+        st.secrets = {}
+
+
+def test_tutorial_stays_demo_only_on_production():
+    """โหมดสอนการใช้เป็นของแอป DEMO เท่านั้น : ระบบจริงต้องไม่แสดง แม้มีธงค้างใน session"""
+    _fresh_state()
+    st.secrets = {}
+    st.session_state['_or_demo'] = True
+    st.session_state['_tut_on'] = True
+    st.session_state['patient_cases'] = [_case()]
+    assert P.render_tutorial('board', st.session_state['patient_cases']) == (None, '')
+
+
 # ═════════════════════════════ runner ═════════════════════════════
 
 def _run_all():

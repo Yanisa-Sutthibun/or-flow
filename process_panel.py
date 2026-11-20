@@ -27,19 +27,20 @@ def build_schedule_db_df(schedule_src):
     import pandas as pd
     import finetune_pipeline as FP
 
-    text = FP._read_utf16_text(schedule_src)
-    rows = []
-    for outer in csv.reader(io.StringIO(text)):
-        inner = outer[0] if len(outer) == 1 else ",".join(outer)
-        rows.append(next(csv.reader([inner])))
+    # 📄 20 พ.ย. 2026 (มุกกี้สั่ง): อ่านผ่าน his_csv · เดิม join แล้ว parse ซ้ำ ทำให้ช่องที่มี
+    #    comma (หัตถการ วินิจฉัย) ดันคอลัมน์ถัดไปเลื่อน และเดาวันที่เป็น วัน/เดือน เสมอ
+    #    (ไฟล์ชุดปี 69 เป็น เดือน/วัน) · ตำแหน่งคอลัมน์ r[..] คงเดิมทุกช่อง
+    import his_csv as HC
+    _hdr, rows, _info = HC.read_table(schedule_src)
+    _order = HC.detect_date_order(r[19] for r in rows if len(r) > 19)
 
     recs = []
-    for r in rows[1:]:
+    for r in rows:
         if len(r) < 29:
             continue
         recs.append({
             "hn": r[0].strip(),
-            "reqdate": r[1].strip(),
+            "reqdate": HC.to_dmy(r[1], _order),     # classify_case อ่านแบบ วัน/เดือน/ปี
             "reqtime": r[2].strip(),
             "division": r[3].strip(),
             "orroom": r[5].strip(),
@@ -47,7 +48,7 @@ def build_schedule_db_df(schedule_src):
             "estmtime": r[9].strip(),
             "dspname": r[14].strip(),       # ชื่อผู้ป่วย
             "optype_var": r[16].strip(),
-            "opedate": FP._norm_date(r[19]) or "",   # ISO date — import_schedule group ได้แน่
+            "opedate": HC.to_iso(r[19], _order) or "",   # ISO date — import_schedule group ได้แน่
             "opetime": r[20].strip(),
             "age": r[22].strip(),
             "icd9cm_name": r[24].strip(),

@@ -2074,11 +2074,19 @@ def _board_fragment():
                          if st.session_state.get('role') == 'room' else None)
     # 🧹 7 พ.ย. 2026 (มุกกี้สั่ง ตาม wireframe): แอป DEMO หัวบอร์ดเหลือ วันที่ + เวลาอัปเดต
     #    เครื่องมือที่ใช้วันละครั้ง (อัปโหลด เพิ่มเคส วิธีใช้ ปิดโหมดสาธิต) ย้ายเข้าเมนู ⋯
-    _mini_hdr = bool(_is_demo_instance and _compact and not _room_scope_board)
+    # 🚀 20 พ.ย. 2026 (มุกกี้สั่ง): หัวบอร์ดแบบนี้ใช้กับระบบจริงด้วย (ui_theme.tryout_ui)
+    #    ระบบจริงไม่มีปุ่มโหมดสาธิตและโหมดสอน : บังคับ _demo_on = False เหมือนเดิม
+    try:
+        from ui_theme import tryout_ui as _tryout_ui_fn
+        _tryout = _tryout_ui_fn()
+    except Exception:
+        _tryout = True
+    _mini_hdr = bool(_tryout and _compact and not _room_scope_board)
     _more_tools = None
     if _mini_hdr:
-        _demo_on = bool(st.session_state.get('_or_demo'))
-        _confirm = st.session_state.get('_demo_switch_confirm')
+        _demo_on = bool(st.session_state.get('_or_demo')) if _is_demo_instance else False
+        _confirm = (st.session_state.get('_demo_switch_confirm')
+                    if _is_demo_instance else None)
         _hl, _hb, _hm = st.columns([6, 1.7, 0.55], vertical_alignment="center")
         with _hl:
             try:
@@ -2094,7 +2102,9 @@ def _board_fragment():
                 f'color:#0f172a;">{_dtxt}</div>'
                 f'<div style="font-size:14px;color:#94a3b8;">{_sub}</div></div>',
                 unsafe_allow_html=True)
-        if _confirm in ('on', 'off'):
+        if not _is_demo_instance:
+            pass                      # 🔒 ระบบจริง: ไม่มีปุ่มโหมดสาธิตและโหมดสอน
+        elif _confirm in ('on', 'off'):
             _demo_on = _render_demo_switch_confirm(_confirm, _demo_on)
         elif not _demo_on:
             with _hb:
@@ -2112,8 +2122,11 @@ def _board_fragment():
                     _rerun_board()
         with _hm:
             try:
-                _more_tools = st.popover("⋯", help="เครื่องมือ : อัปโหลดตาราง เพิ่มเคส "
-                                         "วิธีใช้ ปิดโหมดสาธิต", width='stretch')
+                _more_tools = st.popover("⋯", help=("เครื่องมือ : อัปโหลดตาราง เพิ่มเคส "
+                                                    "วิธีใช้ ปิดโหมดสาธิต"
+                                                    if _is_demo_instance else
+                                                    "เครื่องมือ : อัปโหลดตาราง เพิ่มเคส "
+                                                    "วิธีใช้"), width='stretch')
             except TypeError:
                 _more_tools = st.popover("⋯")
         if _demo_on and _confirm not in ('on', 'off'):
@@ -2327,6 +2340,12 @@ def _board_fragment():
                     "(ข้อมูลตัวอย่าง ไม่บันทึกจริง)\n"
                     "- หรืออัปโหลดไฟล์ทดสอบที่ปุ่ม **⋯** มุมขวาบน "
                     "แท็บ อัปโหลดตารางวันนี้")
+        elif _mini_hdr:
+            # 🚀 20 พ.ย. 2026: ระบบจริงหัวบอร์ดแบบสั้น เครื่องมืออยู่ในปุ่ม ⋯ แล้ว
+            st.info("ยังไม่มีเคสบนบอร์ดวันนี้\n\n"
+                    "- อัปโหลดตารางจาก HIS ที่ปุ่ม **⋯** มุมขวาบน "
+                    "แท็บ อัปโหลดตารางวันนี้ (แนะนำไฟล์ Excel)\n"
+                    "- หรือเพิ่มเคสเองที่แท็บ **เพิ่มเคส**")
         else:
             st.info("ยังไม่มีเคสบนบอร์ดวันนี้\n\n"
                     "- อัปโหลดตารางจาก HIS ที่ **🧰 เครื่องมือ** ด้านบน "

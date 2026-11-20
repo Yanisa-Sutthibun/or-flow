@@ -680,6 +680,15 @@ def _render_demo_controls():
     return sim_min
 
 
+def _tryout_ui() -> bool:
+    """🚀 20 พ.ย. 2026 (มุกกี้สั่ง): หน้าตาชุด try out ใช้ทั้งสองแอป · สวิตช์เดียวอยู่ที่ ui_theme.tryout_ui"""
+    try:
+        from ui_theme import tryout_ui
+        return tryout_ui()
+    except Exception:
+        return True
+
+
 def _demo_fx() -> bool:
     """🎨 ลูกเล่น UI (คู่กับ tracking_board._demo_fx_tb) — ยกเข้า production
     แล้ว (มุคกี้สั่ง 4 ส.ค. 2026: แถบ progress ไหล · ชิป ⏱ เกินเวลา ·
@@ -2152,7 +2161,7 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
     # 📊 15 พ.ย. 2026 (มุกกี้สั่ง · DEMO): ชื่อหัวข้อในสารบัญตรงกับหัวข้อจริง "ภาระงานห้องผ่าตัด"
     try:
         _toc_trend = ('📊 ภาระงานห้องผ่าตัด'
-                      if str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+                      if _tryout_ui()
                       else '📈 กราฟจำนวนเคสรายเดือน')
     except Exception:
         _toc_trend = '📈 กราฟจำนวนเคสรายเดือน'
@@ -2669,7 +2678,7 @@ def _hist_sec_trend(date_from, date_to, data=None):
     # 📊 15 พ.ย. 2026 (มุกกี้สั่ง · DEMO): รวบเป็น "ภาระงานห้องผ่าตัด" 3 ชั้น
     #    เดือนไหน → วันไหน → ช่วงเวลาไหน ใช้กราฟแท่งชุดสีเดียวกัน · production เดิม
     try:
-        _demo_trend = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+        _demo_trend = _tryout_ui()
     except Exception:
         _demo_trend = False
     st.markdown('<div id="sec-trend" class="group-header purple">'
@@ -3004,7 +3013,7 @@ def _hist_sec_trend(date_from, date_to, data=None):
     # ⏰ 15 พ.ย. 2026 (มุกกี้สั่ง · DEMO): heatmap อ่านยาก → แท่งรายชั่วโมง 3 ระดับ
     #    ต่อจากกราฟวันในสัปดาห์ · production ยังเป็น heatmap เดิม
     try:
-        _demo_stats = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+        _demo_stats = _tryout_ui()
     except Exception:
         _demo_stats = False
     if _demo_stats:
@@ -4310,7 +4319,7 @@ def page_admin(section='today'):
         # 🧭 7 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO จัดหน้าเป็น 3 ชั้นตามงานวิจัย
         #    (ต้องจัดการตอนนี้ → สถานการณ์ห้อง → ตัวเลขของวัน) ระบบจริงยังเป็นหน้าเดิม
         try:
-            _lean_today = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+            _lean_today = _tryout_ui()
         except Exception:
             _lean_today = False
         if _lean_today and not demo_active:
@@ -4426,7 +4435,7 @@ def page_admin(section='today'):
         # 🗓️ 7 พ.ย. 2026 (มุกกี้สั่ง): แอป DEMO ใช้ไทม์ไลน์รุ่น 2 ตาม mockup ก่อน
         #    ระบบจริงยังเป็นรุ่นเดิม (หัวข้อ/หน้าตาเดิมทุกอย่าง)
         try:
-            _tl_demo = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+            _tl_demo = _tryout_ui()
         except Exception:
             _tl_demo = False
         if _tl_demo:
@@ -4761,7 +4770,7 @@ def page_admin(section='today'):
                         unsafe_allow_html=True)
             try:
                 _trend_label = ('📊 ภาระงานห้องผ่าตัด'
-                                if str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+                                if _tryout_ui()
                                 else '📈 กราฟจำนวนเคสรายเดือน')
             except Exception:
                 _trend_label = '📈 กราฟจำนวนเคสรายเดือน'

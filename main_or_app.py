@@ -406,12 +406,20 @@ def page_room_settings():
         _demo = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
     except Exception:
         _demo = False
-    if not _demo:
+    # 🚀 20 พ.ย. 2026 (มุกกี้สั่ง): ระบบจริงใช้หน้าตาเดียวกับ DEMO = 2 แท็บย่อย
+    #    (ห้องผ่าตัดและลิงก์ | การแสดงผล) · จัดเวรพรุ่งนี้ ยังเป็นของแอป DEMO เท่านั้น
+    try:
+        from ui_theme import tryout_ui as _tryout_ui_fn
+        _tryout = _tryout_ui_fn()
+    except Exception:
+        _tryout = True
+    if not _demo and not _tryout:
         _page_room_settings_body()
         return
     # 🙈 17 พ.ย. 2026 (มุกกี้สั่ง): ซ่อนแท็บย่อย จัดเวรพรุ่งนี้ ช่วง try out (คู่กับแท็บ จัดคิวพรุ่งนี้ ที่ซ่อนไปแล้ว)
     #    ยังเปิดได้ทางเดิม : เข้าด้วยรหัสผู้ดูแลระบบ หรือเติม ?menu=all ต่อท้ายลิงก์
-    _full = (st.session_state.get('role') == 'admin' or st.session_state.get('_all_tabs'))
+    _full = _demo and (st.session_state.get('role') == 'admin'
+                       or st.session_state.get('_all_tabs'))
     if _full:
         _t1, _t2, _t3 = st.tabs(["ห้องผ่าตัดและลิงก์", "จัดเวรพรุ่งนี้", "การแสดงผล"])
     else:
@@ -1276,6 +1284,25 @@ def main():
                 # ⚙️ 17 พ.ย. 2026 (มุกกี้สั่ง): แท็บตั้งค่าต้องใช้ระหว่าง try out → เปิดคืนให้ทุกคน
                 #    เหลือซ่อนแค่ จัดคิว AI กับ จอญาติ
                 _page_options = _page_options[:3] + [p for p in _page_options[3:] if 'ตั้งค่า' in p]
+        else:
+            # 🚀 20 พ.ย. 2026 (มุกกี้สั่ง): ระบบจริงเรียงแท็บแบบเดียวกับ DEMO
+            #    ผู้ใช้ทั่วไปเห็น 3 แท็บวิจัย + ตั้งค่าห้องผ่าตัด · จัดคิว AI กับ จอญาติ
+            #    เปิดได้ 2 ทางเหมือน DEMO คือเข้าด้วยรหัสผู้ดูแลระบบ หรือเติม ?menu=all
+            #    (จัดคิวพรุ่งนี้ เป็นของแอป DEMO เท่านั้น ไม่ยกมา)
+            from ui_theme import tryout_ui as _tryout_ui_tabs
+            if _tryout_ui_tabs():
+                _page_options = ["📋 ตารางผ่าตัด", "📊 ภาพรวมวันนี้", "📈 สถิติย้อนหลัง",
+                                 "🗓️ จัดคิว AI", "📺 จอญาติ (Demo)",
+                                 "⚙️ ตั้งค่าห้องผ่าตัด"]
+                try:
+                    if str(st.query_params.get('menu', '')).lower() == 'all':
+                        st.session_state['_all_tabs'] = True
+                except Exception:
+                    pass
+                if not (st.session_state.get('role') == 'admin'
+                        or st.session_state.get('_all_tabs')):
+                    _page_options = _page_options[:3] + [p for p in _page_options[3:]
+                                                         if 'ตั้งค่า' in p]
     except Exception:
         pass
     # 🚪 โหมดจอประจำห้อง: เหลือ 3 แท็บ (ทำงาน + รับรู้สถานการณ์ + ดูสถิติ)
