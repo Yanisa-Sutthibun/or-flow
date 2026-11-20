@@ -796,6 +796,10 @@ def _or_board_demo():
         elif ph == 'run_ok':                  # กำลังผ่า เหลือเวลาเยอะ (เขียว)
             c['status'] = 'in_or'
             c['time_entered_or'] = now - timedelta(minutes=max(5, int(pred * 0.4)))
+            # 🔄 20 พ.ย. 2026 (มุกกี้สั่ง): ให้การ์ด Turnover ของชุดสาธิตมีค่าตั้งแต่เปิด โดยไม่เปลี่ยนหน้าตาบอร์ด
+            #    จำลองว่าห้องนี้มีเคสก่อนหน้าออกไป 15 นาทีก่อนเคสนี้เข้าห้อง (ค่าสมมติ ใช้เฉพาะเคส _demo
+            #    อ่านที่ live_link.kpi_from_session) · ย้อนเคสนี้ออกจากห้อง = ค่านี้ไม่ถูกนับ
+            c['_demo_turnover_min'] = 15
         elif ph == 'run_near':                # ใกล้ครบเวลา ~3 นาที (ส้ม mm:ss)
             c['status'] = 'in_or'
             c['time_entered_or'] = now - timedelta(minutes=max(1, pred - 3))

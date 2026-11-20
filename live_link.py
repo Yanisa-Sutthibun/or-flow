@@ -160,6 +160,13 @@ def kpi_from_session(cases):
             gap = (lst[i][0] - lst[i - 1][1]).total_seconds() / 60
             if 1 <= gap <= 90:  # 📐 M-08: ช่วง turnover ที่นับ = 1–90 นาที (นิยามเดียวทั้งระบบ)
                 turnovers.append(gap)
+    # 🎬 ชุดสาธิตเท่านั้น: ค่า turnover สมมติของเคสตั้งต้น (ดู main_or_pages ตอนสร้างชุดสาธิต)
+    #    นับเมื่อเคสนั้นยังอยู่ในห้องหรือผ่าเสร็จแล้ว · เคสจริงไม่มี field นี้ จึงไม่กระทบระบบจริง
+    for c in cases:
+        _dt = c.get('_demo_turnover_min')
+        if (c.get('_demo') and _dt and c.get('time_entered_or') is not None
+                and 1 <= float(_dt) <= 90):
+            turnovers.append(float(_dt))
 
     return {
         'total': len(recs),
