@@ -136,21 +136,27 @@ def kpi_from_session(cases):
     available_min = 480 * active_rooms  # 8:00–16:00 (8 ชม.)
     utilization = round(min(total_op_min / available_min * 100, 100.0), 1) if available_min else 0.0
 
-    # turnover: ช่องว่างระหว่างเคสที่จบแล้วในห้องเดียวกัน (0 < gap < 180 นาที)
+    # turnover: ช่องว่างระหว่าง "เคสก่อนออกห้อง" กับ "เคสถัดไปเข้าห้อง" ในห้องเดียวกัน
+    # 🔄 20 พ.ย. 2026 (มุกกี้แจ้ง: มีเคสเสร็จแล้วแต่ค่ายังไม่ขึ้น): เดิมนับเฉพาะคู่ที่ "จบแล้วทั้งสองเคส"
+    #    ทั้งที่ช่องว่างวัดได้ทันทีที่เคสถัดไปเข้าห้อง → เคสถัดไปที่กำลังผ่าอยู่ก็นับเป็นคู่ได้
+    #    (เคสก่อนหน้าต้องมีเวลาออกห้องจริง · ช่วงที่นับยังเป็น 1-90 นาทีเหมือนเดิม)
     rb = {}
     for c in cases:
-        if (c.get('status') in _DONE_RAW
-                and c.get('time_entered_or') is not None
-                and c.get('time_exited_or') is not None
-                and hasattr(c.get('time_entered_or'), 'hour')
-                and hasattr(c.get('time_exited_or'), 'hour')):
-            r = _rid(c)
-            if r:
-                rb.setdefault(r, []).append((c['time_entered_or'], c['time_exited_or']))
+        ent = c.get('time_entered_or')
+        if ent is None or not hasattr(ent, 'hour'):
+            continue
+        ext = c.get('time_exited_or') if c.get('status') in _DONE_RAW else None
+        if ext is not None and not hasattr(ext, 'hour'):
+            ext = None
+        r = _rid(c)
+        if r:
+            rb.setdefault(r, []).append((ent, ext))
     turnovers = []
     for r, lst in rb.items():
         lst.sort(key=lambda t: t[0])
         for i in range(1, len(lst)):
+            if lst[i - 1][1] is None:
+                continue   # เคสก่อนหน้ายังไม่ออกห้อง (ข้อมูลผิดลำดับ) ไม่นับ
             gap = (lst[i][0] - lst[i - 1][1]).total_seconds() / 60
             if 1 <= gap <= 90:  # 📐 M-08: ช่วง turnover ที่นับ = 1–90 นาที (นิยามเดียวทั้งระบบ)
                 turnovers.append(gap)
