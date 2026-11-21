@@ -10,7 +10,7 @@ data_analysis.py : 🔬 แท็บ Data analysis ของระบบจร�
   · ปลดล็อกต่อ session (ปิดเบราว์เซอร์หรือออกจากระบบ = ล็อกใหม่) ใส่ผิดเกิน 5 ครั้ง = พักทั้ง session
   · ห้าม hardcode รหัสในไฟล์ อ่านจาก st.secrets ตอนรันเท่านั้น
 
-เนื้อหา : ยังเป็นโครงเปล่า รอมุกกี้กำหนดรายละเอียด (นัดคุย 21 พ.ย. 2026)
+เนื้อหา : พยาบาลรายบุคคล (21 พ.ย. 2026) ดูหัวข้อ 👩‍⚕️ ใน _render_body
   งานกราฟในหน้านี้ให้ทำตามสกิล graph-storytelling (สรุป สวย สื่อ) :
     1. เขียน key message 1 ประโยคที่มีตัวเลขก่อนวาด แล้วใช้เป็นชื่อกราฟ
     2. เลือกชนิดกราฟจากคำถาม (สัดส่วน เปรียบเทียบ เปลี่ยนแปลง การกระจาย ความสัมพันธ์)
@@ -102,6 +102,164 @@ def page_data_analysis():
     _render_body()
 
 
+# ════════════════════════════════════════════════════════════════════════════
+# 👩‍⚕️ พยาบาลรายบุคคล (มุกกี้สั่ง 21 พ.ย. 2026) : ใช้ภายในหน่วยงาน ไม่ใช้ในงานวิจัย
+#    1. สุดยอด scrub / circulate : เข้าเคสมากที่สุด และรวมเวลานานที่สุด
+#    2. น้องใหม่ตามระดับ Benner (Novice ไม่ถึง 1 ปี · Advanced beginner 1 ถึง 2 ปี)
+#       อายุงานประมาณจาก "เคสแรกที่พบในฐานข้อมูล" ไม่ใช่วันเริ่มงานจริง
+#    ชื่อแสดงแบบ ชื่อต้น + อักษรแรกนามสกุล (มุกกี้เคาะ 21 พ.ย. 2026 : คนในองค์กรรู้กันอยู่แล้ว)
+#    ข้อมูล : main_or_db.get_nurse_stats() (ตาราง cases ที่มีชื่อ scrub / circulate)
+# ════════════════════════════════════════════════════════════════════════════
+import re as _re
+
+_MIN_CASES = 30     # ตัดชื่อที่พบรวมไม่ถึงเท่านี้ (สะกดต่าง นักศึกษา คนจากหน่วยอื่น)
+_PREF = _re.compile(r'^(?:(?:[ก-ฮ]{1,2}\.){2,4}(?:หญิง)?|นางสาว|นาง|นาย|น\.ส\.)\s*')
+
+
+def full_key(raw) -> str:
+    """ชื่อสำหรับจัดกลุ่ม : ตัดยศ/คำนำหน้าและช่องว่างเกิน (ยศเปลี่ยนข้ามปีก็ยังเป็นคนเดียวกัน)"""
+    t = str(raw or '').replace('_x000D_', ' ').strip()
+    if not t or _re.search(r'[A-Za-z]', t):
+        return ''
+    return _re.sub(r'\s+', ' ', _PREF.sub('', t)).strip()
+
+
+def short_name(key: str) -> str:
+    """ชื่อต้น + อักษรแรกนามสกุล เช่น 'สมใจ ใจดี' → 'สมใจ ใ.'"""
+    parts = key.split(' ')
+    if len(parts) < 2:
+        return parts[0]
+    last = parts[-1]
+    return f"{parts[0]} {last if last.endswith('.') else last[0] + '.'}"   # ย่อแล้ว (มาจาก staff_map) คงไว้
+
+
+def summarize(nurse_cases, year_ce: int, ref_date=None, min_cases: int = _MIN_CASES) -> dict:
+    """logic ล้วน (ไม่แตะ streamlit) · nurse_cases = ผลจาก get_nurse_stats()['nurse_cases']"""
+    import pandas as pd
+    df = nurse_cases.copy()
+    if df.empty:
+        return {'rows': 0}
+    df['key'] = df['nurse_name'].map(full_key)
+    df = df[df['key'] != '']
+    df['op_date'] = pd.to_datetime(df['op_date'], errors='coerce')
+    df = df[df['op_date'].notna()]
+    cnt = df.groupby('key').size()
+    df = df[df['key'].isin(cnt[cnt >= min_cases].index)]
+    if df.empty:
+        return {'rows': 0}
+    ref = pd.Timestamp(ref_date) if ref_date is not None else df['op_date'].max()
+    first = df.groupby('key')['op_date'].min()
+    y = df[df['op_date'].dt.year == year_ce]
+    dur = pd.to_numeric(y['actual_duration_min'], errors='coerce')
+    y = y.assign(dur=dur.where((dur > 0) & (dur <= 24 * 60)))
+    top = {}
+    for role in ('Scrub', 'Circulate'):
+        g = y[y['role'] == role].groupby('key').agg(cases=('case_id', 'count'), mins=('dur', 'sum'))
+        g['hours'] = (g['mins'] / 60).round(0)
+        top[role] = {'cases': g.sort_values('cases', ascending=False).head(5),
+                     'hours': g.sort_values('mins', ascending=False).head(5)}
+    months = (ref - first).dt.days / 30.44
+    new = []
+    for k, m in months.sort_values().items():
+        if m >= 24 or k not in set(y['key']):
+            continue
+        s = df[df['key'] == k]
+        new.append({'key': k, 'name': short_name(k),
+                    'level': 'Novice' if m < 12 else 'Advanced beginner',
+                    'months': int(round(m)), 'first': first[k].strftime('%d/%m/') + str(first[k].year + 543),
+                    'cases': len(s), 'scrub': int((s['role'] == 'Scrub').sum()),
+                    'circ': int((s['role'] == 'Circulate').sum())})
+    return {'rows': len(y), 'active': int(y['key'].nunique()), 'top': top, 'new': new, 'df': df}
+
+
+@st.cache_data(ttl=900, show_spinner="กำลังโหลดข้อมูลพยาบาล…")
+def _load_nurse_cases():
+    from main_or_db import get_nurse_stats
+    return get_nurse_stats()['nurse_cases']
+
+
+def _hbar(g, col, unit, title):
+    import plotly.express as px
+    from main_or_admin import _story_bars, _story_head
+    _story_head(title)
+    d = g.reset_index().iloc[::-1]
+    d['label'] = d['key'].map(short_name)
+    fig = px.bar(d, x=col, y='label', orientation='h',
+                 text=d[col].map(lambda v: f"{v:,.0f} {unit}"))
+    _story_bars(fig, list(d[col]), '#1D6FE0', horizontal=True)
+    fig.update_layout(height=230, margin=dict(l=0, r=40, t=0, b=0))
+    st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
+
+
 def _render_body():
-    # 🚧 โครงเปล่า : รอรายละเอียดจากมุกกี้ (ดู docstring หัวไฟล์ก่อนเติมกราฟ)
-    st.info("หน้านี้อยู่ระหว่างจัดทำ")
+    try:
+        nc = _load_nurse_cases()
+    except Exception as _ex:
+        st.error("โหลดข้อมูลพยาบาลไม่สำเร็จ : ลองกด 🔄 รีเฟรช อีกครั้ง")
+        print(f"[data_analysis] load fail: {_ex}")
+        return
+    if nc is None or nc.empty:
+        st.info("ยังไม่มีข้อมูลชื่อพยาบาลในฐานข้อมูล")
+        return
+    import pandas as pd
+    years = sorted(pd.to_datetime(nc['op_date'], errors='coerce').dt.year.dropna().astype(int).unique(), reverse=True)
+    _y = st.selectbox("ปี", [y + 543 for y in years], index=0, key="da_year")
+    R = summarize(nc, int(_y) - 543)
+    if not R.get('rows'):
+        st.info(f"ปี {_y} ยังไม่มีเคสที่บันทึกชื่อพยาบาล")
+        return
+    new = R['new']
+    new_keys = {n['key'] for n in new}
+    top_sc = R['top']['Scrub']['cases']
+    n_new_top = sum(1 for k in top_sc.index if k in new_keys)
+
+    # 3 วินาที : ตัวเลขหลัก
+    c1, c2, c3 = st.columns(3)
+    c1.metric("พยาบาลที่เข้าเคสในปีนี้", f"{R['active']} คน")
+    c2.metric("น้องใหม่ (อายุงานไม่ถึง 2 ปี)", f"{len(new)} คน")
+    c3.metric("น้องใหม่ที่ติด 5 อันดับ scrub", f"{n_new_top} จาก {len(top_sc)} คน")
+
+    # 30 วินาที : สุดยอด scrub / circulate
+    st.markdown("### 1 : สุดยอด Scrub และ Circulate")
+    a, b = st.columns(2)
+    for col, role, th in ((a, 'Scrub', 'scrub'), (b, 'Circulate', 'circulate')):
+        T = R['top'][role]
+        with col:
+            if T['cases'].empty:
+                st.caption(f"ยังไม่มีข้อมูล {th}")
+                continue
+            k1, v1 = T['cases'].index[0], int(T['cases'].iloc[0]['cases'])
+            _hbar(T['cases'], 'cases', 'เคส', f"{short_name(k1)} {th} มากที่สุด {v1:,} เคส")
+            k2, v2 = T['hours'].index[0], T['hours'].iloc[0]['hours']
+            _hbar(T['hours'], 'hours', 'ชม.', f"{short_name(k2)} {th} รวมนานที่สุด {v2:,.0f} ชั่วโมง")
+
+    # 300 วินาที : น้องใหม่รายคน
+    st.markdown("### 2 : น้องใหม่ตามระดับ Benner")
+    if not new:
+        st.info("ปีนี้ไม่พบน้องใหม่ที่อายุงานไม่ถึง 2 ปี")
+    else:
+        tb = pd.DataFrame(new)[['name', 'level', 'months', 'cases', 'scrub', 'circ', 'first']]
+        tb.columns = ['ชื่อ', 'ระดับ', 'อายุงาน (เดือน)', 'เคสทั้งหมด', 'scrub', 'circulate', 'เคสแรกที่พบ']
+        st.dataframe(tb, hide_index=True, width='stretch')
+        pick = st.selectbox("ดูรายละเอียดของ", [n['name'] for n in new], key="da_new_pick")
+        n = next(x for x in new if x['name'] == pick)
+        s = R['df'][R['df']['key'] == n['key']]
+        from main_or_db import DIV_CODE_MAP
+        def _div(v):
+            try:
+                return DIV_CODE_MAP.get(str(int(float(v))), 'อื่นๆ')
+            except (TypeError, ValueError):
+                return 'ไม่ระบุ'
+        dv = s['division_code'].map(_div).value_counts().head(6)
+        d1, d2 = st.columns(2)
+        with d1:
+            _hbar(pd.DataFrame({'key': dv.index, 'n': dv.values}).set_index('key'), 'n', 'เคส',
+                  f"{n['name']} เข้าสาขา{dv.index[0]} มากที่สุด {int(dv.iloc[0]):,} เคส")
+        with d2:
+            pr = s['procedure_name'].fillna('').astype(str).str.strip()
+            pr = pr[pr != ''].value_counts().head(10)
+            st.markdown(f"**หัตถการที่เข้าบ่อย 10 อันดับ** (จากทั้งหมด {s['procedure_name'].nunique():,} ชนิด)")
+            st.dataframe(pd.DataFrame({'หัตถการ': pr.index, 'เคส': pr.values}), hide_index=True, width='stretch')
+    st.caption("ใช้วางแผนหมุนเวียนน้องใหม่ : ดูว่าใครยังเข้าสาขาไหนน้อย หรือได้ circulate น้อยเมื่อเทียบกับ scrub · "
+               "นับ 1 เคสต่อพยาบาลทุกคนที่มีชื่อในช่อง scrub หรือ circulate · ชั่วโมง = เวลาเข้าห้องถึงออกห้อง · "
+               f"ตัดชื่อที่พบรวมไม่ถึง {_MIN_CASES} เคส · ระดับ Benner ประมาณจากเคสแรกที่พบในข้อมูล ไม่ใช่วันเริ่มงานจริง")

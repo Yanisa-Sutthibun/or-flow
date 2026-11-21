@@ -1121,6 +1121,33 @@ def test_data_analysis_gate_is_fail_closed_and_separate_from_admin():
         st.secrets = {}
 
 
+
+def test_data_analysis_nurse_names_short_and_benner():
+    """👩‍⚕️ พยาบาลรายบุคคล : ยศเปลี่ยนยังเป็นคนเดียวกัน · แสดงแค่ชื่อต้น + อักษรแรกนามสกุล ·
+    น้องใหม่ไม่ถึง 1 ปี = Novice · 1 ถึง 2 ปี = Advanced beginner · ชื่อที่พบน้อยถูกตัด"""
+    import pandas as pd
+    import data_analysis as DA
+    assert DA.full_key('พ.ต.ท.หญิงสมใจ ใจดี') == DA.full_key('ร.ต.อ.หญิงสมใจ  ใจดี') == 'สมใจ ใจดี'
+    assert DA.short_name('สมใจ ใจดี') == 'สมใจ ใ.' and DA.short_name('สมใจ ใ.') == 'สมใจ ใ.'
+    assert DA.full_key('SCRUB_012') == '' and DA.full_key('resident A') == ''
+    rows, cid = [], 0
+    for d in pd.date_range('2023-01-01', '2026-11-20', freq='D'):
+        for nm, start in (('พ.ต.ท.หญิงสมใจ ใจดี', '2023-01-01'), ('นางสาวมาลี รักงาน', '2025-03-01'),
+                          ('น.ส.ดาว เด่น', '2026-02-01')):
+            if d >= pd.Timestamp(start):
+                cid += 1
+                rows.append(dict(nurse_name=nm, role='Scrub' if cid % 2 else 'Circulate', case_id=cid,
+                                 op_date=d.strftime('%Y-%m-%d'), procedure_name='X', division_code=5,
+                                 actual_duration_min=60))
+    rows += [dict(nurse_name='ชั่วคราว ผ่านมา', role='Scrub', case_id=10**6 + i, op_date='2026-05-01',
+                  procedure_name='X', division_code=5, actual_duration_min=60) for i in range(3)]
+    R = DA.summarize(pd.DataFrame(rows), 2026, ref_date='2026-11-20')
+    assert R['active'] == 3, "ชื่อที่พบไม่ถึง 30 เคสต้องถูกตัด"
+    lv = {n['name']: n['level'] for n in R['new']}
+    assert lv == {'ดาว เ.': 'Novice', 'มาลี ร.': 'Advanced beginner'}, lv
+    assert all('ใจดี' not in str(k) for k in R['top']['Scrub']['cases'].index.map(DA.short_name))
+
+
 # ═════════════════════════════ runner ═════════════════════════════
 
 def _run_all():

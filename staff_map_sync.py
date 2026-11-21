@@ -81,7 +81,7 @@ def upload_staff_mapping() -> int:
     if not os.path.exists(CSV_PATH):
         raise SystemExit(f"❌ ไม่พบ {CSV_PATH} — ต้องรันจากเครื่องที่มีไฟล์จริง")
     # 🧹 กรองก่อนขึ้น cloud (19 ก.ค. 2026 — มุคกี้พบชื่อหัตถการ/วินิจฉัย/ทีมห้องเล็กปน):
-    #   ① เอาเฉพาะ role แพทย์ (surgeon/SURG) — scrub/circ ห้องเล็ก cloud ไม่ใช้
+    #   ① role แพทย์ (surgeon/SURG) ชื่อเต็ม · scrub/circ เฉพาะชื่อต้น + อักษรแรกนามสกุล (21 พ.ย. 2026)
     #   ② ชื่อต้องมีอักษรไทย (ขยะจาก HIS เป็นอังกฤษล้วน: 'CKD III', 'Excision of...')
     #   ③ ตัด resident · ชื่อยาวผิดปกติ
     #   ⚠️ กรองเฉพาะตอนอัปโหลด — ไฟล์ CSV ต้นทางไม่ถูกแตะ (รหัสเก่าต้องคงอยู่
@@ -97,6 +97,16 @@ def upload_staff_mapping() -> int:
         if (role in ('surgeon', 'surg') and _TH.search(name)
                 and 'resident' not in name.lower() and len(name) < 60):
             rows.append((r['role'], r['masked_code'], name))
+        elif role in ('scrub', 'circ'):
+            # 👩‍⚕️ 21 พ.ย. 2026 (มุกกี้เคาะ): พยาบาลขึ้น cloud เฉพาะ "ชื่อต้น + อักษรแรกนามสกุล"
+            #    ชื่อเต็มไม่ออกจากเครื่อง รพ. · ใช้กับแท็บ Data analysis (พยาบาลรายบุคคล)
+            from data_analysis import full_key, short_name
+            parts = [full_key(x) for x in name.split(',')]
+            parts = [short_name(k) for k in parts if k]
+            if parts:
+                rows.append((r['role'], r['masked_code'], ', '.join(parts)))
+            else:
+                skipped += 1
         else:
             skipped += 1
     print(f"กรองแล้ว: ขึ้น cloud {len(rows)} แถว · คัดออก {skipped} แถว "
