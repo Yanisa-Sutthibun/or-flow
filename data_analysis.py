@@ -391,7 +391,7 @@ _CSS = ('<style>.da-card{background:#FFFFFF;border:1px solid #E3E9EF;border-radi
         'margin:0 0 16px;display:flex;flex-direction:column;gap:12px;color:#12212E}'
         '.da-t{font-size:17px;font-weight:700}.da-s{font-size:13px;color:#5B6B7B}'
         '.da-f{font-size:13px;color:#3E4C59;border-top:1px solid #EEF2F6;padding-top:10px}'
-        '.da-kpi{background:#FFFFFF;border:1px solid #E3E9EF;border-radius:14px;padding:14px 16px}'
+        '.da-kpi{background:#FFFFFF;border:1px solid #E3E9EF;border-radius:14px;padding:14px 16px;margin:0 0 16px;min-height:118px}'
         '.da-kpi b{display:block;font-size:30px;line-height:1.2}.da-kpi span{font-size:13px;color:#5B6B7B}'
         '.da-sec{font-size:22px;font-weight:700;margin:18px 0 8px;color:#12212E}'
         '.da-hub{background:#FFFFFF;border:1px solid #E3E9EF;border-radius:18px;padding:20px;min-height:430px;'
@@ -414,8 +414,10 @@ def _md(h: str):
     st.markdown(h.replace('\n', ''), unsafe_allow_html=True)
 
 
-def _card(title, sub, body, foot='') -> str:
-    return (f'<div class="da-card"><div><div class="da-t">{title}</div><div class="da-s">{sub}</div></div>'
+def _card(title, sub, body, foot='', minh=0) -> str:
+    """minh = ความสูงขั้นต่ำ (px) ใช้กับการ์ดที่วางคู่กันในแถวเดียว ให้สูงเท่ากัน (มุกกี้สั่ง 22 พ.ย. 2026 ดูสมดุลการ์ด)"""
+    _st = f' style="min-height:{minh}px"' if minh else ''
+    return (f'<div class="da-card"{_st}><div><div class="da-t">{title}</div><div class="da-s">{sub}</div></div>'
             f'{body}' + (f'<div class="da-f">{foot}</div>' if foot else '') + '</div>')
 
 
@@ -495,7 +497,9 @@ def _fy_note(C, fy) -> str:
 def _pick_fy(C, key, label='ปีงบประมาณ'):
     fys = _fy_list(C)
     d = _default_fy(C)
-    return st.selectbox(label, fys, index=fys.index(d), key=key, format_func=lambda f: f'ปีงบ {f}')
+    _c, _x = st.columns([1, 3])
+    with _c:
+        return st.selectbox(label, fys, index=fys.index(d), key=key, format_func=lambda f: f'ปีงบ {f}')
 
 
 # ---------- หน้ารวมการ์ด ----------
@@ -545,7 +549,7 @@ def _back():
 def _winner_card(fy, role, rows, note) -> str:
     th = 'Scrub' if role == 'scrub' else 'Circulate'
     if not rows:
-        return _card(f'{th} nurse of the year', note, '<div class="da-s">ยังไม่มีข้อมูลพอ</div>')
+        return _card(f'{th} nurse of the year', note, '<div class="da-s">ยังไม่มีข้อมูลพอ</div>', minh=290)
     w = rows[0]
     badges = ''.join(f'<span style="font-size:12px;background:#EEF4FF;color:#1658B8;border-radius:999px;'
                      f'padding:3px 10px;margin-right:6px">{t}</span>'
@@ -553,32 +557,34 @@ def _winner_card(fy, role, rows, note) -> str:
     rest = ''.join(f'<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;'
                    f'border-top:1px solid #EEF2F6"><span>อันดับ {i + 2} : {_nm(r["key"])} : {r["cases"]:,} เคส · '
                    f'{r["hours"]:,.0f} ชม.</span><b>{r["score"]}</b></div>' for i, r in enumerate(rows[1:]))
+    rest += ''.join(f'<div style="font-size:13px;padding:6px 0;border-top:1px solid #EEF2F6;color:#94A3B8">'
+                    f'อันดับ {i + 2} : -</div>' for i in range(len(rows) - 1, 2))
     body = (f'<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px">'
             f'<div><div style="font-size:26px;font-weight:700">{_nm(w["key"])}</div>'
             f'<div style="font-size:14px;color:#3E4C59">{w["cases"]:,} เคส · {w["hours"]:,.0f} ชั่วโมง</div>'
             f'<div style="margin-top:6px">{badges}</div></div>'
             f'<div style="text-align:right"><div style="font-size:30px;font-weight:700;color:{_ACC}">{w["score"]}</div>'
             f'<div class="da-s">คะแนน</div></div></div>{rest}')
-    return _card(f'{th} nurse of the year', note, body)
+    return _card(f'{th} nurse of the year', note, body, minh=290)
 
 
 def _view_noy(C, L):
-    from da_sprites import NOY
     _back()
     fy = _pick_fy(C, 'da_fy_noy')
     pair = [f for f in (fy - 1, fy) if f in set(C['fy'])]
-    _md(f'<div style="display:flex;align-items:center;gap:16px"><div style="width:110px">{NOY}</div>'
+    _md(f'<div style="margin:4px 0 8px">'
         f'<div><div class="da-sec" style="margin:0">Nurse of the Year</div>'
         f'<div class="da-s">ปีงบ {fy} = {fy_range_text(fy)} · ตัดสินจากคะแนนรวมของจำนวนเคสและชั่วโมง น้ำหนักเท่ากัน</div></div></div>')
     _kpis([(f'เคสปีงบ {fy}', f'{int((C["fy"] == fy).sum()):,}', 'เคส'),
            (f'พยาบาลที่เข้าเคสปีงบ {fy}', f'{len(active_keys(L, fy))}', 'คน'),
            (f'Novice ปีงบ {fy}', f'{len(novices(L, fy))}', 'คน')])
-    res = {f: nurse_of_year(L, f) for f in pair}
-    for role in ('scrub', 'circ'):
-        cols = st.columns(len(pair))
-        for col, f in zip(cols, pair):
+    # 🃏 22 พ.ย. 2026 (มุกกี้สั่ง ดูสมดุลการ์ด): แต่ละปีงบเป็น 1 แถว scrub | circulate คู่กัน สูงเท่ากัน · ปีที่เลือกขึ้นก่อน
+    for f in sorted(pair, reverse=True):
+        res = nurse_of_year(L, f)
+        cols = st.columns(2)
+        for col, role in zip(cols, ('scrub', 'circ')):
             with col:
-                _md(_winner_card(f, role, res[f][role], _fy_note(C, f)))
+                _md(_winner_card(f, role, res[role], _fy_note(C, f)))
     _md('<div class="da-s" style="line-height:1.7">คะแนน = (จำนวนเคส ÷ จำนวนเคสสูงสุดของปีงบนั้น + ชั่วโมงรวม ÷ '
         'ชั่วโมงสูงสุดของปีงบนั้น) ÷ 2 × 100 : เต็ม 100 เทียบเฉพาะในปีงบและบทบาทเดียวกัน · นับ 1 เคสต่อพยาบาล'
         'ทุกคนที่มีชื่อในช่อง scrub หรือ circulate · ชั่วโมง = เวลาเข้าห้องถึงออกห้อง · '
@@ -587,11 +593,10 @@ def _view_noy(C, L):
 
 # ---------- การ์ด 2 : Novice ----------
 def _view_nov(C, L):
-    from da_sprites import NOV
     _back()
     fy = _pick_fy(C, 'da_fy_nov')
     nv = novices(L, fy)
-    _md(f'<div style="display:flex;align-items:center;gap:16px"><div style="width:110px">{NOV}</div>'
+    _md(f'<div style="margin:4px 0 8px">'
         f'<div><div class="da-sec" style="margin:0">Novice : น้องใหม่ปีงบ {fy}</div>'
         f'<div class="da-s">ตามแนวคิด Novice to Expert ของ Patricia Benner : เคสแรกที่พบอยู่ในปีงบ {fy} '
         f'และไม่เคยพบในข้อมูลก่อนหน้า</div></div></div>')
@@ -630,12 +635,12 @@ def _view_nov(C, L):
         _md(_card(f'{_nm(n["key"])} เข้าสาขา{_e(dv.index[0]).replace("ศัลยกรรม", "")} มากที่สุด {int(dv.iloc[0]):,} เคส',
                   f'เคสแรกที่พบในข้อมูล : {f0.day} {TH_MON[f0.month - 1]} {f0.year + 543} · อายุงานโดยประมาณ {n["months"]} เดือน',
                   _hbars([(_e(k).replace('ศัลยกรรม', '') or _e(k), int(v), f'{int(v):,}', None) for k, v in dv.items()],
-                         label_w=150, val_w=60)))
+                         label_w=150, val_w=60), minh=440))
     with b:
         pr = ''.join(f'<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;'
                      f'border-top:1px solid #EEF2F6"><span>{_e(p)}</span><b>{int(c):,} เคส</b></div>'
                      for p, c in n['procs'].items())
-        _md(_card('หัตถการที่เข้าบ่อย 10 อันดับ', f'จากทั้งหมด {n["nprocs"]:,} ชนิด', f'<div>{pr}</div>'))
+        _md(_card('หัตถการที่เข้าบ่อย 10 อันดับ', f'จากทั้งหมด {n["nprocs"]:,} ชนิด', f'<div>{pr}</div>', minh=440))
     _md('<div class="da-s" style="line-height:1.7">ใช้วางแผนหมุนเวียนน้องใหม่ : ดูว่าใครยังเข้าสาขาไหนน้อย '
         'หรือยังได้ circulate น้อยเมื่อเทียบกับ scrub · อายุงานประมาณจากเคสแรกที่พบในข้อมูล ไม่ใช่วันเริ่มงานจริง</div>')
 
@@ -663,7 +668,6 @@ def _legend(items) -> str:
 
 
 def _view_tr(C, L):
-    from da_sprites import TR
     _back()
     fy = _pick_fy(C, 'da_fy_tr')
     nv = novices(L, fy)
@@ -672,7 +676,7 @@ def _view_tr(C, L):
     D = deep(C, L, fy, nvk)
     cm = T['common']
     rng = (f'{TH_MON[FY_MONTHS[cm[0]] - 1]} ถึง {TH_MON[FY_MONTHS[cm[-1]] - 1]}' if cm else '')
-    _md(f'<div style="display:flex;align-items:center;gap:16px"><div style="width:110px">{TR}</div>'
+    _md(f'<div style="margin:4px 0 8px">'
         f'<div><div class="da-sec" style="margin:0">แนวโน้มการทำงาน</div>'
         f'<div class="da-s">ปีงบ {fy} = {fy_range_text(fy)} · เทียบเดือนเดียวกันของปีงบ {fy - 1} ({rng})</div></div></div>')
     chg = ((T['n_common_now'] - T['n_common_prev']) / T['n_common_prev'] * 100) if T['n_common_prev'] else None
@@ -703,7 +707,7 @@ def _view_tr(C, L):
             _md(_card(f'สาขา{_e(up["div"]).replace("ศัลยกรรม", "")} เปลี่ยนเพิ่มมากที่สุด {up["pct"]:+.0f}% · '
                       f'{_e(dn["div"]).replace("ศัลยกรรม", "")} {dn["pct"]:+.0f}%',
                       f'จำนวนเคส {rng} เทียบช่วงเดียวกันปีก่อน (สาขาที่มีอย่างน้อย 100 เคส)',
-                      _hbars(rows, label_w=150, val_w=60, accent_first=False)))
+                      _hbars(rows, label_w=150, val_w=60, accent_first=False), minh=430))
     with b:
         w1, w0 = T['workload_now'], T['workload_prev']
         v1 = [x for x in w1 if x]
@@ -720,7 +724,7 @@ def _view_tr(C, L):
         _md(_card(f'ภาระงานต่อคนเฉลี่ย {_fmt(a1, 1)} เคสต่อเดือน (ปีก่อน {_fmt(a0, 1)})',
                   f'จำนวนครั้งที่เข้าเคส (scrub และ circulate) ต่อพยาบาล 1 คน ต่อเดือน {rng}',
                   _legend([(_BASE, f'ปีงบ {fy - 1}'), (_ACC, f'ปีงบ {fy}')]) +
-                  f'<div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:2px">{cols}</div>'))
+                  f'<div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:2px">{cols}</div>', minh=430))
     if T['ramp']:
         rp = T['ramp']
         pk = max(rp, key=lambda r: r['scrub'] + r['circ'])
@@ -834,7 +838,7 @@ def _view_tr(C, L):
                       f'<div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;align-items:end">{cols}</div>'
                       f'<div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px">{labs}</div>',
                       f'กลุ่มกลาง 50% อยู่ที่ {q[0.25]:,.0f}-{q[0.75]:,.0f} ครั้ง · กลุ่มต่ำกว่า 100 ครั้งอาจเป็นคนที่ย้ายเข้า-ออกกลางปี ลา '
-                      f'หรือหมุนมาจากหน่วยอื่น ตัวเลขนี้ไม่ได้หักวันลา'))
+                      f'หรือหมุนมาจากหน่วยอื่น ตัวเลขนี้ไม่ได้หักวันลา', minh=470))
         with b:
             med = float(per['scrub_pct'].median())
             stack, dots = {}, ''
@@ -858,7 +862,7 @@ def _view_tr(C, L):
                       'border-top:1px solid #C9D3DD;padding-top:4px"><span>0% : circulate ล้วน</span><span>50%</span>'
                       '<span>100% : scrub ล้วน</span></div>'
                       + (f'<div style="font-size:12px;color:#3E4C59;line-height:1.6">{lst}</div>' if lst else ''),
-                      'เส้นประ = ค่ากลางของทุกคน'))
+                      'เส้นประ = ค่ากลางของทุกคน', minh=470))
     if D['pairs']:
         P = D['pairs']
 
