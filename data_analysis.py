@@ -5,8 +5,10 @@ data_analysis.py : 🔬 แท็บ Data analysis ของระบบจร�
 หน้าวิเคราะห์ข้อมูลจากสถิติ สำหรับหัวหน้าห้องผ่าตัด
 
 สิทธิ์ : ทุกคนเห็นแท็บ แต่เนื้อหาเปิดด้วย "รหัสเฉพาะ" ที่ตั้งใน Secrets ชื่อ analysis_code
-  · ไม่ใช่รหัสหน่วยงาน และไม่ใช่รหัสผู้ดูแลระบบ (สิทธิ์ผู้ดูแลระบบก็ไม่ได้เปิดให้เอง)
-  · 🔒 fail-closed : ไม่ได้ตั้ง analysis_code = หน้านี้ปิดสนิท
+  · 🔑 22 พ.ย. 2026 (มุกกี้สั่ง): ช่วงนี้รหัสผู้ดูแลระบบ (admin_pin) เปิดได้ด้วย
+    และผู้ที่เข้าระบบด้วยรหัสผู้ดูแลอยู่แล้วเห็นเนื้อหาเลย ไม่ต้องกรอกซ้ำ
+  · รหัสหน่วยงาน (app_password) เปิดไม่ได้
+  · 🔒 fail-closed : ไม่ได้ตั้งทั้ง analysis_code และ admin_pin = หน้านี้ปิดสนิท
   · ปลดล็อกต่อ session (ปิดเบราว์เซอร์หรือออกจากระบบ = ล็อกใหม่) ใส่ผิดเกิน 5 ครั้ง = พักทั้ง session
   · ห้าม hardcode รหัสในไฟล์ อ่านจาก st.secrets ตอนรันเท่านั้น
 
@@ -37,20 +39,33 @@ def _code() -> str:
         return ''
 
 
+def _admin_pin() -> str:
+    try:
+        from main_or_db import get_admin_pin
+        return str(get_admin_pin() or '').strip()
+    except Exception:
+        return ''
+
+
 def code_configured() -> bool:
-    return bool(_code())
+    return bool(_code() or _admin_pin())
 
 
 def check_code(entered) -> bool:
-    """เทียบรหัสแบบ constant-time · ไม่ตั้งรหัสหรือกรอกว่าง = ไม่ผ่านเสมอ"""
-    want = _code()
+    """เทียบรหัสแบบ constant-time กับ analysis_code หรือ admin_pin · ไม่ตั้งรหัสหรือกรอกว่าง = ไม่ผ่านเสมอ"""
     got = str(entered or '').strip()
-    if not want or not got:
+    if not got:
         return False
-    return hmac.compare_digest(got.encode('utf-8'), want.encode('utf-8'))
+    ok = False
+    for want in (_code(), _admin_pin()):
+        if want and hmac.compare_digest(got.encode('utf-8'), want.encode('utf-8')):
+            ok = True
+    return ok
 
 
 def is_unlocked() -> bool:
+    if st.session_state.get('role') == 'admin' and st.session_state.get('authenticated'):
+        return True
     return bool(code_configured() and st.session_state.get(_K_OPEN) is True)
 
 
@@ -59,7 +74,7 @@ def _render_gate():
     st.markdown(
         '<div style="font-size:22px;font-weight:700;color:#0f172a;">🔬 Data analysis</div>'
         '<div style="color:#64748b;font-size:var(--fs-meta);margin:4px 0 12px;">'
-        'หน้าวิเคราะห์ข้อมูลสำหรับหัวหน้าห้องผ่าตัด เปิดด้วยรหัสเฉพาะของหน้านี้</div>',
+        'หน้าวิเคราะห์ข้อมูลสำหรับหัวหน้าห้องผ่าตัด เปิดด้วยรหัสเฉพาะของหน้านี้หรือรหัสผู้ดูแลระบบ</div>',
         unsafe_allow_html=True)
     if not code_configured():
         st.info("หน้านี้ยังไม่เปิดใช้งาน : ผู้วิจัยยังไม่ได้ตั้งรหัสของหน้านี้")

@@ -1103,23 +1103,32 @@ def test_production_tutorial_is_point_only_tour_on_board():
     assert P.render_tutorial('board', cs) == (None, '')
 
 
-def test_data_analysis_gate_is_fail_closed_and_separate_from_admin():
-    """🔬 แท็บ Data analysis : เปิดด้วยรหัสเฉพาะเท่านั้น ไม่ตั้งรหัส = ปิดสนิท รหัสผู้ดูแลระบบเปิดไม่ได้"""
+def test_data_analysis_gate_is_fail_closed_and_admin_can_open():
+    """🔬 แท็บ Data analysis : เปิดด้วยรหัสเฉพาะหรือรหัสผู้ดูแลระบบ (มุกกี้สั่ง 22 พ.ย. 2026)
+    ไม่ตั้งทั้งสองรหัส = ปิดสนิท · รหัสหน่วยงานเปิดไม่ได้ · เข้าระบบด้วยรหัสผู้ดูแลแล้วเห็นเลย"""
     import data_analysis as DA
     _fresh_state()
+    _orig = DA._admin_pin
     try:
         st.secrets = {}
+        DA._admin_pin = lambda: ''
         assert DA.code_configured() is False and DA.check_code('') is False
         assert DA.check_code('1234') is False
-        st.secrets = {'analysis_code': 'หัวหน้า-2569', 'admin_pin': '9999'}
+        st.secrets = {'analysis_code': 'หัวหน้า-2569', 'app_password': '5555'}
+        DA._admin_pin = lambda: '9999'
         assert DA.code_configured() is True
-        assert DA.check_code('9999') is False and DA.check_code('') is False
-        assert DA.check_code(' หัวหน้า-2569 ') is True
+        assert DA.check_code('') is False and DA.check_code('5555') is False
+        assert DA.check_code(' หัวหน้า-2569 ') is True and DA.check_code('9999') is True
+        st.session_state['role'] = 'user'
+        st.session_state['authenticated'] = True
+        assert DA.is_unlocked() is False, "รหัสหน่วยงานไม่เปิดแท็บนี้"
         st.session_state['role'] = 'admin'
-        assert DA.is_unlocked() is False, "สิทธิ์ผู้ดูแลระบบไม่ได้เปิดแท็บนี้ให้เอง"
+        assert DA.is_unlocked() is True, "เข้าระบบด้วยรหัสผู้ดูแลแล้วเห็นเนื้อหาเลย"
     finally:
         st.secrets = {}
-
+        DA._admin_pin = _orig
+        st.session_state.pop('role', None)
+        st.session_state.pop('authenticated', None)
 
 
 def test_data_analysis_nurse_names_short_and_benner():
