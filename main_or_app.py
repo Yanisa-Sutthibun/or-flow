@@ -941,43 +941,16 @@ def _check_password():
     if st.session_state.get('authenticated'):
         return True
 
-    # Login screen
-    st.markdown("""
-    <style>
-    .login-card {
-        max-width: 420px; margin: 80px auto; padding: 32px;
-        background: white; border-radius: 16px;
-        border: 0.5px solid #e0e0e0;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    _l, _c, _r = st.columns([1, 2, 1])
+    # 🔐 21 พ.ย. 2026 (มุกกี้เลือกแบบ B 20 พ.ย.): แผงซ้ายข้อมูลวันนี้ + พยาบาล pixel + รู้หรือไม่ · ฟอร์มขวา
+    from login_page import render_left_panel, render_form_head
+    _l, _c = st.columns([1.15, 1], gap='large', vertical_alignment='center')
+    with _l:
+        render_left_panel()
     with _c:
         if st.session_state.pop('_idle_logged_out', False):
             st.info("⏳ ออกจากระบบอัตโนมัติ เพราะไม่มีการใช้งานนานเกิน "
                     f"{_ADMIN_IDLE_SEC // 60} นาที : เข้าสู่ระบบใหม่ได้เลย")
-        st.markdown(
-            '<div style="text-align:center;margin:60px 0 24px;">'
-            '<div style="font-size:48px;">🔐</div>'
-            '<div style="font-size:24px;font-weight:700;color:#1f2937;'
-            'margin-top:4px;">OR Flow</div>'
-            '<div style="font-size:18px;color:#5b6b7b;margin-top:5px;'
-            'line-height:1.5;">ระบบบริหารห้องผ่าตัดและทำนายเวลาผ่าตัด</div>'
-            '<div style="font-size:var(--fs-meta);color:#90a0ae;margin-top:7px;'
-            'line-height:1.5;">ห้องผ่าตัดศัลยกรรมทั่วไป · '
-            'โรงพยาบาลตำรวจ</div>'
-            # 🎓 13 พ.ย. 2026 (มุกกี้สั่ง): ป้ายย้ายมาอยู่ใต้ชื่อโรงพยาบาล 2 บรรทัด
-            '<div style="display:inline-block;margin:12px 0 0;background:#eef4ff;'
-            'color:#2563eb;font-size:var(--fs-meta);font-weight:600;padding:6px 18px;'
-            'line-height:1.5;border-radius:14px;border:1px solid #d6e4ff;">'
-            '🎓 ส่วนหนึ่งของวิทยานิพนธ์<br>'
-            'หลักสูตรพยาบาลศาสตรมหาบัณฑิต สาขาการบริหารการพยาบาล</div></div>',
-            unsafe_allow_html=True)
-
-        # 🔑 13 พ.ย. 2026 (มุกกี้สั่ง): บรรทัดนี้ย้ายมาอยู่เหนือกล่องกรอกรหัส
-        st.caption("🔑 รหัสผ่านจากเจ้าของระบบ : สำหรับบุคลากรที่ได้รับอนุญาตเท่านั้น")
+        render_form_head()
         _lock_left = _login_lock_left()
         with st.form("login_form", clear_on_submit=False):
             # 🔑 16 พ.ย. 2026 (เจอตอน try out · มุกกี้สั่ง): ไม่ระบุ autocomplete = Streamlit ใส่
@@ -991,11 +964,11 @@ def _check_password():
                         unsafe_allow_html=True)
             pwd = st.text_input("รหัสผ่าน", type="default",
                                 autocomplete="off",
-                                placeholder="••••••••",
-                                label_visibility='collapsed',
+                                placeholder="กรอกรหัสผ่าน",
                                 disabled=bool(_lock_left))
+            st.caption("ใช้รหัสที่ได้รับจากผู้วิจัย")
             submit = st.form_submit_button(
-                "🔓 เข้าสู่ระบบ", use_container_width=True, type='primary',
+                "เข้าสู่ระบบ", use_container_width=True, type='primary',
                 disabled=bool(_lock_left))
             if submit and _lock_left:
                 # 🛡️ ยังอยู่ในช่วงล็อก — ไม่ตรวจรหัสเลย (กันไล่เดาต่อ)
