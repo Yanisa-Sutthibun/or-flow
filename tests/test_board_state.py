@@ -1132,29 +1132,39 @@ def test_data_analysis_gate_is_fail_closed_and_admin_can_open():
 
 
 def test_data_analysis_nurse_names_short_and_benner():
-    """👩‍⚕️ พยาบาลรายบุคคล : ยศเปลี่ยนยังเป็นคนเดียวกัน · แสดงแค่ชื่อต้น + อักษรแรกนามสกุล ·
-    น้องใหม่ไม่ถึง 1 ปี = Novice · 1 ถึง 2 ปี = Advanced beginner · ชื่อที่พบน้อยถูกตัด"""
+    """👩‍⚕️ 3 การ์ด Data analysis (22 พ.ย. 2026) : ยศเปลี่ยนยังเป็นคนเดียวกัน · ชื่อต้น + อักษรแรกนามสกุล ·
+    ปีงบเริ่ม ต.ค. · Novice = เคสแรกอยู่ในปีงบนั้นและไม่เคยพบก่อนหน้า · คะแนนรวมเคส + ชั่วโมง · เคสจบหลัง 16:30"""
     import pandas as pd
     import data_analysis as DA
     assert DA.full_key('พ.ต.ท.หญิงสมใจ ใจดี') == DA.full_key('ร.ต.อ.หญิงสมใจ  ใจดี') == 'สมใจ ใจดี'
     assert DA.short_name('สมใจ ใจดี') == 'สมใจ ใ.' and DA.short_name('สมใจ ใ.') == 'สมใจ ใ.'
     assert DA.full_key('SCRUB_012') == '' and DA.full_key('resident A') == ''
+    assert DA.fy_of(pd.Timestamp('2025-09-30')) == 2568 and DA.fy_of(pd.Timestamp('2025-10-01')) == 2569
     rows, cid = [], 0
-    for d in pd.date_range('2023-01-01', '2026-11-20', freq='D'):
-        for nm, start in (('พ.ต.ท.หญิงสมใจ ใจดี', '2023-01-01'), ('นางสาวมาลี รักงาน', '2025-03-01'),
-                          ('น.ส.ดาว เด่น', '2026-02-01')):
-            if d >= pd.Timestamp(start):
-                cid += 1
-                rows.append(dict(nurse_name=nm, role='Scrub' if cid % 2 else 'Circulate', case_id=cid,
-                                 op_date=d.strftime('%Y-%m-%d'), procedure_name='X', division_code=5,
-                                 actual_duration_min=60))
-    rows += [dict(nurse_name='ชั่วคราว ผ่านมา', role='Scrub', case_id=10**6 + i, op_date='2026-05-01',
-                  procedure_name='X', division_code=5, actual_duration_min=60) for i in range(3)]
-    R = DA.summarize(pd.DataFrame(rows), 2026, ref_date='2026-11-20')
-    assert R['active'] == 3, "ชื่อที่พบไม่ถึง 30 เคสต้องถูกตัด"
-    lv = {n['name']: n['level'] for n in R['new']}
-    assert lv == {'ดาว เ.': 'Novice', 'มาลี ร.': 'Advanced beginner'}, lv
-    assert all('ใจดี' not in str(k) for k in R['top']['Scrub']['cases'].index.map(DA.short_name))
+    for d in pd.date_range('2024-10-01', '2026-09-30', freq='D'):
+        cid += 1
+        new = d >= pd.Timestamp('2025-11-01')
+        rows.append(dict(case_id=cid, op_date=d.strftime('%Y-%m-%d'), procedure_name='LC', division_code=1,
+                         scrub_nurse='น.ส.ดาว เด่น' if new else 'พ.ต.ท.หญิงสมใจ ใจดี',
+                         circ_nurse='นางสาวมาลี รักงาน', actual_duration_min=120 if new else 60,
+                         in_or_at=d.strftime('%Y-%m-%d') + ' 15:00:00',
+                         op_end_at=d.strftime('%Y-%m-%d') + (' 17:00:00' if new else ' 16:00:00')))
+    rows += [dict(case_id=10 ** 6 + i, op_date='2026-05-01', procedure_name='X', division_code=1,
+                  scrub_nurse='ชั่วคราว ผ่านมา', circ_nurse='', actual_duration_min=60,
+                  in_or_at=None, op_end_at=None) for i in range(3)]
+    C, L = DA.prep(pd.DataFrame(rows), {'1': 'ศัลยกรรมทั่วไป'})
+    assert set(C['fy']) == {2568, 2569}
+    assert 'ชั่วคราว ผ่านมา' not in DA.active_keys(L, 2569), "ชื่อที่พบไม่ถึง 30 เคสต้องถูกตัด"
+    nv = DA.novices(L, 2569)
+    assert [n['key'] for n in nv] == ['ดาว เด่น'], nv
+    assert DA.novices(L, 2568) == [], "ปีงบแรกของข้อมูลหาน้องใหม่ไม่ได้"
+    noy = DA.nurse_of_year(L, 2569)
+    assert noy['scrub'][0]['key'] == 'ดาว เด่น' and noy['scrub'][0]['score'] == 100
+    D = DA.deep(C, L, 2569, [n['key'] for n in nv])
+    assert D['per'].loc['ดาว เด่น', 'late_pct'] == 100 and D['per'].loc['สมใจ ใจดี', 'late_pct'] == 0
+    assert D['pairs'][0]['top3'][0][0] == 'มาลี รักงาน'
+    T = DA.trends(C, L, 2569, [n['key'] for n in nv])
+    assert len(T['common']) == 12 and T['ramp'][0]['scrub'] > 0
 
 
 # ═════════ 15. ตัวอ่านตารางผ่าตัด CSV จาก HIS (22 พ.ย. 2026) ═════════

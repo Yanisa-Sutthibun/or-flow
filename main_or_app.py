@@ -1311,7 +1311,7 @@ def main():
             from ui_theme import tryout_ui as _tryout_ui_tabs
             if _tryout_ui_tabs():
                 _page_options = ["📋 ตารางผ่าตัด", "📊 ภาพรวมวันนี้", "📈 สถิติย้อนหลัง",
-                                 "🔬 Data analysis", "⚙️ ตั้งค่าห้องผ่าตัด"]
+                                 "🔍 Data analysis", "⚙️ ตั้งค่าห้องผ่าตัด"]
     except Exception:
         pass
     # 🚪 โหมดจอประจำห้อง: เหลือ 3 แท็บ (ทำงาน + รับรู้สถานการณ์ + ดูสถิติ)
@@ -1400,7 +1400,7 @@ def main():
     elif page == "🗓️ จัดคิวพรุ่งนี้":
         from tomorrow_plan import page_tomorrow
         page_tomorrow()
-    elif page == "🔬 Data analysis":
+    elif page == "🔍 Data analysis":
         from data_analysis import page_data_analysis
         page_data_analysis()
     elif page == "📊 ภาพรวมวันนี้":
