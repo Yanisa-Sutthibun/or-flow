@@ -22,9 +22,12 @@ import os
 import sys
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
-_V2_DIR = os.path.join(_DIR, 'models', 'thesis_ML_v2')
+# 🧠 21 พ.ย. 2026 (มุกกี้เคาะ): แบบจำลองหลักเปลี่ยนเป็น thesis_ML_v4 (เทรน พ.ศ. 2564 ถึง มิ.ย. 2569 รู้จักห้องตึกใหม่ 90-98)
+#    โฟลเดอร์ models/thesis_ML_v2 ยังอยู่ในเครื่องไว้อ้างอิง แต่ไม่ถูกโหลดแล้ว
+MODEL_NAME = 'thesis_ML_v4'
+_MODEL_DIR = os.path.join(_DIR, 'models', MODEL_NAME)
 
-_mv2 = None            # โหลดครั้งเดียวต่อ process (โมเดล ~0.4MB — เบา)
+_mv2 = None            # โหลดครั้งเดียวต่อ process (ไฟล์แบบจำลองราว 1.3 MB)
 _load_failed = False
 
 
@@ -34,17 +37,26 @@ def _get_model():
     if _mv2 is not None or _load_failed:
         return _mv2
     try:
-        if not os.path.isdir(_V2_DIR):
-            raise FileNotFoundError(f"ไม่พบ {_V2_DIR}")
-        if _V2_DIR not in sys.path:
-            sys.path.insert(0, _V2_DIR)
-        from predictor import ModelV2   # models/thesis_ML_v2/predictor.py
-        _mv2 = ModelV2(_V2_DIR)
-        print("[shadow_v2] โหลด thesis_ML_v2 สำเร็จ — เริ่ม shadow logging")
+        if not os.path.isdir(_MODEL_DIR):
+            raise FileNotFoundError(f"ไม่พบ {_MODEL_DIR}")
+        if _MODEL_DIR not in sys.path:
+            sys.path.insert(0, _MODEL_DIR)
+        from predictor import ModelV2   # models/thesis_ML_v4/predictor.py (ชื่อคลาสคงเดิม)
+        _mv2 = ModelV2(_MODEL_DIR)
+        print(f"[shadow_v2] โหลด {MODEL_NAME} สำเร็จ")
     except Exception as ex:
         _load_failed = True
         print(f"[shadow_v2] โหลดไม่ได้ (ปิด shadow ไว้ · บอร์ดทำงานปกติ): {ex}")
     return _mv2
+
+
+def model_sched_hour(sched_h, sched_m=0):
+    """🕘 เวลานัดบนบอร์ด (ชั่วโมง, นาที จาก estmtime ของตารางผ่าตัด · ต่อคิว = 23:55) → ช่วงเวลานัดแบบที่แบบจำลองเรียน
+    ตอนเทรนใช้ opetime ของ HIS ซึ่งเท่ากับ estmtime ลบ 5 นาที (09:00 → ชั่วโมง 8 · ต่อคิว → 23) · ไม่ทราบเวลา = None"""
+    try:
+        return int(((int(sched_h) * 60 + int(sched_m or 0) - 5) % 1440) // 60)
+    except (TypeError, ValueError):
+        return None
 
 
 _baseline = None       # ตารางมัธยฐานรายกลุ่มหัตถการ (โหลดครั้งเดียว) · False = โหลดไม่ได้
@@ -61,7 +73,7 @@ def _baseline_min(proc_group):
     if _baseline is None:
         try:
             import json as _json
-            with open(os.path.join(_V2_DIR, 'baseline_median.json'), encoding='utf-8') as f:
+            with open(os.path.join(_MODEL_DIR, 'baseline_median.json'), encoding='utf-8') as f:
                 _baseline = _json.load(f)
         except Exception as ex:
             _baseline = False
@@ -149,6 +161,9 @@ def _features_for_log(case, r, masked_surgeon):
         'planicu': _c(case.get('planicu')), 'blood': _c(case.get('blood')),
         'ASA': _c(case.get('ASA'), 10), 'sex': _c(case.get('sex'), 10),
         'BMI': _n(case.get('BMI')), 'age': _n(case.get('age')),
+        # 🏥🕘 21 พ.ย. 2026: ปัจจัยที่แบบจำลองรุ่นปัจจุบันใช้เพิ่ม (ห้องตามตาราง + ช่วงเวลานัด)
+        'or_room': _n(case.get('room')),
+        'sched_hour': model_sched_hour(case.get('sched_hour'), case.get('sched_min')),
     }
 
 
@@ -186,6 +201,9 @@ def log_shadow(case: dict, actual_min=None) -> bool:
                 'ASA': case.get('ASA'), 'BMI': case.get('BMI'),
                 'sex': case.get('sex'), 'planicu': case.get('planicu'),
                 'blood': case.get('blood'),
+                # 🏥🕘 ห้องตามตารางผ่าตัด + ช่วงเวลานัด (ชุดเดียวกับตอนทำนายขึ้นบอร์ด)
+                'or_room': case.get('room'),
+                'sched_hour': model_sched_hour(case.get('sched_hour'), case.get('sched_min')),
             })
             _r90 = r.get('range90')
             _conf2, _pn2 = r.get('confidence'), r.get('proc_n')

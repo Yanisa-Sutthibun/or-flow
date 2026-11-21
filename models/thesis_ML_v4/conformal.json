@@ -1,0 +1,98 @@
+{
+ "global": {
+  "q50": 12.5391845703125,
+  "q80": 32.070002746582055,
+  "q90": 54.53950195312499
+ },
+ "per_proc_group_q90": {
+  "Anorectal": 16.0,
+  "Blepharoplasty": 47.1,
+  "Breast": 59.1,
+  "Central_line": 17.5,
+  "Cystoscopy_URO": 29.4,
+  "ENT": 55.1,
+  "Endoscopy_GI": 29.2,
+  "GI_abdominal": 112.4,
+  "Hepatobiliary": 69.5,
+  "Neuro_cranial": 87.5,
+  "Other": 119.3,
+  "Skin_softtissue": 72.0,
+  "Spine": 79.4,
+  "Uro_other": 62.5,
+  "Vascular_access": 31.3,
+  "Vascular_interv": 49.3
+ },
+ "n_calib": 1533,
+ "per_proc_group_logq": {
+  "Anorectal": [
+   -0.3904,
+   0.2526
+  ],
+  "Blepharoplasty": [
+   -0.5884,
+   0.5033
+  ],
+  "Breast": [
+   -0.4804,
+   0.4507
+  ],
+  "Central_line": [
+   -0.4865,
+   0.3764
+  ],
+  "Cystoscopy_URO": [
+   -0.5789,
+   0.6584
+  ],
+  "ENT": [
+   -0.7052,
+   0.5954
+  ],
+  "Endoscopy_GI": [
+   -0.5248,
+   0.4903
+  ],
+  "GI_abdominal": [
+   -0.6089,
+   0.4913
+  ],
+  "Hepatobiliary": [
+   -0.6174,
+   0.3709
+  ],
+  "Neuro_cranial": [
+   -0.393,
+   0.3749
+  ],
+  "Other": [
+   -0.7171,
+   1.1379
+  ],
+  "Skin_softtissue": [
+   -0.7429,
+   0.7798
+  ],
+  "Spine": [
+   -0.2609,
+   0.362
+  ],
+  "Uro_other": [
+   -0.3186,
+   0.6347
+  ],
+  "Vascular_access": [
+   -0.5436,
+   0.3256
+  ],
+  "Vascular_interv": [
+   -0.5456,
+   0.5239
+  ]
+ },
+ "global_logq": [
+  -0.577,
+  0.5651
+ ],
+ "coverage_test_logq": 0.893,
+ "note": "ช่วง 90% = pred×exp(q05) ถึง pred×exp(q95) ของ log(เวลาจริง/ค่าทำนาย) ต่อกลุ่มหัตถการ คาลิเบรตจากชุดทดสอบ 2026-07-01 เป็นต้นไป"
+}

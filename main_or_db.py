@@ -1467,6 +1467,11 @@ def _repredict_case_row(r):
                 _age = 40
         except (TypeError, ValueError):
             _age = 40
+        # 🏥🕘 21 พ.ย. 2026: แบบจำลองหลักใช้ห้องตามตารางและเวลานัด (estimated_time = 0 คือต่อคิว)
+        _hm = None
+        if est.isdigit():
+            _en = int(est)
+            _hm = (23, 55) if _en == 0 else (_en // 10000, (_en // 100) % 100)
         result = predict_surgical_time(
             procedure=r['procedure_name'] or 'UNKNOWN',
             age=_age,  # อายุจริงจาก DB (เติมย้อนหลังจาก history) — ไม่มีค่อย fallback 40
@@ -1477,6 +1482,7 @@ def _repredict_case_row(r):
             op_date=op_dt,
             orroom=room,
             diagnosis=r['diagnosis'] or '',
+            or_room=(room if r['room_no'] else None), sched_hm=_hm,
         )
         pred = result.get('predicted_min')
         # 🔁 M-04: คืน source จริงด้วย (thesis_ML/local_history/default/...) — ไม่ปั๊ม thesis_ML เหมา
@@ -1599,7 +1605,9 @@ def import_history_6467(progress_cb=None):
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, (op_date, is_ipd, diag, proc, surg, surg, div,
                   cls.get('case_category'), cls.get('patient_type'), optype,
-                  est, note, 'discharged', in_ts, out_ts, out_ts, dur,
+                  # 🔒 21 พ.ย. 2026: procnote (ข้อความอิสระจาก HIS) ใช้จัดประเภทเคสข้างบนเท่านั้น
+                  #    ไม่เก็บลงฐานข้อมูลบนคลาวด์ (กติกา PDPA ข้อ 2 ใน CLAUDE.md)
+                  est, None, 'discharged', in_ts, out_ts, out_ts, dur,
                   room, age_v, ai_min, _ver_tag))
             n_ins += 1
         if progress_cb and total and (i % 100 == 0 or i == total - 1):

@@ -421,7 +421,7 @@ def test_current_actor_survives_bad_room_value():
 def test_prediction_health_quiet_when_healthy():
     C._PRED_TALLY.clear()
     for _ in range(50):
-        C._tally_prediction('thesis_ML_v2')
+        C._tally_prediction(C._PRED_HEALTHY_SOURCE)
     h = C.prediction_health()
     assert h['total'] == 50 and h['fallback_n'] == 0 and h['alert'] is False
 
@@ -434,13 +434,13 @@ def test_prediction_health_alerts_on_fallback_storm():
     h = C.prediction_health()
     assert h['alert'] is True
     assert h['fallback_pct'] == 100.0
-    assert 'thesis_ML_v2' in h['message']
+    assert 'แบบจำลองหลัก' in h['message']   # 21 พ.ย. 2026: ข้อความไม่บอกชื่อรุ่นแล้ว
 
 
 def test_prediction_health_needs_enough_samples():
     """ทำนาย 2 ครั้งแล้วพลาด 1 = 50% แต่ยังสรุปไม่ได้ ห้ามเตือนหมาป่า"""
     C._PRED_TALLY.clear()
-    C._tally_prediction('thesis_ML_v2')
+    C._tally_prediction(C._PRED_HEALTHY_SOURCE)
     C._tally_prediction('default')
     assert C.prediction_health()['alert'] is False
 

@@ -68,6 +68,10 @@ logs/
 #    (โฟลเดอร์ rename model_v2 → thesis_ML_v2 เมื่อ 7 ก.ค. 2026 — แก้ path ตาม 14 ก.ค.)
 !models/thesis_ML_v2/model.pkl
 
+# ✅ ยกเว้น: แบบจำลองหลัก thesis_ML_v4 (ขึ้นเป็นตัวหลัก 21 พ.ย. 2026 · mask แล้ว SURG_xxx · ราว 1.3 MB)
+#    ข้อความวินิจฉัยและชื่อหัตถการใน te_maps.json เก็บเฉพาะที่มีตั้งแต่ 2 เคส ไม่มีอักษรไทย
+!models/thesis_ML_v4/model.pkl
+
 # 🔒 สำรอง model keys "ก่อน mask" — มีชื่อแพทย์จริง ห้าม commit เด็ดขาด
 _model_backup/
 

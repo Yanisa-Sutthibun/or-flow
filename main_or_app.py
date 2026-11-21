@@ -200,27 +200,37 @@ if not st.session_state.get('_room_settings_loaded'):
 # ============================================================================
 
 def render_system_status():
-    """🤖 กล่องสถานะโมเดล AI — ตัวหลัก thesis_ML_v2 (13 features) · fallback thesis_ML
-    (โปรโมต v2 ขึ้นบอร์ด 7 ก.ค. 2026 ตามคำสั่งมุคกี้ · อ่านจาก artifact จริง)"""
+    """🤖 กล่องสถานะแบบจำลองทำนายเวลา : ตัวหลัก thesis_ML_v4 · สำรอง thesis_ML
+    (มุกกี้เคาะ 21 พ.ย. 2026 : เปลี่ยนตัวหลักเป็น v4 และไม่บอกชื่อรุ่นกับจำนวนตัวแปรบนหน้าเว็บ
+     ผู้ใช้ไม่สนใจเรื่องเทคนิค · ตัวเลขที่ใช้เทรนและผลทดสอบอ่านจาก meta.json ของแบบจำลองจริง)"""
     try:
         import json as _json
         from pathlib import Path as _Path
-        _v2meta_p = _Path(__file__).resolve().parent / 'models' / 'thesis_ML_v2' / 'meta.json'
-        _v2pkl_ok = (_Path(__file__).resolve().parent / 'models' / 'thesis_ML_v2'
-                     / 'model.pkl').exists()
+        _mdir = _Path(__file__).resolve().parent / 'models' / 'thesis_ML_v4'
+        _v2meta_p = _mdir / 'meta.json'
+        _v2pkl_ok = (_mdir / 'model.pkl').exists()
         if _v2pkl_ok and _v2meta_p.exists():
             _m2 = _json.loads(_v2meta_p.read_text(encoding='utf-8'))
-            _mt = _m2.get('metrics_test67') or {}
+            _mt = _m2.get('metrics_test') or {}
+            _TH_MON = ('ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+                       'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.')
+
+            def _th_date(_iso):
+                # '2026-06-30' → '30 มิ.ย. 2569'
+                _y, _mo, _d = (int(_x) for _x in str(_iso).split('-'))
+                return f'{_d} {_TH_MON[_mo - 1]} {_y + 543}'
+
+            _tr, _te = _m2.get('train_range') or [], _m2.get('test_range') or []
             st.markdown(
                 f'<div style="background:#e8f5e9;padding:10px;border-radius:8px;text-align:center;">'
                 f'<p style="margin:0;font-size:var(--fs-meta);color:#2e7d32;">'
-                f'🤖 <b>AI Model: thesis_ML_v2</b> : โมเดลวิทยานิพนธ์ 13 features '
-                f'(ตัวที่ทำนายบนบอร์ด · เริ่ม 7 ก.ค. 2569)<br>'
-                f'General XGBoost + Target Encoding · เทรน {_m2.get("n_train", "—"):,} เคส '
-                f'(พ.ศ. 2565–2566)<br>'
-                f'MAE {_mt.get("MAE", "—")} นาที · R² {_mt.get("R2", "—")} · '
-                f'±30 นาที {_mt.get("within30min_pct", "—")}% (ทดสอบปี 2567)<br>'
-                f'ช่วงทำนาย 90%: split conformal · fallback: thesis_ML → ค่ากลาง DB'
+                f'🤖 <b>แบบจำลองทำนายเวลาใช้ห้องผ่าตัด</b> : พร้อมใช้งาน (ตัวที่ทำนายบนบอร์ด)<br>'
+                f'XGBoost · เทรน {int(_m2.get("n_train", 0)):,} เคส '
+                f'({_th_date(_tr[0])} ถึง {_th_date(_tr[1])})<br>'
+                f'MAE {_mt.get("MAE", "-")} นาที · R² {_mt.get("R2", "-")} · '
+                f'±30 นาที {_mt.get("within_30min", "-")}% '
+                f'(ทดสอบ {int(_m2.get("n_test", 0)):,} เคส {_th_date(_te[0])} ถึง {_th_date(_te[1])})<br>'
+                f'ช่วงทำนาย 90% คาลิเบรตจากชุดทดสอบ · ถ้าตัวหลักใช้ไม่ได้ ระบบใช้แบบจำลองสำรอง แล้วจึงใช้ค่ากลางจากฐานข้อมูล'
                 f'</p></div>',
                 unsafe_allow_html=True,
             )
@@ -754,13 +764,15 @@ def parse_schedule_csv_to_cases(uploaded_file):
             case['procedure'], case['age'], case['surgeon'], case['division'],
             case['sched_hour'] if case['sched_hour'] < 23 else 9,
             diagnosis=case['diagnosis'] if case['diagnosis'] != '-' else '',
-            ward=case['ward'])
+            ward=case['ward'],
+            # 🏥🕘 21 พ.ย. 2026: แบบจำลองหลักใช้ห้องตามตารางและช่วงเวลานัดด้วย (ไม่ส่ง = แม่นน้อยลงราว 1 นาที)
+            or_room=case['room'], sched_hm=(case['sched_hour'], case['sched_min']))
         case['predicted_min'] = pred['predicted_min']
         case['confidence'] = pred['confidence']
         case['pred_method'] = pred['method']
         case['proc_n'] = pred.get('proc_n', 0)
         case['surg_n'] = pred.get('surg_n', 0)
-        # 🧭 15 พ.ย. 2026 (มุกกี้สั่ง): ชั้นที่ให้คำทำนายนี้ thesis_ML_v2 / thesis_ML /
+        # 🧭 15 พ.ย. 2026 (มุกกี้สั่ง): ชั้นที่ให้คำทำนายนี้ thesis_ML_v4 / thesis_ML /
         #    local_history / default → ลง log วิจัย กัน MAE ของตัวหลักปนกับชั้นสำรองโดยไม่รู้
         case['pred_source'] = pred.get('source')
         case['predicted_range'] = pred.get('predicted_range')      # 📏 ช่วง conformal 90%
@@ -1223,7 +1235,7 @@ def main():
         st.markdown(
             '<div class="or-chips" style="margin-top:6px;">'
             + _hdr_extra
-            + '<span class="or-chip">🤖 AI: thesis_ML_v2 · 13 features</span>'
+            + '<span class="or-chip">🤖 AI ทำนายเวลาผ่าตัด</span>'   # 21 พ.ย. 2026 (มุกกี้เคาะ): ไม่บอกชื่อรุ่นและจำนวนตัวแปร
             + _hdr_extra2
             + _online_chips
             + ('<span class="or-chip" style="background:#fff3e0;color:#e65100;">'

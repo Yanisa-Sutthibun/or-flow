@@ -1,0 +1,91 @@
+{
+ "definition": "มัธยฐาน room_duration_min ของ proc_group จากชุดเทรน; กลุ่มที่ไม่มีใช้มัธยฐานรวม",
+ "n_train": 19911,
+ "global_median": 65,
+ "per_proc_group": {
+  "Anorectal": {
+   "median": 45,
+   "n": 645
+  },
+  "Blepharoplasty": {
+   "median": 90,
+   "n": 279
+  },
+  "Breast": {
+   "median": 105,
+   "n": 870
+  },
+  "Central_line": {
+   "median": 40,
+   "n": 1529
+  },
+  "Cystoscopy_URO": {
+   "median": 20,
+   "n": 2913
+  },
+  "ENT": {
+   "median": 90,
+   "n": 1190
+  },
+  "Endoscopy_GI": {
+   "median": 45,
+   "n": 1567
+  },
+  "Fracture_fixation": {
+   "median": 90,
+   "n": 119
+  },
+  "GI_abdominal": {
+   "median": 170,
+   "n": 870
+  },
+  "Hepatobiliary": {
+   "median": 145,
+   "n": 606
+  },
+  "Neuro_cranial": {
+   "median": 195,
+   "n": 510
+  },
+  "Other": {
+   "median": 115,
+   "n": 488
+  },
+  "Skin_softtissue": {
+   "median": 60,
+   "n": 1695
+  },
+  "Spine": {
+   "median": 195,
+   "n": 799
+  },
+  "Thyroid_neck": {
+   "median": 135,
+   "n": 563
+  },
+  "Tracheostomy": {
+   "median": 60,
+   "n": 415
+  },
+  "Uro_other": {
+   "median": 75,
+   "n": 628
+  },
+  "Vascular_access": {
+   "median": 60,
+   "n": 2839
+  },
+  "Vascular_interv": {
+   "median": 60,
+   "n": 1386
+  }
+ },
+ "retro_metrics": {
+  "n_test": 1533,
+  "MAE": 39.3,
+  "RMSE": 65.4,
+  "R2": 0.3,
+  "within_15min": 41.2,
+  "within_30min": 62.4
+ }
+}

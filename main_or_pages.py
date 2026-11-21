@@ -752,7 +752,8 @@ def _or_board_demo():
                           diagnosis=d.get('diagnosis') or '',
                           ward=d.get('ward') or '',
                           asa=d.get('ASA'), bmi=d.get('BMI'),
-                          planicu=d.get('planicu'), blood=d.get('blood'))
+                          planicu=d.get('planicu'), blood=d.get('blood'),
+                          or_room=d['room'], sched_hm=(d['sched_h'], d['sched_m']))
                 pred = int(_r.get('predicted_min') or 60)
                 rng = _r.get('predicted_range')
                 conf = _r.get('confidence', 'ปานกลาง')
@@ -1117,7 +1118,8 @@ def _render_add_case_form(demo_active):
                 op_hour=sched_h if sched_h < 23 else 9,
                 op_date=_now(), orroom=int(_room_no),
                 diagnosis=(diag or '').strip(),
-                asa=_asa_v, blood=_blood_v, planicu=_icu_v, sex=_sex_v)
+                asa=_asa_v, blood=_blood_v, planicu=_icu_v, sex=_sex_v,
+                or_room=int(_room_no), sched_hm=(sched_h, sched_m))
             _pm = int(_pred.get('predicted_min') or 60)
             _conf = _pred.get('confidence')
             _pn = _pred.get('proc_n', 0)
@@ -1255,7 +1257,9 @@ def render_csv_upload(bare=False):
                             ward=_ec.get('ward') or '',
                             asa=_ec.get('ASA'), bmi=_ec.get('BMI'),
                             sex=_ec.get('sex'), planicu=_ec.get('planicu'),
-                            blood=_ec.get('blood'))
+                            blood=_ec.get('blood'),
+                            or_room=_ec.get('room'),
+                            sched_hm=(_ec['sched_hour'], _ec.get('sched_min') or 0))
                         _ec['predicted_min'] = _pr['predicted_min']
                         _ec['ai_predicted_min'] = _pr['predicted_min']
                         _ec['effective_min'] = _pr['predicted_min']
@@ -2427,11 +2431,11 @@ def _board_fragment():
             "---\n"
             "**ตัวเลขใต้ค่าทำนาย อ่านอย่างไร**\n\n"
             "1. **จาก N เคส** — แบบจำลองทำนายโดยอ้างอิงเคสหัตถการใกล้เคียง"
-            "จำนวนกี่เคสในข้อมูลที่ใช้พัฒนา (พ.ศ. 2565–2566) ยิ่งมากยิ่งหนักแน่น · "
+            "จำนวนกี่เคสในข้อมูลที่ใช้พัฒนา (พ.ศ. 2564 ถึง มิ.ย. 2569) ยิ่งมากยิ่งหนักแน่น · "
             "*ไม่มีเคสใกล้เคียง* = ทำนายจากค่ากลาง ควรตรวจสอบและปรับด้วย ✏️\n"
             "2. **ช่วง 90%** (เช่น ช่วง 29–98 น.) — เคสลักษณะนี้ราว 9 ใน 10 เคส"
             "จะใช้เวลาจริงอยู่ในช่วงนี้ (คำนวณด้วยวิธี conformal prediction "
-            "สอบเทียบกับเคสจริง พ.ศ. 2567)\n"
+            "สอบเทียบกับเคสจริง ก.ค. ถึง พ.ย. 2569)\n"
             "   - *ช่วงแคบ* = เวลาค่อนข้างแน่นอน วางแผนต่อเคสได้มั่นใจ\n"
             "   - *ช่วงกว้าง* = เวลาแกว่งได้มาก ควรเผื่อเวลาและติดตามใกล้ชิด\n\n"
             "พยาบาลสามารถปรับเวลาทับค่าที่ AI ทำนายได้เสมอ (✏️) "

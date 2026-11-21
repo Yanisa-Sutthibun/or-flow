@@ -94,7 +94,7 @@ def fuzzy_resolve(query, candidates, cutoff=0.65):
 #    (แอปรีสตาร์ท = เริ่มนับใหม่ ตั้งใจให้เป็นสัญญาณของ "ตอนนี้" ไม่ใช่สถิติสะสม)
 # ════════════════════════════════════════════════════════════════════════════
 _PRED_TALLY: dict = {}
-_PRED_HEALTHY_SOURCE = 'thesis_ML_v2'   # ชั้นเดียวที่ถือว่า "ปกติ"
+_PRED_HEALTHY_SOURCE = 'thesis_ML_v4'   # ชั้นเดียวที่ถือว่า "ปกติ" (เปลี่ยนจาก thesis_ML_v2 เมื่อ 21 พ.ย. 2026)
 
 
 def _tally_prediction(source: str) -> None:
@@ -118,7 +118,7 @@ def prediction_health() -> dict:
     _msg = ''
     if _alert:
         _worst = 'ค่าเริ่มต้น 60 นาที' if _by.get('default') else 'โมเดลสำรอง'
-        _msg = (f"⛔ AI ไม่ได้ใช้โมเดลหลัก (thesis_ML_v2) ใน {_pct:.0f}% "
+        _msg = (f"⛔ AI ไม่ได้ใช้แบบจำลองหลักใน {_pct:.0f}% "
                 f"ของการทำนายล่าสุด ({_fb} จาก {_total} ครั้ง) : ตกไปใช้{_worst} "
                 f"ตรวจว่าไฟล์โมเดลโหลดขึ้นหรือไม่ (ดูชิป AI บนหัวแอป) "
                 f"ก่อนนำผลช่วงนี้ไปใช้ในงานวิจัย")
@@ -150,7 +150,9 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
                           bmi: float = None,
                           sex: str = None,
                           planicu: str = None,
-                          blood: str = None) -> dict:
+                          blood: str = None,
+                          or_room=None,                  # 🏥 ห้องตามตารางผ่าตัด (21 พ.ย. 2026) · None = ไม่ทราบ
+                          sched_hm=None) -> dict:        # 🕘 (ชั่วโมง, นาที) เวลานัดบนบอร์ด · ต่อคิว = (23, 55)
     """
     ทำนายเวลาผ่าตัด — ใช้ predictor v2 (XGBoost + fuzzy + multi-level evidence)
 
@@ -166,7 +168,8 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
       - evidence_levels: list หลักฐานหลายระดับ
       - fuzzy_correction: ถ้ามี auto-correct
     """
-    # 🥇 thesis_ML_v2 (โมเดลเล่ม 13 features) — โปรโมตขึ้นตัวหลัก 7 ก.ค. 2026 ตามคำสั่งมุคกี้
+    # 🥇 แบบจำลองหลัก thesis_ML_v4 (มุกกี้เคาะ 21 พ.ย. 2026 : แทน thesis_ML_v2 ที่ขึ้นเป็นตัวหลักเมื่อ 7 ก.ค. 2026)
+    #    ใช้เฉพาะข้อมูลก่อนผ่าตัด : ตารางผ่าตัด + ใบประเมินวิสัญญี · ห้องและช่วงเวลานัดส่งเมื่อผู้เรียกให้มา
     #    (บอร์ดโชว์ v2 · thesis_ML ย้ายไปทำนายเงียบใน shadow_v2_log — การเทียบไม่ขาดตอน)
     try:
         from shadow_v2 import _get_model as _get_v2
@@ -182,15 +185,23 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
                            ('planicu', planicu), ('blood', blood)):
                 if _v is not None:
                     _case_in[_k] = _v
+            if or_room is not None:
+                _case_in['or_room'] = or_room
+            if sched_hm:
+                from shadow_v2 import model_sched_hour as _msh
+                _sh = _msh(sched_hm[0], sched_hm[1] if len(sched_hm) > 1 else 0)
+                if _sh is not None:
+                    _case_in['sched_hour'] = _sh
             _r2 = _mv2.predict_case(_case_in)
             _pn2 = int(_r2.get('proc_n') or 0)
-            _tally_prediction('thesis_ML_v2')
+            _src2 = str(_r2.get('model_version') or _PRED_HEALTHY_SOURCE)
+            _tally_prediction(_src2)
             return {
                 'predicted_min': int(_r2['predicted_min']),
                 'confidence': _r2.get('confidence', 'ปานกลาง'),
-                'method': 'General XGBoost 13 features (thesis_ML_v2 — โมเดลวิทยานิพนธ์)',
+                'method': 'แบบจำลอง XGBoost ของงานวิจัย',
                 'details': f'จาก {_pn2} เคสใกล้เคียง' if _pn2 else 'ไม่มีเคสใกล้เคียง (ใช้ค่ากลาง)',
-                'proc_n': _pn2, 'surg_n': 0, 'source': 'thesis_ML_v2', 'tier': 1,
+                'proc_n': _pn2, 'surg_n': 0, 'source': _src2, 'tier': 1,
                 'predicted_range': tuple(_r2.get('range90') or ()) or None,
                 'predicted_range80': None,
                 'range_method': 'conformal' if _r2.get('range90') else None,
@@ -200,9 +211,9 @@ def predict_surgical_time(procedure: str, age: int, surgeon: str = "",
     except Exception as _vx:
         try:
             from logger_setup import get_logger
-            get_logger("core").warning("thesis_ML_v2 ใช้ไม่ได้ จะ fallback thesis_ML: %s", _vx)
+            get_logger("core").warning("แบบจำลองหลัก %s ใช้ไม่ได้ จะ fallback thesis_ML: %s", _PRED_HEALTHY_SOURCE, _vx)
         except Exception:
-            print(f"[core] thesis_ML_v2 fallback: {_vx}")
+            print(f"[core] {_PRED_HEALTHY_SOURCE} fallback: {_vx}")
 
     # 🥈 thesis_ML: fallback ชั้นสอง (และยังทำนายเงียบใน shadow เพื่อเทียบต่อเนื่อง)
     try:
