@@ -1148,6 +1148,87 @@ def test_data_analysis_nurse_names_short_and_benner():
     assert all('ใจดี' not in str(k) for k in R['top']['Scrub']['cases'].index.map(DA.short_name))
 
 
+# ═════════ 15. ตัวอ่านตารางผ่าตัด CSV จาก HIS (22 พ.ย. 2026) ═════════
+# บั๊กที่เจอจากไฟล์ HIS จริงก่อนใช้งาน : (ก) ช่องที่มี comma ทำคอลัมน์เลื่อน แพทย์หาย 6.4% ของเคส
+# (ข) ไฟล์ชุดใหม่เขียนวันที่ เดือน/วัน/ปี วันที่ 1-12 สลับวันกับเดือน (ค) UTF-8 ถูกถอดเป็น UTF-16 ได้ตัวขยะ
+# (ง) ใบประเมินวิสัญญีเรียงวันที่แบบข้อความ ใบเก่าทับใบใหม่
+
+_CSV_HEAD = ('hn,reqdate,division,orroom,ororder,estmtime,dspname,brthdate,opedate,age,'
+             'icd9cm_name,icd10_name,surgstfnm,procnote,reqward,rgtward,optypenm')
+
+
+def _csv_case_rows():
+    return [
+        _CSV_HEAD,
+        '9000001,10/28/2026 00:00:00,1,93,1,90000,นาย ทดสอบ หนึ่ง,3/25/1970 00:00:00,11/5/2026 00:00:00,56,'
+        '"LC, IOC","GALLSTONE, CBD STONE",นพ.สมมติ ระบบ,"note, with comma",W5,,ELECTIVE',
+        '9000002,11/2/2026 00:00:00,5,95,2,0,นาง ทดสอบ สอง,12/30/1960 00:00:00,11/5/2026 00:00:00,66,'
+        'TURP,BPH,นพ.สมมติ สอง,,,,ELECTIVE',
+    ]
+
+
+def _parse_csv(text, enc):
+    import io
+    up = io.BytesIO(text.encode(enc))
+    up.name = 'sched.csv'
+    keep = A.predict_surgical_time
+    A.predict_surgical_time = lambda *a, **k: {'predicted_min': 60, 'confidence': 'ต่ำ',
+                                               'method': 'test', 'source': 'test'}
+    try:
+        return A.parse_schedule_csv_to_cases(up)
+    finally:
+        A.predict_surgical_time = keep
+
+
+def test_csv_quoted_comma_keeps_columns():
+    """ช่องหัตถการ/วินิจฉัย/หมายเหตุที่มี comma ต้องไม่ทำให้แพทย์ หอผู้ป่วย ประเภทเคส เลื่อนช่อง"""
+    cs = _parse_csv('\n'.join(_csv_case_rows()) + '\n', 'utf-16')
+    assert len(cs) == 2
+    c = cs[0]
+    assert c['procedure'] == 'LC, IOC'
+    assert c['diagnosis'] == 'GALLSTONE, CBD STONE'
+    assert c['surgeon'] == 'นพ.สมมติ ระบบ'
+    assert c['ward'] == 'W5' and c['room'] == 93 and c['is_emergency'] is False
+    assert cs[1]['surgeon'] == 'นพ.สมมติ สอง' and cs[1]['is_tf'] is True
+
+
+def test_csv_month_first_date_not_swapped():
+    """ไฟล์ HIS ชุดใหม่เขียน เดือน/วัน/ปี : 11/5/2026 คือ 5 พ.ย. ไม่ใช่ 11 พ.ค."""
+    cs = _parse_csv('\n'.join(_csv_case_rows()) + '\n', 'utf-16')
+    assert str(cs[0]['sched_date']) == '2026-11-05'
+
+
+def test_csv_day_first_date_still_works():
+    """ไฟล์ชุดเก่า วัน/เดือน/ปี ต้องอ่านได้เหมือนเดิม"""
+    rows = _csv_case_rows()
+    rows[1] = rows[1].replace('10/28/2026', '28/10/2026').replace('3/25/1970', '25/3/1970').replace('11/5/2026', '5/11/2026')
+    rows[2] = rows[2].replace('11/2/2026', '2/11/2026').replace('12/30/1960', '30/12/1960').replace('11/5/2026', '5/11/2026')
+    cs = _parse_csv('\n'.join(rows) + '\n', 'utf-16')
+    assert str(cs[0]['sched_date']) == '2026-11-05'
+
+
+def test_csv_utf8_not_misread_as_utf16():
+    """ไฟล์ UTF-8 (เช่น บันทึกจาก Excel) ต้องอ่านได้ทั้งความยาวไบต์คู่และคี่"""
+    base = '\n'.join(_csv_case_rows()) + '\n'
+    for extra in ('', ' '):
+        cs = _parse_csv(base + extra, 'utf-8-sig')
+        assert len(cs) == 2 and cs[0]['surgeon'] == 'นพ.สมมติ ระบบ'
+
+
+def test_preop_latest_record_by_real_date():
+    """ใบประเมินหลายใบของ HN เดียวกัน : ใบวันล่าสุดจริงต้องชนะ ('9/1/2026' มาก่อน '11/20/2026')"""
+    import io
+    import preop_merge as PMG
+    head = 'hn,weight,height,planicu,blood,estmdate,asa'
+    body = ['9000001,60,160,2,2,11/20/2026 00:00:00,2',
+            '9000001,60,160,1,1,9/1/2026 00:00:00,4']
+    body += [f'90001{i:02d},60,160,2,2,10/{13 + i % 15}/2026 00:00:00,{1 + i % 3}' for i in range(24)]
+    up = io.BytesIO(('\n'.join([head] + body) + '\n').encode('utf-8-sig'))
+    up.name = 'preop.csv'
+    rec = PMG.load_preop(up)['9000001']
+    assert rec['ASA'] == '2' and rec['planicu'] == 'ไม่มี' and rec['blood'] == 'ไม่มี'
+
+
 # ═════════════════════════════ runner ═════════════════════════════
 
 def _run_all():

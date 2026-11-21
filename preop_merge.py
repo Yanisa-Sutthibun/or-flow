@@ -70,7 +70,16 @@ def load_preop(file) -> dict:
         raise ValueError(f"ไฟล์ preop ไม่มีคอลัมน์ hn — เจอ: {list(df.columns)[:8]}")
     asa_col = _find_asa_col(df)
     if 'estmdate' in df.columns:
-        df = df.sort_values('estmdate')          # แถวท้าย = ล่าสุด
+        # 📅 22 พ.ย. 2026: เรียงตามวันจริง ไม่ใช่ตามข้อความ · ไฟล์ CSV ของ HIS เขียนวันที่เป็น เดือน/วัน/ปี
+        #    เรียงแบบข้อความแล้ว '9/1/2026' มาหลัง '11/20/2026' ใบเก่าจึงทับใบใหม่ (วัดกับไฟล์ปี 69 : ค่าที่ส่งให้
+        #    แบบจำลองผิดไป 9.7% ของเคสเมื่อไฟล์มีหลายวัน) · ไฟล์ Excel เป็นข้อความแบบ ปี-เดือน-วัน เรียงได้อยู่แล้ว
+        try:
+            import his_csv as _HC
+            _ord = _HC.detect_date_order(df['estmdate'])
+            _key = df['estmdate'].map(lambda v: _HC.to_iso(v, _ord) or '')
+        except Exception:
+            _key = df['estmdate'].astype(str)    # ดูรูปแบบไม่ออก (เช่น ไฟล์วันเดียว) = ท่าเดิม
+        df = df.assign(_estm_key=_key).sort_values('_estm_key', kind='stable')   # แถวท้าย = ล่าสุด
     out = {}
     for _, r in df.iterrows():
         hn = str(r.get('hn') or '').strip()

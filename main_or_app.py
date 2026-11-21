@@ -629,7 +629,12 @@ def parse_schedule_csv_to_cases(uploaded_file):
         text = data
         if isinstance(data, (bytes, bytearray)):
             text = None
-            for enc in ['utf-16', 'utf-8-sig', 'utf-8', 'cp874', 'tis-620']:
+            _encs = ['utf-16', 'utf-8-sig', 'utf-8', 'cp874', 'tis-620']
+            # 🔎 22 พ.ย. 2026: ไม่มี BOM ของ UTF-16 และแทบไม่มีไบต์ศูนย์ = ไม่ใช่ UTF-16 ให้ลอง UTF-8 ก่อน
+            #    (ไฟล์ UTF-8 ที่ความยาวเป็นเลขคู่ ถอดเป็น UTF-16 ได้โดยไม่ error แต่ได้ตัวอักษรขยะ แล้วขึ้นว่าไม่พบเคส)
+            if bytes(data[:2]) not in (b'\xff\xfe', b'\xfe\xff') and bytes(data[:4000]).count(b'\x00') < 40:
+                _encs = ['utf-8-sig', 'utf-8', 'cp874', 'tis-620', 'utf-16']
+            for enc in _encs:
                 try:
                     text = data.decode(enc)
                     break
@@ -643,12 +648,26 @@ def parse_schedule_csv_to_cases(uploaded_file):
     if _excel_rows is not None:
         rows = _excel_rows
     else:
-        rows = []
-        for outer in _csv.reader(_io.StringIO(text)):
-            if not outer:
-                continue
-            inner = outer[0] if len(outer) == 1 else ",".join(outer)
-            rows.append(next(_csv.reader([inner])))
+        # 📄 22 พ.ย. 2026 (สำรวจ bug ก่อนใช้จริง): ใช้ตัวอ่านกลาง his_csv ชุดเดียวกับตัวนำเข้าสถิติ
+        #    ท่าเดิม (join แล้ว parse ซ้ำ) ทำเครื่องหมายคำพูดหาย ช่องที่มี comma (หัตถการ วินิจฉัย หมายเหตุ) จึงแตก
+        #    คอลัมน์หลังจากนั้นเลื่อน : วัดกับไฟล์ HIS ปี 69 ทั้งไฟล์ 4,250 แถว แพทย์หาย 6.4% วินิจฉัยผิด 5.2% หัตถการขาด 3.0%
+        #    his_csv อ่านครั้งเดียว + ต่อบรรทัดที่แตกกลางช่องกลับ · ใช้เมื่ออ่านได้ครบทุกแถว (bad = 0) เท่านั้น
+        #    ไม่ครบหรืออ่านไม่ได้ = ถอยไปท่าเดิม เพื่อไม่ให้มีเคสหายจากบอร์ด
+        rows = None
+        try:
+            import his_csv as _HC
+            _h, _body, _info = _HC.read_table(_io.StringIO(text))
+            if _h and _body and not _info.get('bad'):
+                rows = [_h] + _body
+        except Exception as _rx:
+            print(f"[csv] his_csv อ่านไม่ได้ ใช้ตัวอ่านเดิม: {_rx}")
+        if rows is None:
+            rows = []
+            for outer in _csv.reader(_io.StringIO(text)):
+                if not outer:
+                    continue
+                inner = outer[0] if len(outer) == 1 else ",".join(outer)
+                rows.append(next(_csv.reader([inner])))
     rows = [r for r in rows if any(str(x).strip() for x in r)]
     if len(rows) < 2:
         return []
@@ -678,6 +697,18 @@ def parse_schedule_csv_to_cases(uploaded_file):
         'ward': col('reqward'), 'ward2': col('rgtward'),
     }
 
+    # 📅 22 พ.ย. 2026: รูปแบบวันที่ของไฟล์ HIS ไม่คงที่ (ชุดเก่า วัน/เดือน/ปี · ชุดใหม่ เดือน/วัน/ปี)
+    #    เดิมอ่านแบบวันก่อนเดือนเสมอ วันที่ 1-12 ของไฟล์ชุดใหม่จึงสลับวันกับเดือน (5 พ.ย. กลายเป็น 11 พ.ค.)
+    #    ดูจากทุกคอลัมน์วันที่ในไฟล์ (วันเกิด วันขอผ่าตัด ฯลฯ) · ดูไม่ออก = ใช้ท่าเดิม
+    _date_order = None
+    try:
+        import his_csv as _HCD
+        _dcols = [i for i, _hn in enumerate(header) if 'date' in _hn]
+        _date_order = _HCD.detect_date_order(
+            str(_r[i]) for _r in rows[1:] for i in _dcols if i < len(_r))
+    except Exception:
+        _date_order = None
+
     cases = []
     for r in rows[1:]:
         def get(key):
@@ -698,7 +729,11 @@ def parse_schedule_csv_to_cases(uploaded_file):
         raw_note = get('procnote') or ''
         _d = get('date')
         try:
-            sched_date = pd.to_datetime(_d, dayfirst=True).date() if _d else datetime.now().date()
+            _iso = _HCD.to_iso(_d, _date_order) if (_d and _date_order) else None
+            if _iso:
+                sched_date = datetime.strptime(_iso, '%Y-%m-%d').date()
+            else:
+                sched_date = pd.to_datetime(_d, dayfirst=True).date() if _d else datetime.now().date()
         except Exception:
             sched_date = datetime.now().date()
 
