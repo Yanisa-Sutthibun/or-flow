@@ -1133,7 +1133,7 @@ def test_data_analysis_gate_is_fail_closed_and_admin_can_open():
 
 def test_data_analysis_nurse_names_short_and_benner():
     """👩‍⚕️ 3 การ์ด Data analysis (22 พ.ย. 2026) : ยศเปลี่ยนยังเป็นคนเดียวกัน · ชื่อต้น + อักษรแรกนามสกุล ·
-    ปีงบเริ่ม ต.ค. · Novice = เคสแรกอยู่ในปีงบนั้นและไม่เคยพบก่อนหน้า · คะแนนรวมเคส + ชั่วโมง · เคสจบหลัง 16:30"""
+    ปีงบเริ่ม ต.ค. · Novice = เคสแรกอยู่ในปีงบนั้นและไม่เคยพบก่อนหน้า · อันดับเคสกับเวลาแยกกัน · เคสจบหลัง 16:30"""
     import pandas as pd
     import data_analysis as DA
     assert DA.full_key('พ.ต.ท.หญิงสมใจ ใจดี') == DA.full_key('ร.ต.อ.หญิงสมใจ  ใจดี') == 'สมใจ ใจดี'
@@ -1159,7 +1159,8 @@ def test_data_analysis_nurse_names_short_and_benner():
     assert [n['key'] for n in nv] == ['ดาว เด่น'], nv
     assert DA.novices(L, 2568) == [], "ปีงบแรกของข้อมูลหาน้องใหม่ไม่ได้"
     noy = DA.nurse_of_year(L, 2569)
-    assert noy['scrub'][0]['key'] == 'ดาว เด่น' and noy['scrub'][0]['score'] == 100
+    assert noy['scrub']['cases'][0]['key'] == noy['scrub']['hours'][0]['key'] == 'ดาว เด่น'
+    assert noy['scrub']['cases'][1]['key'] == 'สมใจ ใจดี' and 'score' not in noy['scrub']['cases'][0]
     D = DA.deep(C, L, 2569, [n['key'] for n in nv])
     assert D['per'].loc['ดาว เด่น', 'late_pct'] == 100 and D['per'].loc['สมใจ ใจดี', 'late_pct'] == 0
     assert D['pairs'][0]['top3'][0][0] == 'มาลี รักงาน'

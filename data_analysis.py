@@ -120,7 +120,7 @@ def page_data_analysis():
 # ════════════════════════════════════════════════════════════════════════════
 # 🃏 เนื้อหา 3 การ์ด (มุกกี้เคาะ mock-up 21 พ.ย. 2026 · ลงโค้ด 22 พ.ย. 2026)
 #    ใช้ภายในหน่วยงาน ไม่ใช้ในงานวิจัย · นับตามปีงบประมาณ (ปีงบ 2569 = 1 ต.ค. 68 ถึง 30 ก.ย. 69)
-#    1. Nurse of the Year : คะแนนรวมจำนวนเคส + ชั่วโมง น้ำหนักเท่ากัน แยก scrub / circulate
+#    1. Nurse of the Year : อันดับเข้าเคสมากที่สุด กับรวมเวลาในห้องนานที่สุด แยกกัน (ไม่ใช้คะแนน · มุกกี้สั่ง 22 พ.ย. 2026) แยก scrub / circulate
 #    2. Novice : น้องใหม่ตามแนวคิด Novice to Expert ของ Patricia Benner
 #       = เคสแรกที่พบอยู่ในปีงบนั้น และไม่เคยพบในข้อมูลก่อนหน้า (นับเฉพาะ Novice)
 #    3. แนวโน้มการทำงาน + เจาะลึกกำลังคนพยาบาล : แสดงตัวเลขตามที่ปรากฏ (มุกกี้สั่ง 21 พ.ย. 2026)
@@ -221,22 +221,19 @@ def active_keys(L, fy, min_cases=_MIN_CASES):
 
 
 def nurse_of_year(L, fy, min_cases=_MIN_CASES, top=3):
-    """คะแนน = (เคส ÷ เคสสูงสุด + ชั่วโมง ÷ ชั่วโมงสูงสุด) ÷ 2 × 100 เทียบในปีงบและบทบาทเดียวกัน"""
+    """🏆 22 พ.ย. 2026 (มุกกี้สั่ง ไม่ใช้ระบบคะแนน): จัดอันดับ 2 แบบแยกกัน ในปีงบและบทบาทเดียวกัน
+    cases = เข้าเคสมากที่สุด · hours = รวมเวลาในห้องนานที่สุด → {'scrub': {'cases': [...], 'hours': [...]}, 'circ': ...}"""
     out = {}
     act = active_keys(L, fy, min_cases)
     y = L[(L['fy'] == fy) & (L['key'].isin(act))]
     for role in ('scrub', 'circ'):
         g = y[y['role'] == role].groupby('key').agg(cases=('case_id', 'size'), mins=('dur', 'sum'))
-        if g.empty:
-            out[role] = []
-            continue
         g['hours'] = g['mins'] / 60
-        mc, mh = g['cases'].max(), max(g['hours'].max(), 1e-9)
-        g['score'] = ((g['cases'] / mc + g['hours'] / mh) / 2 * 100).round(0)
-        g = g.sort_values(['score', 'cases'], ascending=False)
-        out[role] = [dict(key=k, cases=int(r.cases), hours=float(r.hours), score=int(r.score),
-                          most_cases=bool(r.cases == mc), most_hours=bool(r.hours >= mh - 1e-9))
-                     for k, r in g.head(top).iterrows()]
+        rk = {}
+        for by in ('cases', 'hours'):
+            gg = g.sort_values([by, 'cases' if by == 'hours' else 'hours'], ascending=False).head(top)
+            rk[by] = [dict(key=k, cases=int(r.cases), hours=float(r.hours)) for k, r in gg.iterrows()]
+        out[role] = rk
     return out
 
 
@@ -510,9 +507,9 @@ def _view_hub(C, L):
     nv = novices(L, fy)
     tr = trends(C, L, fy)
     cap = deep(C, L, fy)['capable']
-    sc = noy.get('scrub') or []
-    ci = noy.get('circ') or []
-    hl1 = (f'Scrub ปีงบ {fy} : {_nm(sc[0]["key"])}<br>Circulate ปีงบ {fy} : {_nm(ci[0]["key"])}'
+    sc = (noy.get('scrub') or {}).get('cases') or []
+    ci = (noy.get('circ') or {}).get('cases') or []
+    hl1 = (f'Scrub เคสมากที่สุด ปีงบ {fy} : {_nm(sc[0]["key"])}<br>Circulate เคสมากที่สุด ปีงบ {fy} : {_nm(ci[0]["key"])}'
            if sc and ci else f'ปีงบ {fy} ยังไม่มีข้อมูลพอ')
     hl2 = f'Novice ปีงบ {fy} : {len(nv)} คน<br>กดชื่อเพื่อดูสาขาและหัตถการรายคน'
     chg = ((tr['n_common_now'] - tr['n_common_prev']) / tr['n_common_prev'] * 100) if tr['n_common_prev'] else None
@@ -522,7 +519,7 @@ def _view_hub(C, L):
         hl3 += f'<br>สาขา{_e(few[0][0]).replace("ศัลยกรรม", "")} มีคนเข้าได้ {few[0][1]} คน'
     cards = [
         ('noy', NOY, 'การ์ด 1', 'Nurse of the Year',
-         'ที่สุดของพยาบาลห้องผ่าตัด ตัดสินจากคะแนนรวมของจำนวนเคสและชั่วโมง', hl1, 'ดู Nurse of the Year'),
+         'ที่สุดของพยาบาลห้องผ่าตัด ดูจากจำนวนเคสและเวลาที่เข้าเคส', hl1, 'ดู Nurse of the Year'),
         ('nov', NOV, 'การ์ด 2', 'Novice : น้องใหม่',
          'น้องใหม่ตามแนวคิด Novice to Expert ของ Patricia Benner ทำเคสอะไร สาขาไหนไปบ้าง', hl2, 'ดู Novice'),
         ('tr', TR, 'การ์ด 3', 'แนวโน้มการทำงาน',
@@ -546,25 +543,28 @@ def _back():
 
 
 # ---------- การ์ด 1 : Nurse of the Year ----------
-def _winner_card(fy, role, rows, note) -> str:
-    th = 'Scrub' if role == 'scrub' else 'Circulate'
+def _rank_block(title, rows, unit_of) -> str:
+    """อันดับ 1 ตัวใหญ่ + อันดับ 2-3 · unit_of(r) = ข้อความตัวเลขของแถว"""
     if not rows:
-        return _card(f'{th} nurse of the year', note, '<div class="da-s">ยังไม่มีข้อมูลพอ</div>', minh=290)
+        return f'<div><div class="da-s">{title}</div><div class="da-s">ยังไม่มีข้อมูลพอ</div></div>'
     w = rows[0]
-    badges = ''.join(f'<span style="font-size:12px;background:#EEF4FF;color:#1658B8;border-radius:999px;'
-                     f'padding:3px 10px;margin-right:6px">{t}</span>'
-                     for t, ok in (('เคสมากที่สุด', w['most_cases']), ('รวมนานที่สุด', w['most_hours'])) if ok)
-    rest = ''.join(f'<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;'
-                   f'border-top:1px solid #EEF2F6"><span>อันดับ {i + 2} : {_nm(r["key"])} : {r["cases"]:,} เคส · '
-                   f'{r["hours"]:,.0f} ชม.</span><b>{r["score"]}</b></div>' for i, r in enumerate(rows[1:]))
+    rest = ''.join(f'<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 0;'
+                   f'border-top:1px solid #EEF2F6"><span>{i + 2}. {_nm(r["key"])}</span><b>{unit_of(r)}</b></div>'
+                   for i, r in enumerate(rows[1:]))
     rest += ''.join(f'<div style="font-size:13px;padding:6px 0;border-top:1px solid #EEF2F6;color:#94A3B8">'
-                    f'อันดับ {i + 2} : -</div>' for i in range(len(rows) - 1, 2))
-    body = (f'<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px">'
-            f'<div><div style="font-size:26px;font-weight:700">{_nm(w["key"])}</div>'
-            f'<div style="font-size:14px;color:#3E4C59">{w["cases"]:,} เคส · {w["hours"]:,.0f} ชั่วโมง</div>'
-            f'<div style="margin-top:6px">{badges}</div></div>'
-            f'<div style="text-align:right"><div style="font-size:30px;font-weight:700;color:{_ACC}">{w["score"]}</div>'
-            f'<div class="da-s">คะแนน</div></div></div>{rest}')
+                    f'{i + 2}. -</div>' for i in range(len(rows) - 1, 2))
+    return (f'<div style="display:flex;flex-direction:column;gap:4px"><div class="da-s" style="font-weight:600">{title}</div>'
+            f'<div style="font-size:24px;font-weight:700">{_nm(w["key"])}</div>'
+            f'<div style="font-size:20px;font-weight:700;color:{_ACC};margin-bottom:6px">{unit_of(w)}</div>{rest}</div>')
+
+
+def _winner_card(fy, role, rk, note) -> str:
+    """🏆 22 พ.ย. 2026 (มุกกี้สั่ง ไม่ใช้คะแนน): ซ้าย = เข้าเคสมากที่สุด · ขวา = รวมเวลาในห้องนานที่สุด"""
+    th = 'Scrub' if role == 'scrub' else 'Circulate'
+    body = ('<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px">'
+            + _rank_block('เข้าเคสมากที่สุด', rk.get('cases') or [], lambda r: f'{r["cases"]:,} เคส')
+            + _rank_block('รวมเวลาในห้องนานที่สุด', rk.get('hours') or [], lambda r: f'{r["hours"]:,.0f} ชั่วโมง')
+            + '</div>')
     return _card(f'{th} nurse of the year', note, body, minh=290)
 
 
@@ -574,7 +574,7 @@ def _view_noy(C, L):
     pair = [f for f in (fy - 1, fy) if f in set(C['fy'])]
     _md(f'<div style="margin:4px 0 8px">'
         f'<div><div class="da-sec" style="margin:0">Nurse of the Year</div>'
-        f'<div class="da-s">ปีงบ {fy} = {fy_range_text(fy)} · ตัดสินจากคะแนนรวมของจำนวนเคสและชั่วโมง น้ำหนักเท่ากัน</div></div></div>')
+        f'<div class="da-s">ปีงบ {fy} = {fy_range_text(fy)} · ดูจากจำนวนเคสและเวลาที่เข้าเคส</div></div></div>')
     _kpis([(f'เคสปีงบ {fy}', f'{int((C["fy"] == fy).sum()):,}', 'เคส'),
            (f'พยาบาลที่เข้าเคสปีงบ {fy}', f'{len(active_keys(L, fy))}', 'คน'),
            (f'Novice ปีงบ {fy}', f'{len(novices(L, fy))}', 'คน')])
@@ -585,9 +585,8 @@ def _view_noy(C, L):
         for col, role in zip(cols, ('scrub', 'circ')):
             with col:
                 _md(_winner_card(f, role, res[role], _fy_note(C, f)))
-    _md('<div class="da-s" style="line-height:1.7">คะแนน = (จำนวนเคส ÷ จำนวนเคสสูงสุดของปีงบนั้น + ชั่วโมงรวม ÷ '
-        'ชั่วโมงสูงสุดของปีงบนั้น) ÷ 2 × 100 : เต็ม 100 เทียบเฉพาะในปีงบและบทบาทเดียวกัน · นับ 1 เคสต่อพยาบาล'
-        'ทุกคนที่มีชื่อในช่อง scrub หรือ circulate · ชั่วโมง = เวลาเข้าห้องถึงออกห้อง · '
+    _md('<div class="da-s" style="line-height:1.7">เทียบเฉพาะในปีงบและบทบาทเดียวกัน · นับ 1 เคสต่อพยาบาล'
+        'ทุกคนที่มีชื่อในช่อง scrub หรือ circulate · เวลาในห้อง = เวลาเข้าห้องถึงออกห้อง · '
         f'ตัดชื่อที่พบในปีงบไม่ถึง {_MIN_CASES} เคส</div>')
 
 
