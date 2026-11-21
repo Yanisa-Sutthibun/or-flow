@@ -91,6 +91,11 @@ def upload_staff_mapping() -> int:
     with open(CSV_PATH, encoding='utf-8-sig', newline='') as f:
         raw = [r for r in csv.DictReader(f) if (r.get('masked_code') or '').strip()]
     rows, skipped = [], 0
+    # 🩺 22 พ.ย. 2026 (มุกกี้แจ้ง): ข้อมูลเก่าบางช่วงมีชื่อแพทย์อยู่ในช่อง scrub → ไม่ขึ้นเป็นชื่อพยาบาล
+    from data_analysis import doctor_keys, _DOC_T
+    _docs = doctor_keys({(r.get('masked_code') or '').strip(): r.get('original_name')
+                         for r in raw if (r.get('role') or '').strip().lower() in ('surgeon', 'surg')
+                         or (r.get('masked_code') or '').startswith('SURG_')})
     for r in raw:
         name = (r.get('original_name') or '').strip()
         role = (r.get('role') or '').strip().lower()
@@ -101,8 +106,8 @@ def upload_staff_mapping() -> int:
             # 👩‍⚕️ 21 พ.ย. 2026 (มุกกี้เคาะ): พยาบาลขึ้น cloud เฉพาะ "ชื่อต้น + อักษรแรกนามสกุล"
             #    ชื่อเต็มไม่ออกจากเครื่อง รพ. · ใช้กับแท็บ Data analysis (พยาบาลรายบุคคล)
             from data_analysis import full_key, short_name
-            parts = [full_key(x) for x in name.split(',')]
-            parts = [short_name(k) for k in parts if k]
+            parts = [full_key(x) for x in name.split(',') if not _DOC_T.search(x)]
+            parts = [short_name(k) for k in parts if k and k not in _docs]
             if parts:
                 rows.append((r['role'], r['masked_code'], ', '.join(parts)))
             else:

@@ -147,6 +147,23 @@ def full_key(raw) -> str:
     return _re.sub(r'\s+', ' ', _PREF.sub('', t)).strip()
 
 
+_DOC_T = _re.compile(r'(นพ\.|พญ\.|นายแพทย์|แพทย์หญิง|ทพ\.|ทพญ\.)')
+
+
+def doctor_keys(mapping) -> set:
+    """🩺 22 พ.ย. 2026 (มุกกี้แจ้ง มีชื่อแพทย์โผล่ในรายชื่อพยาบาล): ชื่อย่อของแพทย์ทุกคนใน staff_map
+    ใช้กรองตอนอัปโหลด staff_map (staff_map_sync) : แถวพยาบาลที่ชื่อเต็มตรงกับแพทย์ ไม่ขึ้นเป็นชื่อพยาบาล
+    (ข้อมูลเก่าบางช่วงลงชื่อแพทย์ไว้ในช่อง scrub) · เทียบชื่อเต็ม ไม่เทียบชื่อย่อ (ชื่อย่อชนกับพยาบาลจริงได้)
+    mapping = {รหัส: ชื่อ} · คืน set ของ full_key"""
+    out = set()
+    for code, name in (mapping or {}).items():
+        if str(code).startswith('SURG_'):
+            k = full_key(_DOC_T.sub(' ', str(name or '')))
+            if k:
+                out.add(k)
+    return out
+
+
 def short_name(key: str) -> str:
     """ชื่อต้น + อักษรแรกนามสกุล เช่น 'สมใจ ใจดี' → 'สมใจ ใ.'"""
     parts = key.split(' ')
@@ -171,7 +188,7 @@ def _dt(v):
     return t
 
 
-def prep(raw, div_map=None):
+def prep(raw, div_map=None, exclude=()):
     """raw = แถวเคสจากตาราง cases (unmask แล้ว) → (C ระดับเคส, L ระดับพยาบาลต่อเคส)
     C : case_id date fy dur div start_min end_min late · L : key role case_id date fy dur div proc"""
     import pandas as pd
@@ -204,8 +221,8 @@ def prep(raw, div_map=None):
     for r in df.itertuples(index=False):
         for role, col in (('scrub', 'scrub_nurse'), ('circ', 'circ_nurse')):
             for nm in str(getattr(r, col) or '').split(','):
-                k = full_key(nm)
-                if k:
+                k = '' if _DOC_T.search(nm) else full_key(nm)
+                if k and k not in exclude:
                     rows.append((k, role, r.case_id, r.date, r.fy, r.dur, r.div,
                                  str(getattr(r, 'procedure_name', '') or '').strip()))
     L = pd.DataFrame(rows, columns=['key', 'role', 'case_id', 'date', 'fy', 'dur', 'div', 'proc'])
@@ -467,6 +484,7 @@ def _load():
     finally:
         conn.close()
     raw = apply_to_dataframe(raw)
+    # รหัสพยาบาลที่เป็นชื่อแพทย์ถูกกรองตั้งแต่อัปโหลด staff_map แล้ว → ถอดไม่ออก เหลือเป็นรหัส → full_key ทิ้งเอง
     return prep(raw, DIV_CODE_MAP)
 
 
