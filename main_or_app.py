@@ -915,8 +915,8 @@ def _check_password():
             _is_pg = False
         if _is_pg:
             st.error(
-                "⛔ ระบบยังไม่ได้ตั้งรหัสผ่าน (app_password) : ปิดการเข้าถึงไว้ก่อนเพื่อความปลอดภัย\n\n"
-                "ผู้วิจัย: ไปที่ Streamlit Cloud → App settings → Secrets แล้วเพิ่ม\n"
+                "⛔ ระบบยังไม่ได้ตั้งรหัสผ่าน (app_password) : ปิดการเข้าถึงไว้ก่อนเพื่อความปลอดภัย\r\n\r\n"
+                "ผู้วิจัย: ไปที่ Streamlit Cloud → App settings → Secrets แล้วเพิ่ม\r\n"
                 "`app_password = \"รหัสที่ต้องการ\"` จากนั้น reboot แอป")
             return False
         # local dev (SQLite) — allow access · ถือเป็นผู้ดูแล (เครื่องพัฒนา)
@@ -1178,7 +1178,7 @@ def main():
             st.session_state['_db_inited'] = True
     except Exception as _db_err:
         st.error(
-            "⛔ เชื่อมต่อฐานข้อมูลไม่สำเร็จ\n\n"
+            "⛔ เชื่อมต่อฐานข้อมูลไม่สำเร็จ\r\n\r\n"
             "ลองกดรีเฟรชหน้า (F5) อีกครั้งใน 1 นาที : ถ้ายังไม่หาย "
             "แจ้งผู้วิจัย (Mukky) พร้อมภาพหน้าจอนี้")
         with st.expander("รายละเอียดทางเทคนิค (สำหรับผู้วิจัย)"):
@@ -1286,23 +1286,14 @@ def main():
                 _page_options = _page_options[:3] + [p for p in _page_options[3:] if 'ตั้งค่า' in p]
         else:
             # 🚀 20 พ.ย. 2026 (มุกกี้สั่ง): ระบบจริงเรียงแท็บแบบเดียวกับ DEMO
-            #    ผู้ใช้ทั่วไปเห็น 3 แท็บวิจัย + ตั้งค่าห้องผ่าตัด · จัดคิว AI กับ จอญาติ
-            #    เปิดได้ 2 ทางเหมือน DEMO คือเข้าด้วยรหัสผู้ดูแลระบบ หรือเติม ?menu=all
+            # 🧹 20 พ.ย. 2026 รอบ 2 (มุกกี้สั่ง): จอญาติ กับ จัดคิว AI เอาออกจากระบบจริง (ไม่ได้ใช้)
+            #    เพิ่มแท็บ Data analysis สำหรับหัวหน้าห้องผ่าตัด : ทุกคนเห็นแท็บ แต่เนื้อหาเปิดด้วย
+            #    รหัสเฉพาะ (secret analysis_code ไม่ใช่รหัสผู้ดูแลระบบ) ดู data_analysis.py
             #    (จัดคิวพรุ่งนี้ เป็นของแอป DEMO เท่านั้น ไม่ยกมา)
             from ui_theme import tryout_ui as _tryout_ui_tabs
             if _tryout_ui_tabs():
                 _page_options = ["📋 ตารางผ่าตัด", "📊 ภาพรวมวันนี้", "📈 สถิติย้อนหลัง",
-                                 "🗓️ จัดคิว AI", "📺 จอญาติ (Demo)",
-                                 "⚙️ ตั้งค่าห้องผ่าตัด"]
-                try:
-                    if str(st.query_params.get('menu', '')).lower() == 'all':
-                        st.session_state['_all_tabs'] = True
-                except Exception:
-                    pass
-                if not (st.session_state.get('role') == 'admin'
-                        or st.session_state.get('_all_tabs')):
-                    _page_options = _page_options[:3] + [p for p in _page_options[3:]
-                                                         if 'ตั้งค่า' in p]
+                                 "🔬 Data analysis", "⚙️ ตั้งค่าห้องผ่าตัด"]
     except Exception:
         pass
     # 🚪 โหมดจอประจำห้อง: เหลือ 3 แท็บ (ทำงาน + รับรู้สถานการณ์ + ดูสถิติ)
@@ -1391,6 +1382,9 @@ def main():
     elif page == "🗓️ จัดคิวพรุ่งนี้":
         from tomorrow_plan import page_tomorrow
         page_tomorrow()
+    elif page == "🔬 Data analysis":
+        from data_analysis import page_data_analysis
+        page_data_analysis()
     elif page == "📊 ภาพรวมวันนี้":
         _render_tutorial_bar('today')
         page_admin('today')

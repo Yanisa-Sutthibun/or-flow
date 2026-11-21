@@ -1063,14 +1063,62 @@ def test_tryout_ui_switch_defaults_on_and_can_roll_back():
         st.secrets = {}
 
 
-def test_tutorial_stays_demo_only_on_production():
-    """โหมดสอนการใช้เป็นของแอป DEMO เท่านั้น : ระบบจริงต้องไม่แสดง แม้มีธงค้างใน session"""
+def test_production_tutorial_is_point_only_tour_on_board():
+    """🎓 โหมดสอนของระบบจริง (มุกกี้สั่ง 20 พ.ย. 2026) : เฉพาะหน้า ตารางผ่าตัด ชี้ปุ่มให้ดู ไม่ต้องกดจริง
+    ขั้นฝึกกดและกล่องถามของแอป DEMO ต้องไม่หลุดมา และไม่เปิดเองถ้าผู้ใช้ไม่ได้กดเปิด"""
     _fresh_state()
     st.secrets = {}
-    st.session_state['_or_demo'] = True
+    cs = [_case(id='A', status='not_arrived', room=91, or_room_assigned=91, _demo=False),
+          _case(id='B', status='not_arrived', room=91, or_room_assigned=91, _demo=False),
+          _case(id='C', status='in_or', room=92, or_room_assigned=92, _demo=False)]
+    st.session_state['patient_cases'] = cs
+    # ไม่ได้กดเปิด / ค่าค้าง 'ask' ของ DEMO = ไม่แสดง
+    for _v in (False, 'ask', None):
+        st.session_state['_tut_on'] = _v
+        assert P.render_tutorial('board', cs) == (None, '')
     st.session_state['_tut_on'] = True
-    st.session_state['patient_cases'] = [_case()]
-    assert P.render_tutorial('board', st.session_state['patient_cases']) == (None, '')
+    # หน้าอื่นไม่มีโหมดสอนในระบบจริง
+    assert P.render_tutorial('today', cs) == (None, '')
+    assert P.render_tutorial('history', cs) == (None, '')
+    # ไล่ทุกป้าย : เป้าต้องเป็นเคสที่สถานะตรงกับปุ่มที่ชี้
+    seen_btn = []
+    for i in range(len(P._TUT_PROD)):
+        v = P.tutorial_prod_view(i, cs)
+        seen_btn.append(v['btn'])
+        if v['btn'] == 'รับเข้า':
+            assert v['case']['status'] == 'not_arrived'
+        if v['btn'] == 'เสร็จ':
+            assert v['case'] is cs[2]
+        if v['btn'] == 'คิวถัดไป':
+            assert v['case'] is cs[1], "ต้องชี้เคสที่ไม่ใช่เคสแรกของห้อง"
+        if v['btn'] == 'เข้าห้อง':
+            assert v['case'] is None and v['miss'], "ไม่มีเคสรอผ่าตัด ต้องบอกว่าไม่มีแถวให้ชี้"
+        assert '—' not in v['title'] + v['text'] and 'ฝึกกด' not in v['text']
+    assert seen_btn.count('รับเข้า') == 1 and '⋯' in seen_btn
+    st.session_state['_tut_tour'] = 4
+    row, _h = P.render_tutorial('board', cs)
+    assert row is cs[0]
+    # จอประจำห้องไม่มีโหมดสอน
+    st.session_state['role'] = 'room'
+    assert P.render_tutorial('board', cs) == (None, '')
+
+
+def test_data_analysis_gate_is_fail_closed_and_separate_from_admin():
+    """🔬 แท็บ Data analysis : เปิดด้วยรหัสเฉพาะเท่านั้น ไม่ตั้งรหัส = ปิดสนิท รหัสผู้ดูแลระบบเปิดไม่ได้"""
+    import data_analysis as DA
+    _fresh_state()
+    try:
+        st.secrets = {}
+        assert DA.code_configured() is False and DA.check_code('') is False
+        assert DA.check_code('1234') is False
+        st.secrets = {'analysis_code': 'หัวหน้า-2569', 'admin_pin': '9999'}
+        assert DA.code_configured() is True
+        assert DA.check_code('9999') is False and DA.check_code('') is False
+        assert DA.check_code(' หัวหน้า-2569 ') is True
+        st.session_state['role'] = 'admin'
+        assert DA.is_unlocked() is False, "สิทธิ์ผู้ดูแลระบบไม่ได้เปิดแท็บนี้ให้เอง"
+    finally:
+        st.secrets = {}
 
 
 # ═════════════════════════════ runner ═════════════════════════════

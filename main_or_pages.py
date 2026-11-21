@@ -1656,6 +1656,127 @@ _TUT_WHAT = {
 }
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# 🎓 โหมดสอนการใช้ของระบบจริง (มุกกี้สั่ง 20 พ.ย. 2026)
+# เฉพาะหน้า ตารางผ่าตัด · แบบ tutorial ในเกม : การ์ดลอย + ฉายไฟแถว + นิ้วชี้ปุ่ม
+# ผู้ใช้ "ไม่ต้องกดจริง" เดินด้วยปุ่ม ถัดไป / ย้อนกลับ ในการ์ดเท่านั้น
+# บอร์ดเป็นผู้ป่วยจริง → ระหว่างสอน ปุ่มบนตารางถูกปิดการกดไว้ กันบันทึกเวลาผิดโดยไม่ตั้งใจ
+# เป้าของแต่ละป้ายเลือกจากเคสที่อยู่บนบอร์ดตอนนั้น (ไม่มีเคสในสถานะนั้น = อธิบายอย่างเดียว)
+# ป้ายที่ข้อความซ้ำกับการแนะนำระบบของแอป DEMO ดึงจาก _TUT_TOUR ชุดเดียวกัน (แก้ที่เดียว)
+#   เป้า : head = หัวกลุ่ม · st = สถานะของเคสที่จะฉายไฟ · btn = ปุ่มในแถวที่นิ้วชี้
+# ═══════════════════════════════════════════════════════════════════════
+_PRE = ('not_arrived', 'holding_pre')
+_TUT_PROD = [
+    (_TUT_TOUR[0][0], _TUT_TOUR[0][1], {}),
+    (_TUT_TOUR[2][0], _TUT_TOUR[2][1], {'head': 'ก่อนผ่าตัด'}),
+    (_TUT_TOUR[3][0], _TUT_TOUR[3][1], {'st': _PRE}),
+    (_TUT_TOUR[4][0], _TUT_TOUR[4][1], {'st': _PRE}),
+    ('ปุ่ม รับเข้า',
+     'เมื่อผู้ป่วยมาถึงห้องผ่าตัด ให้กดปุ่ม รับเข้า ที่ท้ายแถวของผู้ป่วยรายนั้น '
+     'ระบบจะบันทึกเวลาและเริ่มจับเวลารอให้เอง', {'st': ('not_arrived',), 'btn': 'รับเข้า'}),
+    ('ปุ่ม เข้าห้อง',
+     'เมื่อนำผู้ป่วยเข้าห้องผ่าตัด ให้กดปุ่ม เข้าห้อง ระบบจะเริ่มนับเวลาเทียบกับเวลาที่แบบจำลองทำนาย '
+     'ถ้าห้องนั้นยังมีเคสผ่าตัดอยู่ ปุ่มจะขึ้นว่า ห้องไม่ว่าง และกดไม่ได้',
+     {'st': ('holding_pre',), 'btn': 'เข้าห้อง'}),
+    ('ปุ่ม คิวถัดไป',
+     'เมื่อแพทย์ขอสลับคิว ให้กดปุ่ม คิวถัดไป ที่แถวของเคสที่จะผ่าตัดก่อน '
+     'เคสนั้นจะเลื่อนขึ้นมาเป็นคิวถัดไปของห้อง', {'st': _PRE, 'btn': 'คิวถัดไป', 'q': 1}),
+    (_TUT_TOUR[6][0], _TUT_TOUR[6][1], {'head': 'ระยะผ่าตัด'}),
+    ('ปุ่ม เสร็จ',
+     'เมื่อผ่าตัดเสร็จ ให้กดปุ่ม เสร็จ แล้วเลือกว่าผู้ป่วยไปห้องรับ-ส่ง หรือไปห้องพักฟื้น',
+     {'st': ('in_or',), 'btn': 'เสร็จ'}),
+    (_TUT_TOUR[7][0], _TUT_TOUR[7][1].split('ต่อจากนี้')[0].strip(), {'head': 'หลังผ่าตัด'}),
+    ('ปุ่ม ✏️ ท้ายแถว',
+     'ถ้ากดผิดหรือต้องการแก้ไข ให้กด ✏️ ที่ท้ายแถว ในนั้นมีปุ่ม เลิกทำ สำหรับย้อนกลับหนึ่งขั้น '
+     'และช่องแก้เวลาทำนายหรือย้ายห้อง', {'st': _PRE + ('in_or',), 'btn': '✏️'}),
+    ('ปุ่ม ⋯ มุมขวาบน',
+     'เครื่องมือที่ใช้วันละครั้งอยู่ในปุ่มนี้ คือ อัปโหลดตารางวันนี้ เพิ่มเคส และวิธีใช้บอร์ด',
+     {'btn': '⋯'}),
+]
+
+
+def tutorial_prod_view(idx, cases) -> dict:
+    """สิ่งที่การ์ดโหมดสอนของระบบจริงต้องแสดงในป้ายที่ idx (logic ล้วน ทดสอบได้โดยไม่มี UI)
+    case = เคสบนบอร์ดที่จะฉายไฟ (None = ไม่มีเคสในสถานะนั้นตอนนี้ หรือป้ายนี้ไม่ชี้แถว)
+    miss = True เมื่อป้ายนี้ควรชี้แถวแต่บนบอร์ดไม่มีเคสให้ชี้"""
+    idx = min(max(0, int(idx or 0)), len(_TUT_PROD) - 1)
+    title, text, tg = _TUT_PROD[idx]
+    case, want = None, tg.get('st')
+    if want:
+        pool = [c for c in (cases or []) if c.get('status') in want]
+        if tg.get('q'):
+            # ปุ่ม คิวถัดไป ไม่ขึ้นที่เคสแรกของห้อง → เลือกเคสที่ไม่ใช่เคสแรกของห้องตัวเองก่อน
+            seen, later = set(), []
+            for c in pool:
+                r = c.get('or_room_assigned') or c.get('room')
+                if r in seen:
+                    later.append(c)
+                seen.add(r)
+            pool = later or pool
+        case = pool[0] if pool else None
+    return {'mode': 'tour', 'title': title, 'text': text, 'btn': tg.get('btn', ''),
+            'head': tg.get('head', ''), 'case': case, 'miss': bool(want and case is None),
+            'pos': idx + 1, 'total': len(_TUT_PROD),
+            'next': 'จบการแนะนำ' if idx == len(_TUT_PROD) - 1 else 'ถัดไป'}
+
+
+def _render_tutorial_prod(page_key, cases):
+    """🎓 การ์ดโหมดสอนของระบบจริง · คืน (เคสเป้าหมาย, '') แบบเดียวกับ render_tutorial"""
+    ss = st.session_state
+    if page_key != 'board' or ss.get('role') == 'room' or ss.get('_tut_on') is not True:
+        return None, ''
+    cases = cases if cases is not None else (ss.get('patient_cases') or [])
+    if not cases:
+        return None, ''
+    _i = min(max(0, int(ss.get('_tut_tour', 0) or 0)), len(_TUT_PROD) - 1)
+    v = tutorial_prod_view(_i, cases)
+    _dots = ''.join(
+        f'<span style="width:22px;height:8px;border-radius:4px;'
+        f'background:{"#2563eb" if k < v["pos"] else "#60a5fa" if k == v["pos"] else "#dbeafe"};"></span>'
+        for k in range(1, v['total'] + 1))
+    with st.container(key='tutcard'):
+        st.markdown(
+            _TUT_CSS
+            # 🔒 ระหว่างสอน ปุ่มบนหน้าจอกดไม่ได้ (ผู้ป่วยจริง) เหลือเฉพาะปุ่มในการ์ดนี้
+            + '<style>.stMain button{pointer-events:none;}'
+              '.st-key-tutcard button{pointer-events:auto;}</style>'
+            + '<div class="tut-do" style="margin-bottom:1rem;">'
+            '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+            '<span style="background:#2563eb;color:#fff;border-radius:999px;padding:2px 12px;'
+            'font-size:14px;font-weight:700;">โหมดสอนการใช้</span>'
+            f'<span style="font-size:15px;color:#1e3a8a;font-weight:700;">แนะนำ {v["pos"]} จาก {v["total"]}</span>'
+            f'<span style="display:flex;gap:4px;">{_dots}</span></div>'
+            f'<div style="font-size:21px;font-weight:800;color:#0f172a;margin-top:6px;">🧭 {v["title"]}</div>'
+            f'<div style="font-size:18px;color:#334155;line-height:1.6;margin-top:2px;">{v["text"]}</div>'
+            '<div style="font-size:15px;color:#64748b;margin-top:4px;">'
+            + ('ตอนนี้บนตารางไม่มีเคสในสถานะนี้ จึงไม่มีแถวให้ชี้'
+               if v['miss'] else 'ดูอย่างเดียว ยังไม่ต้องกดปุ่มบนตาราง')
+            + '</div></div>',
+            unsafe_allow_html=True)
+        if st.button(v['next'], key="tutp_next", type='primary', width='stretch'):
+            if _i < len(_TUT_PROD) - 1:
+                ss['_tut_tour'] = _i + 1
+            else:
+                ss['_tut_on'], ss['_tut_tour'] = False, 0
+            _rerun_board()
+        _c1, _c2, _c3 = st.columns([1, 1.2, 1.8])
+        with _c1:
+            if _i > 0 and st.button("ย้อนกลับ", key="tutp_back"):
+                ss['_tut_tour'] = _i - 1
+                _rerun_board()
+        with _c2:
+            if st.button("ปิดโหมดสอน", key="tutp_off",
+                         help="ซ่อนการ์ดนี้ เปิดใหม่ได้จากปุ่ม เปิดโหมดสอนการใช้ บนหัวตารางผ่าตัด"):
+                ss['_tut_on'], ss['_tut_tour'] = False, 0
+                _rerun_board()
+        import json as _json
+        import streamlit.components.v1 as _stc
+        _stc.html(_TUT_JS.replace('__CFG__', _json.dumps(
+            {'k': f'prod-{_i}', 'tab': '', 'btn': v['btn'], 'head': v['head'], 'tabs': 0, 'pick': ''},
+            ensure_ascii=False)), height=0)
+    return v['case'], ''
+
+
 def _render_tutorial_ask():
     """🙋 กล่องถามกลางจอหลังกดเปิดโหมดสาธิต : เริ่มโหมดสอนการใช้หรือไม่ + อธิบายว่าแต่ละขั้นคืออะไร
     ใช้กล่องในหน้าแทน st.dialog เหตุผลเดียวกับ _render_demo_switch_confirm (บอร์ดอยู่ใน fragment)"""
@@ -1703,8 +1824,12 @@ def render_tutorial(page_key, cases=None):
     ss = st.session_state
     try:
         if str(st.secrets.get('instance_mode', '')).lower() != 'demo':
-            return None, ''
-    except Exception:
+            # 🎓 20 พ.ย. 2026 (มุกกี้สั่ง): ระบบจริงมีโหมดสอนของตัวเอง เฉพาะหน้า ตารางผ่าตัด
+            #    แบบชี้ปุ่มให้ดู ไม่ต้องกดจริง · ขั้นฝึกกดและกล่องถามเป็นของแอป DEMO เท่านั้น
+            return _render_tutorial_prod(page_key, cases)
+    except Exception as _tpx:
+        print(f"[tutorial] โหมดสอนของระบบจริงแสดงไม่สำเร็จ: {_tpx}")
+        ss['_tut_on'] = False        # กันค้าง : การ์ดพังแล้วปุ่มบนจอต้องกลับมากดได้ในรอบถัดไป
         return None, ''
     # 🙋 16 พ.ย. 2026 รอบ 3 (มุกกี้สั่ง): ไม่เปิดโหมดสอนเอง · กดเปิดโหมดสาธิตก่อน แล้วถามว่าจะเริ่มหรือไม่
     #    _tut_on : 'ask' = เพิ่งเปิดโหมดสาธิต รอคำตอบ · True = กำลังสอน · False/ไม่มีค่า = ไม่สอน
@@ -1859,6 +1984,25 @@ def _render_tryout_intro():
         'ที่บอกขั้นตอนทีละขั้นและชี้แถวที่ต้องกด<br>' + 'เมื่อทำครบทั้ง 7 ขั้นตอนแล้ว โปรดตอบแบบสอบถาม SUS ที่ผู้วิจัยแจกให้ โดยประเมินจากความรู้สึกต่อระบบที่เพิ่งทดลองใช้ ไม่มีคำตอบถูกหรือผิด' + '</div>'
         '</div>',
         unsafe_allow_html=True)
+
+
+# 🎬 21 พ.ย. 2026 (มุกกี้สั่ง): วิดีโอสาธิตการใช้ 4 ขั้นแบบ pixel art
+#    ตัวละครและการ์ดเป็นของสมมุติทั้งหมด ไม่มีข้อมูลผู้ป่วยจริง (เข้า git ได้)
+#    วางไว้ 2 จุด : แท็บ วิธีใช้บอร์ด และหน้าบอร์ดว่างของระบบจริง
+_DEMO_VIDEO = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
+                            'assets', 'or_flow_demo.mp4')
+
+
+def _render_demo_video(caption=True):
+    """แสดงวิดีโอสาธิต · ไม่มีไฟล์หรือเล่นไม่ได้ = ข้ามเงียบ ไม่ให้หน้าพัง"""
+    if not _os.path.exists(_DEMO_VIDEO):
+        return
+    try:
+        st.video(_DEMO_VIDEO)
+        if caption:
+            st.caption("วิดีโอสาธิตการใช้ OR Flow ใน 4 ขั้น : 30 วินาที")
+    except Exception as _ex:
+        print(f"[demo_video] แสดงไม่ได้ (ข้าม): {_ex}")
 
 
 def page_or_board():
@@ -2103,7 +2247,16 @@ def _board_fragment():
                 f'<div style="font-size:14px;color:#94a3b8;">{_sub}</div></div>',
                 unsafe_allow_html=True)
         if not _is_demo_instance:
-            pass                      # 🔒 ระบบจริง: ไม่มีปุ่มโหมดสาธิตและโหมดสอน
+            # 🔒 ระบบจริง: ไม่มีปุ่มโหมดสาธิต · 🎓 มีปุ่มเปิดโหมดสอนแบบชี้ปุ่ม (มุกกี้สั่ง 20 พ.ย. 2026)
+            #    ขึ้นเมื่อมีเคสบนตารางแล้วเท่านั้น (ไม่มีแถว = ไม่มีอะไรให้ชี้)
+            if (st.session_state.get('patient_cases')
+                    and st.session_state.get('_tut_on') is not True):
+                with _hb:
+                    if st.button("🎓 เปิดโหมดสอนการใช้", key="orboard_tut_on_hdr", width='stretch',
+                                 help="ระบบจะชี้ให้ดูว่าปุ่มไหนใช้ทำอะไร โดยไม่ต้องกดจริง"):
+                        st.session_state['_tut_on'] = True
+                        st.session_state['_tut_tour'] = 0
+                        _rerun_board()
         elif _confirm in ('on', 'off'):
             _demo_on = _render_demo_switch_confirm(_confirm, _demo_on)
         elif not _demo_on:
@@ -2293,6 +2446,7 @@ def _board_fragment():
                     ("- **✏️** = แก้เวลาทำนายการใช้ห้องหรือย้ายห้อง",
                      "- **✏️** ท้ายแถว = แก้เวลาทำนายการใช้ห้อง ย้ายห้อง หรือดู HN")):
                 _txt = _txt.replace(_a, _b)
+        _render_demo_video()
         st.markdown(_txt)
 
     # ---------- 🧰 เครื่องมือ — มุคกี้สั่ง 5 ส.ค. 2026: ยุบ 3 แถวเหลือแถวเดียว ----------
@@ -2346,17 +2500,23 @@ def _board_fragment():
                     "- อัปโหลดตารางจาก HIS ที่ปุ่ม **⋯** มุมขวาบน "
                     "แท็บ อัปโหลดตารางวันนี้ (แนะนำไฟล์ Excel)\n"
                     "- หรือเพิ่มเคสเองที่แท็บ **เพิ่มเคส**")
+            _vc, _ = st.columns([1, 1])
+            with _vc:
+                _render_demo_video()
         else:
             st.info("ยังไม่มีเคสบนบอร์ดวันนี้\n\n"
                     "- อัปโหลดตารางจาก HIS ที่ **🧰 เครื่องมือ** ด้านบน "
                     "แท็บ 📤 อัปโหลดตารางวันนี้ (แนะนำไฟล์ Excel)\n"
                     "- หรือเพิ่มเคสเองที่แท็บ **➕ เพิ่มเคส (Manual)**")
+            _vc, _ = st.columns([1, 1])
+            with _vc:
+                _render_demo_video()
         return
 
     # 🎓 16 พ.ย. 2026 (มุกกี้สั่ง): โหมดสอนการใช้ของแอป DEMO : แถบภารกิจเหนือบอร์ด
     #    อยู่ใน fragment เพื่อให้กดปุ่มบนบอร์ดแล้วแถบขยับขั้นทันที
     _tut_row, _tut_hint = (None, '')
-    if _is_demo_instance and _mini_hdr:
+    if _mini_hdr:      # 🎓 20 พ.ย. 2026: ระบบจริงมีโหมดสอนด้วย (render_tutorial แยกเส้นทางเอง)
         try:
             _tut_row, _tut_hint = render_tutorial('board', cases)
         except Exception as _tx:
