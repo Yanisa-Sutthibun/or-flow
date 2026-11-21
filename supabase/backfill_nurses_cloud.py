@@ -10,7 +10,10 @@
 หมายเหตุ: เขียนลง DB ตาม db_mode ใน secrets (supabase) — ใช้ connection/รหัสของมุ้กกเอง
 
 ใช้:
-  python supabase/backfill_nurses_cloud.py  <intraopปี68.xls>  <intraopปี69.xls>
+  python supabase/backfill_nurses_cloud.py  <intraopปี68.xls>  <intraopปี69.xls> --dry-run   # นับอย่างเดียว ไม่เขียน
+  python supabase/backfill_nurses_cloud.py  <intraopปี68.xls>  <intraopปี69.xls>             # เขียนจริง + mask
+🧪 22 พ.ย. 2026 (มุกกี้สั่ง ให้แท็บ Data analysis ใช้ชื่อพยาบาลจาก intraop ปี 68-69):
+   เพิ่ม --dry-run เพราะฐานข้อมูลชุด 1 ม.ค. 68 ถึง 21 พ.ค. 69 (year68_69_completed.csv) ไม่มีคอลัมน์ชื่อพยาบาล
 """
 from __future__ import annotations
 
@@ -22,7 +25,8 @@ sys.path.insert(0, str(ROOT))
 
 
 def main():
-    files = [a for a in sys.argv[1:] if a]
+    dry = '--dry-run' in sys.argv
+    files = [a for a in sys.argv[1:] if a and not a.startswith('--')]
     if not files:
         print("ใช้:  python supabase/backfill_nurses_cloud.py <ไฟล์ intraop> [เพิ่มได้หลายไฟล์]")
         sys.exit(1)
@@ -45,7 +49,13 @@ def main():
             continue
         print(f"\n→ {Path(p).name}")
         try:
-            res = reimport_timestamps(p)   # dry_run=False → เขียนจริง
+            res = reimport_timestamps(p, dry_run=dry)
+            if dry:
+                n_match = len(res.get('samples') or [])
+                total_updated += n_match
+                print(f"   [DRY-RUN] จับคู่เคสในฐานข้อมูลได้ {n_match} เคส จาก {res.get('total', 0)} แถว · "
+                      f"ไม่เจอใน DB {res.get('not_found', 0)} แถว (ยังไม่เขียนอะไร)")
+                continue
             up = res.get("updated", 0)
             total_updated += up
             print(f"   เติมเวลา/พยาบาล: อัปเดต {up} เคส · "
@@ -53,6 +63,9 @@ def main():
         except Exception as e:
             print(f"   ⚠️ ข้าม (error): {e}")
 
+    if dry:
+        print(f"\n[DRY-RUN] รวมจับคู่ได้ {total_updated} เคส · ยังไม่เขียนฐานข้อมูล ถ้าตัวเลขโอเค รันซ้ำโดยไม่ใส่ --dry-run")
+        return
     print("\n🎭 mask ชื่อหมอ/พยาบาลจริง → รหัส ...")
     try:
         n = mask_unmasked_staff()
