@@ -453,14 +453,15 @@ def _fmt(v, d=0):
 @st.cache_data(ttl=900, show_spinner="กำลังโหลดข้อมูลจากฐานข้อมูล…")
 def _load():
     import pandas as pd
-    from main_or_db import get_conn, DIV_CODE_MAP
+    # 📊 ข้อมูลจริงชุดเดียวกับหน้าสถิติย้อนหลัง (ตาราง cases · สถานะเคสที่จบแล้วชุดเดียวกัน) ไม่มีข้อมูลสมมติปน
+    from main_or_db import get_conn, DIV_CODE_MAP, _DONE_STATUSES
     from staff_unmask import apply_to_dataframe
     conn = get_conn()
     try:
         raw = pd.read_sql_query(
             "SELECT case_id, op_date, procedure_name, division_code, scrub_nurse, circ_nurse, "
             "actual_duration_min, in_or_at, op_end_at FROM cases "
-            "WHERE status IN ('in_or','post_op','discharged') "
+            f"WHERE status IN {_DONE_STATUSES} "
             "AND (scrub_nurse IS NOT NULL OR circ_nurse IS NOT NULL)", conn)
     finally:
         conn.close()
