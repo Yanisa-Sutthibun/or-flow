@@ -24,6 +24,31 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 
+def _adapt_history(path):
+    """ไฟล์ปี 64-67 (data/historical/main_or_history.csv) ใช้ชื่อคอลัมน์ opedate_intra / orroom_intra
+    → เขียนสำเนาชั่วคราวข้างไฟล์เดิมที่เปลี่ยนชื่อเป็น opedate / orroom ให้ reimport_timestamps อ่านได้
+    (มีชื่อผู้ป่วย : อยู่ในเครื่องเท่านั้น ลบทิ้งทันทีหลังใช้) · ไฟล์ intraop ปกติคืนตามเดิม"""
+    if not str(path).lower().endswith('.csv'):
+        return path, None
+    import pandas as pd
+    try:
+        head = pd.read_csv(path, nrows=0, encoding='utf-8-sig').columns
+    except Exception:
+        return path, None
+    if 'opedate' in head or 'opedate_intra' not in head or 'orroom_intra' not in head:
+        return path, None
+    df = pd.read_csv(path, dtype=str, encoding='utf-8-sig')
+    df = df.drop(columns=[c for c in ('opedate', 'orroom') if c in df.columns])
+    df = df.rename(columns={'opedate_intra': 'opedate', 'orroom_intra': 'orroom'})
+    for c in ('roomtimein', 'roomtimeout', 'arrivtime'):      # '163000.0' → '163000' (ตัวแปลงเวลาอ่านเลขทศนิยมไม่ได้)
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors='coerce').map(lambda v: '' if pd.isna(v) else str(int(v)))
+    tmp = str(Path(path).with_name(Path(path).stem + '_tmp_backfill.csv'))
+    df.to_csv(tmp, index=False, encoding='utf-8-sig')
+    print(f"   ไฟล์ปี 64-67 : ใช้คอลัมน์ opedate_intra / orroom_intra ({len(df):,} แถว)")
+    return tmp, tmp
+
+
 def main():
     dry = '--dry-run' in sys.argv
     files = [a for a in sys.argv[1:] if a and not a.startswith('--')]
@@ -48,8 +73,9 @@ def main():
             print(f"  ❌ ไม่เจอไฟล์: {p}")
             continue
         print(f"\n→ {Path(p).name}")
+        p_use, tmp = _adapt_history(p)
         try:
-            res = reimport_timestamps(p, dry_run=dry)
+            res = reimport_timestamps(p_use, dry_run=dry)
             if dry:
                 n_match = len(res.get('samples') or [])
                 total_updated += n_match
@@ -62,6 +88,9 @@ def main():
                   f"ไม่เจอใน DB {res.get('not_found', 0)} เคส")
         except Exception as e:
             print(f"   ⚠️ ข้าม (error): {e}")
+        finally:
+            if tmp:
+                Path(tmp).unlink(missing_ok=True)
 
     if dry:
         print(f"\n[DRY-RUN] รวมจับคู่ได้ {total_updated} เคส · ยังไม่เขียนฐานข้อมูล ถ้าตัวเลขโอเค รันซ้ำโดยไม่ใส่ --dry-run")
