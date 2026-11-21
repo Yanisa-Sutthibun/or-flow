@@ -942,6 +942,7 @@ def _check_password():
         return True
 
     # 🔐 21 พ.ย. 2026 (มุกกี้เลือกแบบ B 20 พ.ย.): แผงซ้ายข้อมูลวันนี้ + พยาบาล pixel + รู้หรือไม่ · ฟอร์มขวา
+    #    ฟอร์มขวาแบบ C ทักทายตามเวร ไม่บอกชื่อหน่วยงาน (มุกกี้เลือก 22 พ.ย. 2026)
     from login_page import render_left_panel, render_form_head
     _l, _c = st.columns([1.15, 1], gap='large', vertical_alignment='center')
     with _l:
@@ -964,9 +965,8 @@ def _check_password():
                         unsafe_allow_html=True)
             pwd = st.text_input("รหัสผ่าน", type="default",
                                 autocomplete="off",
-                                placeholder="กรอกรหัสผ่าน",
+                                placeholder="กรอกรหัสผ่านเพื่อเริ่มงาน",
                                 disabled=bool(_lock_left))
-            st.caption("ใช้รหัสที่ได้รับจากผู้วิจัย")
             submit = st.form_submit_button(
                 "เข้าสู่ระบบ", use_container_width=True, type='primary',
                 disabled=bool(_lock_left))
