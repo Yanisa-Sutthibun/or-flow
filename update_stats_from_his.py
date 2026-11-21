@@ -56,17 +56,61 @@ def _month_table(title, counter):
         print(f"    {_TH_MON[int(ym[5:7])]:>5} {int(ym[:4]) + 543} : {counter[ym]:>5} เคส")
 
 
+def _read_intraop(path):
+    """intraop เป็น .csv (ชุดปี 69 ใหม่) หรือ .xls/.xlsx (ชุดปี 68 และ 69 ชุดเก่า) → (header, rows, info)
+    📄 21 พ.ย. 2026 (มุกกี้สั่งเติมสถิติปี 64-69): ไฟล์ .xls อ่านด้วย pandas วันที่ออกมาเป็น ISO อยู่แล้ว
+    ชื่อคอลัมน์ซ้ำที่ pandas เติม .1 ถูกถอดกลับเป็นชื่อเดิม ให้หาตำแหน่งด้วย his_csv.col ได้เหมือน csv"""
+    import his_csv as HC
+    if str(path).lower().endswith('.csv'):
+        return HC.read_table(path)
+    import re as _re
+    if str(path).lower().endswith('.xlsx'):
+        import pandas as pd
+        xl = pd.read_excel(path, engine='openpyxl', dtype=str).fillna('')
+        header = [_re.sub(r'\.\d+$', '', str(c)).strip() for c in xl.columns]
+        rows = [[str(v) for v in row] for row in xl.values.tolist()]
+    else:
+        # .xls : อ่านด้วย xlrd ตรง ๆ ไม่ผ่าน pandas (pandas บังคับ xlrd 2.0.1 ขึ้นไป
+        # แต่เครื่องที่รันจริงมี xlrd 1.2.0 · เขียนแบบนี้ใช้ได้ทั้งสองรุ่น)
+        import xlrd
+        book = xlrd.open_workbook(path, logfile=open(os.devnull, 'w'))
+        sh = book.sheet_by_index(0)
+
+        def _cell(c):
+            if c.ctype == xlrd.XL_CELL_DATE:
+                return xlrd.xldate_as_datetime(c.value, book.datemode).strftime('%Y-%m-%d %H:%M:%S')
+            if c.ctype == xlrd.XL_CELL_NUMBER:
+                return str(int(c.value)) if float(c.value).is_integer() else str(c.value)
+            if c.ctype in (xlrd.XL_CELL_EMPTY, xlrd.XL_CELL_BLANK):
+                return ''
+            return str(c.value)
+        header = [str(v).strip() for v in sh.row_values(0)]
+        rows = [[_cell(c) for c in sh.row(i)] for i in range(1, sh.nrows)]
+    return header, rows, {'rejoined': 0, 'bad': 0, 'wrapped': False, 'blank': 0}
+
+
+def _date_order(values):
+    """'DMY' / 'MDY' จาก his_csv · ถ้าทั้งคอลัมน์เป็น ISO (ไฟล์ .xls) คืน 'ISO' (to_iso รับ ISO ได้เอง)"""
+    import his_csv as HC
+    import re as _re
+    vals = [str(v or '') for v in values]
+    if not any(_re.match(r'^\s*\d{1,2}/\d{1,2}/\d{4}', v) for v in vals):
+        if any(_re.match(r'^\d{4}-\d{2}-\d{2}', v.strip()) for v in vals):
+            return 'ISO'
+    return HC.detect_date_order(vals)
+
+
 def load_files(sched_path, intra_path):
     """อ่าน 2 ไฟล์ผ่าน his_csv → dict ของแถว + วันที่ ISO + รายงานคุณภาพไฟล์ (ไม่พิมพ์เนื้อหาแถว)"""
     import his_csv as HC
     sh, srows, sinfo = HC.read_table(sched_path)
-    ih, irows, iinfo = HC.read_table(intra_path)
+    ih, irows, iinfo = _read_intraop(intra_path)
     s_op = HC.col(sh, 'opedate')
     i_op = HC.col(ih, 'opedate')
     if s_op < 0 or i_op < 0 or HC.col(ih, 'roomtimein') < 0 or HC.col(sh, 'icd9cm_name') < 0:
         sys.exit("⛔ ไฟล์ไม่ใช่รูปแบบที่คาดไว้ : เช็กว่าใส่ ตารางผ่าตัด ก่อน แล้วตามด้วย intraop")
-    s_order = HC.detect_date_order(r[s_op] for r in srows)
-    i_order = HC.detect_date_order(r[i_op] for r in irows)
+    s_order = _date_order(r[s_op] for r in srows)
+    i_order = _date_order(r[i_op] for r in irows)
     s_iso = [HC.to_iso(r[s_op], s_order) for r in srows]
     i_iso = [HC.to_iso(r[i_op], i_order) for r in irows]
     return dict(sh=sh, srows=srows, sinfo=sinfo, s_order=s_order, s_iso=s_iso,
@@ -132,7 +176,7 @@ def insert_cases(F, tset):
     for _c, _t in (('age', 'REAL'), ('ai_model_ver', 'TEXT')):
         if _c not in _cols:
             conn.execute(f"ALTER TABLE cases ADD COLUMN {_c} {_t}")
-    n_ins = n_dup = n_nosched = n_baddur = 0
+    n_ins = n_dup = n_nosched = n_baddur = n_notime = 0
     # เรียงตามวัน แล้ว commit ทีละวัน : วันหนึ่งเข้าครบทั้งวันหรือไม่เข้าเลย
     # (กติกาข้ามวันที่มีข้อมูลแล้ว จะพังถ้าปล่อยให้วันไหนเข้าครึ่งเดียว) ล้มกลางทางรันซ้ำได้
     todo = sorted(((r, d) for r, d in zip(F['irows'], F['i_iso']) if d in tset),
@@ -176,6 +220,15 @@ def insert_cases(F, tset):
             out_ts = _ts(out_iso, g(r, I['roomtimeout']))
             arr_ts = _ts(HC.to_iso(g(r, I['arrivdate']), F['i_order']) or op_date,
                          g(r, I['arrivtime']))
+            if not in_ts or not out_ts:
+                # ไม่มีเวลาเข้าหรือออกห้อง = HIS ไม่ได้บันทึกว่าผ่าตัดจริง (เลื่อน ยกเลิก หรือบันทึกไม่ครบ)
+                # ไม่นับเป็นเคสผ่าตัดเสร็จ (เกณฑ์เดียวกับ finetune_pipeline._parse_intraop ที่ตัดแถวไม่มีเวลา)
+                n_notime += 1
+                if s is not None:
+                    cand.insert(0, s)                  # คืนแถวตารางผ่าตัดให้เคสอื่นของคนเดียวกันในวันนั้น
+                else:
+                    n_nosched -= 1
+                continue
             dur = wait = None
             try:
                 if in_ts and out_ts:
@@ -236,7 +289,31 @@ def insert_cases(F, tset):
         raise
     finally:
         conn.close()
-    return n_ins, n_dup, n_nosched, n_baddur
+    return n_ins, n_dup, n_nosched, n_baddur, n_notime
+
+
+def overview(title="ฐานข้อมูลทั้งหมด แยกปี (ทั้งหมด / ผ่าตัดเสร็จ)"):
+    """📊 จำนวนแถวในตาราง cases แยกปี (อ่านอย่างเดียว) · คืน dict {ปี ค.ศ.: (ทั้งหมด, ผ่าตัดเสร็จ)}"""
+    from main_or_db import get_conn
+    conn = get_conn()
+    try:
+        rows = [tuple(r) for r in conn.execute(
+            "SELECT substr(op_date,1,4), COUNT(*), "
+            "SUM(CASE WHEN status='discharged' THEN 1 ELSE 0 END), MIN(op_date), MAX(op_date) "
+            "FROM cases GROUP BY substr(op_date,1,4)").fetchall()]
+    finally:
+        conn.close()
+    print(title)
+    if not rows:
+        print("    (ตาราง cases ว่าง)")
+    out = {}
+    for y, n, nd, d0, d1 in sorted(rows, key=lambda r: str(r[0])):
+        try:
+            print(f"    พ.ศ. {int(y) + 543} : {n:>6} / {nd or 0:>6}   ({_th(str(d0))} ถึง {_th(str(d1))})")
+        except (TypeError, ValueError):
+            print(f"    ปีอ่านไม่ออก ({y!r}) : {n} แถว")
+        out[str(y)] = (int(n), int(nd or 0))
+    return out
 
 
 def main():
@@ -255,7 +332,7 @@ def main():
 
     import his_csv as HC
     F = load_files(sched_path, intra_path)
-    _ord = {'DMY': 'วัน/เดือน/ปี', 'MDY': 'เดือน/วัน/ปี'}
+    _ord = {'DMY': 'วัน/เดือน/ปี', 'MDY': 'เดือน/วัน/ปี', 'ISO': 'ปี-เดือน-วัน'}
 
     from db_connection import IS_POSTGRES, DB_SCHEMA
     print("=" * 66)
@@ -278,9 +355,12 @@ def main():
 
     # ── ช่วงที่จะนำเข้า ──
     d_from = _opt('--from') or f_min
-    _last_full = (date.fromisoformat(f_max) - timedelta(days=1)).isoformat()
+    # วันสุดท้ายในไฟล์ถือว่ายังไม่ครบวัน เฉพาะเมื่อไฟล์จบใกล้วันนี้ (ไฟล์ export สด)
+    # ไฟล์ย้อนหลังทั้งปี (เช่นปี 68 จบ 31 ธ.ค.) นำเข้าครบถึงวันสุดท้าย
+    _fresh = (date.today() - date.fromisoformat(f_max)).days <= 3
+    _last_full = (date.fromisoformat(f_max) - timedelta(days=1)).isoformat() if _fresh else f_max
     d_until = _opt('--until') or _last_full
-    if not _opt('--until'):
+    if _fresh and not _opt('--until'):
         print(f"    วันสุดท้ายในไฟล์ ({_th(f_max)}) ถือว่ายังไม่ครบวัน : นำเข้าถึง {_th(d_until)}")
 
     # ── ฐานข้อมูลมีอะไรอยู่แล้ว ──
@@ -308,13 +388,17 @@ def main():
     tset = set(target)
     n_intra = sum(1 for d in F['i_iso'] if d in tset)
     n_sched = sum(1 for d in F['s_iso'] if d in tset)
-    new_month = collections.Counter(d[:7] for d in F['i_iso'] if d in tset)
+    new_month = collections.Counter(d[:7] for d in F['i_iso'] if d in tset)   # นับแถว intraop ทั้งหมดของวันเป้าหมาย
     print("③ แผนนำเข้า")
     print(f"    ช่วง {_th(d_from)} ถึง {_th(d_until)} : {len(in_range)} วันที่มีเคสในไฟล์")
     print(f"    ข้าม {len(skipped)} วันที่ฐานข้อมูลมีแล้ว"
           + (f" ({_th(skipped[0])} ถึง {_th(skipped[-1])})" if skipped else ""))
-    print(f"    นำเข้า {len(target)} วัน : ตารางผ่าตัด {n_sched} แถว · ผ่าตัดจริง {n_intra} เคส")
-    _month_table("    เคสผ่าตัดจริงที่จะเพิ่ม แยกเดือน", new_month)
+    _ti, _to = HC.col(F['ih'], 'roomtimein'), HC.col(F['ih'], 'roomtimeout')
+    n_notime = sum(1 for r, d in zip(F['irows'], F['i_iso'])
+                   if d in tset and not (_hhmm(r[_ti]) and _hhmm(r[_to])))
+    print(f"    นำเข้า {len(target)} วัน : ตารางผ่าตัด {n_sched} แถว · แถว intraop {n_intra} "
+          f"(ไม่มีเวลาเข้าออกห้อง ไม่นำเข้า {n_notime}) · จะเพิ่มราว {n_intra - n_notime} เคส")
+    _month_table("    แถว intraop ของวันที่จะนำเข้า แยกเดือน", new_month)
     # วันที่ในฐานข้อมูลมีบางส่วน (เช่นวันที่ใช้ระบบสด) : บอกให้เห็น ไม่แก้ให้
     _i_day = collections.Counter(d for d in F['i_iso'] if d)
     _thin = [d for d in skipped if db_days[d] < 0.5 * _i_day[d]]
@@ -335,9 +419,10 @@ def main():
     print("④ นำเข้าเคสที่ผ่าตัดจริง + ทำนายเวลา")
     from main_or_db import mask_unmasked_staff
     try:
-        n_ins, n_dup, n_nosched, n_baddur = insert_cases(F, tset)
+        n_ins, n_dup, n_nosched, n_baddur, n_notime = insert_cases(F, tset)
         print(f"    เพิ่ม {n_ins} เคส · ซ้ำกับที่มีอยู่ {n_dup} · "
-              f"ไม่มีแถวในตารางผ่าตัด {n_nosched} · เวลาครองห้องใช้ไม่ได้ (เว้นว่าง) {n_baddur}")
+              f"ไม่มีแถวในตารางผ่าตัด {n_nosched} · เวลาครองห้องใช้ไม่ได้ (เว้นว่าง) {n_baddur} · "
+              f"ไม่มีเวลาเข้าออกห้อง (ไม่นำเข้า) {n_notime}")
     finally:
         # 🎭 ต้องรันเสมอ แม้ขั้นบนล้มกลางทาง : กันชื่อจริงค้างบนคลาวด์
         print("⑤ แปลงชื่อแพทย์และพยาบาลเป็นรหัส")
