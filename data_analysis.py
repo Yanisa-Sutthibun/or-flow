@@ -255,6 +255,10 @@ def nurse_of_year(L, fy, min_cases=_MIN_CASES, top=3):
     return out
 
 
+# 🙈 22 พ.ย. 2026 (มุกกี้สั่ง: "เอาระบบ novice ออกไปก่อน"): ข้อมูลยังแยกไม่ได้ว่าใครเป็นน้องใหม่จริง
+#    (มีชื่อคนเก่าและคนนอกหน่วยปน) → หน้านี้เหลือ 2 การ์ด Nurse of the Year กับ แนวโน้มการทำงาน
+#    โค้ด novices() และ _view_nov ยังอยู่ครบ · จะเปิดคืน เปลี่ยนเป็น True
+_SHOW_NOVICE = False
 _NOV_FY_MIN = 2568   # สถิติน้องใหม่เริ่มที่ปีงบนี้ (มุกกี้สั่ง 22 พ.ย. 2026)
 _NOV_DAYS = 365      # น้องใหม่ = ประสบการณ์น้อยกว่า 1 ปี นับจากเคสแรก
 
@@ -537,7 +541,7 @@ def _view_hub(C, L):
     from da_sprites import NOY, NOV, TR
     fy = _default_fy(C)
     noy = nurse_of_year(L, fy)
-    nv = novices(L, fy)
+    nv = novices(L, fy) if _SHOW_NOVICE else []
     tr = trends(C, L, fy)
     cap = deep(C, L, fy)['capable']
     sc = (noy.get('scrub') or {}).get('cases') or []
@@ -557,9 +561,12 @@ def _view_hub(C, L):
          'น้องใหม่ตามแนวคิด Novice to Expert ของ Patricia Benner ทำเคสอะไร สาขาไหนไปบ้าง', hl2, 'ดู Novice'),
         ('tr', TR, 'การ์ด 3', 'แนวโน้มการทำงาน',
          'แนวโน้มเทียบปีต่อปี และเจาะลึกกำลังคนพยาบาล : ช่วงเวลาที่งานหนาแน่น พยาบาล × สาขา เคสจบเย็น '
-         'การกระจายงาน สมดุล scrub กับ circulate และทีมคู่ของน้องใหม่', hl3, 'ดูแนวโน้ม'),
+         'การกระจายงาน และสมดุล scrub กับ circulate', hl3, 'ดูแนวโน้ม'),
     ]
-    cols = st.columns(3)
+    if not _SHOW_NOVICE:
+        cards = [(v, svg, f'การ์ด {i}', *rest)
+                 for i, (v, svg, _tag, *rest) in enumerate((c for c in cards if c[0] != 'nov'), 1)]
+    cols = st.columns(len(cards))
     for col, (v, svg, tag, title, desc, hl, btn) in zip(cols, cards):
         with col:
             _md(f'<div class="da-hub"><div class="px">{svg}</div><div class="da-tag">{tag}</div>'
@@ -609,8 +616,8 @@ def _view_noy(C, L):
         f'<div><div class="da-sec" style="margin:0">Nurse of the Year</div>'
         f'<div class="da-s">ปีงบ {fy} = {fy_range_text(fy)} · ดูจากจำนวนเคสและเวลาที่เข้าเคส</div></div></div>')
     _kpis([(f'เคสปีงบ {fy}', f'{int((C["fy"] == fy).sum()):,}', 'เคส'),
-           (f'พยาบาลที่เข้าเคสปีงบ {fy}', f'{len(active_keys(L, fy))}', 'คน'),
-           (f'Novice ปีงบ {fy}', f'{len(novices(L, fy))}', 'คน')])
+           (f'พยาบาลที่เข้าเคสปีงบ {fy}', f'{len(active_keys(L, fy))}', 'คน')]
+          + ([(f'Novice ปีงบ {fy}', f'{len(novices(L, fy))}', 'คน')] if _SHOW_NOVICE else []))
     # 🃏 22 พ.ย. 2026 (มุกกี้สั่ง ดูสมดุลการ์ด): แต่ละปีงบเป็น 1 แถว scrub | circulate คู่กัน สูงเท่ากัน · ปีที่เลือกขึ้นก่อน
     for f in sorted(pair, reverse=True):
         res = nurse_of_year(L, f)
@@ -705,7 +712,7 @@ def _legend(items) -> str:
 def _view_tr(C, L):
     _back()
     fy = _pick_fy(C, 'da_fy_tr')
-    nv = novices(L, fy)
+    nv = novices(L, fy) if _SHOW_NOVICE else []
     nvk = [n['key'] for n in nv]
     T = trends(C, L, fy, nvk)
     D = deep(C, L, fy, nvk)
@@ -869,7 +876,7 @@ def _view_tr(C, L):
             labs = ''.join(f'<div style="font-size:11px;color:#5B6B7B;text-align:center">{x}</div>' for x in bl)
             q = per['cases'].quantile([0.25, 0.5, 0.75])
             _md(_card(f'ครึ่งหนึ่งเข้าเคสเกิน {q[0.5]:,.0f} ครั้งต่อปี · น้อยสุด {per["cases"].min():,} มากสุด {per["cases"].max():,} ครั้ง',
-                      f'จำนวนพยาบาลตามช่วงจำนวนครั้งที่เข้าเคส ปีงบ {fy} ({len(per)} คน) · สีเขียว = น้องใหม่',
+                      f'จำนวนพยาบาลตามช่วงจำนวนครั้งที่เข้าเคส ปีงบ {fy} ({len(per)} คน)' + (' · สีเขียว = น้องใหม่' if _SHOW_NOVICE else ''),
                       f'<div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;align-items:end">{cols}</div>'
                       f'<div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px">{labs}</div>',
                       f'กลุ่มกลาง 50% อยู่ที่ {q[0.25]:,.0f}-{q[0.75]:,.0f} ครั้ง · กลุ่มต่ำกว่า 100 ครั้งอาจเป็นคนที่ย้ายเข้า-ออกกลางปี ลา '
@@ -890,7 +897,7 @@ def _view_tr(C, L):
             lst = ' · '.join(f'{_nm(k)} {r["scrub_pct"]:.0f}%' for k, r in nvs.iterrows())
             _md(_card((f'น้องใหม่ {n70} ใน {len(nvs)} คนเป็น scrub เกิน 70% ของเคส · ' if n70 else '')
                       + f'ภาพรวมกลางอยู่ที่ {med:.0f}%',
-                      f'สัดส่วนเคสที่เป็น scrub ต่อเคสทั้งหมดของแต่ละคน ปีงบ {fy} · 1 จุด = 1 คน · สีเขียว = น้องใหม่',
+                      f'สัดส่วนเคสที่เป็น scrub ต่อเคสทั้งหมดของแต่ละคน ปีงบ {fy} · 1 จุด = 1 คน' + (' · สีเขียว = น้องใหม่' if _SHOW_NOVICE else ''),
                       f'<div style="position:relative;height:{hF}px;margin:6px 6px 0"><div style="position:absolute;'
                       f'left:{med:.1f}%;top:0;bottom:0;border-left:1.5px dashed #5B6B7B"></div>{dots}</div>'
                       '<div style="display:flex;justify-content:space-between;font-size:11px;color:#5B6B7B;'
@@ -938,4 +945,7 @@ def _render_body():
         st.info("ยังไม่มีข้อมูลชื่อพยาบาลในฐานข้อมูล")
         return
     v = st.session_state.get(_K_VIEW, 'hub')
-    {'noy': _view_noy, 'nov': _view_nov, 'tr': _view_tr}.get(v, _view_hub)(C, L)
+    _views = {'noy': _view_noy, 'tr': _view_tr}
+    if _SHOW_NOVICE:
+        _views['nov'] = _view_nov
+    _views.get(v, _view_hub)(C, L)
