@@ -3665,6 +3665,80 @@ def _hist_sec_eff(date_from, date_to, data=None):
                        "เส้นประ = ค่าเฉลี่ย · "
                        "ดูชั่วโมง OT ในตาราง 'สรุปรายเดือน' ด้านล่าง")
 
+    # ════════════════════════════════════════════════════════════════
+    # 🚚 22 พ.ย. 2026 (มุคกี้สั่ง): ย้ายบล็อกนี้มาจากหมวดเคสนอกเวลา ให้อยู่กับสถิติรับเวร
+    # ⏱️ เคสรับเวร (ผ่าตัดจบหลัง 15:30 · ไม่นับนอกเวลา) — เวลาจาก intraop
+    # ════════════════════════════════════════════════════════════════
+    st.markdown('<div class="sub-title">⏱️ เคสรับเวร (ผ่าตัดจบหลัง 15:30 น. · ไม่นับเป็นนอกเวลา)</div>',
+                unsafe_allow_html=True)
+    try:
+        from main_or_db import get_conn as _gc_ho
+        _ho_where = "status IN ('post_op','discharged','done')"
+        _ho_params = []
+        if date_from:
+            _ho_where += " AND op_date >= ?"
+            _ho_params.append(date_from)
+        if date_to:
+            _ho_where += " AND op_date <= ?"
+            _ho_params.append(date_to)
+        _conn_ho = _gc_ho()
+        _ho_df = pd.read_sql_query(
+            f"SELECT op_date, diagnosis, procedure_name, division_code, "
+            f"in_or_at, op_end_at, discharged_at "
+            f"FROM cases WHERE {_ho_where} AND op_end_at IS NOT NULL "
+            f"AND (patient_type IS NULL OR patient_type != 'นอกเวลา') "
+            f"AND CAST(strftime('%H%M', op_end_at) AS INTEGER) > 1530 "
+            f"ORDER BY op_date DESC, op_end_at DESC", _conn_ho, params=_ho_params)
+        _conn_ho.close()
+        if _ho_df.empty:
+            st.info("ไม่มีเคสรับเวรในช่วงนี้")
+        else:
+            # ── Executive view: สาขาไหนรับเวรเยอะสุด — ดูปราดเดียวรู้เรื่อง ──
+            _ho_df['_div'] = (_ho_df['division_code'].fillna('-').astype(str)
+                              .map(lambda c: div_name(c)
+                                   if c not in ('-', '', 'None', 'nan')
+                                   else 'ไม่ระบุ'))
+            _div_ho = (_ho_df['_div'].value_counts().head(8)
+                       .rename_axis('สาขา').reset_index(name='n'))
+            st.caption(f"รวม {len(_ho_df)} เคสรับเวรในช่วงที่เลือก · "
+                       "เวลาจากไฟล์ intraop")
+            fig_ho = px.bar(
+                _div_ho.sort_values('n'), x='n', y='สาขา', orientation='h',
+                text='n', labels={'n': 'จำนวนเคสรับเวร', 'สาขา': ''},
+                color_discrete_sequence=['#1565c0'],
+            )
+            fig_ho.update_traces(textposition='outside', cliponaxis=False)
+            fig_ho.update_layout(
+                margin=dict(t=10, b=30, l=10, r=40),
+                height=max(190, 70 + 34 * len(_div_ho)),
+                plot_bgcolor='white',
+                xaxis=dict(gridcolor='#f0f0f0'),
+                yaxis=dict(tickfont=dict(size=13)),
+            )
+            _story_bars(fig_ho, _div_ho.sort_values('n')['n'], '#1565c0', horizontal=True)
+            _story_head(f"สาขา{_div_ho['สาขา'].iloc[0].replace('ศัลยกรรม', '') or _div_ho['สาขา'].iloc[0]}"
+                        f"รับเวรมากที่สุด {int(_div_ho['n'].iloc[0]):,} เคส")
+            st.plotly_chart(fig_ho, use_container_width=True,
+                            config={'displayModeBar': False})
+
+            # รายละเอียดรายเคส — พับเก็บ ไม่รกหน้า
+            with st.expander(f"ดูรายเคส ({len(_ho_df)} เคส)", expanded=False):
+                def _hhmm(ts):
+                    s = str(ts)
+                    return s[11:16] if len(s) >= 16 else '-'
+                _ho_show = pd.DataFrame({
+                    'วันที่': pd.to_datetime(_ho_df['op_date'], errors='coerce').dt.strftime('%d/%m/%Y'),
+                    'สาขา': _ho_df['_div'],
+                    'Diagnosis': _ho_df['diagnosis'].fillna('-'),
+                    'Operation': _ho_df['procedure_name'].fillna('-'),
+                    'Start': _ho_df['in_or_at'].map(_hhmm),
+                    'End': _ho_df['op_end_at'].map(_hhmm),
+                    'Discharge': _ho_df['discharged_at'].map(_hhmm),
+                })
+                st.dataframe(_ho_show, use_container_width=True, hide_index=True)
+    except Exception as _e_ho:
+        st.caption(f"โหลดเคสรับเวรไม่สำเร็จ: {_e_ho}")
+
     st.caption(
         "🔄 **Turnover + Utilization รายห้อง/รายเดือน** — ดูแบบเต็มที่ที่แท็บ "
         "**📊 Utilization** (รวมไว้ที่เดียว ไม่ให้ตัวเลขซ้ำ/ขัดกัน)")
@@ -3822,79 +3896,6 @@ def _hist_sec_night(date_from, date_to, data=None):
                     f"({_max_dow_aft} เคส/วัน)")
         else:
             st.info("ไม่มีเคสนอกเวลาในช่วงนี้")
-
-    # ════════════════════════════════════════════════════════════════
-    # ⏱️ เคสรับเวร (ผ่าตัดจบหลัง 15:30 · ไม่นับนอกเวลา) — เวลาจาก intraop
-    # ════════════════════════════════════════════════════════════════
-    st.markdown('<div class="sub-title">⏱️ เคสรับเวร (ผ่าตัดจบหลัง 15:30 น. · ไม่นับเป็นนอกเวลา)</div>',
-                unsafe_allow_html=True)
-    try:
-        from main_or_db import get_conn as _gc_ho
-        _ho_where = "status IN ('post_op','discharged','done')"
-        _ho_params = []
-        if date_from:
-            _ho_where += " AND op_date >= ?"
-            _ho_params.append(date_from)
-        if date_to:
-            _ho_where += " AND op_date <= ?"
-            _ho_params.append(date_to)
-        _conn_ho = _gc_ho()
-        _ho_df = pd.read_sql_query(
-            f"SELECT op_date, diagnosis, procedure_name, division_code, "
-            f"in_or_at, op_end_at, discharged_at "
-            f"FROM cases WHERE {_ho_where} AND op_end_at IS NOT NULL "
-            f"AND (patient_type IS NULL OR patient_type != 'นอกเวลา') "
-            f"AND CAST(strftime('%H%M', op_end_at) AS INTEGER) > 1530 "
-            f"ORDER BY op_date DESC, op_end_at DESC", _conn_ho, params=_ho_params)
-        _conn_ho.close()
-        if _ho_df.empty:
-            st.info("ไม่มีเคสรับเวรในช่วงนี้")
-        else:
-            # ── Executive view: สาขาไหนรับเวรเยอะสุด — ดูปราดเดียวรู้เรื่อง ──
-            _ho_df['_div'] = (_ho_df['division_code'].fillna('-').astype(str)
-                              .map(lambda c: div_name(c)
-                                   if c not in ('-', '', 'None', 'nan')
-                                   else 'ไม่ระบุ'))
-            _div_ho = (_ho_df['_div'].value_counts().head(8)
-                       .rename_axis('สาขา').reset_index(name='n'))
-            st.caption(f"รวม {len(_ho_df)} เคสรับเวรในช่วงที่เลือก · "
-                       "เวลาจากไฟล์ intraop")
-            fig_ho = px.bar(
-                _div_ho.sort_values('n'), x='n', y='สาขา', orientation='h',
-                text='n', labels={'n': 'จำนวนเคสรับเวร', 'สาขา': ''},
-                color_discrete_sequence=['#1565c0'],
-            )
-            fig_ho.update_traces(textposition='outside', cliponaxis=False)
-            fig_ho.update_layout(
-                margin=dict(t=10, b=30, l=10, r=40),
-                height=max(190, 70 + 34 * len(_div_ho)),
-                plot_bgcolor='white',
-                xaxis=dict(gridcolor='#f0f0f0'),
-                yaxis=dict(tickfont=dict(size=13)),
-            )
-            _story_bars(fig_ho, _div_ho.sort_values('n')['n'], '#1565c0', horizontal=True)
-            _story_head(f"สาขา{_div_ho['สาขา'].iloc[0].replace('ศัลยกรรม', '') or _div_ho['สาขา'].iloc[0]}"
-                        f"รับเวรมากที่สุด {int(_div_ho['n'].iloc[0]):,} เคส")
-            st.plotly_chart(fig_ho, use_container_width=True,
-                            config={'displayModeBar': False})
-
-            # รายละเอียดรายเคส — พับเก็บ ไม่รกหน้า
-            with st.expander(f"ดูรายเคส ({len(_ho_df)} เคส)", expanded=False):
-                def _hhmm(ts):
-                    s = str(ts)
-                    return s[11:16] if len(s) >= 16 else '-'
-                _ho_show = pd.DataFrame({
-                    'วันที่': pd.to_datetime(_ho_df['op_date'], errors='coerce').dt.strftime('%d/%m/%Y'),
-                    'สาขา': _ho_df['_div'],
-                    'Diagnosis': _ho_df['diagnosis'].fillna('-'),
-                    'Operation': _ho_df['procedure_name'].fillna('-'),
-                    'Start': _ho_df['in_or_at'].map(_hhmm),
-                    'End': _ho_df['op_end_at'].map(_hhmm),
-                    'Discharge': _ho_df['discharged_at'].map(_hhmm),
-                })
-                st.dataframe(_ho_show, use_container_width=True, hide_index=True)
-    except Exception as _e_ho:
-        st.caption(f"โหลดเคสรับเวรไม่สำเร็จ: {_e_ho}")
 
     # ════════════════════════════════════════════════════════════════
     # 6.5️⃣  👥 Progress รายบุคคล — เอาออกตามคำขอ 2026-06
