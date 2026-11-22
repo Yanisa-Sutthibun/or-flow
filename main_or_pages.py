@@ -1213,6 +1213,22 @@ def render_csv_upload(bare=False):
                  "แล้วเติม ASA / BMI / จองเลือด / จอง ICU ให้ AI ใช้ทำนาย")
         _rep = st.checkbox("แทนที่เคส 'ยังไม่มา' เดิม (กันซ้ำ)", value=True,
                            key="orboard_rep", disabled=_demo_active)
+        # 🗓️ 22 พ.ย. 2026 (มุกกี้สั่ง): อัปโหลดตารางของวันทำการถัดไปไว้ล่วงหน้าได้ (งานประจำ 16:00 น.)
+        #    เก็บเป็นตารางที่เตรียมไว้ ไม่แตะบอร์ดวันนี้ · ถึงวันนั้นเครื่องแรกที่เปิดบอร์ดซึ่งยังว่างจะได้ตารางขึ้นเอง
+        #    (กลไกเดิมของ tomorrow_plan.promote_plan_if_needed) · หลัง 15:00 น. ตั้งต้นที่วันทำการถัดไป
+        try:
+            from tomorrow_plan import _next_workday as _nwd, _th_date as _thd_up
+            _d_today = _now().date()
+            _d_next = _nwd(_d_today)
+            _target = st.radio(
+                "ตารางนี้เป็นของวันไหน",
+                [f"วันนี้ ({_thd_up(_d_today)})", f"วันทำการถัดไป ({_thd_up(_d_next)})"],
+                index=1 if _now().hour >= 15 else 0, horizontal=True,
+                key="orboard_target", disabled=_demo_active)
+            _ahead = _target.startswith("วันทำการถัดไป")
+        except Exception as _tx:
+            print(f"[upload] เลือกวันของตารางไม่ได้ ใช้วันนี้: {_tx}")
+            _ahead, _d_next = False, None
         # 🧪 อัปโหลดเพื่อ "ทดสอบระบบ": ติดธง _demo ทุกเคส → กดได้ครบทุก flow
         #    แต่ override_log / shadow_v2_log / case_history จะไม่ถูกเขียนเลย
         #    (ไม่มีรอยใน DB วิจัย) · ทดสอบเสร็จกด 🗑️ ล้างกระดานวันนี้ = จบสะอาด
@@ -1269,26 +1285,43 @@ def render_csv_upload(bare=False):
                         _ec['predicted_range'] = _pr.get('predicted_range')
                 except Exception as _px:
                     st.warning(f"เติมข้อมูล preop ไม่สำเร็จ (ใช้ค่าทำนายเดิม): {_px}")
-                _cur = list(st.session_state.patient_cases)
-                if _rep:
-                    _cur = [c for c in _cur if c.get('status') != 'not_arrived']
-                _seen_hn = {c.get('hn') for c in _cur if c.get('hn')}
-                _added = 0
-                for _nc in _new:
-                    if _nc.get('hn') and _nc['hn'] in _seen_hn:
-                        continue
+                if _ahead:
+                    # 🗓️ เก็บเป็นตารางของวันทำการถัดไป (mask ชื่อ/HN ก่อนเขียน เหมือนบอร์ดกลาง)
+                    from tomorrow_plan import load_day_plan, save_day_plan, _mask_cases
                     if _testmode:
-                        _nc['_demo'] = True   # 🧪 เคสทดสอบ — guard ทุกจุดจะไม่เขียน DB วิจัย
-                    _cur.append(_nc)
-                    _added += 1
-                st.session_state.patient_cases = _cur
-                st.session_state['_or_demo'] = False
-                st.session_state['_board_dirty'] = True   # CR-2: โหลดตารางใหม่ → ดันขึ้นบอร์ดกลาง
-                _msg = f"✅ โหลด {_added} เคสเข้าบอร์ดแล้ว — ไปดูที่หน้า 📋 ตารางผ่าตัด"
-                if _testmode:
-                    _msg += " · 🧪 โหมดทดสอบ (ไม่บันทึกลงฐานข้อมูลวิจัย)"
-                st.success(_msg)
-                st.rerun()
+                        for _nc in _new:
+                            _nc['_demo'] = True
+                    _dkey = _d_next.isoformat()
+                    _plan = load_day_plan(_dkey) or {}
+                    _plan['cases'] = _mask_cases(_new)
+                    _plan['uploaded_at'] = _now().strftime('%H:%M')
+                    _plan['promoted'] = False
+                    if save_day_plan(_dkey, _plan):
+                        st.success(f"✅ เก็บตารางของ{_thd_up(_d_next)} แล้ว {len(_new)} เคส : "
+                                   f"บอร์ดวันนี้ไม่เปลี่ยน ตารางนี้จะขึ้นบอร์ดเองเมื่อเปิดระบบในวันนั้น")
+                    else:
+                        st.error("บันทึกตารางล่วงหน้าไม่สำเร็จ : ลองอัปโหลดอีกครั้ง หรืออัปโหลดเป็นตารางของวันนี้ในเช้าวันนั้น")
+                else:
+                    _cur = list(st.session_state.patient_cases)
+                    if _rep:
+                        _cur = [c for c in _cur if c.get('status') != 'not_arrived']
+                    _seen_hn = {c.get('hn') for c in _cur if c.get('hn')}
+                    _added = 0
+                    for _nc in _new:
+                        if _nc.get('hn') and _nc['hn'] in _seen_hn:
+                            continue
+                        if _testmode:
+                            _nc['_demo'] = True   # 🧪 เคสทดสอบ — guard ทุกจุดจะไม่เขียน DB วิจัย
+                        _cur.append(_nc)
+                        _added += 1
+                    st.session_state.patient_cases = _cur
+                    st.session_state['_or_demo'] = False
+                    st.session_state['_board_dirty'] = True   # CR-2: โหลดตารางใหม่ → ดันขึ้นบอร์ดกลาง
+                    _msg = f"✅ โหลด {_added} เคสเข้าบอร์ดแล้ว — ไปดูที่หน้า 📋 ตารางผ่าตัด"
+                    if _testmode:
+                        _msg += " · 🧪 โหมดทดสอบ (ไม่บันทึกลงฐานข้อมูลวิจัย)"
+                    st.success(_msg)
+                    st.rerun()
 
         # ---- 🗑️ ล้างกระดานวันนี้ — ล็อก PIN เฉพาะผู้ดูแล (Mukky) ----
         #      (19 ก.ค. 2026: สลับกุญแจ — อัปโหลดฟรี / การลบต้องมี PIN)

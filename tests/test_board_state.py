@@ -1249,6 +1249,20 @@ def test_preop_latest_record_by_real_date():
     assert rec['ASA'] == '2' and rec['planicu'] == 'ไม่มี' and rec['blood'] == 'ไม่มี'
 
 
+def test_upload_keeps_hn_hash_through_masking():
+    """hn_hash ต้องคิดจาก HN เต็มตอนอ่านไฟล์ และรอดการ mask ของตารางล่วงหน้า/บอร์ดกลาง
+    (ไม่งั้นเครื่องที่โหลดเคสจากบอร์ดกลางจะจับคู่กับไฟล์ intraop ไม่ได้)"""
+    import json
+    import research_log as RL
+    import tomorrow_plan as TP
+    cs = _parse_csv('\n'.join(_csv_case_rows()) + '\n', 'utf-16')
+    assert cs[0]['hn_hash'] == RL.hn_hash('9000001')
+    masked = json.loads(json.dumps(TP._mask_cases(cs), ensure_ascii=False, default=str))
+    assert masked[0]['hn'] != '9000001' and '9000001' not in json.dumps(masked, ensure_ascii=False)
+    assert masked[0]['hn_hash'] == RL.hn_hash('9000001')
+    assert 'procnote' not in masked[0]
+
+
 # ═════════════════════════════ runner ═════════════════════════════
 
 def _run_all():

@@ -791,6 +791,14 @@ def parse_schedule_csv_to_cases(uploaded_file):
             'is_tf': is_tf, 'is_after_note': is_after,
             'procnote': raw_note, 'predicted_min': None, 'confidence': None,
         }
+        # 🔑 22 พ.ย. 2026: คิด hn_hash ตั้งแต่ตอนอ่านไฟล์ ซึ่งเป็นจุดเดียวที่มี HN เต็ม
+        #    บอร์ดกลางและตารางที่เตรียมล่วงหน้าเก็บ HN แค่ 4 ตัวท้าย เครื่องที่โหลดเคสจากที่นั่น
+        #    จึงคิด hash จาก HN ที่ถูกตัดแล้ว ทำให้จับคู่กับไฟล์ intraop ตอนเช้าไม่ได้
+        try:
+            from research_log import hn_hash as _hn_hash
+            case['hn_hash'] = _hn_hash(get('hn'))
+        except Exception:
+            case['hn_hash'] = None
         # 🔧 15 ก.ค. 2026: เดิมไม่ส่ง diagnosis/ward → โมเดล v2 ขาด feature
         #    (ทายเพี้ยนไปทางค่ากลางทุกเคสที่มาจาก CSV) — ส่งให้ครบเท่าที่ไฟล์มี
         pred = predict_surgical_time(

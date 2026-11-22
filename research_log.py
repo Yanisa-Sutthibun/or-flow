@@ -252,7 +252,10 @@ def log_case_state(case) -> bool:
         actor_role, actor_room = current_actor()
 
         vals = {
-            'hn_hash': hn_hash(case.get('hn')),
+            # 🔑 22 พ.ย. 2026: ใช้ hash ที่คิดไว้ตอนอ่านไฟล์ (HN เต็ม) ก่อน · HN ที่ถูกตัดเหลือ 4 ตัวท้าย ('…1234')
+            #    เอามาคิด hash ไม่ได้ (จะไม่ตรงกับไฟล์ intraop) จึงปล่อยว่างแทนค่าที่ผิด
+            'hn_hash': case.get('hn_hash') or (
+                None if str(case.get('hn') or '').strip().startswith('…') else hn_hash(case.get('hn'))),
             'room_no': room,
             'division': str(case.get('division') or ''),
             'procedure_name': str(case.get('procedure') or ''),
@@ -315,6 +318,8 @@ def log_case_state(case) -> bool:
                 else:
                     vals['actual_or_min'] = actual_new
                     vals['actual_source'] = 'board' if actual_new is not None else None
+                if vals.get('hn_hash') is None:
+                    vals.pop('hn_hash', None)      # ไม่รู้ hash รอบนี้ = คงค่าที่เคยบันทึกไว้ ไม่ทับด้วยค่าว่าง
                 sets = ', '.join(f"{k}=?" for k in vals)
                 conn.execute(
                     f"UPDATE research_case_log SET {sets} WHERE id=?",
