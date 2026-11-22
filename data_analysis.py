@@ -403,6 +403,126 @@ def deep(C, L, fy, nov_keys=(), min_cases=_MIN_CASES):
     R['pairs'] = sorted(pairs, key=lambda x: -x['with_novice'])
     return R
 
+# ══════════════════════════════════════════════════════════════════
+# 🏥 การ์ด "ห้องผ่าตัดและหัตถการ" (มุกกี้สั่ง 22 พ.ย. 2026 : ข้อ 1 การใช้ห้อง · 3 หัตถการที่เวลาแกว่ง
+#    · 4 ภาระงานรายสาขา · "ขอค่า Utilization บอกวิธีการคำนวนด้วย จัดเรียงตามปีงบประมาณไปก่อน")
+#    Utilization ใช้นิยามเดียวกับทั้งระบบ (M-08 · main_or_utilization) :
+#      นาทีที่ห้องมีผู้ป่วยอยู่ในช่วง 08:00-16:00 ของวันจันทร์ถึงศุกร์ (รวมทั้งวันไม่เกิน 480)
+#      ÷ (จำนวนวันที่ห้องนั้นมีเคส × 480) × 100
+#    เวลาพักห้อง = เวลาเข้าห้องของเคสถัดไป ลบ เวลาออกห้องของเคสก่อนหน้า ห้องเดียวกันวันเดียวกัน นับเฉพาะ 1-90 นาที
+#    ⛔ logic ส่วนนี้ห้าม import streamlit
+# ══════════════════════════════════════════════════════════════════
+_WORK_S, _WORK_E, _WORK_MIN = 8 * 60, 16 * 60, 480
+_PROC_MIN_N = 30     # หัตถการที่มีไม่ถึงเท่านี้ในปีงบ ไม่นำมาเทียบการแกว่งของเวลา
+
+
+def ops_prep(raw, div_map=None):
+    """raw = แถวเคสที่ผ่าตัดเสร็จ → ตารางระดับเคส : case_id date fy dur div room start end proc_std"""
+    import pandas as pd
+    if raw is None or raw.empty:
+        return pd.DataFrame()
+    df = raw.copy()
+    df['date'] = pd.to_datetime(df['op_date'], errors='coerce')
+    df = df[df['date'].notna()].copy()
+    df['fy'] = df['date'].map(fy_of)
+    dur = pd.to_numeric(df.get('actual_duration_min'), errors='coerce')
+    df['dur'] = dur.where((dur > 0) & (dur <= 24 * 60))
+    dm = div_map or {}
+
+    def _div(v):
+        try:
+            return dm.get(str(int(float(v))), 'อื่น ๆ')
+        except (TypeError, ValueError):
+            return 'ไม่ระบุ'
+    df['div'] = df['division_code'].map(_div)
+    df['room'] = pd.to_numeric(df.get('room_no'), errors='coerce')
+    df['start'] = _dt(df.get('in_or_at'))
+    df['end'] = _dt(df.get('op_end_at'))
+    if 'proc_std' not in df.columns:
+        df['proc_std'] = df['procedure_name'].fillna('').astype(str).str.strip()
+    return df[['case_id', 'date', 'fy', 'dur', 'div', 'room', 'start', 'end', 'proc_std']].reset_index(drop=True)
+
+
+def room_usage(O, fy):
+    """Utilization และเวลาพักห้องรายห้องของปีงบ fy (จันทร์ถึงศุกร์)
+    คืน {'rooms': [dict(room, days, cases, used_min, util, turn_med, turn_n)], 'util', 'days', 'turn_med', 'cases'}"""
+    import numpy as np
+    out = dict(rooms=[], util=None, days=0, turn_med=None, cases=0)
+    if O is None or O.empty:
+        return out
+    y = O[(O['fy'] == fy) & O['start'].notna() & O['end'].notna() & O['room'].notna()].copy()
+    y = y[(y['date'].dt.weekday < 5) & (y['end'] > y['start'])]
+    if y.empty:
+        return out
+    day0 = y['start'].dt.normalize()
+    s = (y['start'] - day0).dt.total_seconds() / 60
+    e = ((y['end'] - day0).dt.total_seconds() / 60).clip(upper=24 * 60)
+    y['inh'] = (e.clip(upper=_WORK_E) - s.clip(lower=_WORK_S)).clip(lower=0)
+    y['day'] = day0
+    y['room'] = y['room'].astype(int)
+    rd = y.groupby(['room', 'day'])['inh'].sum().clip(upper=_WORK_MIN).reset_index()
+    y = y.sort_values(['room', 'day', 'start'])
+    gap = (y['start'] - y.groupby(['room', 'day'])['end'].shift()).dt.total_seconds() / 60
+    y['gap'] = gap.where((gap >= 1) & (gap <= 90))
+    for room, g in rd.groupby('room'):
+        yy = y[y['room'] == room]
+        tg = yy['gap'].dropna()
+        out['rooms'].append(dict(room=int(room), days=int(len(g)), cases=int(len(yy)),
+                                 used_min=float(g['inh'].sum()),
+                                 util=float(g['inh'].sum() / (len(g) * _WORK_MIN) * 100),
+                                 turn_med=float(tg.median()) if len(tg) else None, turn_n=int(len(tg))))
+    out['rooms'].sort(key=lambda r: -r['util'])
+    out['days'] = int(len(rd))
+    out['util'] = float(rd['inh'].sum() / (len(rd) * _WORK_MIN) * 100)
+    ta = y['gap'].dropna()
+    out['turn_med'] = float(ta.median()) if len(ta) else None
+    out['cases'] = int(len(y))
+    return out
+
+
+def proc_spread(O, fy, min_n=_PROC_MIN_N, top=10):
+    """หัตถการที่เวลาใช้ห้องแกว่งมากที่สุดของปีงบ fy : วัดด้วยช่วงกลาง 50% (P75 ลบ P25)
+    คืน [dict(proc, n, q25, med, q75, iqr)] เรียงจากแกว่งมาก · n_all = จำนวนหัตถการที่ผ่านเกณฑ์"""
+    if O is None or O.empty:
+        return [], 0
+    y = O[(O['fy'] == fy) & O['dur'].notna()]
+    y = y[~y['proc_std'].isin(['', 'UNKNOWN', 'nan', 'None', '-'])]
+    rows = []
+    for p, g in y.groupby('proc_std'):
+        if len(g) < min_n:
+            continue
+        q = g['dur'].quantile([0.25, 0.5, 0.75])
+        rows.append(dict(proc=str(p), n=int(len(g)), q25=float(q[0.25]), med=float(q[0.5]),
+                         q75=float(q[0.75]), iqr=float(q[0.75] - q[0.25])))
+    rows.sort(key=lambda r: -r['iqr'])
+    return rows[:top], len(rows)
+
+
+def div_workload(O, fy):
+    """ภาระงานรายสาขาของปีงบ fy : เคส ชั่วโมงห้อง เฉลี่ยต่อเคส รายเดือน และเทียบเดือนเดียวกันของปีงบก่อน
+    คืน {'divs': [dict(div, cases, hours, avg, months[12], hours_prev, pct)], 'common': [...]}"""
+    if O is None or O.empty:
+        return dict(divs=[], common=[])
+    y1, y0 = O[O['fy'] == fy], O[O['fy'] == fy - 1]
+    m1 = y1['date'].map(_fy_month_index)
+    m0 = y0['date'].map(_fy_month_index)
+    common = sorted(set(m1.unique()) & set(m0.unique()))
+    divs = []
+    for d, g in y1.groupby('div'):
+        if d in ('ไม่ระบุ', 'อื่น ๆ'):
+            continue
+        gm = g['date'].map(_fy_month_index)
+        mc = gm.value_counts()
+        h1 = float(g[gm.isin(common)]['dur'].sum() / 60)
+        g0 = y0[y0['div'] == d]
+        h0 = float(g0[g0['date'].map(_fy_month_index).isin(common)]['dur'].sum() / 60) if len(g0) else 0.0
+        divs.append(dict(div=d, cases=int(len(g)), hours=float(g['dur'].sum() / 60),
+                         avg=float(g['dur'].mean()) if g['dur'].notna().any() else None,
+                         months=[int(mc.get(i, 0)) for i in range(12)],
+                         hours_prev=h0, pct=((h1 - h0) / h0 * 100) if h0 > 0 else None))
+    divs.sort(key=lambda r: -r['hours'])
+    return dict(divs=divs, common=[int(i) for i in common])
+
 
 # ════════════════════════════════════════════════════════════════════════════
 # 🖼️ ส่วนแสดงผล (HTML ล้วน ตาม mock-up · ⛔ ห้ามมีบรรทัดว่างใน string ที่ส่งเข้า st.markdown)
@@ -538,8 +658,13 @@ def _pick_fy(C, key, label='ปีงบประมาณ', fy_min=None):
 
 # ---------- หน้ารวมการ์ด ----------
 def _view_hub(C, L):
-    from da_sprites import NOY, NOV, TR
+    from da_sprites import NOY, NOV, TR, OPS
     fy = _default_fy(C)
+    try:
+        hl4 = _ops_headline(_load_ops(), fy)
+    except Exception as _ex:
+        hl4 = 'โหลดข้อมูลห้องผ่าตัดไม่สำเร็จ'
+        print(f"[data_analysis] ops headline fail: {_ex}")
     noy = nurse_of_year(L, fy)
     nv = novices(L, fy) if _SHOW_NOVICE else []
     tr = trends(C, L, fy)
@@ -559,6 +684,8 @@ def _view_hub(C, L):
          'น้องใหม่ตามแนวคิด Novice to Expert ของ Patricia Benner ทำเคสอะไร สาขาไหนไปบ้าง', hl2, 'ดู Novice'),
         ('tr', TR, 'การ์ด 3', 'แนวโน้มการทำงาน',
          'แนวโน้มเทียบปีต่อปี และเจาะลึกกำลังคนพยาบาล : ช่วงเวลาที่งานหนาแน่น และพยาบาล × สาขา', hl3, 'ดูแนวโน้ม'),
+        ('ops', OPS, 'การ์ด 4', 'ห้องผ่าตัดและหัตถการ',
+         'Utilization และเวลาพักห้องรายห้อง หัตถการที่เวลาใช้ห้องแกว่งมาก และภาระงานรายสาขา', hl4, 'ดูห้องผ่าตัด'),
     ]
     if not _SHOW_NOVICE:
         cards = [(v, svg, f'การ์ด {i}', *rest)
@@ -938,6 +1065,130 @@ def _view_tr(C, L):
     _md('<div class="da-s" style="line-height:1.7">หมายเหตุ : นับทุกเคสที่บันทึกชื่อพยาบาลรวมเคสนอกเวลาและฉุกเฉิน · '
         'เวลาใช้ห้อง = เข้าห้องถึงออกห้อง · เทียบปีต่อปีเฉพาะเดือนที่มีข้อมูลทั้งสองปี</div>')
 
+# ---------- การ์ด : ห้องผ่าตัดและหัตถการ (มุกกี้สั่ง 22 พ.ย. 2026) ----------
+@st.cache_data(ttl=900, show_spinner="กำลังโหลดข้อมูลจากฐานข้อมูล…")
+def _load_ops():
+    import pandas as pd
+    from main_or_db import get_conn, DIV_CODE_MAP, _DONE_STATUSES, normalize_procedure_df
+    conn = get_conn()
+    try:
+        raw = pd.read_sql_query(
+            "SELECT case_id, op_date, procedure_name, diagnosis, division_code, room_no, "
+            f"actual_duration_min, in_or_at, op_end_at FROM cases WHERE status IN {_DONE_STATUSES}", conn)
+    finally:
+        conn.close()
+    if not raw.empty:
+        raw['proc_std'] = normalize_procedure_df(raw)     # 📚 พจนานุกรมชุดเดียวกับแบบจำลอง
+    return ops_prep(raw, DIV_CODE_MAP)
+
+
+def _room_name(r) -> str:
+    from room_config import ROOM_INFO
+    return ROOM_INFO[r][0] + ' ' + ROOM_INFO[r][1] if r in ROOM_INFO else f'ห้อง {r} (ตึกเก่า)'
+
+
+def _ops_headline(O, fy) -> str:
+    U = room_usage(O, fy)
+    if U['util'] is None:
+        return f'ปีงบ {fy} ยังไม่มีข้อมูลเวลาเข้าออกห้อง'
+    t = f'ปีงบ {fy} Utilization รวม {U["util"]:.0f}%'
+    if U['turn_med'] is not None:
+        t += f'<br>เวลาพักห้องค่ากลาง {U["turn_med"]:.0f} นาที'
+    return t
+
+
+def _view_ops(C, L):
+    _back()
+    try:
+        O = _load_ops()
+    except Exception as _ex:
+        st.error("โหลดข้อมูลไม่สำเร็จ : ลองกด 🔄 รีเฟรช อีกครั้ง")
+        print(f"[data_analysis] load ops fail: {_ex}")
+        return
+    if O is None or O.empty:
+        st.info("ยังไม่มีข้อมูลเคสในฐานข้อมูล")
+        return
+    fy = _pick_fy(O, 'da_fy_ops')
+    _md(f'<div style="margin:4px 0 8px">'
+        f'<div><div class="da-sec" style="margin:0">ห้องผ่าตัดและหัตถการ</div>'
+        f'<div class="da-s">ปีงบ {fy} = {fy_range_text(fy)} · การใช้ห้อง หัตถการที่เวลาแกว่ง และภาระงานรายสาขา</div></div></div>')
+    U = room_usage(O, fy)
+    # ── 1. การใช้ห้อง ──
+    if U['util'] is None:
+        st.info(f'ปีงบ {fy} ยังไม่มีข้อมูลเวลาเข้าออกห้อง')
+    else:
+        _kpis([('Utilization รวม', f'{U["util"]:.0f}%', 'จันทร์ถึงศุกร์ 08:00-16:00'),
+               ('วันใช้งานห้องรวม', f'{U["days"]:,}', 'ห้อง-วัน'),
+               ('เวลาพักห้องค่ากลาง', _fmt(U['turn_med']), 'นาที')])
+        R = U['rooms']
+        hi, lo = R[0], R[-1]
+        rows = [(_e(_room_name(r['room'])), r['util'],
+                 f'<b>{r["util"]:.0f}%</b> · {r["days"]:,} วัน · {r["cases"]:,} เคส', None) for r in R]
+        _md(_card(f'{_e(_room_name(hi["room"]))} ใช้ห้องมากที่สุด {hi["util"]:.0f}% · '
+                  f'{_e(_room_name(lo["room"]))} น้อยที่สุด {lo["util"]:.0f}%',
+                  f'Utilization รายห้อง ปีงบ {fy} · เฉพาะวันจันทร์ถึงศุกร์',
+                  _hbars(rows, label_w=170, val_w=230),
+                  'วิธีคำนวณ : Utilization = นาทีที่ห้องมีผู้ป่วยอยู่ในช่วง 08:00-16:00 ÷ (จำนวนวันที่ห้องนั้นมีเคส × 480 นาที) × 100'
+                  '<br>เคสที่เริ่มก่อน 08:00 หรือจบหลัง 16:00 นับเฉพาะส่วนที่อยู่ในช่วงเวลา · วันหนึ่งนับได้ไม่เกิน 480 นาที '
+                  'ค่าจึงไม่เกิน 100% · วันที่ห้องไม่มีเคสเลยไม่ถูกนำมาคิด · ไม่รวมเสาร์อาทิตย์'
+                  '<br>ตัวอย่าง : ห้องหนึ่งมีผู้ป่วยอยู่ 09:00-12:00 และ 13:00-17:00 นับได้ 180 + 180 = 360 นาที = 360 ÷ 480 = 75%'))
+        tr = sorted([r for r in R if r['turn_med'] is not None], key=lambda r: -r['turn_med'])
+        if tr:
+            rows = [(_e(_room_name(r['room'])), r['turn_med'],
+                     f'<b>{r["turn_med"]:.0f} นาที</b> · จาก {r["turn_n"]:,} ช่วง', None) for r in tr]
+            _md(_card(f'{_e(_room_name(tr[0]["room"]))} พักห้องนานที่สุด ค่ากลาง {tr[0]["turn_med"]:.0f} นาที · '
+                      f'เร็วที่สุด {_e(_room_name(tr[-1]["room"]))} {tr[-1]["turn_med"]:.0f} นาที',
+                      f'เวลาพักห้องระหว่างเคส (ค่ากลาง) รายห้อง ปีงบ {fy}',
+                      _hbars(rows, label_w=170, val_w=230),
+                      'วิธีคำนวณ : เวลาเข้าห้องของเคสถัดไป ลบ เวลาออกห้องของเคสก่อนหน้า ในห้องเดียวกันวันเดียวกัน · '
+                      'นับเฉพาะช่วง 1 ถึง 90 นาที (นานกว่านั้นถือว่าห้องว่างรอเคส ไม่ใช่พักห้อง)'))
+    # ── 3. หัตถการที่เวลาแกว่ง ──
+    P, n_all = proc_spread(O, fy)
+    if P:
+        mxq = max(p['q75'] for p in P) or 1
+        body = ''.join(
+            f'<div style="display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr) 250px;align-items:center;gap:10px">'
+            f'<div style="font-size:13px">{_e(p["proc"])}</div>'
+            f'<div style="position:relative;height:16px;background:#F1F5F9;border-radius:6px">'
+            f'<div style="position:absolute;left:{p["q25"] / mxq * 100:.1f}%;width:{max(p["iqr"] / mxq * 100, 1):.1f}%;'
+            f'top:0;bottom:0;background:{_ACC if i == 0 else _BASE};border-radius:6px"></div>'
+            f'<div style="position:absolute;left:{p["med"] / mxq * 100:.1f}%;top:-2px;bottom:-2px;width:2px;background:#12212E"></div></div>'
+            f'<div style="font-size:13px;text-align:right"><b>{p["q25"]:.0f}-{p["q75"]:.0f} นาที</b> · ค่ากลาง {p["med"]:.0f} · '
+            f'{p["n"]:,} เคส</div></div>' for i, p in enumerate(P))
+        _md(_card(f'{_e(P[0]["proc"])} เวลาใช้ห้องแกว่งมากที่สุด : เคสส่วนใหญ่อยู่ที่ {P[0]["q25"]:.0f}-{P[0]["q75"]:.0f} นาที',
+                  f'หัตถการที่เวลาใช้ห้องต่างกันมากระหว่างเคส 10 อันดับ ปีงบ {fy} · จาก {n_all:,} หัตถการที่มีอย่างน้อย {_PROC_MIN_N} เคส',
+                  f'<div style="display:flex;flex-direction:column;gap:8px">{body}</div>',
+                  'แถบ = ช่วงเวลาของเคสครึ่งกลาง (ตัดเคสที่เร็วสุด 25% และช้าสุด 25% ออก) · ขีดดำ = ค่ากลาง · แถบยิ่งยาวยิ่งคาดเวลายาก'
+                  '<br>ชื่อหัตถการจัดกลุ่มด้วยพจนานุกรมหัตถการมาตรฐาน · เวลาใช้ห้อง = เข้าห้องถึงออกห้อง'))
+    # ── 4. ภาระงานรายสาขา ──
+    W = div_workload(O, fy)
+    if W['divs']:
+        D_ = W['divs']
+        th = 'font-size:11px;color:#5B6B7B;font-weight:600;text-align:right'
+        head = (f'<div style="font-size:11px;color:#5B6B7B;font-weight:600">สาขา</div><div style="{th}">เคส</div>'
+                f'<div style="{th}">ชั่วโมงห้อง</div><div style="{th}">เฉลี่ยต่อเคส</div><div style="{th}">เทียบปีงบก่อน</div>'
+                + ''.join(f'<div style="{th};text-align:center">{TH_MON[m - 1]}</div>' for m in FY_MONTHS))
+        mmax = max(max(d['months']) for d in D_) or 1
+        body = ''
+        for d in D_:
+            pc = '-' if d['pct'] is None else f'{d["pct"]:+.0f}%'
+            cells = ''
+            for v in d['months']:
+                t = v / mmax
+                bg = '#F5F7FA' if v == 0 else f'rgb({int(232 - t * 203)},{int(240 - t * 129)},{int(251 - t * 27)})'
+                cells += (f'<div style="height:22px;border-radius:3px;background:{bg};color:{"#FFFFFF" if t > 0.55 else "#12212E"};'
+                          f'font-size:11px;display:flex;align-items:center;justify-content:center">{v or ""}</div>')
+            td = 'font-size:13px;text-align:right;align-self:center'
+            body += (f'<div style="font-size:13px;align-self:center;white-space:nowrap">{_e(d["div"]).replace("ศัลยกรรม", "") or _e(d["div"])}</div>'
+                     f'<div style="{td}">{d["cases"]:,}</div><div style="{td}"><b>{d["hours"]:,.0f}</b></div>'
+                     f'<div style="{td}">{_fmt(d["avg"])} นาที</div><div style="{td}">{pc}</div>{cells}')
+        top = D_[0]
+        _md(_card(f'สาขา{_e(top["div"]).replace("ศัลยกรรม", "")} ใช้ชั่วโมงห้องมากที่สุด {top["hours"]:,.0f} ชั่วโมง จาก {top["cases"]:,} เคส',
+                  f'ภาระงานรายสาขา ปีงบ {fy} : จำนวนเคส ชั่วโมงห้อง และจำนวนเคสรายเดือน · สีเข้ม = เคสมาก',
+                  f'<div style="display:grid;grid-template-columns:150px 60px 80px 90px 100px repeat(12,minmax(0,1fr));gap:3px 8px">'
+                  f'{head}{body}</div>',
+                  'ชั่วโมงห้อง = ผลรวมเวลาเข้าห้องถึงออกห้องของทุกเคส · เทียบปีงบก่อน = ชั่วโมงห้องเทียบเฉพาะเดือนที่มีข้อมูลทั้งสองปี'))
+
 
 def _render_body():
     _md(_CSS)
@@ -951,7 +1202,7 @@ def _render_body():
         st.info("ยังไม่มีข้อมูลชื่อพยาบาลในฐานข้อมูล")
         return
     v = st.session_state.get(_K_VIEW, 'hub')
-    _views = {'noy': _view_noy, 'tr': _view_tr}
+    _views = {'noy': _view_noy, 'tr': _view_tr, 'ops': _view_ops}
     if _SHOW_NOVICE:
         _views['nov'] = _view_nov
     _views.get(v, _view_hub)(C, L)

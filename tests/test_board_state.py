@@ -1179,6 +1179,35 @@ def test_data_analysis_nurse_names_short_and_benner():
     assert len(T['common']) == 12 and T['ramp'][0]['scrub'] > 0
 
 
+def test_data_analysis_room_utilization_formula():
+    """🏥 การ์ดห้องผ่าตัดและหัตถการ (มุกกี้สั่ง 22 พ.ย. 2026) : Utilization = นาทีในช่วง 08:00-16:00
+    ÷ (วันที่ห้องมีเคส × 480) · ไม่นับเสาร์อาทิตย์ · เวลาพักห้องนับเฉพาะ 1-90 นาที"""
+    import pandas as pd
+    import data_analysis as DA
+    def _c(i, d, room, a, b, dur, proc='LC', div=1):
+        return dict(case_id=i, op_date=d, procedure_name=proc, division_code=div, room_no=room,
+                    actual_duration_min=dur, in_or_at=f'{d} {a}:00', op_end_at=f'{d} {b}:00')
+    raw = pd.DataFrame([
+        _c(1, '2026-06-01', 93, '09:00', '12:00', 180),     # จันทร์ : 180 นาที
+        _c(2, '2026-06-01', 93, '13:00', '17:00', 240),     # นับถึง 16:00 = 180 นาที · พักห้อง 60 นาที
+        _c(3, '2026-06-02', 93, '07:00', '09:00', 120),     # นับตั้งแต่ 08:00 = 60 นาที
+        _c(4, '2026-06-06', 93, '09:00', '15:00', 360),     # เสาร์ : ไม่นับ
+        _c(5, '2026-06-02', 94, '08:00', '16:00', 480),     # เต็มวัน = 100%
+    ])
+    O = DA.ops_prep(raw, {'1': 'ศัลยกรรมทั่วไป'})
+    U = DA.room_usage(O, 2569)
+    r93 = next(r for r in U['rooms'] if r['room'] == 93)
+    r94 = next(r for r in U['rooms'] if r['room'] == 94)
+    assert r93['days'] == 2 and abs(r93['util'] - (360 + 60) / 960 * 100) < 1e-6, r93
+    assert r93['turn_med'] == 60 and r93['turn_n'] == 1
+    assert abs(r94['util'] - 100) < 1e-6 and U['days'] == 3
+    assert DA.room_usage(O, 2568)['util'] is None
+    P, n = DA.proc_spread(O, 2569, min_n=3)
+    assert n == 1 and P[0]['n'] == 5 and P[0]['q25'] <= P[0]['med'] <= P[0]['q75']
+    W = DA.div_workload(O, 2569)
+    assert W['divs'][0]['cases'] == 5 and abs(W['divs'][0]['hours'] - 23) < 1e-6 and W['divs'][0]['pct'] is None
+
+
 # ═════════ 15. ตัวอ่านตารางผ่าตัด CSV จาก HIS (22 พ.ย. 2026) ═════════
 # บั๊กที่เจอจากไฟล์ HIS จริงก่อนใช้งาน : (ก) ช่องที่มี comma ทำคอลัมน์เลื่อน แพทย์หาย 6.4% ของเคส
 # (ข) ไฟล์ชุดใหม่เขียนวันที่ เดือน/วัน/ปี วันที่ 1-12 สลับวันกับเดือน (ค) UTF-8 ถูกถอดเป็น UTF-16 ได้ตัวขยะ
