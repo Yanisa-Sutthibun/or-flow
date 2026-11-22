@@ -3508,18 +3508,23 @@ def _hist_sec_eff(date_from, date_to, data=None):
                 unsafe_allow_html=True)
     with st.expander("💡 อธิบายส่วนนี้", expanded=False):
         st.markdown("""
-บอก **คุณภาพการให้บริการ** — ผู้ป่วยรอนานไหม ทีมทำงานเร็วแค่ไหน
+บอก **คุณภาพการให้บริการ** — ทีมทำงานเร็วแค่ไหน
 
-- **⏱️ เวลารอ** = เวลาเข้าห้องผ่าตัด ลบ เวลามาถึงห้องผ่าตัด (จากไฟล์ intraop ของ HIS)
-  - เป้า: รอ ≤60 นาที
 - **🔄 รับเวร** = เคสที่ทำหลัง 15:30 น. → ทีมต้องอยู่ OT
   - เฉพาะ จ.-ศ. ไม่นับเคสนอกเวลา
 - **🔄 Turnover Time** = ช่วงพักห้องระหว่างเคส (เคสก่อนออก → เคสถัดไปเข้า)
   - เป้า: **≤15 นาที** (ยิ่งสั้น = ใช้ห้องคุ้ม)
 """)
-    col_wt, col_ho = st.columns(2)
+    # 🙈 22 พ.ย. 2026 (มุคกี้สั่ง: "ซ่อนตารางนี้ไปก่อน"): ซ่อนการ์ดเวลารอผู้ป่วย
+    #    โค้ดคำนวณยังอยู่ครบ · จะเปิดคืน เปลี่ยน _SHOW_WAIT เป็น True
+    _SHOW_WAIT = False
+    if _SHOW_WAIT:
+        col_wt, col_ho = st.columns(2)
+    else:
+        col_wt, col_ho = None, st.container()
 
-    with col_wt:
+    if _SHOW_WAIT:
+      with col_wt:
         st.markdown('<div class="sub-title">⏱️ เวลารอผู้ป่วย</div>',
                     unsafe_allow_html=True)
         # ⏱️ 22 พ.ย. 2026 (มุคกี้สั่ง): เวลารอ = เวลาเข้าห้อง ลบ เวลามาถึง (arrivtime ของ HIS)
