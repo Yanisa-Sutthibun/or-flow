@@ -552,8 +552,6 @@ def _view_hub(C, L):
     chg = ((tr['n_common_now'] - tr['n_common_prev']) / tr['n_common_prev'] * 100) if tr['n_common_prev'] else None
     few = sorted(cap.items(), key=lambda kv: kv[1])[:1]
     hl3 = f'ปีงบ {fy} มี {tr["n"]:,} เคส' + (f' : เดือนเดียวกันกับปีก่อน {chg:+.0f}%' if chg is not None else '')
-    if few:
-        hl3 += f'<br>สาขา{_e(few[0][0]).replace("ศัลยกรรม", "")} มีคนเข้าได้ {few[0][1]} คน'
     cards = [
         ('noy', NOY, 'การ์ด 1', 'Nurse of the Year',
          'ที่สุดของพยาบาลห้องผ่าตัด ดูจากจำนวนเคสและเวลาที่เข้าเคส', hl1, 'ดู Nurse of the Year'),
@@ -813,8 +811,9 @@ def _view_tr(C, L):
                   f'<div style="display:grid;grid-template-columns:36px repeat(24,minmax(0,1fr));gap:3px"><div></div>{hdr}{rows}</div>'))
     mx = D['mx']
     if not mx.empty:
-        cap = D['capable']
-        few = [d for d in mx.columns if cap[d] <= 5]
+        # 🔢 22 พ.ย. 2026 (มุกกี้สั่ง): แสดงแค่จำนวนครั้งที่เข้าเคส นับรวม scrub กับ circulate
+        #    ไม่ตีความว่า 10 ครั้งขึ้นไป = เข้าสาขานั้นได้ (เลิกตัวหนา เลิกนับ "คนที่เข้าได้")
+        tot = mx.sum()
 
         def _short(s):
             return _e(s).replace('ศัลยกรรม', '').strip() or _e(s)
@@ -826,8 +825,8 @@ def _view_tr(C, L):
             return (f'rgb({int(230 - t * 219)},{int(244 - t * 122)},{int(241 - t * 133)})',
                     '#FFFFFF' if t > 0.55 else '#12212E')
         head = ''.join(f'<div style="font-size:11px;font-weight:600;text-align:center;line-height:1.3;'
-                       f'color:{"#B5531A" if d in few else "#3E4C59"}">{_short(d)}<div style="font-weight:500">'
-                       f'{cap[d]} คน</div></div>' for d in mx.columns)
+                       f'color:#3E4C59">{_short(d)}<div style="font-weight:500">'
+                       f'{int(tot[d]):,} ครั้ง</div></div>' for d in mx.columns)
         body = ''
         for k, r in mx.iterrows():
             tag = f' <span style="font-size:10px;color:{_NEW};font-weight:700">ใหม่</span>' if k in nvk else ''
@@ -835,13 +834,13 @@ def _view_tr(C, L):
             for d in mx.columns:
                 bg, fg = _mc(int(r[d]))
                 cells += (f'<div style="height:22px;border-radius:3px;background:{bg};color:{fg};font-size:11px;'
-                          f'display:flex;align-items:center;justify-content:center;font-weight:{700 if r[d] >= _CAPABLE else 400}">'
+                          f'display:flex;align-items:center;justify-content:center;font-weight:400">'
                           f'{int(r[d]) or ""}</div>')
             body += f'<div style="font-size:12px;white-space:nowrap;align-self:center">{_nm(k)}{tag}</div>{cells}'
-        t = (' · '.join(f'{_short(d)} มีคนเข้าได้ {cap[d]} คน' for d in few) + ' : สาขาที่มีคนเข้าได้ไม่ถึง 5 คน') if few \
-            else 'ทุกสาขามีคนเข้าได้อย่างน้อย 6 คน'
-        _md(_card(t, f'จำนวนครั้งที่พยาบาลแต่ละคนเข้าเคสแต่ละสาขา ปีงบ {fy} ({len(mx)} คนที่เข้าเคสอย่างน้อย {_MIN_CASES} ครั้ง) · '
-                     f'ตัวหนา = {_CAPABLE} ครั้งขึ้นไป ถือว่าเข้าสาขานั้นได้ · ใต้ชื่อสาขาคือจำนวนคนที่เข้าได้',
+        _top = tot.idxmax()
+        t = f'สาขา{_short(_top)} มีการเข้าเคสมากที่สุด {int(tot[_top]):,} ครั้ง'
+        _md(_card(t, f'จำนวนครั้งที่พยาบาลแต่ละคนเข้าเคสแต่ละสาขา ปีงบ {fy} นับรวมทั้ง scrub และ circulate '
+                     f'({len(mx)} คนที่เข้าเคสอย่างน้อย {_MIN_CASES} ครั้ง) · สีเข้ม = เข้าบ่อย · ใต้ชื่อสาขาคือจำนวนครั้งรวม',
                   f'<div style="display:grid;grid-template-columns:120px repeat({len(mx.columns)},minmax(0,1fr));gap:3px">'
                   f'<div></div>{head}{body}</div>'))
     per = D['per']
