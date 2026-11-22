@@ -837,12 +837,14 @@ def _view_tr(C, L):
                           f'display:flex;align-items:center;justify-content:center;font-weight:400">'
                           f'{int(r[d]) or ""}</div>')
             body += f'<div style="font-size:12px;white-space:nowrap;align-self:center">{_nm(k)}{tag}</div>{cells}'
-        _top = tot.idxmax()
-        t = f'สาขา{_short(_top)} มีการเข้าเคสมากที่สุด {int(tot[_top]):,} ครั้ง'
-        _md(_card(t, f'จำนวนครั้งที่พยาบาลแต่ละคนเข้าเคสแต่ละสาขา ปีงบ {fy} นับรวมทั้ง scrub และ circulate '
-                     f'({len(mx)} คนที่เข้าเคสอย่างน้อย {_MIN_CASES} ครั้ง) · สีเข้ม = เข้าบ่อย · ใต้ชื่อสาขาคือจำนวนครั้งรวม',
+        # 🏷️ 22 พ.ย. 2026 (มุกกี้กำหนดหัว บรรทัดรอง และหมายเหตุท้ายตารางเอง)
+        _top, _low = tot.idxmax(), tot.idxmin()
+        _md(_card('ตารางการเข้าเคสแยกตามสาขา',
+                  f'ปีงบ {fy} : สาขาที่มีคนเข้าเคสมากที่สุดคือ{_short(_top)} {int(tot[_top]):,} ครั้ง · '
+                  f'น้อยที่สุดคือ{_short(_low)} {int(tot[_low]):,} ครั้ง',
                   f'<div style="display:grid;grid-template-columns:120px repeat({len(mx.columns)},minmax(0,1fr));gap:3px">'
-                  f'<div></div>{head}{body}</div>'))
+                  f'<div></div>{head}{body}</div>',
+                  'จำนวนครั้งที่เข้านับรวมบทบาททั้ง scrub และ circulate'))
     per = D['per']
     # 🙈 22 พ.ย. 2026 (มุกกี้สั่ง "3 ตารางนี้เอาออกไปก่อน"): ซ่อนกราฟเคสเลิกเย็น (ปนกับเคสนอกเวลา)
     #    จำนวนครั้งที่เข้าเคสต่อคน และสัดส่วน scrub ต่อคน · โค้ดยังอยู่ครบ จะเปิดคืนเปลี่ยนเป็น True
