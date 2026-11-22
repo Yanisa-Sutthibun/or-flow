@@ -160,7 +160,9 @@ def render_process_panel():
 
     c1, c2 = st.columns(2)
     sched = c1.file_uploader("① ไฟล์ schedule (.csv)", type=["csv"], key="proc_sched")
-    intra = c2.file_uploader("② ไฟล์ intraop (.xls/.xlsx)", type=["xls", "xlsx"], key="proc_intra")
+    # 📄 22 พ.ย. 2026 (มุกกี้สั่ง): รับ .csv ด้วย (ไฟล์ .xls จาก HIS เสียตั้งแต่ต้นทาง)
+    #    FP._parse_intraop อ่าน .csv ผ่าน his_csv อยู่แล้ว : ต่อแถวที่แตกบรรทัดและตรวจลำดับวันที่ให้
+    intra = c2.file_uploader("② ไฟล์ intraop (.csv/.xls/.xlsx)", type=["csv", "xls", "xlsx"], key="proc_intra")
 
     if st.button("③ ▶️ ประมวลผลทั้งหมด (อัปเดต dashboard + สถิติ)", type="primary",
                  width="stretch", key="proc_run",
