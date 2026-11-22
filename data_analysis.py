@@ -122,7 +122,8 @@ def page_data_analysis():
 #    ใช้ภายในหน่วยงาน ไม่ใช้ในงานวิจัย · นับตามปีงบประมาณ (ปีงบ 2569 = 1 ต.ค. 68 ถึง 30 ก.ย. 69)
 #    1. Nurse of the Year : อันดับเข้าเคสมากที่สุด กับรวมเวลาในห้องนานที่สุด แยกกัน (ไม่ใช้คะแนน · มุกกี้สั่ง 22 พ.ย. 2026) แยก scrub / circulate
 #    2. Novice : น้องใหม่ตามแนวคิด Novice to Expert ของ Patricia Benner
-#       = เคสแรกที่พบอยู่ในปีงบนั้น และไม่เคยพบในข้อมูลก่อนหน้า (นับเฉพาะ Novice)
+#       = ประสบการณ์น้อยกว่า 1 ปี นับจากเคสแรก ไม่ตัดที่ 30 เคส เริ่มที่ปีงบ 2568 (มุกกี้สั่ง 22 พ.ย. 2026)
+#       เดิม : เคสแรกที่พบอยู่ในปีงบนั้น และไม่เคยพบในข้อมูลก่อนหน้า (นับเฉพาะ Novice)
 #    3. แนวโน้มการทำงาน + เจาะลึกกำลังคนพยาบาล : แสดงตัวเลขตามที่ปรากฏ (มุกกี้สั่ง 21 พ.ย. 2026)
 #    ชื่อแสดงแบบ ชื่อต้น + อักษรแรกนามสกุล (มุกกี้เคาะ 21 พ.ย. 2026 : คนในองค์กรรู้กันอยู่แล้ว)
 #    ⛔ logic ส่วนนี้ห้าม import streamlit (ทดสอบได้ด้วย python เปล่า)
@@ -254,23 +255,33 @@ def nurse_of_year(L, fy, min_cases=_MIN_CASES, top=3):
     return out
 
 
-def novices(L, fy, min_cases=_MIN_CASES):
-    """Novice ของปีงบ = เคสแรกที่พบอยู่ในปีงบนั้น ไม่เคยพบก่อนหน้า และมีเคสรวมอย่างน้อย min_cases
+_NOV_FY_MIN = 2568   # สถิติน้องใหม่เริ่มที่ปีงบนี้ (มุกกี้สั่ง 22 พ.ย. 2026)
+_NOV_DAYS = 365      # น้องใหม่ = ประสบการณ์น้อยกว่า 1 ปี นับจากเคสแรก
+
+
+def novices(L, fy, min_cases=1):
+    """Novice ของปีงบ = คนที่เคสแรกในข้อมูลอยู่ในปีงบนั้น (ไม่เคยพบก่อนหน้า)
+    🐣 22 พ.ย. 2026 (มุกกี้สั่ง): น้องใหม่คือคนที่มีประสบการณ์น้อยกว่า 1 ปี นับจากเคสแรกที่เข้า
+      · ไม่ตัดที่ 30 เคส · สถิติของแต่ละคนนับเฉพาะ 1 ปีแรก (365 วันจากเคสแรก)
+      · คนที่มีชื่อเข้าเคสตั้งแต่ปี 64 ไม่ใช่น้องใหม่ : สถิติน้องใหม่เริ่มที่ปีงบ 2568
     ปีงบแรกสุดของข้อมูลหาไม่ได้ (ไม่รู้ว่าก่อนหน้านั้นเคยมีหรือไม่) คืน []"""
-    if L.empty or fy <= int(L['fy'].min()):
+    import pandas as pd
+    if L.empty or fy < _NOV_FY_MIN or fy <= int(L['fy'].min()):
         return []
     first = L.groupby('key')['date'].min()
     last_date = L['date'].max()
     keys = [k for k, d in first.items() if fy_of(d) == fy]
     out = []
     for k in keys:
-        s = L[L['key'] == k]
+        end = first[k] + pd.Timedelta(days=_NOV_DAYS)
+        s = L[(L['key'] == k) & (L['date'] < end)]
         if len(s) < min_cases:
             continue
         pr = s['proc'][s['proc'] != ''].value_counts()
         out.append(dict(key=k, cases=len(s), scrub=int((s['role'] == 'scrub').sum()),
                         circ=int((s['role'] == 'circ').sum()), hours=float(s['dur'].sum() / 60),
-                        first=first[k], months=int(round((last_date - first[k]).days / 30.44)),
+                        first=first[k],
+                        months=min(12, int(round((last_date - first[k]).days / 30.44))),
                         divs=s['div'].value_counts(), procs=pr.head(10), nprocs=int(pr.size)))
     return sorted(out, key=lambda x: -x['cases'])
 
@@ -322,7 +333,7 @@ def trends(C, L, fy, nov_keys=()):
         s['k0'] = s.groupby('key')['ym'].transform('min')
         s['mi'] = s['ym'] - s['k0']
         last_ym = L['date'].max().year * 12 + L['date'].max().month
-        span = int(min(last_ym - s.groupby('key')['ym'].min()))
+        span = min(11, int(min(last_ym - s.groupby('key')['ym'].min())))   # เฉพาะ 1 ปีแรก
         for i in range(span + 1):
             t = s[s['mi'] == i]
             n = len(nov_keys)
@@ -509,9 +520,13 @@ def _fy_note(C, fy) -> str:
     return f'ปีงบ {fy} : มีข้อมูล {nm} เดือน ถึง {last.day} {TH_MON[last.month - 1]} {str(last.year + 543)[-2:]}'
 
 
-def _pick_fy(C, key, label='ปีงบประมาณ'):
-    fys = _fy_list(C)
+def _pick_fy(C, key, label='ปีงบประมาณ', fy_min=None):
+    fys = [f for f in _fy_list(C) if fy_min is None or f >= fy_min]
+    if not fys:
+        return None
     d = _default_fy(C)
+    if d not in fys:
+        d = fys[0]
     _c, _x = st.columns([1, 3])
     with _c:
         return st.selectbox(label, fys, index=fys.index(d), key=key, format_func=lambda f: f'ปีงบ {f}')
@@ -611,14 +626,17 @@ def _view_noy(C, L):
 # ---------- การ์ด 2 : Novice ----------
 def _view_nov(C, L):
     _back()
-    fy = _pick_fy(C, 'da_fy_nov')
+    fy = _pick_fy(C, 'da_fy_nov', fy_min=_NOV_FY_MIN)
+    if fy is None:
+        st.info(f'สถิติน้องใหม่เริ่มที่ปีงบ {_NOV_FY_MIN} : ยังไม่มีข้อมูลปีงบนั้น')
+        return
     nv = novices(L, fy)
     _md(f'<div style="margin:4px 0 8px">'
         f'<div><div class="da-sec" style="margin:0">Novice : น้องใหม่ปีงบ {fy}</div>'
-        f'<div class="da-s">ตามแนวคิด Novice to Expert ของ Patricia Benner : เคสแรกที่พบอยู่ในปีงบ {fy} '
-        f'และไม่เคยพบในข้อมูลก่อนหน้า</div></div></div>')
+        f'<div class="da-s">ตามแนวคิด Novice to Expert ของ Patricia Benner : ประสบการณ์น้อยกว่า 1 ปี '
+        f'นับจากเคสแรกที่เข้า (เคสแรกอยู่ในปีงบ {fy}) · ตัวเลขนับเฉพาะ 1 ปีแรกของแต่ละคน</div></div></div>')
     if not nv:
-        st.info(f'ปีงบ {fy} ไม่พบน้องใหม่ที่เข้าเคสอย่างน้อย {_MIN_CASES} เคส')
+        st.info(f'ปีงบ {fy} ไม่พบน้องใหม่')
         return
     top_div = {}
     for n in nv:
@@ -626,7 +644,7 @@ def _view_nov(C, L):
             top_div[n['divs'].index[0]] = top_div.get(n['divs'].index[0], 0) + 1
     td = max(top_div.items(), key=lambda kv: kv[1]) if top_div else None
     more_circ = sum(1 for n in nv if n['circ'] > n['scrub'])
-    title = (f'น้อง {len(nv)} คนเข้าเคสไปแล้วคนละ {min(n["cases"] for n in nv):,} ถึง {max(n["cases"] for n in nv):,} เคส'
+    title = (f'น้อง {len(nv)} คนเข้าเคสในปีแรกคนละ {min(n["cases"] for n in nv):,} ถึง {max(n["cases"] for n in nv):,} เคส'
              + (f' : สาขาที่เข้ามากที่สุดคือ {_e(td[0])} ({td[1]} จาก {len(nv)} คน)' if td else '')
              + (f' · มี {more_circ} คนที่ได้ circulate มากกว่า scrub' if more_circ else ''))
     mx = max(n['cases'] for n in nv)
@@ -644,7 +662,7 @@ def _view_nov(C, L):
     pick = st.selectbox('ดูรายละเอียดของ', [n['key'] for n in nv], format_func=short_name, key='da_nov_pick')
     n = next(x for x in nv if x['key'] == pick)
     f0 = n['first']
-    _kpis([('เคสทั้งหมด', f'{n["cases"]:,}', 'เคส'), ('scrub', f'{n["scrub"]:,}', 'เคส'),
+    _kpis([('เคสในปีแรก', f'{n["cases"]:,}', 'เคส'), ('scrub', f'{n["scrub"]:,}', 'เคส'),
            ('circulate', f'{n["circ"]:,}', 'เคส'), ('ชั่วโมงในห้อง', f'{n["hours"]:,.0f}', 'ชั่วโมง')])
     a, b = st.columns(2)
     with a:

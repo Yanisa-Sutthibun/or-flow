@@ -1155,9 +1155,20 @@ def test_data_analysis_nurse_names_short_and_benner():
     C, L = DA.prep(pd.DataFrame(rows), {'1': 'ศัลยกรรมทั่วไป'})
     assert set(C['fy']) == {2568, 2569}
     assert 'ชั่วคราว ผ่านมา' not in DA.active_keys(L, 2569), "ชื่อที่พบไม่ถึง 30 เคสต้องถูกตัด"
-    nv = DA.novices(L, 2569)
-    assert [n['key'] for n in nv] == ['ดาว เด่น'], nv
+    # 🐣 22 พ.ย. 2026 (มุกกี้สั่ง): น้องใหม่ = น้อยกว่า 1 ปีนับจากเคสแรก ไม่ตัดที่ 30 เคส เริ่มปีงบ 2568
+    nv_all = DA.novices(L, 2569)
+    assert [n['key'] for n in nv_all] == ['ดาว เด่น', 'ชั่วคราว ผ่านมา'], nv_all
+    nv = nv_all[:1]
     assert DA.novices(L, 2568) == [], "ปีงบแรกของข้อมูลหาน้องใหม่ไม่ได้"
+    _old = pd.DataFrame([dict(key=k, role='scrub', case_id=i, date=pd.Timestamp(d), fy=DA.fy_of(pd.Timestamp(d)),
+                              dur=60, div='x', proc='LC')
+                         for i, (k, d) in enumerate([('เก่า ก.', '2021-02-01'), ('เก่า ก.', '2025-01-05'),
+                                                     ('กลาง ข.', '2023-03-01'), ('ใหม่ ค.', '2024-11-01'),
+                                                     ('ใหม่ ค.', '2025-10-31'), ('ใหม่ ค.', '2025-11-02')])])
+    assert DA.novices(_old, 2566) == [] and DA.novices(_old, 2567) == [], "สถิติน้องใหม่เริ่มที่ปีงบ 2568"
+    _n68 = DA.novices(_old, 2568)
+    assert [n['key'] for n in _n68] == ['ใหม่ ค.'], "คนที่มีชื่อตั้งแต่ปี 64 ไม่ใช่น้องใหม่"
+    assert _n68[0]['cases'] == 2, "นับเฉพาะ 365 วันแรกจากเคสแรก"
     noy = DA.nurse_of_year(L, 2569)
     assert noy['scrub']['cases'][0]['key'] == noy['scrub']['hours'][0]['key'] == 'ดาว เด่น'
     assert noy['scrub']['cases'][1]['key'] == 'สมใจ ใจดี' and 'score' not in noy['scrub']['cases'][0]
