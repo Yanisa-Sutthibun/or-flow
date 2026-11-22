@@ -1175,6 +1175,12 @@ def test_data_analysis_nurse_names_short_and_benner():
     D = DA.deep(C, L, 2569, [n['key'] for n in nv])
     assert D['per'].loc['ดาว เด่น', 'late_pct'] == 100 and D['per'].loc['สมใจ ใจดี', 'late_pct'] == 0
     assert D['pairs'][0]['top3'][0][0] == 'มาลี รักงาน'
+    # 🔀 22 พ.ย. 2026 (มุกกี้สั่ง): ตารางสาขาแยกหน้าที่ และรายคนถึงระดับหัตถการ
+    assert (D['mx_scrub'] + D['mx_circ']).equals(D['mx']), "scrub + circulate ต้องเท่ากับตารางรวม"
+    assert D['mx_circ'].loc['มาลี รักงาน'].sum() == D['mx'].loc['มาลี รักงาน'].sum()
+    NP = DA.nurse_procs(L, 2569, 'ดาว เด่น')
+    assert list(NP['proc']) == ['LC'] and NP.loc[0, 'circ'] == 0 and NP.loc[0, 'scrub'] == NP.loc[0, 'total'] > 0
+    assert DA.nurse_procs(L, 2569, 'ไม่มี ตัวตน').empty
     T = DA.trends(C, L, 2569, [n['key'] for n in nv])
     assert len(T['common']) == 12 and T['ramp'][0]['scrub'] > 0
 

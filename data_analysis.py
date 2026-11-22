@@ -225,7 +225,7 @@ def prep(raw, div_map=None, exclude=()):
                 k = '' if _DOC_T.search(nm) else full_key(nm)
                 if k and k not in exclude:
                     rows.append((k, role, r.case_id, r.date, r.fy, r.dur, r.div,
-                                 str(getattr(r, 'procedure_name', '') or '').strip()))
+                                 str(getattr(r, 'proc_std', None) or getattr(r, 'procedure_name', '') or '').strip()))
     L = pd.DataFrame(rows, columns=['key', 'role', 'case_id', 'date', 'fy', 'dur', 'div', 'proc'])
     if not L.empty:
         L = L.drop_duplicates(['key', 'role', 'case_id'])
@@ -370,6 +370,11 @@ def deep(C, L, fy, nov_keys=(), min_cases=_MIN_CASES):
         mx = mx.reindex(columns=cols, fill_value=0)
         mx = mx.loc[mx.sum(axis=1).sort_values(ascending=False).index]
     R['mx'] = mx
+    # 🔀 22 พ.ย. 2026 (มุกกี้สั่ง): ตารางเดียวกัน แยกหน้าที่ scrub / circulate (แถวและคอลัมน์เรียงเหมือนตารางรวม)
+    for _role in ('scrub', 'circ'):
+        _m = y[y['role'] == _role].groupby(['key', 'div']).size().unstack(fill_value=0)
+        R['mx_' + _role] = (_m.reindex(index=mx.index, columns=mx.columns, fill_value=0)
+                            if not mx.empty else mx)
     R['capable'] = {d: int((mx[d] >= _CAPABLE).sum()) for d in mx.columns} if not mx.empty else {}
     # รายคน : เคสจบเย็น · จำนวนเคส · สัดส่วน scrub
     lt = c.set_index('case_id')['late']
@@ -402,6 +407,23 @@ def deep(C, L, fy, nov_keys=(), min_cases=_MIN_CASES):
                           top3=[(str(a), int(b)) for a, b in vc.head(3).items()]))
     R['pairs'] = sorted(pairs, key=lambda x: -x['with_novice'])
     return R
+
+def nurse_procs(L, fy, key):
+    """👩‍⚕️ 22 พ.ย. 2026 (มุกกี้สั่ง): พยาบาล 1 คน เข้าหัตถการอะไรกี่ครั้ง แยกหน้าที่ ในปีงบ fy
+    คืน DataFrame[proc, scrub, circ, total] เรียงจากมาก · ชื่อหัตถการว่างรวมเป็น 'ไม่ระบุหัตถการ'"""
+    import pandas as pd
+    s = L[(L['fy'] == fy) & (L['key'] == key)]
+    if s.empty:
+        return pd.DataFrame(columns=['proc', 'scrub', 'circ', 'total'])
+    p = s['proc'].where(~s['proc'].isin(['', 'UNKNOWN', 'nan', 'None', '-']), 'ไม่ระบุหัตถการ')
+    g = s.assign(proc=p).groupby(['proc', 'role']).size().unstack(fill_value=0)
+    for c in ('scrub', 'circ'):
+        if c not in g.columns:
+            g[c] = 0
+    g['total'] = g['scrub'] + g['circ']
+    return g.reset_index()[['proc', 'scrub', 'circ', 'total']].sort_values(
+        ['total', 'proc'], ascending=[False, True]).reset_index(drop=True)
+
 
 # ══════════════════════════════════════════════════════════════════
 # 🏥 การ์ด "ห้องผ่าตัดและหัตถการ" (มุกกี้สั่ง 22 พ.ย. 2026 : ข้อ 1 การใช้ห้อง · 3 หัตถการที่เวลาแกว่ง
@@ -612,13 +634,17 @@ def _load():
     conn = get_conn()
     try:
         raw = pd.read_sql_query(
-            "SELECT case_id, op_date, procedure_name, division_code, scrub_nurse, circ_nurse, "
+            "SELECT case_id, op_date, procedure_name, diagnosis, division_code, scrub_nurse, circ_nurse, "
             "actual_duration_min, in_or_at, op_end_at FROM cases "
             f"WHERE status IN {_DONE_STATUSES} "
             "AND (scrub_nurse IS NOT NULL OR circ_nurse IS NOT NULL)", conn)
     finally:
         conn.close()
     raw = apply_to_dataframe(raw)
+    # 📚 22 พ.ย. 2026 (มุกกี้สั่ง ดูรายคนถึงระดับหัตถการ): ชื่อหัตถการมาตรฐานจากพจนานุกรมชุดเดียวกับแบบจำลอง
+    if not raw.empty:
+        from main_or_db import normalize_procedure_df
+        raw['proc_std'] = normalize_procedure_df(raw)
     # รหัสพยาบาลที่เป็นชื่อแพทย์ถูกกรองตั้งแต่อัปโหลด staff_map แล้ว → ถอดไม่ออก เหลือเป็นรหัส → full_key ทิ้งเอง
     return prep(raw, DIV_CODE_MAP)
 
@@ -938,6 +964,13 @@ def _view_tr(C, L):
                   f'<div style="display:grid;grid-template-columns:36px repeat(24,minmax(0,1fr));gap:3px"><div></div>{hdr}{rows}</div>'))
     mx = D['mx']
     if not mx.empty:
+        # 🔀 22 พ.ย. 2026 (มุกกี้สั่ง): สลับดู รวม / scrub / circulate
+        _ROLE = {'รวมทั้งสองหน้าที่': ('mx', 'นับรวมบทบาททั้ง scrub และ circulate'),
+                 'เฉพาะ scrub': ('mx_scrub', 'นับเฉพาะครั้งที่เป็น scrub'),
+                 'เฉพาะ circulate': ('mx_circ', 'นับเฉพาะครั้งที่เป็น circulate')}
+        _pick_role = st.radio('นับหน้าที่', list(_ROLE), horizontal=True, key='da_mx_role')
+        _mk, _role_note = _ROLE.get(_pick_role, _ROLE['รวมทั้งสองหน้าที่'])
+        mx = D.get(_mk, mx)
         # 🔢 22 พ.ย. 2026 (มุกกี้สั่ง): แสดงแค่จำนวนครั้งที่เข้าเคส นับรวม scrub กับ circulate
         #    ไม่ตีความว่า 10 ครั้งขึ้นไป = เข้าสาขานั้นได้ (เลิกตัวหนา เลิกนับ "คนที่เข้าได้")
         tot = mx.sum()
@@ -971,7 +1004,40 @@ def _view_tr(C, L):
                   f'น้อยที่สุดคือ{_short(_low)} {int(tot[_low]):,} ครั้ง',
                   f'<div style="display:grid;grid-template-columns:120px repeat({len(mx.columns)},minmax(0,1fr));gap:3px">'
                   f'<div></div>{head}{body}</div>',
-                  'จำนวนครั้งที่เข้านับรวมบทบาททั้ง scrub และ circulate'))
+                  f'จำนวนครั้งที่เข้า{_role_note}'))
+        # 👩‍⚕️ 22 พ.ย. 2026 (มุกกี้สั่ง): เลือกพยาบาล 1 คน ดูว่าเข้าหัตถการอะไรกี่ครั้ง แยกหน้าที่
+        _who = st.selectbox('ดูรายคน : เข้าหัตถการอะไร หน้าที่อะไร กี่ครั้ง', list(D['mx'].index),
+                            format_func=short_name, key='da_nurse_pick')
+        NP = nurse_procs(L, fy, _who)
+        if not NP.empty:
+            _ns, _nc = int(NP['scrub'].sum()), int(NP['circ'].sum())
+            _kpis([('เข้าเคสทั้งหมด', f'{_ns + _nc:,}', 'ครั้ง'), ('scrub', f'{_ns:,}', 'ครั้ง'),
+                   ('circulate', f'{_nc:,}', 'ครั้ง'), ('หัตถการที่เคยเข้า', f'{len(NP):,}', 'ชนิด')])
+            _TOPN = 20
+            _mx = int(NP['total'].max()) or 1
+            th = 'font-size:11px;color:#5B6B7B;font-weight:600;text-align:right'
+            rows = (f'<div style="font-size:11px;color:#5B6B7B;font-weight:600">หัตถการ</div><div></div>'
+                    f'<div style="{th}">scrub</div><div style="{th}">circulate</div><div style="{th}">รวม</div>')
+            for r in NP.head(_TOPN).itertuples(index=False):
+                rows += (f'<div style="font-size:13px;align-self:center">{_e(r.proc)}</div>'
+                         f'<div style="display:flex;align-self:center;width:{max(r.total / _mx * 100, 1):.1f}%">'
+                         f'<div style="flex:{int(r.scrub)};height:14px;background:{_ACC};border-radius:5px 0 0 5px"></div>'
+                         f'<div style="flex:{int(r.circ)};height:14px;background:{_BASE};border-radius:0 5px 5px 0"></div></div>'
+                         f'<div style="font-size:13px;text-align:right">{int(r.scrub):,}</div>'
+                         f'<div style="font-size:13px;text-align:right">{int(r.circ):,}</div>'
+                         f'<div style="font-size:13px;text-align:right"><b>{int(r.total):,}</b></div>')
+            _t0 = NP.iloc[0]
+            _md(_card(f'{_nm(_who)} เข้า {_e(_t0["proc"])} มากที่สุด {int(_t0["total"]):,} ครั้ง '
+                      f'(scrub {int(_t0["scrub"]):,} · circulate {int(_t0["circ"]):,})',
+                      f'หัตถการที่เข้าบ่อย {min(_TOPN, len(NP))} อันดับ จากทั้งหมด {len(NP):,} ชนิด ปีงบ {fy}',
+                      _legend([(_ACC, 'scrub'), (_BASE, 'circulate')]) +
+                      f'<div style="display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr) 60px 70px 60px;'
+                      f'gap:6px 10px">{rows}</div>',
+                      'ชื่อหัตถการจัดกลุ่มด้วยพจนานุกรมหัตถการมาตรฐาน · นับตามชื่อที่บันทึกใน HIS'))
+            if len(NP) > _TOPN:
+                with st.expander(f'ดูครบทุกหัตถการ ({len(NP):,} ชนิด)'):
+                    st.dataframe(NP.rename(columns={'proc': 'หัตถการ', 'circ': 'circulate', 'total': 'รวม'}),
+                                 use_container_width=True, hide_index=True)
     per = D['per']
     # 🙈 22 พ.ย. 2026 (มุกกี้สั่ง "3 ตารางนี้เอาออกไปก่อน"): ซ่อนกราฟเคสเลิกเย็น (ปนกับเคสนอกเวลา)
     #    จำนวนครั้งที่เข้าเคสต่อคน และสัดส่วน scrub ต่อคน · โค้ดยังอยู่ครบ จะเปิดคืนเปลี่ยนเป็น True
