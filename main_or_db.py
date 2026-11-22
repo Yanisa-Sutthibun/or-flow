@@ -13,6 +13,7 @@ import statistics
 import pandas as pd
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
+import functools
 
 from db_connection import get_connection, IS_POSTGRES, IS_SQLITE, get_db_info
 # Staff de-mask layer — แปลง SURG_001 → ชื่อจริง สำหรับ display
@@ -148,26 +149,50 @@ def _fuzzy_match_canonical(name: str, threshold: float = 0.82):
     return best_canon if best_score >= threshold else None
 
 
-def _normalize_procedure_name(name) -> str:
-    """แปลงชื่อหัตถการดิบ → canonical group ตาม rule + cleanup.
+@functools.lru_cache(maxsize=50000)
+def _dict_procedure_name(s: str, sp: str, dx: str):
+    """📚 ชื่อหัตถการมาตรฐานจากพจนานุกรม (procedure_master) · ไม่รู้จัก = None"""
+    try:
+        import procedure_master as _pm
+        r = _pm.resolve(s, sp or None, None, dx or None)
+        return r['label'] if r.get('main') is not None else None
+    except Exception as _e:
+        try:
+            from logger_setup import get_logger
+            get_logger(__name__).warning("procedure_master resolve failed: %s", _e)
+        except Exception:
+            pass
+        return None
 
-    Layer 1: Regex rules (เร็วสุด — pattern จับ keyword)
-    Layer 2: SequenceMatcher fuzzy (จับ typo — เช่น Debreidement → Debridement)
+
+def _normalize_procedure_name(name, specialty=None, diagnosis=None) -> str:
+    """แปลงชื่อหัตถการดิบ → ชื่อหัตถการมาตรฐาน
+
+    📚 22 พ.ย. 2026 (มุคกี้สั่ง: "ในหน้าสถิติขอให้ใช้ dictionary เหมือนกับ model")
+    Layer 1: พจนานุกรม procedure_master ชุดเดียวกับแบบจำลอง (ส่งสาขา + diagnosis ได้ยิ่งแม่น)
+    Layer 2: กติกาเดิม _PROC_RULES เฉพาะชื่อที่พจนานุกรมไม่รู้จัก (หัตถการห้องผ่าตัดเล็ก)
     Layer 3: Cleanup + title case
+    เลิกใช้ fuzzy เทียบตัวสะกด (รวมผิดกลุ่มได้ ตรวจย้อนไม่ได้)
     """
     if name is None:
         return 'UNKNOWN'
     s = str(name).strip()
     if not s or s.lower() in ('nan', 'none', '-'):
         return 'UNKNOWN'
-    # Layer 1: Rule-based
+    _sp = '' if specialty is None else str(specialty).strip()
+    _dx = '' if diagnosis is None else str(diagnosis).strip()
+    if _sp.lower() in ('nan', 'none', '-'):
+        _sp = ''
+    if _dx.lower() in ('nan', 'none', '-'):
+        _dx = ''
+    # Layer 1: พจนานุกรมหัตถการมาตรฐาน
+    std = _dict_procedure_name(s, _sp, _dx)
+    if std:
+        return std
+    # Layer 2: กติกาเดิม (เฉพาะชื่อที่พจนานุกรมไม่รู้จัก)
     for pat, canonical in _PROC_RULES:
         if pat.search(s):
             return canonical
-    # Layer 2: SequenceMatcher fuzzy (สำหรับ typo)
-    fuzzy = _fuzzy_match_canonical(s)
-    if fuzzy:
-        return fuzzy
     # Layer 3: ตัด side / เลขท้าย แล้ว Title Case
     cleaned = _strip_modifiers(s)
     if not cleaned:
@@ -176,6 +201,19 @@ def _normalize_procedure_name(name) -> str:
     if len(cleaned) <= 4 and cleaned.isalpha():
         return cleaned.upper()
     return cleaned[0].upper() + cleaned[1:]
+
+
+def normalize_procedure_df(df, col: str = 'procedure_name'):
+    """📚 ชื่อหัตถการมาตรฐานทั้งตาราง : ใช้สาขา (division_code/division) และ diagnosis
+    ของแถวนั้นประกอบถ้ามีคอลัมน์ (เหมือนที่แบบจำลองใช้) · คืน Series"""
+    sp_col = next((c for c in ('division_code', 'division') if c in df.columns), None)
+    dx_col = 'diagnosis' if 'diagnosis' in df.columns else None
+    names = df[col].fillna('-').tolist()
+    sps = df[sp_col].tolist() if sp_col else [None] * len(names)
+    dxs = df[dx_col].tolist() if dx_col else [None] * len(names)
+    import pandas as _pd
+    return _pd.Series([_normalize_procedure_name(n, a, d)
+                       for n, a, d in zip(names, sps, dxs)], index=df.index)
 
 
 # ============================================================================
@@ -3390,8 +3428,7 @@ def get_surgeon_detail(surgeon: str, date_from: str = None,
     # Top procedures — นับจากที่แพทย์คนนี้ "ทำจริง" (actual)
     actual_cases = df[df['actual_clean'] == surgeon].copy()
     if not actual_cases.empty:
-        actual_cases['proc'] = actual_cases['procedure_name'].fillna('-').apply(
-            _normalize_procedure_name)
+        actual_cases['proc'] = normalize_procedure_df(actual_cases)
         top_proc = (actual_cases.groupby('proc')
                     .size().reset_index(name='n_cases')
                     .sort_values('n_cases', ascending=False).head(5))
@@ -3553,7 +3590,7 @@ def get_nurse_skill_map(date_from: str = None, date_to: str = None,
         return empty
 
     # Normalize procedure names
-    df['proc'] = df['procedure_name'].apply(_normalize_procedure_name)
+    df['proc'] = normalize_procedure_df(df)
     # หา top N procedures
     top_procs = (df['proc'].value_counts().head(top_n_procedures)
                  .index.tolist())

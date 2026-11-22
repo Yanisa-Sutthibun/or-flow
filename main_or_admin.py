@@ -192,6 +192,7 @@ def _ca_surgeon_detail(surgeon, date_from, date_to, _v):
     from main_or_db import get_surgeon_detail
     return get_surgeon_detail(surgeon, date_from, date_to)
 from difflib import SequenceMatcher
+from main_or_db import normalize_procedure_df as _norm_proc_df
 
 
 def _fuzzy_merge(df: pd.DataFrame, name_col: str = 'procedure_name',
@@ -244,8 +245,8 @@ def group_top_procedures(proc_df: pd.DataFrame, top_n: int = 10,
             .agg(n=('n', 'sum'), _total_min=('_total_min', 'sum')))
     df['avg_min'] = (df['_total_min'] / df['n']).round(0)
     df = df.drop(columns=['_total_min'])
-    # fuzzy merge รอบสองสำหรับชื่อที่หลุด rule
-    df = _fuzzy_merge(df, 'procedure_name', threshold=fuzzy_threshold)
+    # 📚 22 พ.ย. 2026 (มุคกี้สั่ง): ใช้พจนานุกรมอย่างเดียว เลิก fuzzy merge รอบสอง
+    df = df.sort_values('n', ascending=False)
     return df.head(top_n).reset_index(drop=True)
 
 
@@ -1444,7 +1445,7 @@ def _render_ai_research_tab():
     if 'procedure_name' not in ai_df.columns:
         ai_df = ai_df.assign(procedure_name='UNKNOWN')
     _byp = (ai_df.assign(
-                _p=ai_df['procedure_name'].apply(_normalize_procedure_name))
+                _p=_norm_proc_df(ai_df))
             .groupby('_p')['abs_error'].agg(mae='mean', n='size').reset_index())
     _byp = _byp[(_byp['n'] >= 20)
                 & (~_byp['_p'].isin(['UNKNOWN', '', None]))].sort_values('mae')
@@ -1478,14 +1479,14 @@ def _render_ai_research_tab():
     # ── Apply fuzzy normalization to procedure names (canonical groups) ──
     # ทำให้ filter dropdown แสดงชื่อแบบรวมแล้ว เช่น
     # "ESWL", "ESWL Right" → "ESWL"  /  "QS", "Q-Switch" → "Q-Switch ND:YAG"
-    ai_df['proc_canonical'] = ai_df['procedure_name'].apply(_normalize_procedure_name)
+    ai_df['proc_canonical'] = _norm_proc_df(ai_df)
 
     # ── Filter Control (เฉพาะหัตถการ — เอาแพทย์ออก) ──
     proc_options = sorted(
         [p for p in ai_df['proc_canonical'].dropna().unique() if p != 'UNKNOWN']
     )
     sel_procs = st.multiselect(
-        "🔬 หัตถการ (รวมกลุ่ม fuzzy แล้ว)", proc_options, default=[],
+        "🔬 หัตถการ (ชื่อมาตรฐาน)", proc_options, default=[],
         placeholder="ทั้งหมด — เลือกเพื่อกรอง",
         key="ai_filter_proc",
     )
@@ -2010,7 +2011,7 @@ def _render_nurse_progress_history(date_from: str, date_to: str):
         unsafe_allow_html=True)
 
     # Fuzzy normalize procedure name
-    ind['_proc_norm'] = ind['procedure_name'].fillna('-').apply(_normalize_procedure_name)
+    ind['_proc_norm'] = _norm_proc_df(ind)
     grouped = (ind.groupby('_proc_norm')
                   .agg(total=('case_id', 'count'),
                        scrub=('role', lambda x: (x == 'Scrub').sum()),
@@ -3254,7 +3255,7 @@ def _hist_sec_rank(date_from, date_to, data=None):
         _dfp['_div'] = _dfp['division_code'].fillna('-').astype(str).apply(
             lambda c: div_name(c) if c not in ('-', '', 'None', 'nan')
             else 'ไม่ระบุสาขา')
-        _dfp['_canon'] = _dfp['_pname'].apply(_normalize_procedure_name)
+        _dfp['_canon'] = _norm_proc_df(_dfp, '_pname')
 
         # ── ตัวเลือกสาขา = ปุ่มชิปกดเลือก (เรียงตามจำนวนเคส) ──
         _divs_avail = _dfp['_div'].value_counts().index.tolist()
@@ -3303,7 +3304,7 @@ def _hist_sec_rank(date_from, date_to, data=None):
             _scope_lbl = ('ทุกสาขา' if _sel_div == 'ทุกสาขา' else _sel_div)
             st.caption(f"🔬 {_scope_lbl} · แสดง {len(_fz)} อันดับแรก · "
                        f"รวม {int(_scope.shape[0]):,} เคส · "
-                       "รวมหัตถการคล้ายกันอัตโนมัติ (fuzzy)")
+                       "จัดกลุ่มตามพจนานุกรมหัตถการมาตรฐาน")
             st.plotly_chart(fig, use_container_width=True,
                             config={'displayModeBar': False})
 
@@ -3339,11 +3340,11 @@ def _hist_sec_rank(date_from, date_to, data=None):
                      'spreadsheetml.sheet',
                 key='proc_xlsx_dl')
             st.caption("ไฟล์ Excel แยก 1 ชีตต่อ 1 สาขา · ชื่อหัตถการดิบจากระบบ "
-                       "(ไม่รวม fuzzy) เรียงมาก→น้อย")
+                       "(ไม่จัดกลุ่ม) เรียงมาก→น้อย")
         except Exception as _xe:
             st.caption(f"สร้างไฟล์ Excel ไม่สำเร็จ: {_xe}")
 
-        with st.expander("ดูตัวอย่างรายการ (ชื่อดิบ ไม่รวม fuzzy)"):
+        with st.expander("ดูตัวอย่างรายการ (ชื่อดิบ ไม่จัดกลุ่ม)"):
             st.dataframe(
                 _raw.rename(columns={'_div': 'สาขา', '_pname': 'หัตถการ',
                                      'n': 'จำนวนเคส'}),
