@@ -560,8 +560,7 @@ def _view_hub(C, L):
         ('nov', NOV, 'การ์ด 2', 'Novice : น้องใหม่',
          'น้องใหม่ตามแนวคิด Novice to Expert ของ Patricia Benner ทำเคสอะไร สาขาไหนไปบ้าง', hl2, 'ดู Novice'),
         ('tr', TR, 'การ์ด 3', 'แนวโน้มการทำงาน',
-         'แนวโน้มเทียบปีต่อปี และเจาะลึกกำลังคนพยาบาล : ช่วงเวลาที่งานหนาแน่น พยาบาล × สาขา เคสจบเย็น '
-         'การกระจายงาน และสมดุล scrub กับ circulate', hl3, 'ดูแนวโน้ม'),
+         'แนวโน้มเทียบปีต่อปี และเจาะลึกกำลังคนพยาบาล : ช่วงเวลาที่งานหนาแน่น และพยาบาล × สาขา', hl3, 'ดูแนวโน้ม'),
     ]
     if not _SHOW_NOVICE:
         cards = [(v, svg, f'การ์ด {i}', *rest)
@@ -784,7 +783,10 @@ def _view_tr(C, L):
                   _legend([(_NEW, 'scrub'), (_BASE, 'circulate')]) +
                   f'<div style="display:flex;gap:10px;align-items:flex-end">{cols}</div>'))
     # ---------- เจาะลึก ----------
-    _md(f'<div class="da-sec">เจาะลึก : กำลังคนพยาบาล</div><div class="da-s">ปีงบ {fy} รวมเคสนอกเวลาไว้ก่อน</div>')
+    # 🩹 22 พ.ย. 2026 (มุกกี้แจ้ง กรอบการ์ดทับบรรทัดรอง): ห่อเป็นก้อนเดียวแบบหัวข้ออื่น + เว้นล่าง
+    _md(f'<div style="margin:18px 0 0;padding-bottom:16px">'
+        f'<div><div class="da-sec" style="margin:0">เจาะลึก : กำลังคนพยาบาล</div>'
+        f'<div class="da-s">ปีงบ {fy} รวมเคสนอกเวลาไว้ก่อน</div></div></div>')
     import numpy as np
     H = D['heat']
     if D['n_timed']:
@@ -843,7 +845,10 @@ def _view_tr(C, L):
                   f'<div style="display:grid;grid-template-columns:120px repeat({len(mx.columns)},minmax(0,1fr));gap:3px">'
                   f'<div></div>{head}{body}</div>'))
     per = D['per']
-    if not per.empty and per['timed'].sum() > 0:
+    # 🙈 22 พ.ย. 2026 (มุกกี้สั่ง "3 ตารางนี้เอาออกไปก่อน"): ซ่อนกราฟเคสเลิกเย็น (ปนกับเคสนอกเวลา)
+    #    จำนวนครั้งที่เข้าเคสต่อคน และสัดส่วน scrub ต่อคน · โค้ดยังอยู่ครบ จะเปิดคืนเปลี่ยนเป็น True
+    _SHOW_PER_NURSE = False
+    if _SHOW_PER_NURSE and not per.empty and per['timed'].sum() > 0:
         lt = per.sort_values('late', ascending=False).head(12)
         hi = per[per['timed'] >= _MIN_CASES].sort_values('late_pct', ascending=False).head(1)
         nvl = per[per.index.isin(nvk)]['late_pct'].dropna()
@@ -858,7 +863,7 @@ def _view_tr(C, L):
                   f'{lt.iloc[0]["late"]:,.0f} เคส',
                   f'จำนวนเคสที่ออกจากห้องหลัง 16:30 หรือข้ามเที่ยงคืน ต่อพยาบาล 12 อันดับแรก ปีงบ {fy} · นับทั้ง scrub และ '
                   f'circulate · รวมเคสนอกเวลา', _hbars(rows, label_w=150, val_w=200), foot))
-    if not per.empty:
+    if _SHOW_PER_NURSE and not per.empty:
         a, b = st.columns(2)
         with a:
             bins = [(0, 100), (100, 200), (200, 300), (300, 400), (400, 500), (500, 600), (600, 700), (700, 10 ** 6)]
