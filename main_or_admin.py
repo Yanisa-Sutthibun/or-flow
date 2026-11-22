@@ -3510,7 +3510,7 @@ def _hist_sec_eff(date_from, date_to, data=None):
         st.markdown("""
 บอก **คุณภาพการให้บริการ** — ผู้ป่วยรอนานไหม ทีมทำงานเร็วแค่ไหน
 
-- **⏱️ เวลารอ** = (กำลังพัฒนา) จะคิดจากตอนพยาบาลกด "พร้อมเข้าห้อง"
+- **⏱️ เวลารอ** = เวลาเข้าห้องผ่าตัด ลบ เวลามาถึงห้องผ่าตัด (จากไฟล์ intraop ของ HIS)
   - เป้า: รอ ≤60 นาที
 - **🔄 รับเวร** = เคสที่ทำหลัง 15:30 น. → ทีมต้องอยู่ OT
   - เฉพาะ จ.-ศ. ไม่นับเคสนอกเวลา
@@ -3522,18 +3522,35 @@ def _hist_sec_eff(date_from, date_to, data=None):
     with col_wt:
         st.markdown('<div class="sub-title">⏱️ เวลารอผู้ป่วย</div>',
                     unsafe_allow_html=True)
-        # NOTE: รอข้อมูลจาก workflow ใหม่ (พยาบาลกด "พร้อมเข้าห้อง")
+        # ⏱️ 22 พ.ย. 2026 (มุคกี้สั่ง): เวลารอ = เวลาเข้าห้อง ลบ เวลามาถึง (arrivtime ของ HIS)
+        #    นับเฉพาะ 0 ถึง 240 นาที : ติดลบ = ลงเวลาผิด · เกิน 4 ชม. = ค่าผิดปกติ (ราว 1.5% ของเคส)
+        _wt_avg = _wt_max = _wt_over = '-'
+        _wt_note = "ยังไม่มีเวลามาถึงห้องผ่าตัดของเคสในช่วงนี้"
+        try:
+            _wdf = _ca_cases_range(str(date_from), str(date_to), _stats_ver())
+            _wdf = _wdf[_wdf['status'].isin(['post_op', 'discharged', 'done'])]
+            _w = (pd.to_datetime(_wdf['in_or_at'], errors='coerce')
+                  - pd.to_datetime(_wdf['arrived_at'], errors='coerce')
+                  ).dt.total_seconds() / 60
+            _w = _w[(_w >= 0) & (_w <= 240)]
+            if len(_w):
+                _n_over = int((_w > 60).sum())
+                _wt_avg = f"{_w.mean():.0f} นาที"
+                _wt_max = f"{_w.max():.0f} นาที"
+                _wt_over = f"{_n_over / len(_w) * 100:.0f}%"
+                _wt_note = (f"คิดจาก {len(_w):,} เคสที่มีเวลามาถึง จากเคสผ่าตัด {len(_wdf):,} เคส · "
+                            f"ค่ากลาง {_w.median():.0f} นาที · รอเกิน 60 นาที {_n_over:,} เคส · "
+                            "เวลาจากไฟล์ intraop")
+        except Exception as _e_wt:
+            _wt_note = f"คำนวณเวลารอไม่สำเร็จ: {_e_wt}"
         m1, m2, m3 = st.columns(3)
         with m1:
-            st.metric("เฉลี่ยรอ", "—")
+            st.metric("เฉลี่ยรอ", _wt_avg)
         with m2:
-            st.metric("นานสุด", "—")
+            st.metric("นานสุด", _wt_max)
         with m3:
-            st.metric("รอ >60 นาที", "—")
-        st.caption(
-            "⏳ ยังไม่พร้อมใช้งาน · กำลังพัฒนา workflow ให้พยาบาลกด "
-            "\"พร้อมเข้าห้อง\" → จะคิดเวลารอจริงได้"
-        )
+            st.metric("รอ >60 นาที", _wt_over)
+        st.caption(_wt_note)
 
     with col_ho:
         st.markdown('<div class="sub-title">🔄 สถิติรับเวร '
