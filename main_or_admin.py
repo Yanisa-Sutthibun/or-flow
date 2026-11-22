@@ -2417,7 +2417,6 @@ def _hist_sec_overview(date_from, date_to, data=None):
     st.markdown('<div id="sec-overview" class="group-header">📊 ภาพรวมทั้งหมด</div>',
                 unsafe_allow_html=True)
     s_all = _ca_summary(date_from, date_to, _stats_ver())
-    cancel_r = s_all['cancelled'] / s_all['total'] * 100 if s_all['total'] > 0 else 0
     opd_pct = (s_all['n_opd'] / s_all['total'] * 100) if s_all['total'] > 0 else 0
     ipd_pct = (s_all['n_ipd'] / s_all['total'] * 100) if s_all['total'] > 0 else 0
 
@@ -2475,9 +2474,10 @@ def _hist_sec_overview(date_from, date_to, data=None):
     k4, k5, k6 = st.columns(3)
     with k1:
         st.markdown(_stat_card(
-            "📊 เคสทั้งหมด", s_all['total'],
-            f"✓ สำเร็จ {s_all['completed']} · ⚠️ ยกเลิก {s_all['cancelled']} "
-            f"({cancel_r:.0f}%)", value_color='#1565c0'),
+            # ✂️ โชว์เฉพาะเคสที่ผ่าตัดจริง ไม่โชว์ยกเลิก (มุคกี้สั่ง 22 พ.ย. 2026)
+            #    เหตุผล: HIS แยกยกเลิกกับเลื่อนไม่ได้ (ทั้งคู่แค่ไม่มีใน intraop วันนั้น)
+            "📊 เคสที่ผ่าตัดทั้งหมด", s_all['completed'],
+            "นับเฉพาะเคสที่ผ่าตัดจริง", value_color='#1565c0'),
             unsafe_allow_html=True)
     with k2:
         st.markdown(_stat_card(
