@@ -1006,10 +1006,12 @@ def _view_tr(C, L):
                   f'<div></div>{head}{body}</div>',
                   f'จำนวนครั้งที่เข้า{_role_note}'))
         # 👩‍⚕️ 22 พ.ย. 2026 (มุกกี้สั่ง): เลือกพยาบาล 1 คน ดูว่าเข้าหัตถการอะไรกี่ครั้ง แยกหน้าที่
+        #    ค่าเริ่มต้น = ยังไม่เลือก ต้องกดเลือกชื่อก่อนจึงแสดงผล (มุกกี้สั่ง 22 พ.ย. 2026)
         _who = st.selectbox('ดูรายคน : เข้าหัตถการอะไร หน้าที่อะไร กี่ครั้ง', list(D['mx'].index),
+                            index=None, placeholder='เลือกชื่อพยาบาล',
                             format_func=short_name, key='da_nurse_pick')
-        NP = nurse_procs(L, fy, _who)
-        if not NP.empty:
+        NP = nurse_procs(L, fy, _who) if _who else None
+        if NP is not None and not NP.empty:
             _ns, _nc = int(NP['scrub'].sum()), int(NP['circ'].sum())
             _kpis([('เข้าเคสทั้งหมด', f'{_ns + _nc:,}', 'ครั้ง'), ('scrub', f'{_ns:,}', 'ครั้ง'),
                    ('circulate', f'{_nc:,}', 'ครั้ง'), ('หัตถการที่เคยเข้า', f'{len(NP):,}', 'ชนิด')])
