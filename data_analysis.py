@@ -1125,27 +1125,49 @@ def _view_ops(C, L):
                ('วันใช้งานห้องรวม', f'{U["days"]:,}', 'ห้อง-วัน'),
                ('เวลาพักห้องค่ากลาง', _fmt(U['turn_med']), 'นาที')])
         R = U['rooms']
-        hi, lo = R[0], R[-1]
-        rows = [(_e(_room_name(r['room'])), r['util'],
-                 f'<b>{r["util"]:.0f}%</b> · {r["days"]:,} วัน · {r["cases"]:,} เคส', None) for r in R]
-        _md(_card(f'{_e(_room_name(hi["room"]))} ใช้ห้องมากที่สุด {hi["util"]:.0f}% · '
-                  f'{_e(_room_name(lo["room"]))} น้อยที่สุด {lo["util"]:.0f}%',
-                  f'Utilization รายห้อง ปีงบ {fy} · เฉพาะวันจันทร์ถึงศุกร์',
-                  _hbars(rows, label_w=170, val_w=230),
-                  'วิธีคำนวณ : Utilization = นาทีที่ห้องมีผู้ป่วยอยู่ในช่วง 08:00-16:00 ÷ (จำนวนวันที่ห้องนั้นมีเคส × 480 นาที) × 100'
-                  '<br>เคสที่เริ่มก่อน 08:00 หรือจบหลัง 16:00 นับเฉพาะส่วนที่อยู่ในช่วงเวลา · วันหนึ่งนับได้ไม่เกิน 480 นาที '
-                  'ค่าจึงไม่เกิน 100% · วันที่ห้องไม่มีเคสเลยไม่ถูกนำมาคิด · ไม่รวมเสาร์อาทิตย์'
-                  '<br>ตัวอย่าง : ห้องหนึ่งมีผู้ป่วยอยู่ 09:00-12:00 และ 13:00-17:00 นับได้ 180 + 180 = 360 นาที = 360 ÷ 480 = 75%'))
-        tr = sorted([r for r in R if r['turn_med'] is not None], key=lambda r: -r['turn_med'])
-        if tr:
+        from room_config import ROOM_INFO as _RI
+        _UTIL_HOW = ('วิธีคำนวณ : Utilization = นาทีที่ห้องมีผู้ป่วยอยู่ในช่วง 08:00-16:00 ÷ (จำนวนวันที่ห้องนั้นมีเคส × 480 นาที) × 100'
+                     '<br>เคสที่เริ่มก่อน 08:00 หรือจบหลัง 16:00 นับเฉพาะส่วนที่อยู่ในช่วงเวลา · วันหนึ่งนับได้ไม่เกิน 480 นาที '
+                     'ค่าจึงไม่เกิน 100% · วันที่ห้องไม่มีเคสเลยไม่ถูกนำมาคิด · ไม่รวมเสาร์อาทิตย์'
+                     '<br>ตัวอย่าง : ห้องหนึ่งมีผู้ป่วยอยู่ 09:00-12:00 และ 13:00-17:00 นับได้ 180 + 180 = 360 นาที = 360 ÷ 480 = 75%')
+        _TURN_HOW = ('วิธีคำนวณ : เวลาเข้าห้องของเคสถัดไป ลบ เวลาออกห้องของเคสก่อนหน้า ในห้องเดียวกันวันเดียวกัน · '
+                     'นับเฉพาะช่วง 1 ถึง 90 นาที (นานกว่านั้นถือว่าห้องว่างรอเคส ไม่ใช่พักห้อง)')
+
+        def _util_card(rs, tag, foot, lw, vw, minh=0):
+            hi, lo = rs[0], rs[-1]
+            rows = [(_e(_room_name(r['room'])), r['util'],
+                     f'<b>{r["util"]:.0f}%</b> · {r["days"]:,} วัน · {r["cases"]:,} เคส', None) for r in rs]
+            t = (f'{_e(_room_name(hi["room"]))} ใช้ห้องมากที่สุด {hi["util"]:.0f}%'
+                 + (f' · {_e(_room_name(lo["room"]))} น้อยที่สุด {lo["util"]:.0f}%' if len(rs) > 1 else ''))
+            return _card(t, f'Utilization รายห้อง{tag} ปีงบ {fy} · เฉพาะวันจันทร์ถึงศุกร์',
+                         _hbars(rows, label_w=lw, val_w=vw), foot, minh=minh)
+
+        def _turn_card(rs, tag, foot, lw, vw, minh=0):
+            tr = sorted([r for r in rs if r['turn_med'] is not None], key=lambda r: -r['turn_med'])
+            if not tr:
+                return ''
             rows = [(_e(_room_name(r['room'])), r['turn_med'],
                      f'<b>{r["turn_med"]:.0f} นาที</b> · จาก {r["turn_n"]:,} ช่วง', None) for r in tr]
-            _md(_card(f'{_e(_room_name(tr[0]["room"]))} พักห้องนานที่สุด ค่ากลาง {tr[0]["turn_med"]:.0f} นาที · '
-                      f'เร็วที่สุด {_e(_room_name(tr[-1]["room"]))} {tr[-1]["turn_med"]:.0f} นาที',
-                      f'เวลาพักห้องระหว่างเคส (ค่ากลาง) รายห้อง ปีงบ {fy}',
-                      _hbars(rows, label_w=170, val_w=230),
-                      'วิธีคำนวณ : เวลาเข้าห้องของเคสถัดไป ลบ เวลาออกห้องของเคสก่อนหน้า ในห้องเดียวกันวันเดียวกัน · '
-                      'นับเฉพาะช่วง 1 ถึง 90 นาที (นานกว่านั้นถือว่าห้องว่างรอเคส ไม่ใช่พักห้อง)'))
+            t = (f'{_e(_room_name(tr[0]["room"]))} พักห้องนานที่สุด ค่ากลาง {tr[0]["turn_med"]:.0f} นาที'
+                 + (f' · เร็วที่สุด {_e(_room_name(tr[-1]["room"]))} {tr[-1]["turn_med"]:.0f} นาที' if len(tr) > 1 else ''))
+            return _card(t, f'เวลาพักห้องระหว่างเคส (ค่ากลาง) รายห้อง{tag} ปีงบ {fy}',
+                         _hbars(rows, label_w=lw, val_w=vw), foot, minh=minh)
+
+        # 🏚️🏥 22 พ.ย. 2026 (มุกกี้สั่ง): ปีงบที่มีทั้งสองตึก แบ่งตึกเก่า (ซ้าย) ตึกใหม่ (ขวา)
+        _old = [r for r in R if r['room'] not in _RI]
+        _new = [r for r in R if r['room'] in _RI]
+        if _old and _new:
+            _h = 150 + 22 * max(len(_old), len(_new))
+            for fn, how in ((_util_card, _UTIL_HOW), (_turn_card, _TURN_HOW)):
+                a, b = st.columns(2)
+                with a:
+                    _md(fn(_old, ' ตึกเก่า', '', 150, 170, _h))
+                with b:
+                    _md(fn(_new, ' ตึกใหม่', '', 150, 170, _h))
+                _md(f'<div class="da-s" style="line-height:1.7;margin:-4px 0 16px">{how}</div>')
+        else:
+            _md(_util_card(R, '', _UTIL_HOW, 170, 230))
+            _md(_turn_card(R, '', _TURN_HOW, 170, 230))
     # ── 3. หัตถการที่เวลาแกว่ง ──
     P, n_all = proc_spread(O, fy)
     if P:
