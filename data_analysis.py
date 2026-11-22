@@ -1083,8 +1083,12 @@ def _load_ops():
 
 
 def _room_name(r) -> str:
-    from room_config import ROOM_INFO
-    return ROOM_INFO[r][0] + ' ' + ROOM_INFO[r][1] if r in ROOM_INFO else f'ห้อง {r} (ตึกเก่า)'
+    # 🏚️ 22 พ.ย. 2026 (มุกกี้สั่ง): ห้องตึกเก่าบอกด้วยว่าเป็นห้องอะไร (สาขาจาก room_config.OLD_HIS_ROOM_INFO)
+    from room_config import ROOM_INFO, OLD_HIS_ROOM_INFO
+    if r in ROOM_INFO:
+        return ROOM_INFO[r][0] + ' ' + ROOM_INFO[r][1]
+    sp = OLD_HIS_ROOM_INFO.get(r)
+    return f'ห้อง {r} {sp} (ตึกเก่า)' if sp else f'ห้อง {r} (ตึกเก่า)'
 
 
 def _ops_headline(O, fy) -> str:
