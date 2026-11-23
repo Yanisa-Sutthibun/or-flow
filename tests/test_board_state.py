@@ -976,12 +976,11 @@ def test_tutorial_waits_for_user_every_step():
     assert P.tutorial_step(2, cs) == 2           # ยังอยู่ขั้นเดิม ไม่ผ่านรวด
     v = P.tutorial_view(2, 'board', cs)
     assert v['mode'] == 'done' and v['next'] == 'ไปขั้นถัดไป' and not v['btn']
+    # 🧹 23 พ.ย. 2026: ตัดขั้น เปลี่ยนคิวถัดไป ออก → ขั้น 4 = กดเสร็จ
     assert P.tutorial_view(4, 'board', cs)['mode'] == 'do'
-    cs[1].update(q_manual=True, q_changed_hhmm='10:15')
-    assert P.tutorial_view(4, 'board', cs)['mode'] == 'done'
-    assert P.tutorial_view(5, 'board', cs)['btn'] == 'เสร็จ'
+    assert P.tutorial_view(4, 'board', cs)['btn'] == 'เสร็จ'
     cs[0]['status'] = 'holding_post'
-    assert P.tutorial_view(5, 'board', cs)['mode'] == 'done'
+    assert P.tutorial_view(4, 'board', cs)['mode'] == 'done'
     assert P.tutorial_step(99, cs) == P._TUT_N + 1
 
 
@@ -989,14 +988,14 @@ def test_tutorial_points_to_the_right_page():
     """ขั้นที่ทำอีกหน้า การ์ดต้องบอกให้กดแท็บนั้น และไม่มีปุ่มไปต่อจนกว่าจะไปถึง"""
     cs = _tut_cases()
     # 🔀 รอบ 4: ขั้น 1-5 อยู่หน้า ตารางผ่าตัด ทั้งหมด แล้วค่อยไป ภาพรวมวันนี้ (6) สถิติย้อนหลัง (7)
-    assert all(P.tutorial_view(k, 'board', cs)['mode'] != 'goto' for k in range(1, 6))
-    v = P.tutorial_view(6, 'board', cs)
+    assert all(P.tutorial_view(k, 'board', cs)['mode'] != 'goto' for k in range(1, 5))
+    v = P.tutorial_view(5, 'board', cs)
     assert v['mode'] == 'goto' and v['tab'] == 'ภาพรวมวันนี้' and not v['next']
-    assert P.tutorial_view(6, 'today', cs)['next']
-    assert P.tutorial_view(7, 'today', cs)['tab'] == 'สถิติย้อนหลัง'
-    assert P.tutorial_view(7, 'history', cs)['mode'] == 'look'
-    assert P.tutorial_view(8, 'board', cs)['btn'] == '⋯'
-    assert P.tutorial_view(8, 'today', cs)['tab'] == 'ตารางผ่าตัด'
+    assert P.tutorial_view(5, 'today', cs)['next']
+    assert P.tutorial_view(6, 'today', cs)['tab'] == 'สถิติย้อนหลัง'
+    assert P.tutorial_view(6, 'history', cs)['mode'] == 'look'
+    assert P.tutorial_view(7, 'board', cs)['btn'] == '⋯'
+    assert P.tutorial_view(7, 'today', cs)['tab'] == 'ตารางผ่าตัด'
 
 
 def test_tutorial_tour_comes_before_practice():
@@ -1012,9 +1011,9 @@ def test_tutorial_tour_comes_before_practice():
 
 def test_tutorial_overview_page_explains_sections_first():
     """🗂️ รอบ 6: ขั้นดูภาพรวมของวัน ต้องอธิบาย 3 ส่วนของหน้าก่อน แล้วจึงขึ้นโจทย์"""
-    heads = [P.tutorial_sub_view(6, k)['head'] for k in range(3)]
+    heads = [P.tutorial_sub_view(5, k)['head'] for k in range(3)]
     assert heads == ['แจ้งเตือน', 'สถานการณ์ห้องผ่าตัด', 'ตัวเลขของวัน']
-    assert P.tutorial_sub_view(6, 3) is None and P.tutorial_sub_view(2, 0) is None
+    assert P.tutorial_sub_view(5, 3) is None and P.tutorial_sub_view(2, 0) is None
 
 
 def test_tutorial_ignores_non_demo_cases():
@@ -1024,8 +1023,8 @@ def test_tutorial_ignores_non_demo_cases():
 
 
 def test_tutorial_steps_match_intro_count():
-    assert P._TUT_N == 7 and all(len(x) == 3 for x in P.TRYOUT_STEPS)
-    assert set(P._TUT_CASE) | set(P._TUT_PAGE) == set(range(1, 8))
+    assert P._TUT_N == 6 and all(len(x) == 3 for x in P.TRYOUT_STEPS)
+    assert set(P._TUT_CASE) | set(P._TUT_PAGE) == set(range(1, 7))
 
 
 def test_mask_keeps_numeric_surname_of_demo_names():

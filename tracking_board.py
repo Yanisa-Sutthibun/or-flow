@@ -342,6 +342,43 @@ def queue_undo(cases, mark_dirty=None) -> bool:
     return bool(_ch)
 
 
+def _removed_section(cases, loc, mark_dirty=None):
+    """🚫 23 พ.ย. 2026 (มุคกี้สั่ง): รายการเคสที่กด เลื่อน/ยกเลิก วันนี้ พับไว้ท้ายบอร์ด
+    กดผิดดึงกลับได้ที่นี่ : เคสกลับไปสถานะเดิมก่อนกด (ยังไม่มา หรือ รอผ่าตัด)
+    การดึงกลับ = ถอยสถานะโดยตั้งใจ → mark_dirty(undo=True) ไม่งั้น merge จะกันไว้ว่าเป็นเคสผีคืนชีพ"""
+    try:
+        _rm = [c for c in (cases or []) if c.get('status') == 'removed']
+        if not _rm:
+            return
+        with st.expander(f"🚫 เลื่อน/ยกเลิกวันนี้ ({len(_rm)} ราย)", expanded=False):
+            for _i, c in enumerate(_rm):
+                _a, _b = st.columns([6, 1.4], vertical_alignment="center")
+                _a.markdown(
+                    f'<div style="font-size:16px;color:#334155;padding:4px 0;">'
+                    f'<b>{_esc(loc(c))}</b> · {_pt_name(c)} · {_esc(c.get("procedure") or "-")}</div>',
+                    unsafe_allow_html=True)
+                if _b.button("↩️ ดึงกลับ", key=f"tb_rmback_{c.get('id') or _i}", width='stretch',
+                             help="กดเลื่อน/ยกเลิกผิด : นำเคสนี้กลับขึ้นกระดาน"):
+                    _prev = c.pop('removed_from', None)
+                    c['status'] = _prev if _prev in ('not_arrived', 'holding_pre') else 'not_arrived'
+                    if c['status'] == 'not_arrived':
+                        c['time_arrived_holding'] = None
+                    c.pop('removed_at', None)
+                    if mark_dirty:
+                        try:
+                            mark_dirty(c, undo=True)
+                        except TypeError:
+                            mark_dirty(c)
+                    try:
+                        from main_or_pages import _toast_ok
+                        _toast_ok("นำเคสกลับขึ้นกระดานแล้ว ↩️")
+                    except Exception:
+                        pass
+                    _rerun_board()
+    except Exception as _rx:
+        print(f"[removed] แสดงรายการเลื่อน/ยกเลิกไม่สำเร็จ: {_rx}")
+
+
 def queue_change_label(cases) -> str:
     """🔀 15 พ.ย. 2026 (มุกกี้สั่ง): ข้อความค้างถาวรว่าคิวของห้องนี้ถูกปรับล่าสุดกี่โมง จากจอไหน
     (แถบแจ้งด้านบนหายเองใน 10 นาที แต่คนที่มาดูทีหลังต้องรู้ที่มาของลำดับที่เห็น)
@@ -456,7 +493,11 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
     #    กดชิป = กรองแถวทันที · ตัวเลขชุดเดียวกับการ์ดเดิมทุกตัว
     if _cmp:
         _cnt = {'ยังไม่มา': 0, 'รอผ่าตัด': 0, 'กำลังผ่า': 0, 'รอจำหน่าย': 0, 'จำหน่ายแล้ว': 0}
-        for _c0 in cases:
+        # 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): เลือกกรองห้องอยู่ → ตัวเลขบนชิปนับเฉพาะห้องนั้น
+        #    (เดิมนับทุกห้องเสมอ คนในห้องเห็น ทั้งหมด 20 ทั้งที่ห้องตัวเองมี 3 เคส)
+        _rf0 = st.session_state.get('tb_room')
+        _cnt_src = [c for c in cases if loc(c) == _rf0] if _rf0 else []
+        for _c0 in (_cnt_src or cases):
             _g0 = _STATUS_GROUP.get(_c0.get('status'))
             if _g0 in _cnt:
                 _cnt[_g0] += 1
@@ -749,6 +790,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         if z_done:
             with st.expander(f"✅ จำหน่ายแล้ววันนี้ ({len(z_done)} ราย)", expanded=False):
                 _rows(z_done)
+        _removed_section(cases, loc, mark_dirty)
         return
 
     # ---------- โซน 1: ห้องรับ-ส่ง ----------
@@ -872,6 +914,9 @@ _ACT_PRED = "⏱️ แก้เวลาทำนาย"
 _ACT_ROOM = "🔀 ย้ายห้อง"
 _ACT_DONE = "✅ ผ่าตัดเสร็จไปแล้ว"
 _ACT_DEL = "🚫 เลื่อน/ยกเลิก"
+
+# 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): ระบบ minimal : ปิดแถบ คิวถัดไป : ตามผู้ป่วยมารอเวลา... ใต้การ์ด
+_NEXT_CALL_BAR_ON = False
 
 # 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): ระบบ minimal : ปิดการสลับคิวหน้างาน (ปุ่ม คิวถัดไป) ลำดับยึดตามตารางผ่าตัด
 #    โค้ดเดิมเก็บไว้ครบ เปิดคืนได้ที่สวิตช์นี้จุดเดียว
@@ -1609,7 +1654,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             # 🔔 แถบคิวถัดไป ต่อท้ายการ์ด — เฉพาะเคสคิวถัดไปของห้อง
             #    (เคสไม่ได้จัดคิว = แถบนี้ว่าง ตามที่เคาะ)
             _call_extra = (_call_line_html(c, _ci[1], now)
-                           if _is_next_call and disp == 'not_arrived' else '')
+                           if _NEXT_CALL_BAR_ON and _is_next_call and disp == 'not_arrived' else '')
             st.markdown(
                 _row_shell(
                     _lead_cells(c, loc, tlabel, emer, dup_badge if not muted else '',
@@ -1633,6 +1678,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 # 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): เมนูดินสอแบบเมนูคลิกขวา : เลือกก่อนว่าจะทำอะไร
                 #    แล้วค่อยเห็นเฉพาะช่องของเรื่องนั้น · เรื่องที่ใช้บ่อยอยู่บน (เลิกทำอยู่บนสุดเหนือรายการนี้)
                 _act = None
+                _ak = f"_tbact_{K}"       # รายการที่เลือกค้างไว้ของเคสนี้ (ต่อเครื่อง)
                 if _mb:
                     _ent_ok = (c.get('status') == 'in_or' and _scope is None
                                and c.get('time_entered_or') is not None
@@ -1647,8 +1693,19 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                         _acts.append(_ACT_DONE)
                     if disp in ('not_arrived', 'holding_pre') and _scope is None:
                         _acts.append(_ACT_DEL)
-                    _act = st.radio("เลือกสิ่งที่ต้องการทำ", _acts, index=None,
-                                    key=f"tb_act_{K}", label_visibility="collapsed")
+                    # 🖱️ 23 พ.ย. 2026 รอบ 2 (มุคกี้แจ้ง: จุดกลมใช้ยาก): ทุกรายการเป็นปุ่มเต็มแถบเหมือนปุ่มย้อนกลับ
+                    #    กดรายการไหน เมนูเปลี่ยนเป็นช่องของเรื่องนั้นอย่างเดียว มีปุ่มกลับไปเมนู
+                    _act = st.session_state.get(_ak)
+                    if _act not in _acts:
+                        _act = None
+                    if _act is None:
+                        for _i, _a in enumerate(_acts):
+                            if st.button(_a, key=f"tb_actb_{K}_{_i}", width='stretch'):
+                                st.session_state[_ak] = _a
+                                _rerun_board()
+                    else:
+                        st.markdown(f'<div style="font-size:17px;font-weight:700;color:#0f172a;'
+                                    f'margin:4px 0 6px;">{_esc(_act)}</div>', unsafe_allow_html=True)
 
                 def _show(_a, _mb=_mb, _act=_act):
                     return (not _mb) or _act == _a
@@ -1751,6 +1808,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                             c['or_room_assigned'] = _new_room
                         if mark_dirty:
                             mark_dirty(c)   # CR-2: ✏️ แก้เวลา/ย้ายห้อง ต้องเซฟขึ้นบอร์ดกลาง
+                        st.session_state.pop(_ak, None)
                         try:    # 🎨 demo: ตอบรับทันที (Doherty)
                             from main_or_pages import _toast_ok
                             _toast_ok("บันทึกแล้ว ✓")
@@ -1805,6 +1863,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                         else:
                             if mark_dirty:
                                 mark_dirty(c)
+                            st.session_state.pop(_ak, None)
                             _toast_ok("บันทึกเวลาเข้าห้องแล้ว ✓")
                             _rerun_board()
 
@@ -1828,6 +1887,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                         c['done_before_board'] = True   # ธงกันสับสน — ไม่ใช่เคสเดินครบ flow
                         if mark_dirty:
                             mark_dirty(c)
+                        st.session_state.pop(_ak, None)
                         _rerun_board()
                 # 🚫 23 พ.ย. 2026 (มุคกี้สั่ง): เลื่อน/ยกเลิก = นำเคสออกจากกระดาน (แทนปุ่ม ลบออกจากกระดาน เดิม)
                 #    กดได้กับเคสที่ยังไม่เข้าห้อง (ยังไม่มา หรือ รอผ่าตัด) · เลือกรายการในเมนูก่อน = ยืนยันขั้นแรก
@@ -1844,15 +1904,21 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                                  help="นำเคสออกจากกระดานทุกเครื่อง : ไม่กระทบฐานข้อมูลสถิติ"):
                         # tombstone: คงเคสไว้แต่สถานะ 'removed' (ไม่แสดงทุกหน้า)
                         # — ลบทิ้งจริงจะโดนบอร์ดกลาง merge คืนชีพจากเครื่องอื่น
+                        c['removed_from'] = c.get('status')    # จำสถานะเดิมไว้ ใช้ตอนดึงกลับ
                         c['status'] = 'removed'
                         c['removed_at'] = _now()
                         if mark_dirty:
                             mark_dirty(c)
+                        st.session_state.pop(_ak, None)
                         try:
                             from main_or_pages import _toast_ok
                             _toast_ok("นำเคสออกจากกระดานแล้ว 🚫")
                         except Exception:
                             pass
+                        _rerun_board()
+                if _mb and _act is not None:
+                    if st.button("◀ กลับไปเมนู", key=f"tb_actx_{K}", width='stretch'):
+                        st.session_state.pop(_ak, None)
                         _rerun_board()
 
     with c2:
