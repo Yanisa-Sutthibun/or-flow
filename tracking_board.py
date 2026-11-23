@@ -1529,7 +1529,13 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
     #    (เดิมปุ่มซ่อนอยู่ในเมนู ✏️) · จอรับ-ส่งกดได้ทุกห้อง โหมดจอห้องกดได้เฉพาะห้องตัวเอง
     _qpre = _mb and disp in ('not_arrived', 'holding_pre')
     if _qpre:
-        _cq, _cqb, c0, c2, _cm = st.columns(_BOARD_COLS_MIN_Q)
+        # 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): ไม่มีปุ่มคิวถัดไปแล้ว : การ์ดขยายเต็มแถบ ไม่เว้นช่องว่างไว้
+        if _QUEUE_SWAP_ON:
+            _cq, _cqb, c0, c2, _cm = st.columns(_BOARD_COLS_MIN_Q)
+        else:
+            _cq, c0, c2, _cm = st.columns([_BOARD_COLS_MIN_Q[0], _BOARD_COLS_MIN_Q[1] + _BOARD_COLS_MIN_Q[2]]
+                                          + _BOARD_COLS_MIN_Q[3:])
+            _cqb = None
         with _cq:
             st.markdown(_queue_prefix_html(c, emer), unsafe_allow_html=True)
         try:
