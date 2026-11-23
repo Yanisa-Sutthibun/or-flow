@@ -1064,22 +1064,19 @@ def test_tryout_ui_switch_defaults_on_and_can_roll_back():
 
 
 def test_production_tutorial_is_point_only_tour_on_board():
-    """🎓 โหมดสอนของระบบจริง (มุกกี้สั่ง 20 พ.ย. 2026) : เฉพาะหน้า ตารางผ่าตัด ชี้ปุ่มให้ดู ไม่ต้องกดจริง
-    ขั้นฝึกกดและกล่องถามของแอป DEMO ต้องไม่หลุดมา และไม่เปิดเองถ้าผู้ใช้ไม่ได้กดเปิด"""
+    """🎓 23 พ.ย. 2026 (มุกกี้สั่ง): ระบบจริงไม่มีโหมดสอนแล้ว ทุกหน้า แม้ _tut_on ค้างเป็น True
+    (เดิม 20 พ.ย. มีแบบชี้ปุ่มเฉพาะหน้า ตารางผ่าตัด · ตัว logic tutorial_prod_view ยังเก็บไว้ จึงยังตรวจต่อ)"""
     _fresh_state()
     st.secrets = {}
     cs = [_case(id='A', status='not_arrived', room=91, or_room_assigned=91, _demo=False),
           _case(id='B', status='not_arrived', room=91, or_room_assigned=91, _demo=False),
           _case(id='C', status='in_or', room=92, or_room_assigned=92, _demo=False)]
     st.session_state['patient_cases'] = cs
-    # ไม่ได้กดเปิด / ค่าค้าง 'ask' ของ DEMO = ไม่แสดง
-    for _v in (False, 'ask', None):
+    for _v in (False, 'ask', None, True):
         st.session_state['_tut_on'] = _v
-        assert P.render_tutorial('board', cs) == (None, '')
-    st.session_state['_tut_on'] = True
-    # หน้าอื่นไม่มีโหมดสอนในระบบจริง
-    assert P.render_tutorial('today', cs) == (None, '')
-    assert P.render_tutorial('history', cs) == (None, '')
+        for _pk in ('board', 'today', 'history'):
+            assert P.render_tutorial(_pk, cs) == (None, '')
+    assert st.session_state['_tut_on'] is False, "ค่าค้างต้องถูกล้าง กันปุ่มบนจอถูกล็อก"
     # ไล่ทุกป้าย : เป้าต้องเป็นเคสที่สถานะตรงกับปุ่มที่ชี้
     seen_btn = []
     for i in range(len(P._TUT_PROD)):
@@ -1095,12 +1092,6 @@ def test_production_tutorial_is_point_only_tour_on_board():
             assert v['case'] is None and v['miss'], "ไม่มีเคสรอผ่าตัด ต้องบอกว่าไม่มีแถวให้ชี้"
         assert '—' not in v['title'] + v['text'] and 'ฝึกกด' not in v['text']
     assert seen_btn.count('รับเข้า') == 1 and '⋯' in seen_btn
-    st.session_state['_tut_tour'] = 4
-    row, _h = P.render_tutorial('board', cs)
-    assert row is cs[0]
-    # จอประจำห้องไม่มีโหมดสอน
-    st.session_state['role'] = 'room'
-    assert P.render_tutorial('board', cs) == (None, '')
 
 
 def test_data_analysis_gate_is_fail_closed_and_admin_can_open():

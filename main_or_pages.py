@@ -1319,10 +1319,22 @@ def render_csv_upload(bare=False):
                     st.session_state.patient_cases = _cur
                     st.session_state['_or_demo'] = False
                     st.session_state['_board_dirty'] = True   # CR-2: โหลดตารางใหม่ → ดันขึ้นบอร์ดกลาง
-                    _msg = f"✅ โหลด {_added} เคสเข้าบอร์ดแล้ว — ไปดูที่หน้า 📋 ตารางผ่าตัด"
+                    # 💾 23 พ.ย. 2026 (มุกกี้สั่ง): อัปโหลดแล้วบันทึกลง Supabase ทันที
+                    #    เดิมรอให้บอร์ดวาดรอบถัดไปค่อยเซฟ ถ้าอัปโหลดจากหน้าอื่นหรือปิดหน้าก่อน ตารางไม่ขึ้นบอร์ดกลาง
+                    #    dirty_ids ว่าง = งานเป็นชุด ของเราชนะตอน merge (ดู _save_board_snapshot)
+                    st.session_state['_board_dirty_ids'] = set()
+                    if _save_board_snapshot(_cur):
+                        st.session_state['_board_dirty'] = False
+                        _synced = True
+                    else:
+                        _synced = False   # คง dirty ไว้ บอร์ดจะลองเซฟซ้ำเองรอบถัดไป
+                    _msg = f"✅ โหลด {_added} เคสเข้าบอร์ดแล้ว : ไปดูที่หน้า 📋 ตารางผ่าตัด"
                     if _testmode:
                         _msg += " · 🧪 โหมดทดสอบ (ไม่บันทึกลงฐานข้อมูลวิจัย)"
                     st.success(_msg)
+                    # st.rerun() ถัดไปกลืนข้อความรอบนี้ → ฝากป้ายไว้โชว์รอบหน้า
+                    _toast_ok(f"บันทึก {_added} เคสขึ้นบอร์ดกลางแล้ว" if _synced else
+                              "บันทึกขึ้นบอร์ดกลางยังไม่สำเร็จ : ระบบจะลองซ้ำเองเมื่อเปิดหน้า ตารางผ่าตัด")
                     st.rerun()
 
         # ---- 🗑️ ล้างกระดานวันนี้ — ล็อก PIN เฉพาะผู้ดูแล (Mukky) ----
@@ -1863,9 +1875,10 @@ def render_tutorial(page_key, cases=None):
     ss = st.session_state
     try:
         if str(st.secrets.get('instance_mode', '')).lower() != 'demo':
-            # 🎓 20 พ.ย. 2026 (มุกกี้สั่ง): ระบบจริงมีโหมดสอนของตัวเอง เฉพาะหน้า ตารางผ่าตัด
-            #    แบบชี้ปุ่มให้ดู ไม่ต้องกดจริง · ขั้นฝึกกดและกล่องถามเป็นของแอป DEMO เท่านั้น
-            return _render_tutorial_prod(page_key, cases)
+            # 🎓 23 พ.ย. 2026 (มุกกี้สั่ง): ระบบจริงไม่มีโหมดสอนแล้ว (เดิม 20 พ.ย. มีแบบชี้ปุ่ม
+            #    _render_tutorial_prod ยังเก็บไว้ในไฟล์ ถ้าจะคืนให้เรียกฟังก์ชันนั้นตรงนี้)
+            ss['_tut_on'] = False    # กันการ์ด/ล็อกปุ่มค้างจาก session ที่เปิดไว้ก่อนอัปเดต
+            return None, ''
     except Exception as _tpx:
         print(f"[tutorial] โหมดสอนของระบบจริงแสดงไม่สำเร็จ: {_tpx}")
         ss['_tut_on'] = False        # กันค้าง : การ์ดพังแล้วปุ่มบนจอต้องกลับมากดได้ในรอบถัดไป
@@ -2286,16 +2299,9 @@ def _board_fragment():
                 f'<div style="font-size:14px;color:#94a3b8;">{_sub}</div></div>',
                 unsafe_allow_html=True)
         if not _is_demo_instance:
-            # 🔒 ระบบจริง: ไม่มีปุ่มโหมดสาธิต · 🎓 มีปุ่มเปิดโหมดสอนแบบชี้ปุ่ม (มุกกี้สั่ง 20 พ.ย. 2026)
-            #    ขึ้นเมื่อมีเคสบนตารางแล้วเท่านั้น (ไม่มีแถว = ไม่มีอะไรให้ชี้)
-            if (st.session_state.get('patient_cases')
-                    and st.session_state.get('_tut_on') is not True):
-                with _hb:
-                    if st.button("🎓 เปิดโหมดสอนการใช้", key="orboard_tut_on_hdr", width='stretch',
-                                 help="ระบบจะชี้ให้ดูว่าปุ่มไหนใช้ทำอะไร โดยไม่ต้องกดจริง"):
-                        st.session_state['_tut_on'] = True
-                        st.session_state['_tut_tour'] = 0
-                        _rerun_board()
+            # 🔒 ระบบจริง: ไม่มีปุ่มโหมดสาธิตและปุ่มโหมดสอน
+            #    (23 พ.ย. 2026 มุกกี้สั่ง: ถอดปุ่ม 🎓 เปิดโหมดสอนการใช้ ออกจากระบบจริง เหลือเฉพาะแอป DEMO)
+            pass
         elif _confirm in ('on', 'off'):
             _demo_on = _render_demo_switch_confirm(_confirm, _demo_on)
         elif not _demo_on:
