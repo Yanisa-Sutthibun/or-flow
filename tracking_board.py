@@ -918,7 +918,8 @@ def _cell_pt_op(c, dup_badge='', fg='#0f172a'):
 
 
 # 📇 15 พ.ย. 2026 (มุกกี้สั่ง): การ์ดเคสก่อนผ่าตัด 2 บรรทัด : บนคือข้อมูลจาก HIS ล่างคือข้อมูลจากแบบจำลอง
-_Q_ROW_H = 66     # ความสูงแถวเคสก่อนผ่าตัด (px) · iframe ต้องสูงกว่านี้เล็กน้อย
+# 📏 23 พ.ย. 2026 (มุกกี้แจ้งวันใช้จริง: แถบชื่อติดกันไป): 66 → 72 ให้บรรทัดทำนายไม่ชิดขอบล่างการ์ด
+_Q_ROW_H = 72     # ความสูงแถวเคสก่อนผ่าตัด (px) · iframe ต้องสูงกว่านี้เล็กน้อย
 _Q_TM_W = 66      # ช่องเวลานัด (px) : บรรทัดล่างเยื้องเท่านี้ให้ตรงใต้ชื่อผู้ป่วย
 _Q_ST_W = 132     # ช่องสถานะท้ายการ์ด (px)
 
@@ -1231,7 +1232,7 @@ def _progress_bar(pct, label, color='#22a565', wrap_id='', fill_id='', label_id=
             f'text-overflow:ellipsis;">{label}</span></span>')
 
 
-def _row_shell(inner, bg, border_css, row_id='row', prog='', extra=''):
+def _row_shell(inner, bg, border_css, row_id='row', prog='', extra='', md=False):
     """extra = แถบต่อท้ายการ์ด (แถวเรียกคิวถัดไป — wireframe rev.2 13 ส.ค. 2026)
     มี extra → กรอบ/พื้นย้ายไปอยู่ที่กล่องนอก การ์ดสูงขึ้นตามเนื้อหา
     ⚠️ ส่ง extra ได้เฉพาะแถวที่ render ด้วย st.markdown (ยังไม่มา) — แถว iframe
@@ -1242,12 +1243,15 @@ def _row_shell(inner, bg, border_css, row_id='row', prog='', extra=''):
            f'{_skin}border-radius:10px;padding:8px 12px;'
            f'height:{_h}px;position:relative;overflow:hidden;">{prog}{inner}</div>')
     if not extra:
-        return row
+        # 📏 23 พ.ย. 2026 (มุกกี้แจ้ง: แถบชื่อติดกันไป): แถวที่วาดด้วย st.markdown (md=True)
+        #    ชดเชย margin-bottom:-1rem ของ Streamlit แล้วเว้นเพิ่ม 8px ให้การ์ดแต่ละเคสแยกจากกันชัด
+        #    แถวใน iframe ไม่ใส่ (ความสูง iframe ประกาศตายตัว ใส่แล้วเนื้อหาจะโดนตัด)
+        return f'<div style="margin-bottom:calc(1rem + 8px);">{row}</div>' if md else row
     # 🩹 13 พ.ย. 2026 (มุกกี้สั่ง): Streamlit 1.67 ใส่ margin-bottom:-1rem ให้กล่อง
     #    markdown ทุกกล่อง (เผื่อ <p> ตัวท้าย) แถวของเราไม่มี <p> กล่องจึงเตี้ยกว่า
     #    การ์ด 1rem = แถวถัดไปขึ้นมาทับแถบคิวถัดไปครึ่งบรรทัด → ชดเชยคืนตรงนี้
     return (f'<div style="{border_css}background:{bg};border-radius:10px;'
-            f'overflow:hidden;margin-bottom:1rem;">{row}{extra}</div>')
+            f'overflow:hidden;margin-bottom:calc(1rem + 8px);">{row}{extra}</div>')
 
 
 def _iframe_doc(body):
@@ -1585,7 +1589,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                                 _cell_chip(label, fg, chipbg), room_fg=room_fg,
                                 name_fg=name_fg, sub_fg=sub_fg)
                     + _cell_time(_tm_html + ov_badge, sub=_tm_sub, title=_tm_tip),
-                    bg=bg, border_css=border_css, extra=_call_extra),
+                    bg=bg, border_css=border_css, extra=_call_extra, md=True),
                 unsafe_allow_html=True)
 
     _tl.q_prefix = False
