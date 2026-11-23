@@ -569,6 +569,22 @@ def _page_room_settings_body():
     #    ถูกถอด 14 ก.ค. แต่ยังต้องมีช่องเติมเคสรายเดือน เช่น มิ.ย.–ก.ค. ที่ขาด)
     #    ปลอดภัยเรื่องจริยธรรม: ส่วน fine-tune ถูกถอดจาก process_panel ถาวรแล้ว
     #    (ethics lock) — เหลือเฉพาะ นำเข้าเคส + เติมเวลาจริง + mask ชื่อ
+    # 🌐 24 พ.ย. 2026 (มุกกี้สั่ง): อัปโหลด intraop รายวันจากเครื่อง รพ. ผ่านหน้าเว็บ แทนการเปิด PowerShell
+    #    เติมเวลาจริงลงข้อมูลวิจัย (research_case_log) : คนละท่อกับกล่องฐานสถิติด้านล่าง
+    st.markdown("---")
+    with st.expander("📥 อัปโหลดไฟล์ HIS รายวัน : ข้อมูลวิจัยและฐานสถิติ (เฉพาะผู้วิจัย) 🔒",
+                     expanded=False):
+        if st.session_state.get('role') != 'admin':
+            st.info("🔒 ส่วนนี้สำหรับผู้วิจัย : ออกจากระบบแล้วเข้าใหม่"
+                    "ด้วยรหัสผู้วิจัย")
+        else:
+            try:
+                from research_upload_panel import render_research_upload
+                render_research_upload()
+            except Exception as _rpe:
+                st.error(f"เปิดส่วนอัปโหลด intraop ไม่สำเร็จ : {type(_rpe).__name__}")
+                print(f"[research_upload] {_rpe}")
+
     st.markdown("---")
     with st.expander("📥 นำเข้าข้อมูลย้อนหลังเข้าฐานสถิติ (เฉพาะผู้วิจัย) 🔒",
                      expanded=False):

@@ -140,8 +140,13 @@ def _read_rows(path: str):
 def main():
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
-    path = sys.argv[1]
-    apply = '--apply' in sys.argv
+    run(sys.argv[1], '--apply' in sys.argv)
+
+
+def run(path, apply=False):
+    """🌐 24 พ.ย. 2026 (มุกกี้สั่ง: อัปโหลด intraop จากเครื่อง รพ. ผ่านหน้าเว็บ): แกนเดียวกับที่สั่งจาก PowerShell
+    แยกออกจาก main() ให้หน้าเว็บ (research_upload_panel) เรียกได้ · คืนสรุปเป็น dict
+    apply=False = ดูผลอย่างเดียว ไม่เขียนฐานข้อมูล"""
     rows = _read_rows(path)
     print(f"อ่านไฟล์ได้ {len(rows)} แถวที่ข้อมูลครบ")
     # 👥 22 พ.ย. 2026: ผู้ป่วยคนเดียวผ่ามากกว่า 1 ครั้งในวันเดียว จับคู่กับแถวเดียวใน log ไม่ได้ : ข้าม ไม่เดา
@@ -223,6 +228,57 @@ def main():
     if missed:
         print(f"ไม่เจอคู่ {len(missed)} แถว (เคสอาจไม่อยู่บนบอร์ดวันนั้น "
               f"หรือ hn_salt ไม่ตรงกัน): {missed[:5]}{'…' if len(missed) > 5 else ''}")
+    return {'rows': len(rows), 'dup': _dup, 'matched': matched, 'updated': updated,
+            'filled': filled, 'missed': len(missed), 'applied': bool(apply),
+            'dates': sorted({r[1] for r in rows})}
+
+
+def mark_not_in_file(path, apply=False):
+    """🚫 24 พ.ย. 2026 (มุกกี้สั่ง: "อันไหนจับคู่ไม่ได้ก็เป็นเลื่อน/ยกเลิกไป")
+    เคสในข้อมูลวิจัยของวันที่อยู่ในไฟล์ ที่ไม่พบในไฟล์ intraop = ไม่ได้ผ่าวันนั้น → outcome = 'cancel_postpone'
+    (รวมเลื่อนกับยกเลิกเป็นป้ายเดียว · จะแยกทีหลังก็ใช้ mark_cancel_postpone.py ทับได้)
+    กันติดป้ายผิด 4 ชั้น
+      1. เฉพาะวันที่ผ่านไปแล้ว (ก่อนวันนี้ เวลาไทย) : ไฟล์ของวันนี้ยังไม่ครบวัน
+      2. วันนั้นต้องจับคู่ได้อย่างน้อย 1 เคส : จับคู่ไม่ได้เลย = ไฟล์ผิดวันหรือรหัสจับคู่ไม่ตรง ไม่แตะ
+      3. ข้ามแถวที่มีเวลาจริงแล้ว มีป้ายผลอยู่แล้ว หรือไม่มีรหัสจับคู่ HN
+      4. ผู้ป่วยที่อยู่ในไฟล์ (รวมคนที่ผ่ามากกว่า 1 ครั้ง) ไม่ถูกติดป้าย
+    คืน [(วันที่, ห้อง, เวลานัด, หัตถการ)] ของแถวที่ติดป้าย (apply=False = รายการที่จะติด ยังไม่เขียน)"""
+    from datetime import datetime as _d, timezone as _tz, timedelta as _td
+    rows = _read_rows(path)
+    by_day = {}
+    for r in rows:
+        by_day.setdefault(r[1], set()).add(r[0])
+    today = _d.now(_tz(_td(hours=7))).date().isoformat()
+    from main_or_db import get_conn, _now, _table_columns
+    conn = get_conn()
+    out = []
+    try:
+        has = 'outcome' in _table_columns(conn, 'research_case_log')
+        if apply and not has:
+            conn.execute("ALTER TABLE research_case_log ADD COLUMN outcome TEXT")
+            conn.execute("ALTER TABLE research_case_log ADD COLUMN outcome_at TEXT")
+            conn.commit()
+            has = True
+        _oc = 'outcome' if has else 'NULL'
+        for d, hs in sorted(by_day.items()):
+            if d >= today:
+                continue
+            rws = [tuple(x) for x in conn.execute(
+                f"SELECT id, room_no, sched_time, procedure_name, hn_hash, actual_or_min, {_oc} "
+                f"FROM research_case_log WHERE log_date=?", (d,)).fetchall()]
+            if not any(x[4] in hs for x in rws):
+                continue
+            for x in rws:
+                if x[5] is None and x[4] and x[4] not in hs and not str(x[6] or '').strip():
+                    out.append((d, x[1], x[2], x[3]))
+                    if apply:
+                        conn.execute("UPDATE research_case_log SET outcome=?, outcome_at=? WHERE id=?",
+                                     ('cancel_postpone', str(_now()), x[0]))
+        if apply:
+            conn.commit()
+    finally:
+        conn.close()
+    return out
 
 
 if __name__ == '__main__':
