@@ -956,9 +956,17 @@ def _render_hourly_load(hm, dow_counts):
         unsafe_allow_html=True)
 
 
+# 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): ระบบ minimal : การ์ดตัวเลขของวันเหลือ 4 ใบ (เคสทั้งหมด ผ่าเสร็จแล้ว กำลังผ่าตัด เสร็จแล้วกี่ %)
+#    ซ่อน Utilization และ Turnover (ดูย้อนหลังได้ที่หน้าสถิติ) · เปิดคืนได้ที่สวิตช์นี้จุดเดียว
+_SHOW_KPI_UTIL_TURNOVER = False
+
+
 def _render_kpi(kpi):
     """แสดง KPI cards."""
-    c1, c2, c3, c4, c5 = st.columns(5)
+    if _SHOW_KPI_UTIL_TURNOVER:
+        c1, c2, c3, c4, c5 = st.columns(5)
+    else:
+        c1, c2, c3, c4 = st.columns(4)
 
     with c1:
         st.markdown(f"""
@@ -978,6 +986,20 @@ def _render_kpi(kpi):
             <div class="kpi-label">กำลังผ่าตัด</div>
             <div class="kpi-value" style="color:#1976d2;">{kpi['in_or']}</div>
         </div>""", unsafe_allow_html=True)
+    if not _SHOW_KPI_UTIL_TURNOVER:
+        # ✅ 23 พ.ย. 2026 (มุคกี้สั่ง): ใบที่ 4 = ผ่าเสร็จไปแล้วกี่ % ของเคสทั้งวัน
+        try:
+            _tot = int(kpi.get('total') or 0)
+            _pct_done = round(int(kpi.get('done') or 0) * 100 / _tot) if _tot else 0
+        except (TypeError, ValueError):
+            _pct_done = 0
+        with c4:
+            st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">เสร็จแล้ว</div>
+            <div class="kpi-value" style="color:#2e7d32;">{_pct_done}%</div>
+        </div>""", unsafe_allow_html=True)
+        return
     with c4:
         color = '#2e7d32' if kpi['utilization'] <= 80 else ('#f57f17' if kpi['utilization'] <= 100 else '#d32f2f')
         st.markdown(f"""
