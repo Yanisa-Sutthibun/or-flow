@@ -340,3 +340,97 @@ def log_case_state(case) -> bool:
     except Exception as ex:
         print(f"[research_log] ข้ามเคสนี้ (ไม่กระทบบอร์ด): {ex}")
         return False
+
+
+# ─────────────────────── สร้างแถวตั้งแต่ตอนอัปโหลด ───────────────────────
+
+def seed_cases(cases, log_date=None) -> int:
+    """🌱 23 พ.ย. 2026 (มุกกี้สั่ง: "ถ้า upload ก็เริ่มบันทึกได้เลย แล้วเคสไหนไม่มีก็บันทึกข้อมูลย้อนหลังจาก intraop")
+    สร้างแถว research_case_log ให้ทุกเคสที่เข้าเกณฑ์วิจัยทันทีที่ตารางขึ้นบอร์ด พร้อมค่าที่ AI ทำนาย
+    เหตุผล : เดิมแถวเกิดเมื่อมีคนกดปุ่มเท่านั้น เคสที่ไม่มีใครกดเลยจึงไม่มีแถวให้ backfill_actual.py
+    เติมเวลาจริงจากไฟล์ intraop
+
+    · สร้างเฉพาะเคสที่ยังไม่มีแถวของวันนั้น (log_date + case_ref) ไม่แตะแถวที่มีอยู่ : เรียกซ้ำได้
+    · ปุ่มบนบอร์ดยัง upsert ลงแถวเดียวกันผ่าน log_case_state ตามเดิม
+    · ผ่านประตู in_research_scope เหมือนทุกตารางวิจัย · ใช้ connection เดียวทั้งชุด
+    · log_date ไม่ส่ง = วันนี้ (เวลาไทย) · ส่งเมื่อสร้างย้อนหลังจากบอร์ดที่เก็บไว้
+    คืนจำนวนแถวที่สร้าง · fail-safe : พังคืน 0 ไม่กระทบบอร์ด"""
+    try:
+        todo = [c for c in (cases or []) if in_research_scope(c) and str(c.get('id') or '')]
+        if not todo:
+            return 0
+        import re as _re
+        from main_or_db import get_conn, _mask_staff_for_log, current_actor
+        from datetime import datetime as _dtm, timezone as _tzc, timedelta as _tdl
+        now = _dtm.now(_tzc(_tdl(hours=7)))
+        log_date = str(log_date or now.date().isoformat())[:10]
+        try:
+            actor_role, actor_room = current_actor()
+        except Exception:
+            actor_role, actor_room = None, None
+
+        def _surg(v):
+            s = str(v or '').strip()
+            return s if _re.fullmatch(r'SURG_\d+', s) else _mask_staff_for_log(s)   # รหัสอยู่แล้ว ไม่แปลงซ้ำ
+
+        conn = get_conn()
+        n = 0
+        try:
+            _ensure_table(conn)
+            have = {str(r[0]) for r in conn.execute(
+                "SELECT case_ref FROM research_case_log WHERE log_date=?", (log_date,)).fetchall()}
+            try:
+                from main_or_db import _table_columns as _tcols
+                _cols = _tcols(conn, 'research_case_log')
+            except Exception:
+                _cols = None
+            for case in todo:
+                cref = str(case.get('id'))
+                if cref in have:
+                    continue
+                try:
+                    room = int(float(case.get('or_room_assigned') or case.get('room') or 0)) or None
+                except (TypeError, ValueError):
+                    room = None
+                _sh, _sm = case.get('sched_hour'), case.get('sched_min')
+                rng = case.get('predicted_range') or (None, None)
+                try:
+                    lo, hi = _int(rng[0]), _int(rng[1])
+                except (TypeError, IndexError):
+                    lo, hi = None, None
+                vals = {
+                    'log_date': log_date, 'case_ref': cref,
+                    'hn_hash': case.get('hn_hash') or (
+                        None if str(case.get('hn') or '').strip().startswith('…') else hn_hash(case.get('hn'))),
+                    'room_no': room,
+                    'division': str(case.get('division') or ''),
+                    'procedure_name': str(case.get('procedure') or ''),
+                    'surgeon_code': _surg(case.get('surgeon')),
+                    'age': _int(case.get('age')),
+                    'ward': str(case.get('ward') or ''),
+                    'sched_time': (f"{int(_sh):02d}:{int(_sm or 0):02d}" if _sh is not None else None),
+                    'pred_ai_min': _int(case.get('ai_predicted_min') or case.get('predicted_min')),
+                    'pred_lo': lo, 'pred_hi': hi,
+                    'pred_confidence': case.get('confidence'),
+                    'pred_proc_n': _int(case.get('proc_n')),
+                    'pred_source': case.get('pred_source'),
+                    'updated_at': now.isoformat(timespec='seconds'),
+                    'actor_role': actor_role, 'actor_room': actor_room,
+                }
+                if _cols is not None:
+                    vals = {k: v for k, v in vals.items() if k in _cols}
+                else:
+                    vals.pop('pred_source', None)
+                cols = list(vals)
+                conn.execute(
+                    f"INSERT INTO research_case_log ({', '.join(cols)}) "
+                    f"VALUES ({','.join('?' * len(cols))})", tuple(vals.values()))
+                have.add(cref)
+                n += 1
+            conn.commit()
+        finally:
+            conn.close()
+        return n
+    except Exception as ex:
+        print(f"[research_log] seed_cases ไม่สำเร็จ (ข้าม): {ex}")
+        return 0

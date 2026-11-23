@@ -1328,6 +1328,14 @@ def render_csv_upload(bare=False):
                         _synced = True
                     else:
                         _synced = False   # คง dirty ไว้ บอร์ดจะลองเซฟซ้ำเองรอบถัดไป
+                    # 🌱 23 พ.ย. 2026 (มุกกี้สั่ง): อัปโหลดแล้วสร้างแถวข้อมูลวิจัยทันที (ค่าที่ AI ทำนาย)
+                    #    เคสที่ไม่มีใครกดปุ่มจะได้มีแถวให้เติมเวลาจริงจาก intraop ภายหลัง
+                    #    เคส 🧪 ทดสอบ (_demo) ถูกประตูวิจัยกันออกเอง · พังไม่กระทบบอร์ด
+                    try:
+                        from research_log import seed_cases as _seed_rl
+                        _seed_rl(_cur)
+                    except Exception as _sx:
+                        print(f"[research_log] seed ตอนอัปโหลดไม่สำเร็จ (ข้าม): {_sx}")
                     _msg = f"✅ โหลด {_added} เคสเข้าบอร์ดแล้ว : ไปดูที่หน้า 📋 ตารางผ่าตัด"
                     if _testmode:
                         _msg += " · 🧪 โหมดทดสอบ (ไม่บันทึกลงฐานข้อมูลวิจัย)"
@@ -2232,6 +2240,13 @@ def _board_fragment():
                 if _plan_cases:
                     st.session_state.patient_cases = _plan_cases
                     cases = _plan_cases
+                    # 🌱 23 พ.ย. 2026 (มุกกี้สั่ง): ตารางที่อัปโหลดล่วงหน้ากลายเป็นบอร์ดของวันนี้
+                    #    → สร้างแถวข้อมูลวิจัยของวันนี้ทันที (ธง promoted กันทำซ้ำ และ seed ข้ามแถวที่มีแล้ว)
+                    try:
+                        from research_log import seed_cases as _seed_rl
+                        _seed_rl(_plan_cases)
+                    except Exception as _sx:
+                        print(f"[research_log] seed ตอนย้ายแผนไม่สำเร็จ (ข้าม): {_sx}")
                     st.session_state['_board_dirty'] = True
                     st.session_state['_board_dirty_ids'] = set()
                     st.session_state['_pending_toast'] = (

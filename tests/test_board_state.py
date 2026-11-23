@@ -1205,6 +1205,38 @@ def test_data_analysis_room_utilization_formula():
     assert W['divs'][0]['cases'] == 5 and abs(W['divs'][0]['hours'] - 23) < 1e-6 and W['divs'][0]['pct'] is None
 
 
+def test_research_seed_on_upload_is_scoped_and_idempotent():
+    """🌱 23 พ.ย. 2026 (มุกกี้สั่ง อัปโหลดแล้วเริ่มบันทึกเลย): seed_cases สร้างแถวเฉพาะเคสในขอบเขตวิจัย
+    พร้อมค่าทำนาย · เรียกซ้ำไม่สร้างซ้ำ · ไม่แปลงรหัสแพทย์ที่เป็นรหัสอยู่แล้ว · ใช้ฐานชั่วคราวเท่านั้น"""
+    import tempfile, sqlite3
+    import research_log as RL
+    from db_connection import get_connection
+    tmp = os.path.join(tempfile.mkdtemp(prefix='orflow_test_'), 't.db')
+    sqlite3.connect(tmp).close()
+    _old_conn, _old_actor = D.get_conn, D.current_actor
+    D.get_conn = lambda *a, **k: get_connection(tmp, timeout=10)
+    D.current_actor = lambda: ('admin', None)
+    try:
+        def _c(i, **k):
+            c = dict(id=f'c{i}', hn=f'{i}{i}{i}', hn_hash=RL.hn_hash(f'{i}{i}{i}'), procedure='LC',
+                     surgeon='SURG_012', room=93, sched_hour=9, sched_min=0, case_type='Elective',
+                     ai_predicted_min=90, predicted_range=(60, 120))
+            c.update(k)
+            return c
+        cases = [_c(1), _c(2, is_emergency=True), _c(3, sched_hour=16), _c(4, _demo=True), _c(5, is_tf=True, sched_hour=23, sched_min=55)]
+        assert RL.seed_cases(cases, log_date='2026-11-20') == 2, "เข้าเกณฑ์เฉพาะ elective ในเวลา และ TF"
+        assert RL.seed_cases(cases, log_date='2026-11-20') == 0, "เรียกซ้ำต้องไม่สร้างแถวซ้ำ"
+        conn = get_connection(tmp)
+        rows = [tuple(r) for r in conn.execute(
+            "SELECT case_ref, surgeon_code, pred_ai_min, pred_lo, pred_hi, entered_or_at, hn_hash "
+            "FROM research_case_log ORDER BY case_ref").fetchall()]
+        conn.close()
+        assert [r[0] for r in rows] == ['c1', 'c5'] and rows[0][1] == 'SURG_012'
+        assert rows[0][2:6] == (90, 60, 120, None) and rows[0][6] == RL.hn_hash('111')
+    finally:
+        D.get_conn, D.current_actor = _old_conn, _old_actor
+
+
 # ═════════ 15. ตัวอ่านตารางผ่าตัด CSV จาก HIS (22 พ.ย. 2026) ═════════
 # บั๊กที่เจอจากไฟล์ HIS จริงก่อนใช้งาน : (ก) ช่องที่มี comma ทำคอลัมน์เลื่อน แพทย์หาย 6.4% ของเคส
 # (ข) ไฟล์ชุดใหม่เขียนวันที่ เดือน/วัน/ปี วันที่ 1-12 สลับวันกับเดือน (ค) UTF-8 ถูกถอดเป็น UTF-16 ได้ตัวขยะ
