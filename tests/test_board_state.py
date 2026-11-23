@@ -69,6 +69,10 @@ def _isolate_io():
             "(ให้ mock ฟังก์ชันที่แตะ DB ในเทสต์นั้นแทน)")
 
     D.get_conn = _no_conn
+    # ④ 23 พ.ย. 2026: ปิดทางเปิด connection ของ db_connection ด้วย (โหมด supabase ไม่สนพาธไฟล์
+    #    เคยมีเทสต์ส่งพาธชั่วคราวแล้วเขียนลง Supabase จริง) · เทสต์ที่ต้องใช้ฐานให้ sqlite3.connect ไฟล์ชั่วคราว
+    import db_connection as _dbc
+    _dbc.get_connection = _no_conn
 
 
 _isolate_io()
@@ -1210,12 +1214,16 @@ def test_research_seed_on_upload_is_scoped_and_idempotent():
     พร้อมค่าทำนาย · เรียกซ้ำไม่สร้างซ้ำ · ไม่แปลงรหัสแพทย์ที่เป็นรหัสอยู่แล้ว · ใช้ฐานชั่วคราวเท่านั้น"""
     import tempfile, sqlite3
     import research_log as RL
-    from db_connection import get_connection
     tmp = os.path.join(tempfile.mkdtemp(prefix='orflow_test_'), 't.db')
-    sqlite3.connect(tmp).close()
-    _old_conn, _old_actor = D.get_conn, D.current_actor
-    D.get_conn = lambda *a, **k: get_connection(tmp, timeout=10)
+    # 🐛 23 พ.ย. 2026: เดิมใช้ db_connection.get_connection(tmp) ซึ่งโหมด supabase ไม่สนพาธ
+    #    → เทสต์นี้เขียนแถวปลอม c1/c5 ลง orsurg.research_case_log จริง · ใช้ sqlite3 ตรง ๆ แทน
+    #    และบังคับโหมด SQLite เฉพาะระหว่างเทสต์ (_table_columns เลือกคำสั่งตาม IS_POSTGRES)
+    def get_connection(*_a, **_k):
+        return sqlite3.connect(tmp, timeout=10)
+    _old_conn, _old_actor, _old_pg = D.get_conn, D.current_actor, D.IS_POSTGRES
+    D.get_conn = get_connection
     D.current_actor = lambda: ('admin', None)
+    D.IS_POSTGRES = False
     try:
         def _c(i, **k):
             c = dict(id=f'c{i}', hn=f'{i}{i}{i}', hn_hash=RL.hn_hash(f'{i}{i}{i}'), procedure='LC',
@@ -1234,7 +1242,7 @@ def test_research_seed_on_upload_is_scoped_and_idempotent():
         assert [r[0] for r in rows] == ['c1', 'c5'] and rows[0][1] == 'SURG_012'
         assert rows[0][2:6] == (90, 60, 120, None) and rows[0][6] == RL.hn_hash('111')
     finally:
-        D.get_conn, D.current_actor = _old_conn, _old_actor
+        D.get_conn, D.current_actor, D.IS_POSTGRES = _old_conn, _old_actor, _old_pg
 
 
 # ═════════ 15. ตัวอ่านตารางผ่าตัด CSV จาก HIS (22 พ.ย. 2026) ═════════
