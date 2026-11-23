@@ -359,17 +359,18 @@ def queue_change_label(cases) -> str:
     if best is None:
         return ''
     c = best[1]
-    _who = 'จอประจำห้อง' if str(c.get('q_changed_by') or '').startswith('room') else 'จอรับ-ส่ง'
+    # 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): ใช้จอรับ-ส่งจอเดียว : บอกแค่เวลา ไม่ต้องบอกว่ามาจากจอไหน
     _hh = _esc(c.get('q_changed_hhmm') or '')
-    return f'🔀 ปรับคิวล่าสุด {_hh} น. จาก{_who}' if _hh else f'🔀 ปรับคิวจาก{_who}'
+    return f'🔀 ปรับคิวล่าสุด {_hh} น.' if _hh else '🔀 ปรับคิวแล้ว'
 
 
 def queue_notice_html(n) -> str:
     """ข้อความแจ้งว่าห้องนี้เพิ่งเปลี่ยนคิว (ทุกจอเห็นตรงกัน) : ไม่มีชื่อคนกด บอกแค่จอไหน"""
     from room_config import room_label as _rl
-    _who = 'จอห้อง' if str(n.get('by') or '').startswith('room') else 'จอรับ-ส่ง'
-    _txt = (f"{_esc(_rl(n['room']))} เปลี่ยนคิวถัดไปเป็น {_pt_name(n['case'])} "
-            f"({_who} {_esc(n.get('hhmm') or '')} น.)")
+    # 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): บอกแค่เวลา ไม่บอกจอ
+    _hh = _esc(n.get('hhmm') or '')
+    _txt = (f"{_esc(_rl(n['room']))} เปลี่ยนคิวถัดไปเป็น {_pt_name(n['case'])}"
+            + (f" ({_hh} น.)" if _hh else ''))
     if n.get('called') is not None:
         _txt += f" · {_pt_name(n['called'])} ถูกแจ้งเรียกไว้ก่อนแล้ว"
     return ('<div style="background:#e6f1fb;border:1px solid #b5d4f4;border-radius:10px;'
@@ -633,7 +634,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
                 with _qa:
                     st.markdown(queue_notice_html(_n), unsafe_allow_html=True)
                 with _qb:
-                    if st.button("↩️ เลิกทำ", key=f"tb_qundo_{_n['room']}",
+                    if st.button("↩️ ย้อนกลับ", key=f"tb_qundo_{_n['room']}",
                                  width='stretch', help="คืนลำดับคิวก่อนการเปลี่ยนครั้งนี้"):
                         queue_undo(cases, mark_dirty)
                         try:
@@ -865,6 +866,18 @@ def _quiet_overrun() -> bool:
     return _tryout_ui()
 
 
+# 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): รายการในเมนูดินสอ (เรียงจากใช้บ่อยไปน้อย) : อีโมจินำให้เห็นแล้วเข้าใจทันที
+_ACT_ENT = "🕒 แก้เวลาเข้าห้อง"
+_ACT_PRED = "⏱️ แก้เวลาทำนาย"
+_ACT_ROOM = "🔀 ย้ายห้อง"
+_ACT_DONE = "✅ ผ่าตัดเสร็จไปแล้ว"
+_ACT_DEL = "🗑️ ลบเคสออกจากกระดาน"
+
+# 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): ระบบ minimal : ปิดการสลับคิวหน้างาน (ปุ่ม คิวถัดไป) ลำดับยึดตามตารางผ่าตัด
+#    โค้ดเดิมเก็บไว้ครบ เปิดคืนได้ที่สวิตช์นี้จุดเดียว
+_QUEUE_SWAP_ON = False
+
+
 def _minimal_board() -> bool:
     """🧹 7 พ.ย. 2026 (มุกกี้สั่ง ตาม wireframe): ตารางผ่าตัดแบบ minimal เฉพาะแอป DEMO
     แถวเหลือ 5 ช่อง : ห้อง+นัด / ผู้ป่วย+หัตถการ·แพทย์ / เวลา / ปุ่มหลัก / ⋯
@@ -955,13 +968,17 @@ def _lead_cells_pre(c, tlabel, emer, dup_badge, chip, name_fg='#0f172a'):
             _bits.append(f'แบบจำลองทำนาย {int(_ai)} น.')
     elif _eff:
         _bits.append(f'<b style="color:#0c447c;">ทำนายใช้ห้อง {int(_eff)} น.</b>')
+    # 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): การ์ดเหลือตัวเลขเดียว = เวลาทำนายใช้ห้อง
+    #    ช่วงที่เป็นไปได้กับจำนวนเคสอ้างอิง ย้ายไปอยู่ในข้อความตอนชี้ค้าง (คนกดปุ่มไม่ได้ใช้)
+    _tipb = []
     _rng = c.get('predicted_range')
     if c.get('range_method') == 'conformal' and _rng:
-        _bits.append(f'ช่วง {int(_rng[0])} ถึง {int(_rng[1])} น.')
+        _tipb.append(f'ช่วง {int(_rng[0])} ถึง {int(_rng[1])} น.')
     _n = c.get('proc_n')
     if _n is not None:
-        _bits.append(f'จาก {int(_n)} เคส' if _n else 'ไม่มีเคสใกล้เคียง')
-    _l2 = ' · '.join(_bits)
+        _tipb.append(f'จาก {int(_n)} เคส' if _n else 'ไม่มีเคสใกล้เคียง')
+    _l2 = (f'<span title="{_esc(" · ".join(_tipb))}" style="cursor:help;">' + ' · '.join(_bits) + '</span>'
+           if _tipb else ' · '.join(_bits))
     return (
         '<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;">'
         '<span style="display:flex;align-items:baseline;gap:10px;min-width:0;">'
@@ -1181,7 +1198,7 @@ def _call_line_html(c, dt, now):
     diff = int((dt - now).total_seconds() // 60)
     _tip = (f'เวลา = คาดว่าห้องจะพร้อมรับ - {_CALL_LEAD_MIN} นาที (เผื่อโทร/'
             f'เดินทาง) : ผู้ป่วยขึ้นมารอไม่เกิน 1 ชั่วโมง · ขยับตามสถานการณ์'
-            f'จริงเอง · ถ้าห้องผ่าตัดกดกระดิ่ง = เรียกมารอได้เลย ไม่ต้องรอถึงเวลา')
+            f'จริงเอง')
     # 🚀 20 พ.ย. 2026 (มุกกี้สั่ง): ใช้ทั้งสองแอป (ui_theme.tryout_ui)
     _demo_inst = _tryout_ui()
     if diff < 0 and _demo_inst:
@@ -1301,6 +1318,10 @@ def _time_static(c, disp, eff, elapsed, now, tov_map=None):
         _bits.append(f'ช่วง {int(_rng[0])}-{int(_rng[1])} น.')
     _tip = ('ช่วง 90% = เคสลักษณะนี้ราว 9 ใน 10 ใช้เวลาอยู่ในช่วงนี้ · '
             'ช่วงแคบ = ค่อนข้างแน่นอน · ช่วงกว้าง = เวลาแกว่งได้มาก ควรเผื่อเวลา')
+    if _minimal_board():        # 🧹 23 พ.ย. 2026: แถวเหลือตัวเลขเดียว รายละเอียดไปอยู่ตอนชี้ค้าง
+        if _bits:
+            _tip = ' · '.join(_bits) + ' · ' + _tip
+        _bits = []
     if ov:
         if _minimal_board():
             return (f'{_who_icon(c)}<b style="font-weight:700;color:#0f172a;">'
@@ -1514,7 +1535,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
         try:
             from call_queue import can_make_next as _can_qn0
             _all0 = st.session_state.get('patient_cases') or []
-            _qn0 = _own and _can_qn0(_all0, c)
+            _qn0 = _QUEUE_SWAP_ON and _own and _can_qn0(_all0, c)
         except Exception as _qnx:
             print(f"[queue] ตรวจสิทธิ์เปลี่ยนคิวไม่สำเร็จ: {_qnx}")
             _qn0 = False
@@ -1535,7 +1556,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
             c0, c2, _cm = st.columns(_BOARD_COLS_MIN)
         with _cm:
             # ✏️ ไอคอนดินสอ ให้ตรงกับคู่มือ (มุกกี้สั่ง 7 พ.ย. 2026 · เดิม ⋯)
-            _more = _popover("✏️", help="ย้อนกลับเมื่อกดผิด แก้เวลาทำนาย ย้ายห้อง และดู HN",
+            _more = _popover("✏️", help="กดเพื่อเลือกสิ่งที่ต้องการทำกับเคสนี้",
                              width='stretch', key=f"tb_more_{K}")
         with _more:
             _meta = _pt_meta(c)
@@ -1603,49 +1624,73 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 except TypeError:
                     pop = st.popover("✏️")
             with pop:
+                # 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): เมนูดินสอแบบเมนูคลิกขวา : เลือกก่อนว่าจะทำอะไร
+                #    แล้วค่อยเห็นเฉพาะช่องของเรื่องนั้น · เรื่องที่ใช้บ่อยอยู่บน (เลิกทำอยู่บนสุดเหนือรายการนี้)
+                _act = None
+                if _mb:
+                    _ent_ok = (c.get('status') == 'in_or' and _scope is None
+                               and c.get('time_entered_or') is not None
+                               and hasattr(c.get('time_entered_or'), 'hour'))
+                    _acts = []
+                    if _ent_ok:
+                        _acts.append(_ACT_ENT)
+                    _acts.append(_ACT_PRED)
+                    if room_opts and _scope is None:
+                        _acts.append(_ACT_ROOM)
+                    if disp == 'not_arrived' and _scope is None:
+                        _acts += [_ACT_DONE, _ACT_DEL]
+                    _act = st.radio("เลือกสิ่งที่ต้องการทำ", _acts, index=None,
+                                    key=f"tb_act_{K}", label_visibility="collapsed")
+
+                def _show(_a, _mb=_mb, _act=_act):
+                    return (not _mb) or _act == _a
                 # 📊 ป้ายขอบเขตวิจัย — ถ้อยคำเดียวทุกกรณี (มุคกี้ปรับ 3 ส.ค. 2026)
-                _out_scope = _is_emer(c)
-                if not _out_scope:
-                    try:
-                        from research_log import in_research_scope as _irs
-                        _out_scope = (not _irs(c)) and not c.get('_demo')
-                    except Exception:
-                        _out_scope = False
-                if _out_scope:
-                    st.caption('เคสที่ "อยู่นอกขอบเขตวิจัย" '
-                               'จะไม่ถูกเก็บบันทึกเข้าข้อมูลวิจัย')
-                st.caption("เวลาทำนายใช้ห้องผ่าตัด (นาที) : แก้แทนค่า AI ได้ "
-                           "(เวลาใช้ห้องตั้งแต่ room in ถึง room out)")
-                # 🤖 ที่มาของคำทำนาย — หลักฐานช่วยตัดสินใจว่าควรเชื่อ AI แค่ไหน
-                _ai0 = c.get('ai_predicted_min') or c.get('predicted_min')
-                if _ai0:
-                    _bits = [f"🤖 AI {_dur_str(_ai0)}"]
-                    if c.get('proc_n') is not None:
-                        _nev = int(c.get('proc_n') or 0)
-                        _bits.append(f"จาก {_nev} เคส" if _nev
-                                     else "ไม่มีเคสใกล้เคียง")
-                    st.caption(" · ".join(_bits))
-                # 📏 ช่วงทำนาย 90% (split conformal — คาลิเบรตจากข้อมูลจริงปี 2567)
-                _rng = c.get('predicted_range')
-                if c.get('range_method') == 'conformal' and _rng:
-                    st.caption(f"📏 โอกาส 9 ใน 10 เคสจะใช้เวลา "
-                               f"{int(_rng[0])}–{int(_rng[1])} นาที")
-                if disp in ('in_or', 'overrun'):
-                    # 📏 15 พ.ย. 2026 (มุกกี้สั่ง): บนแถวมีช่วง 2 แบบ ก่อนเข้าห้องเป็นช่วง 90%
-                    #    เข้าห้องแล้วเป็นช่วงออกห้องที่แคบกว่า เดิมอธิบายใน tooltip อย่างเดียว
-                    #    (จอสัมผัสไม่เห็น) → บอกตรงนี้ให้อ่านได้โดยไม่ต้องชี้เมาส์
-                    st.caption("ช่วงออกห้องบนแถวเป็นช่วงแคบ ครอบราว 5-6 ใน 10 เคส "
-                               "ถ้าต้องการช่วงที่มั่นใจกว่า ให้ดูช่วง 9 ใน 10 ด้านบน")
-                new_t = st.number_input("นาที", min_value=5, max_value=600,
-                                        value=eff, key=f"tb_ov_{K}",
-                                        label_visibility="collapsed")
+                if _show(_ACT_PRED):
+                    _out_scope = _is_emer(c)
+                    if not _out_scope:
+                        try:
+                            from research_log import in_research_scope as _irs
+                            _out_scope = (not _irs(c)) and not c.get('_demo')
+                        except Exception:
+                            _out_scope = False
+                    if _out_scope:
+                        st.caption('เคสที่ "อยู่นอกขอบเขตวิจัย" '
+                                   'จะไม่ถูกเก็บบันทึกเข้าข้อมูลวิจัย')
+                    st.caption("เวลาทำนายใช้ห้องผ่าตัด (นาที) : แก้แทนค่า AI ได้ "
+                               "(เวลาใช้ห้องตั้งแต่ room in ถึง room out)")
+                    # 🤖 ที่มาของคำทำนาย — หลักฐานช่วยตัดสินใจว่าควรเชื่อ AI แค่ไหน
+                    _ai0 = c.get('ai_predicted_min') or c.get('predicted_min')
+                    if _ai0:
+                        _bits = [f"🤖 AI {_dur_str(_ai0)}"]
+                        if c.get('proc_n') is not None:
+                            _nev = int(c.get('proc_n') or 0)
+                            _bits.append(f"จาก {_nev} เคส" if _nev
+                                         else "ไม่มีเคสใกล้เคียง")
+                        st.caption(" · ".join(_bits))
+                    # 📏 ช่วงทำนาย 90% (split conformal — คาลิเบรตจากข้อมูลจริงปี 2567)
+                    _rng = c.get('predicted_range')
+                    if c.get('range_method') == 'conformal' and _rng:
+                        st.caption(f"📏 โอกาส 9 ใน 10 เคสจะใช้เวลา "
+                                   f"{int(_rng[0])}–{int(_rng[1])} นาที")
+                    if disp in ('in_or', 'overrun'):
+                        # 📏 15 พ.ย. 2026 (มุกกี้สั่ง): บนแถวมีช่วง 2 แบบ ก่อนเข้าห้องเป็นช่วง 90%
+                        #    เข้าห้องแล้วเป็นช่วงออกห้องที่แคบกว่า เดิมอธิบายใน tooltip อย่างเดียว
+                        #    (จอสัมผัสไม่เห็น) → บอกตรงนี้ให้อ่านได้โดยไม่ต้องชี้เมาส์
+                        st.caption("ช่วงออกห้องบนแถวเป็นช่วงแคบ ครอบราว 5-6 ใน 10 เคส "
+                                   "ถ้าต้องการช่วงที่มั่นใจกว่า ให้ดูช่วง 9 ใน 10 ด้านบน")
+                    new_t = st.number_input("นาที", min_value=5, max_value=600,
+                                            value=eff, key=f"tb_ov_{K}",
+                                            label_visibility="collapsed")
+                else:
+                    new_t = eff
+                    _ai0 = c.get('ai_predicted_min') or c.get('predicted_min')
                 # (dropdown "ส่งต่อหลังผ่า" ถอดออกแล้ว — ปลายทางเลือกจากปุ่ม
                 #  "เสร็จ → รับ-ส่ง / พักฟื้น" บนแถวโดยตรง · spec 3 ก.ค. 2026)
 
                 # 🔀 ย้ายห้อง — เลือกได้ทุกห้องที่เปิดใช้ (ชื่อล้วน ไม่มีรหัส)
                 #    🚪 โหมดจอห้อง: ซ่อน — ย้ายห้อง = การจัดคิว ต้องผ่านจอรับ-ส่ง
                 _new_room = None
-                if room_opts and _scope is None:
+                if room_opts and _scope is None and _show(_ACT_ROOM):
                     _labels = [lbl for _, lbl in room_opts]
                     try:
                         _cur_rn = int(float(c.get('room')))
@@ -1664,7 +1709,8 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 # 💾 19 พ.ย. 2026 (มุกกี้แจ้ง): ปุ่มบันทึกแสดงตลอด · เดิมปุ่มโผล่หลังค่าถูกยืนยันแล้วเท่านั้น
                 #    คนพิมพ์ตัวเลขใหม่จึงต้องกด Enter ก่อน 1 ครั้งปุ่มถึงขึ้น ตอนนี้พิมพ์แล้วกดบันทึกได้เลย
                 #    (กดโดยไม่ได้แก้อะไร = ไม่เกิดอะไรขึ้น)
-                _sv_clicked = st.button("💾 บันทึก", key=f"tb_sv_{K}", width='stretch')
+                _sv_clicked = ((_show(_ACT_PRED) or _show(_ACT_ROOM))
+                               and st.button("💾 บันทึก", key=f"tb_sv_{K}", width='stretch'))
                 if _sv_clicked and (int(new_t) != eff or _room_changed):
                     # ✏️ กันพิมพ์ผิดหลัก (30 → 300) ก่อนค่าจะชนะ AI บนบอร์ด
                     #    และก่อนไหลลง override_log ซึ่งเป็นข้อมูลวิจัย
@@ -1709,7 +1755,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 try:
                     from call_queue import can_make_next as _can_qn
                     _all_cases = st.session_state.get('patient_cases') or []
-                    _qn_ok = ((_scope is None or _scope == R)
+                    _qn_ok = (_QUEUE_SWAP_ON and (_scope is None or _scope == R)
                               and _can_qn(_all_cases, c))
                 except Exception as _qnx:
                     print(f"[queue] ตรวจสิทธิ์เปลี่ยนคิวไม่สำเร็จ: {_qnx}")
@@ -1731,7 +1777,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 #    เฉพาะเคสกำลังผ่า · ไม่เกินเวลาปัจจุบัน ไม่ก่อนเวลารับเข้า · เวลาที่กดปุ่ม
                 #    จริงถูกเก็บคู่ไว้ (ดู main_or_pages.apply_edit_entered) · จอรับ-ส่งเท่านั้น
                 _ent0 = c.get('time_entered_or')
-                if (c.get('status') == 'in_or' and _scope is None
+                if (c.get('status') == 'in_or' and _scope is None and _show(_ACT_ENT)
                         and _ent0 is not None and hasattr(_ent0, 'hour')):
                     st.caption("🕒 เวลาเข้าห้อง (แก้ได้ถ้ากดช้ากว่าความจริง)")
                     _ent_new = st.time_input(
@@ -1762,9 +1808,10 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 #    มีเฉพาะเคส "ยังไม่มา" · เคสที่เข้า flow แล้วใช้ปุ่มปกติ/↩️ ตามเดิม
                 #    🚪 โหมดจอห้อง: ซ่อน (จำหน่ายก่อนบอร์ด/ลบเคส = งานจอรับ-ส่ง)
                 if disp == 'not_arrived' and _scope is None:
-                    st.markdown("---")
-                    st.caption("🌙 เคสผ่าไปแล้วก่อนเปิดบอร์ด หรือไม่ต้องการบนกระดาน")
-                    if st.button("✅ จำหน่ายแล้ว",
+                    if not _mb:
+                        st.markdown("---")
+                        st.caption("🌙 เคสผ่าไปแล้วก่อนเปิดบอร์ด หรือไม่ต้องการบนกระดาน")
+                    if _show(_ACT_DONE) and st.button("✅ จำหน่ายแล้ว",
                                  key=f"tb_pd_{K}", width='stretch',
                                  help="เคสผ่าเสร็จก่อนบอร์ดเปิด (เช่นเที่ยงคืน) — "
                                       "ย้ายพ้นคิว ไม่บันทึกเวลารอ/เวลาผ่า "
@@ -1774,9 +1821,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                         if mark_dirty:
                             mark_dirty(c)
                         _rerun_board()
-                    _okdel = st.checkbox("ยืนยันลบเคสนี้ออกจากกระดาน",
-                                         key=f"tb_delok_{K}")
-                    if st.button("🗑️ ลบออกจากกระดาน", key=f"tb_del_{K}",
+                    _okdel = _show(_ACT_DEL) and st.checkbox("ยืนยันลบเคสนี้ออกจากกระดาน",
+                                                             key=f"tb_delok_{K}")
+                    if _show(_ACT_DEL) and st.button("🗑️ ลบออกจากกระดาน", key=f"tb_del_{K}",
                                  width='stretch', disabled=not _okdel,
                                  help="นำเคสออกจากกระดานทุกเครื่อง — ไม่กระทบ"
                                       "ฐานข้อมูลสถิติ/วิจัยใด ๆ"):
@@ -1813,17 +1860,12 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 else:
                     do_enter(idx, R)
         elif disp in ('in_or', 'overrun') and _own:
-            # 🧹 minimal (DEMO): ปุ่มเสร็จปุ่มเดียว กดแล้วเลือกปลายทาง
+            # 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): ปุ่มเสร็จปุ่มเดียว กดครั้งเดียวจบ ไม่ต้องเลือกปลายทาง
+            #    (ให้รู้ว่าผ่าเสร็จแล้วก่อน ผู้ป่วยไปไหนต่อ จอรับ-ส่งรู้เอง) · ลงกลุ่มรอจำหน่ายเหมือนเดิม
             if _mb:
-                with _popover("เสร็จ", type="primary", width='stretch',
-                              key=f"tb_fin_{K}"):
-                    if st.button("ไปห้องรับ-ส่ง", key=f"tb_f_{K}", type="primary",
-                                 width='stretch',
-                                 help="ผ่าเสร็จ · กลับห้องรับ-ส่ง เพื่อรอจำหน่าย"):
-                        do_finish(idx, R, "ห้องรับ-ส่ง")
-                    if st.button("ไปห้องพักฟื้น", key=f"tb_f2_{K}", width='stretch',
-                                 help="ผ่าเสร็จ · ไปห้องพักฟื้น เพื่อรอจำหน่าย"):
-                        do_finish(idx, R, "ห้องพักฟื้น")
+                if st.button("เสร็จ", key=f"tb_f_{K}", type="primary", width='stretch',
+                             help="ผ่าตัดเสร็จ ผู้ป่วยออกจากห้องแล้ว"):
+                    do_finish(idx, R, "ห้องรับ-ส่ง")
             # ⑂ ผ่าเสร็จ 2 ปลายทาง — กดครั้งเดียวจบ ไม่ต้องเปิด popover เลือก dropdown
             elif st.button("เสร็จ → รับ-ส่ง", key=f"tb_f_{K}", type="primary",
                          width='stretch',
@@ -1858,7 +1900,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
         if disp in _UNDO_TARGET and _undo_ok:
             if _mb:
                 with _undo_slot:      # บนสุดของเมนู ✏️ (ดูที่จองช่องไว้ด้านบน)
-                    if st.button(f"↩️ เลิกทำ : ย้อนกลับเป็น{_UNDO_TARGET[disp]}",
+                    if st.button(f"↩️ ย้อนกลับเป็น{_UNDO_TARGET[disp]}",
                                  key=f"tb_un_{K}", width='stretch',
                                  help=f"กดปุ่มผิด ย้อนกลับเป็น '{_UNDO_TARGET[disp]}' ได้ 1 ขั้น"):
                         do_undo(idx)

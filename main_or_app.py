@@ -26,6 +26,9 @@ from main_or_core import (
 # หมายเหตุ: page_statistics (main_or_pages) และ page_tracking (main_or_tracking)
 # ไม่ถูก route ใน sidebar แล้ว — ตัด import ออกเพื่อลดเวลาโหลด/ความสับสน
 # (โค้ดหน้าเหล่านั้นยังอยู่ในไฟล์เดิม เผื่อเรียกคืนในอนาคต)
+# 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): ระบบ minimal : ใช้จอรับ-ส่งจอเดียว ปิดจอประจำห้องผ่าตัด
+#    (กระดิ่งเรียกคิวกดได้จากจอห้องเท่านั้น จึงหายไปด้วย) · โค้ดเดิมเก็บไว้ครบ เปิดคืนได้ที่สวิตช์นี้จุดเดียว
+_ROOM_SCREENS_ON = False
 from main_or_pages import page_or_board
 from main_or_admin import page_admin
 from main_or_db import init_db, get_db_stats, save_room_settings, load_room_settings
@@ -374,38 +377,39 @@ def render_screen_links(room_info: dict):
     else:
         st.warning("ยังไม่ได้ตั้ง `family_board_token` ใน Secrets ของแอปนี้")
 
-    # ── 🚪 จอประจำห้องผ่าตัด ───────────────────────────────────────
-    try:
-        _rtoks = {str(k): str(v) for k, v in dict(st.secrets.get('room_tokens', {})).items()}
-    except Exception:
-        _rtoks = {}
-    _rooms = list(room_info.keys())
-    _missing = [rm for rm in _rooms if not _rtoks.get(str(rm))]
-    _ready = len(_rooms) - len(_missing)
+    if _ROOM_SCREENS_ON:   # 🧹 23 พ.ย. 2026 ซ่อนลิงก์จอประจำห้อง (ดูสวิตช์หัวไฟล์)
+        # ── 🚪 จอประจำห้องผ่าตัด ───────────────────────────────────────
+        try:
+            _rtoks = {str(k): str(v) for k, v in dict(st.secrets.get('room_tokens', {})).items()}
+        except Exception:
+            _rtoks = {}
+        _rooms = list(room_info.keys())
+        _missing = [rm for rm in _rooms if not _rtoks.get(str(rm))]
+        _ready = len(_rooms) - len(_missing)
 
-    with st.expander(f"**🖥️ จอประจำห้องผ่าตัด · พร้อมใช้ {_ready} จาก {len(_rooms)} ห้อง**",
-                     expanded=bool(_missing)):
-        if _missing:
-            st.warning("⚠️ ห้องที่ยังไม่ได้ตั้งกุญแจใน Secrets : "
-                       + ", ".join(str(room_info[rm]['name']) for rm in _missing)
-                       + " (จอห้องนี้จะเปิดไม่ได้จนกว่าจะเพิ่มกุญแจใต้ `[room_tokens]`)")
-        # ตาราง 3 ช่องต่อแถว — สร้าง columns ใหม่ทุกแถวเพื่อให้การ์ดสูงเท่ากันในแถวเดียวกัน
-        for _start in range(0, len(_rooms), 3):
-            _cols = st.columns(3)
-            for _col, _rm in zip(_cols, _rooms[_start:_start + 3]):
-                _info = room_info[_rm]
-                _tok = _rtoks.get(str(_rm), '')
-                with _col:
-                    if _tok:
-                        _screen_tile(_info['icon'], _info['name'], _info['desc'],
-                                     _link(f"room={_rm}&k={_tok}"))
-                    else:
-                        with st.container(border=True):
-                            _screen_head(_info['icon'], _info['name'],
-                                         '🔒 ยังไม่ได้ตั้งกุญแจห้องนี้ใน Secrets', dim=True)
+        with st.expander(f"**🖥️ จอประจำห้องผ่าตัด · พร้อมใช้ {_ready} จาก {len(_rooms)} ห้อง**",
+                         expanded=bool(_missing)):
+            if _missing:
+                st.warning("⚠️ ห้องที่ยังไม่ได้ตั้งกุญแจใน Secrets : "
+                           + ", ".join(str(room_info[rm]['name']) for rm in _missing)
+                           + " (จอห้องนี้จะเปิดไม่ได้จนกว่าจะเพิ่มกุญแจใต้ `[room_tokens]`)")
+            # ตาราง 3 ช่องต่อแถว — สร้าง columns ใหม่ทุกแถวเพื่อให้การ์ดสูงเท่ากันในแถวเดียวกัน
+            for _start in range(0, len(_rooms), 3):
+                _cols = st.columns(3)
+                for _col, _rm in zip(_cols, _rooms[_start:_start + 3]):
+                    _info = room_info[_rm]
+                    _tok = _rtoks.get(str(_rm), '')
+                    with _col:
+                        if _tok:
+                            _screen_tile(_info['icon'], _info['name'], _info['desc'],
+                                         _link(f"room={_rm}&k={_tok}"))
+                        else:
+                            with st.container(border=True):
+                                _screen_head(_info['icon'], _info['name'],
+                                             '🔒 ยังไม่ได้ตั้งกุญแจห้องนี้ใน Secrets', dim=True)
 
-    st.caption("กุญแจหลุดหรือสงสัยว่าหลุด : แจ้งผู้วิจัยเพื่อเปลี่ยนกุญแจเฉพาะห้องนั้น "
-               "ใน Secrets แล้ว reboot แอป (ห้องอื่นไม่กระทบ)")
+        st.caption("กุญแจหลุดหรือสงสัยว่าหลุด : แจ้งผู้วิจัยเพื่อเปลี่ยนกุญแจเฉพาะห้องนั้น "
+                   "ใน Secrets แล้ว reboot แอป (ห้องอื่นไม่กระทบ)")
 
 
 def page_room_settings():
@@ -1161,7 +1165,7 @@ def main():
         _room_q = str(st.query_params.get('room', '') or '')
     except Exception:
         _room_q = ''
-    if _room_q and not st.session_state.get('authenticated'):
+    if _ROOM_SCREENS_ON and _room_q and not st.session_state.get('authenticated'):
         import hmac as _hmac_r
         try:
             _rtoks = dict(st.secrets.get('room_tokens', {}))
@@ -1180,6 +1184,11 @@ def main():
         else:   # 🔒 fail-closed: ไม่ตั้ง token / token ผิด = เข้าไม่ได้
             st.error("🚪 จอประจำห้องไม่พร้อมใช้งาน : กรุณาติดต่อผู้วิจัย (Mukky)")
             st.stop()
+
+    # 🧹 23 พ.ย. 2026: ปิดจอประจำห้องแล้ว : จอห้องที่เปิดค้างอยู่ให้ตกไปหน้า login
+    if not _ROOM_SCREENS_ON and st.session_state.get('role') == 'room':
+        for _k in ('authenticated', 'role', 'room_scope'):
+            st.session_state.pop(_k, None)
 
     # ⏳ ตัดสิทธิ์ผู้วิจัยที่ทิ้งหน้าจอไว้นานเกิน — ต้องอยู่ "ก่อน" password gate
     #    เพื่อให้ตกลงไปเจอหน้า login ในรอบเดียวกัน ไม่ใช่รอบถัดไป
