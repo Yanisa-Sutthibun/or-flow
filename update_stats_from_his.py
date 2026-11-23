@@ -197,8 +197,15 @@ def insert_cases(F, tset):
                 cand.remove(s)
             else:
                 n_nosched += 1
-            proc = (_clean(g(s, S['icd9cm_name'])) if s is not None else '') \
+            # 🔁 23 พ.ย. 2026 (มุกกี้เลือกทางเลือก 1): หัตถการในสถิติใช้ชื่อที่ลงรหัสหลังผ่าตัดใน intraop
+            #    (icd9cmnm) ก่อน ถ้าไม่มีจึงใช้ชื่อจากตารางผ่าตัด · เดิมใช้ชื่อจากตารางก่อนเสมอ
+            #    = นับ "ที่วางแผน" ไม่ใช่ "ที่ทำจริง" · HIS ลง icd9cmnm ราว 30% ของเคส ที่เหลือยังเป็นชื่อตามแผน
+            #    สถิตินี้ใช้ดูเร็ว ๆ : หัตถการจริงทุกเคสต้องนับจากสมุดสถิติ
+            #    proc_plan = ชื่อตามแผน ยังใช้กับการทำนายย้อนหลังและการจัดเคสนอกเวลา
+            #    (AI ต้องเห็นเท่าที่รู้ก่อนผ่า และคำว่า "นอกเวลา" อยู่ในชื่อจากตาราง)
+            proc_plan = (_clean(g(s, S['icd9cm_name'])) if s is not None else '') \
                 or _clean(g(r, I['icd9cmnm'])) or 'UNKNOWN'
+            proc = _clean(g(r, I['icd9cmnm'])) or proc_plan
             diag = _clean(g(s, S['icd10_name'])) if s is not None else ''
             sched_surg = _clean(g(s, S['surgstfnm'])) if s is not None else ''
             surg = _clean(g(r, I['dctnm'])) or sched_surg
@@ -258,8 +265,8 @@ def insert_cases(F, tset):
                 'an': an_v, 'estimated_time': est, 'procnote': note,
                 'requested_date': (HC.to_dmy(g(s, S['reqdate']), F['s_order'])
                                    if s is not None else ''),
-                'op_date': op_date, 'procedure_name': proc, 'diagnosis': diag})
-            ai_min = _predict_for_case(proc, surg or 'UNKNOWN', div or '75', optype, op_date,
+                'op_date': op_date, 'procedure_name': proc_plan, 'diagnosis': diag})
+            ai_min = _predict_for_case(proc_plan, surg or 'UNKNOWN', div or '75', optype, op_date,
                                        age=age_v, orroom=room, diagnosis=diag)
             # 🔒 procnote ใช้จัดประเภทเคสข้างบนเท่านั้น ไม่เก็บลงฐานข้อมูลบนคลาวด์
             conn.execute("""
