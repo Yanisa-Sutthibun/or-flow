@@ -2061,8 +2061,24 @@ def page_or_board():
     _board_fragment()
 
 
-@_fragment(run_every=30)
+_BOARD_FRAGS = {}
+
+
 def _board_fragment():
+    """⏲️ 24 พ.ย. 2026 (มุกกี้สั่ง): รอบรีเฟรชเลือกได้ต่อเครื่อง (ui_theme.refresh_sec · หน้าตั้งค่า แท็บการแสดงผล)
+    run_every ของ st.fragment ตั้งได้ตอนสร้างเท่านั้น → สร้าง fragment แยกต่อรอบที่เลือก แล้วเก็บไว้ใช้ซ้ำ"""
+    try:
+        from ui_theme import refresh_sec as _rs
+        _sec = _rs()
+    except Exception:
+        _sec = 30
+    _f = _BOARD_FRAGS.get(_sec)
+    if _f is None:
+        _f = _BOARD_FRAGS[_sec] = _fragment(run_every=_sec)(_board_body)
+    _f()
+
+
+def _board_body():
     from main_or_db import div_name
     from room_config import room_label
     import time as _tmod
@@ -2141,7 +2157,12 @@ def _board_fragment():
         else:
             try:    # fallback: streamlit เก่า (<1.37) — พฤติกรรมเดิมทุกอย่าง
                 from streamlit_autorefresh import st_autorefresh
-                _tick = st_autorefresh(interval=30000, key='_board_live')
+                try:
+                    from ui_theme import refresh_sec as _rs2
+                    _iv = _rs2() * 1000
+                except Exception:
+                    _iv = 30000
+                _tick = st_autorefresh(interval=_iv, key='_board_live')
                 if _tick != st.session_state.get('_board_tick_seen'):
                     st.session_state['_board_tick_seen'] = _tick
                     st.session_state['_board_force_pull'] = True
@@ -2465,7 +2486,7 @@ def _board_fragment():
             "- กดพลาด? ปุ่ม **↩️** ท้ายแถวย้อนกลับได้หนึ่งขั้น\n"
             "- **✏️** = แก้เวลาทำนายการใช้ห้องหรือย้ายห้อง ตัวเลข AI เป็นค่าประมาณ "
             "พยาบาลปรับเวลาได้เสมอ\n"
-            "- หน้าจออัปเดตเองทุก 30 วินาที — **ไม่ต้องกด F5** "
+            "- หน้าจออัปเดตเองทุก 30 วินาที ปรับรอบได้ที่ ตั้งค่า : การแสดงผล · **ไม่ต้องกด F5** "
             "(อยากดึงข้อมูลทันทีกด 🔄 รีเฟรช มุมขวาบน)\n\n"
             "---\n"
             "**ตัวเลขใต้ค่าทำนาย อ่านอย่างไร**\n\n"

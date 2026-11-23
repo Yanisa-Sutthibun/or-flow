@@ -468,6 +468,50 @@ def render_font_size_setting() -> None:
         st.rerun()
 
 
+# ⏲️ 24 พ.ย. 2026 (มุกกี้สั่ง): เลือกรอบรีเฟรชบอร์ดของจอเครื่องนี้ เผื่อคนที่ไม่ชอบจอกระพริบถี่
+#    เก็บใน session + ?rf= ใน URL (รอด F5 แบบเดียวกับขนาดตัวอักษร) · ค่าเริ่มต้น 30 วินาที
+REFRESH_CHOICES = {'30 วินาที': 30, '1 นาที': 60, '2 นาที': 120, '5 นาที': 300}
+
+
+def refresh_sec() -> int:
+    try:
+        v = st.session_state.get('_refresh_sec')
+        if v is None:
+            v = int(float(st.query_params.get('rf', 30)))
+        v = int(v)
+        return v if v in REFRESH_CHOICES.values() else 30
+    except Exception:
+        return 30
+
+
+def render_refresh_setting() -> None:
+    """ตัวเลือกรอบรีเฟรชบอร์ด (หน้าตั้งค่า แท็บการแสดงผล) · กดบันทึกจึงเปลี่ยน · มีผลเฉพาะจอเครื่องนี้"""
+    _labels = list(REFRESH_CHOICES)
+    _cur = refresh_sec()
+    st.markdown('<div style="font-size:15px;color:#64748b;margin-top:18px;">ตารางผ่าตัดดึงข้อมูลใหม่เองทุกกี่นาที '
+                ': ตั้งห่างขึ้นถ้าไม่ชอบให้จอกระพริบบ่อย กด 🔄 รีเฟรช เพื่อดูข้อมูลล่าสุดได้ทุกเมื่อ</div>',
+                unsafe_allow_html=True)
+    _idx = next((i for i, k in enumerate(_labels) if REFRESH_CHOICES[k] == _cur), 0)
+    with st.form('refresh_rate_form', border=False):
+        _sel = st.radio('รีเฟรชตารางผ่าตัดทุก', _labels, index=_idx, horizontal=True,
+                        key='_refresh_radio', help='มีผลเฉพาะจอเครื่องนี้ · จำค่าไว้แม้กด F5')
+        _ok = st.form_submit_button('บันทึก', type='primary')
+    if _ok:
+        _v = REFRESH_CHOICES.get(_sel, 30)
+        if _v == _cur:
+            st.info(f'รีเฟรชทุก {_sel} อยู่แล้ว')
+            return
+        st.session_state['_refresh_sec'] = _v
+        try:
+            if _v == 30:
+                st.query_params.pop('rf', None)
+            else:
+                st.query_params['rf'] = str(_v)
+        except Exception:
+            pass
+        st.rerun()
+
+
 def render_page_header(emoji: str, title: str, subtitle: str = "") -> None:
     """Render unified page header — เรียกใช้ตอนต้น page."""
     sub_html = f"<p>{subtitle}</p>" if subtitle else ""

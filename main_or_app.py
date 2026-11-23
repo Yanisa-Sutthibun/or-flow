@@ -447,8 +447,9 @@ def page_room_settings():
             render_staff_editor()
     with _t3:
         # 🔠 7 พ.ย. 2026 (มุกกี้สั่ง): เลือกขนาดตัวอักษรของจอเครื่องนี้
-        from ui_theme import render_font_size_setting
+        from ui_theme import render_font_size_setting, render_refresh_setting
         render_font_size_setting()
+        render_refresh_setting()   # ⏲️ 24 พ.ย. 2026 (มุกกี้สั่ง): รอบรีเฟรชบอร์ดของจอเครื่องนี้
 
 
 def _page_room_settings_body():
