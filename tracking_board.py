@@ -871,7 +871,7 @@ _ACT_ENT = "🕒 แก้เวลาเข้าห้อง"
 _ACT_PRED = "⏱️ แก้เวลาทำนาย"
 _ACT_ROOM = "🔀 ย้ายห้อง"
 _ACT_DONE = "✅ ผ่าตัดเสร็จไปแล้ว"
-_ACT_DEL = "🗑️ ลบเคสออกจากกระดาน"
+_ACT_DEL = "🚫 เลื่อน/ยกเลิก"
 
 # 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): ระบบ minimal : ปิดการสลับคิวหน้างาน (ปุ่ม คิวถัดไป) ลำดับยึดตามตารางผ่าตัด
 #    โค้ดเดิมเก็บไว้ครบ เปิดคืนได้ที่สวิตช์นี้จุดเดียว
@@ -1644,7 +1644,9 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                     if room_opts and _scope is None:
                         _acts.append(_ACT_ROOM)
                     if disp == 'not_arrived' and _scope is None:
-                        _acts += [_ACT_DONE, _ACT_DEL]
+                        _acts.append(_ACT_DONE)
+                    if disp in ('not_arrived', 'holding_pre') and _scope is None:
+                        _acts.append(_ACT_DEL)
                     _act = st.radio("เลือกสิ่งที่ต้องการทำ", _acts, index=None,
                                     key=f"tb_act_{K}", label_visibility="collapsed")
 
@@ -1827,17 +1829,30 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                         if mark_dirty:
                             mark_dirty(c)
                         _rerun_board()
-                    _okdel = _show(_ACT_DEL) and st.checkbox("ยืนยันลบเคสนี้ออกจากกระดาน",
-                                                             key=f"tb_delok_{K}")
-                    if _show(_ACT_DEL) and st.button("🗑️ ลบออกจากกระดาน", key=f"tb_del_{K}",
+                # 🚫 23 พ.ย. 2026 (มุคกี้สั่ง): เลื่อน/ยกเลิก = นำเคสออกจากกระดาน (แทนปุ่ม ลบออกจากกระดาน เดิม)
+                #    กดได้กับเคสที่ยังไม่เข้าห้อง (ยังไม่มา หรือ รอผ่าตัด) · เลือกรายการในเมนูก่อน = ยืนยันขั้นแรก
+                #    การ์ด เลื่อน/ยกเลิก ในหน้าภาพรวมวันนี้ นับจากเคสกลุ่มนี้ (live_link.kpi_from_session)
+                #    แยกว่าเลื่อนหรือยกเลิก ยังทำตอนเช้าจาก HIS (mark_cancel_postpone.py)
+                if disp in ('not_arrived', 'holding_pre') and _scope is None and _show(_ACT_DEL):
+                    if _mb:
+                        st.caption("เคสนี้จะหายจากกระดานทุกเครื่อง และถูกนับเป็นเคสเลื่อน/ยกเลิกของวันนี้")
+                        _okdel = True
+                    else:
+                        _okdel = st.checkbox("ยืนยันนำเคสนี้ออกจากกระดาน", key=f"tb_delok_{K}")
+                    if st.button("🚫 ยืนยัน เลื่อน/ยกเลิก", key=f"tb_del_{K}",
                                  width='stretch', disabled=not _okdel,
-                                 help="นำเคสออกจากกระดานทุกเครื่อง — ไม่กระทบ"
-                                      "ฐานข้อมูลสถิติ/วิจัยใด ๆ"):
+                                 help="นำเคสออกจากกระดานทุกเครื่อง : ไม่กระทบฐานข้อมูลสถิติ"):
                         # tombstone: คงเคสไว้แต่สถานะ 'removed' (ไม่แสดงทุกหน้า)
                         # — ลบทิ้งจริงจะโดนบอร์ดกลาง merge คืนชีพจากเครื่องอื่น
                         c['status'] = 'removed'
+                        c['removed_at'] = _now()
                         if mark_dirty:
                             mark_dirty(c)
+                        try:
+                            from main_or_pages import _toast_ok
+                            _toast_ok("นำเคสออกจากกระดานแล้ว 🚫")
+                        except Exception:
+                            pass
                         _rerun_board()
 
     with c2:

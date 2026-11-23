@@ -114,6 +114,8 @@ def rooms_from_session(cases, now=None):
 
 def kpi_from_session(cases):
     """โครงเดียวกับ get_kpi() แต่คิดจากเคสสดบนกระดาน."""
+    # 🚫 23 พ.ย. 2026 (มุคกี้สั่ง): นับเคสที่ถูกนำออกจากกระดาน (เลื่อน/ยกเลิก) ไว้โชว์เป็นการ์ดแยก
+    _n_removed = sum(1 for c in cases if c.get("status") == "removed")
     cases = [c for c in cases if c.get("status") != "removed"]   # 🗑️ tombstone
     recs = [_rec(c) for c in cases]
     done = [x for x in recs if x['status'] in ('post_op', 'discharged')]
@@ -173,7 +175,7 @@ def kpi_from_session(cases):
         'done': len(done),
         'in_or': sum(1 for x in recs if x['status'] == 'in_or'),
         'waiting': sum(1 for x in recs if x['status'] in ('scheduled', 'arrived')),
-        'cancelled': 0,
+        'cancelled': _n_removed,     # 🚫 เคสที่กด เลื่อน/ยกเลิก บนกระดาน (23 พ.ย. 2026)
         'total_op_min': total_op_min,
         'utilization': utilization,
         'avg_turnover': round(sum(turnovers) / len(turnovers), 1) if turnovers else 0.0,
