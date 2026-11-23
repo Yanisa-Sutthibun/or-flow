@@ -568,6 +568,8 @@ _CSS = ('<style>.da-card{background:#FFFFFF;border:1px solid #E3E9EF;border-radi
         '.da-hub{background:#FFFFFF;border:1px solid #E3E9EF;border-radius:18px;padding:20px;min-height:430px;'
         'display:flex;flex-direction:column;gap:10px;color:#12212E}'
         '.da-hub .px{background:#F1F6FB;border-radius:14px;display:flex;justify-content:center;padding:14px 0}'
+        '.da-hub .px.img{padding:0;overflow:hidden;background:#FFFFFF;border:1px solid #E3E9EF}'
+        '.da-hub .px.img img{display:block;width:100%;height:auto;aspect-ratio:316/338;object-fit:contain}'
         '.da-tag{font-size:12px;font-weight:700;color:#1658B8}.da-ht{font-size:20px;font-weight:700}'
         '.da-hd{font-size:14px;color:#3E4C59;line-height:1.6}'
         '.da-hl{font-size:13px;background:#F5F8FB;border-radius:10px;padding:8px 10px;color:#12212E}</style>')
@@ -682,6 +684,26 @@ def _pick_fy(C, key, label='ปีงบประมาณ', fy_min=None):
         return st.selectbox(label, fys, index=fys.index(d), key=key, format_func=lambda f: f'ปีงบ {f}')
 
 
+# 🖼️ 24 พ.ย. 2026 (มุกกี้ส่งรูปมาแทน pixel art เดิม): รูปหน้าการ์ดอยู่ assets/da_<การ์ด>.png
+#    ฝังเป็น base64 (st.markdown อ่านไฟล์ในเครื่องตรง ๆ ไม่ได้) · ไม่มีไฟล์ = ใช้ pixel SVG เดิม
+_HUB_IMG = {'noy': 'da_noy.png', 'tr': 'da_tr.png', 'ops': 'da_ops.png'}
+
+
+@st.cache_data(show_spinner=False)
+def _hub_img(view: str):
+    import base64
+    import os
+    fn = _HUB_IMG.get(view)
+    if not fn:
+        return ''
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', fn)
+    try:
+        with open(path, 'rb') as f:
+            return base64.b64encode(f.read()).decode('ascii')
+    except OSError:
+        return ''
+
+
 # ---------- หน้ารวมการ์ด ----------
 def _view_hub(C, L):
     from da_sprites import NOY, NOV, TR, OPS
@@ -719,7 +741,10 @@ def _view_hub(C, L):
     cols = st.columns(len(cards))
     for col, (v, svg, tag, title, desc, hl, btn) in zip(cols, cards):
         with col:
-            _md(f'<div class="da-hub"><div class="px">{svg}</div><div class="da-tag">{tag}</div>'
+            _b64 = _hub_img(v)
+            pic = (f'<div class="px img"><img src="data:image/png;base64,{_b64}" alt="{title}"></div>' if _b64
+                   else f'<div class="px">{svg}</div>')
+            _md(f'<div class="da-hub">{pic}<div class="da-tag">{tag}</div>'
                 f'<div class="da-ht">{title}</div><div class="da-hd">{desc}</div><div class="da-hl">{hl}</div></div>')
             if st.button(btn, key=f'da_go_{v}', width='stretch', type='primary'):
                 st.session_state[_K_VIEW] = v
