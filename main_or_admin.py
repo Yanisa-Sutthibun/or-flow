@@ -4057,8 +4057,8 @@ def _render_today_lean(rooms, kpi, live_cases, op_date):
     จำนวนเคสรายห้อง · สถิติรับเวร (เมื่อมีบอร์ดสดขึ้นแค่ข้อความให้ไปดูสรุปรายวัน)"""
     _now = _now_bkk()
 
-    # ── ชั้น 1 : ต้องจัดการตอนนี้ ──
-    st.markdown('<div class="section-title">⚠️ ต้องจัดการตอนนี้</div>',
+    # ── ชั้น 1 : แจ้งเตือน (เดิมชื่อ "ต้องจัดการตอนนี้" · มุกกี้สั่งเปลี่ยนคำ 23 พ.ย. 2026) ──
+    st.markdown('<div class="section-title">⚠️ แจ้งเตือน</div>',
                 unsafe_allow_html=True)
     try:
         if live_cases:

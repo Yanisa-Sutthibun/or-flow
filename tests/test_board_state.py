@@ -1013,7 +1013,7 @@ def test_tutorial_tour_comes_before_practice():
 def test_tutorial_overview_page_explains_sections_first():
     """🗂️ รอบ 6: ขั้นดูภาพรวมของวัน ต้องอธิบาย 3 ส่วนของหน้าก่อน แล้วจึงขึ้นโจทย์"""
     heads = [P.tutorial_sub_view(6, k)['head'] for k in range(3)]
-    assert heads == ['ต้องจัดการตอนนี้', 'สถานการณ์ห้องผ่าตัด', 'ตัวเลขของวัน']
+    assert heads == ['แจ้งเตือน', 'สถานการณ์ห้องผ่าตัด', 'ตัวเลขของวัน']
     assert P.tutorial_sub_view(6, 3) is None and P.tutorial_sub_view(2, 0) is None
 
 
