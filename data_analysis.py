@@ -1024,13 +1024,17 @@ def _view_tr(C, L):
         def _short(s):
             return _e(s).replace('ศัลยกรรม', '').strip() or _e(s)
 
+        # 🌬️ 25 พ.ย. 2026 (มุกกี้ : ตารางแน่น): ช่องสูงขึ้น เว้นระยะมากขึ้น ช่องที่เป็น 0 ไม่วาดกล่อง
+        #    สีไล่ตามค่าสูงสุดของตาราง (เดิมตัดที่ 60 ครั้ง ค่า 69 กับ 357 จึงเข้มเท่ากัน) ใช้รากที่สองให้ค่าน้อยยังพอเห็น
+        _vmax = max(float(mx.values.max()), 1.0)
+
         def _mc(v):
             if v == 0:
-                return '#F5F7FA', '#C9D3DD'
-            t = min(v / 60, 1)
-            return (f'rgb({int(232 - t * 203)},{int(240 - t * 129)},{int(251 - t * 27)})',   # ฟ้าโทนเดียวกับตารางภาระงานรายสาขา (เดิมเขียว)
-                    '#FFFFFF' if t > 0.55 else '#12212E')
-        head = ''.join(f'<div style="font-size:13px;font-weight:600;text-align:center;line-height:1.3;'
+                return 'transparent', '#C9D3DD'
+            t = (v / _vmax) ** 0.5
+            return (f'rgb({int(238 - t * 197)},{int(245 - t * 82)},{int(253 - t * 21)})',
+                    '#FFFFFF' if t > 0.6 else '#12212E')
+        head = ''.join(f'<div style="font-size:13px;font-weight:600;text-align:center;line-height:1.4;padding-bottom:8px;'
                        f'color:#3E4C59">{_short(d)}<div style="font-weight:500">'
                        f'{int(tot[d]):,} ครั้ง</div></div>' for d in mx.columns)
         body = ''
@@ -1039,16 +1043,16 @@ def _view_tr(C, L):
             cells = ''
             for d in mx.columns:
                 bg, fg = _mc(int(r[d]))
-                cells += (f'<div style="height:22px;border-radius:3px;background:{bg};color:{fg};font-size:13px;'
+                cells += (f'<div style="height:30px;border-radius:5px;background:{bg};color:{fg};font-size:14px;'
                           f'display:flex;align-items:center;justify-content:center;font-weight:400">'
                           f'{int(r[d]) or ""}</div>')
-            body += f'<div style="font-size:14px;white-space:nowrap;align-self:center">{_nm(k)}{tag}</div>{cells}'
+            body += f'<div style="font-size:15px;white-space:nowrap;align-self:center">{_nm(k)}{tag}</div>{cells}'
         # 🏷️ 22 พ.ย. 2026 (มุกกี้กำหนดหัว บรรทัดรอง และหมายเหตุท้ายตารางเอง)
         _top, _low = tot.idxmax(), tot.idxmin()
         _md(_card('ตารางการเข้าเคสแยกตามสาขา',
                   f'ปีงบ {fy} : สาขาที่มีคนเข้าเคสมากที่สุดคือ{_short(_top)} {int(tot[_top]):,} ครั้ง · '
                   f'น้อยที่สุดคือ{_short(_low)} {int(tot[_low]):,} ครั้ง',
-                  f'<div style="display:grid;grid-template-columns:120px repeat({len(mx.columns)},minmax(0,1fr));gap:3px">'
+                  f'<div style="display:grid;grid-template-columns:140px repeat({len(mx.columns)},minmax(0,1fr));gap:6px 8px">'
                   f'<div></div>{head}{body}</div>',
                   f'จำนวนครั้งที่เข้า{_role_note}'))
         # 👩‍⚕️ 22 พ.ย. 2026 (มุกกี้สั่ง): เลือกพยาบาล 1 คน ดูว่าเข้าหัตถการอะไรกี่ครั้ง แยกหน้าที่
