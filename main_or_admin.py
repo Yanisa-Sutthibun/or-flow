@@ -3843,59 +3843,11 @@ def _hist_sec_night(date_from, date_to, data=None):
     if aft_range.empty:
         st.info("ไม่มีเคสนอกเวลาในช่วงนี้")
     else:
-        # KPI row: total + done + top-division + peak-day (4 cols)
+        # 📌 24 พ.ย. 2026 มุกกี้สั่ง : เอาแถวการ์ดบนสุดออกทั้งแถว (ยอดรวม สาขามากสุด วันบ่อยสุด)
+        #    เพราะตัวเลขเดียวกันอยู่ในกราฟสาขาและกราฟรายวันข้างล่างแล้ว
         _n_total_aft = len(aft_range)
-
-        # 🏥 สาขาที่มีเคสนอกเวลามากสุด
-        _div_top_name = '-'
-        _div_top_count = 0
-        _div_top_pct = 0
-        if 'division_code' in aft_range.columns:
-            _div_counts = (aft_range['division_code'].fillna('-')
-                           .astype(str).value_counts())
-            if not _div_counts.empty:
-                _top_code = _div_counts.index[0]
-                _div_top_count = int(_div_counts.iloc[0])
-                _div_top_name = div_name(_top_code) if _top_code != '-' else '-'
-                _div_top_pct = round(_div_top_count / _n_total_aft * 100, 1)
-
-        # 📅 วันในสัปดาห์ที่มีเคสนอกเวลาบ่อยสุด (จ.-อา. นับรวมทั้งช่วง —
-        # บอกแค่ชื่อวัน ไม่ระบุวันที่เจาะจง)
         _aft_dt = aft_range.copy()
         _aft_dt['_dt'] = pd.to_datetime(_aft_dt['op_date'])
-        _peak_day_label = '-'
-        _peak_day_count = 0
-        if not _aft_dt.empty:
-            _thai_dows = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์', 'อาทิตย์']
-            _by_dow = _aft_dt['_dt'].dt.weekday.value_counts()
-            _peak_day_count = int(_by_dow.max())
-            _peak_day_label = _thai_dows[int(_by_dow.idxmax())]
-
-        # 📌 24 พ.ย. 2026 มุกกี้สั่ง : เอาการ์ด "ผ่าตัดเสร็จ" ออก เหลือ 3 การ์ด
-        # 📌 24 พ.ย. 2026 : การ์ด "สาขาที่มีเคสมากสุด" ออก เพราะซ้ำกับตัวเลขใหญ่ของกราฟสาขาข้างล่าง
-        a1, a4 = st.columns(2)
-        with a1:
-            st.markdown(
-                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-                f'<div style="font-size:18px;color:#757575;margin-bottom:4px;">'
-                f'🌙 เคสนอกเวลาทั้งหมด</div>'
-                f'<div style="font-size:26px;font-weight:600;line-height:1;color:#5e35b1;">'
-                f'{_n_total_aft}</div>'
-                f'<div style="font-size:18px;color:#9e9e9e;margin-top:4px;">เคส</div>'
-                f'</div>', unsafe_allow_html=True)
-        with a4:
-            st.markdown(
-                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-                f'<div style="font-size:18px;color:#757575;margin-bottom:4px;">'
-                f'📅 วันที่มีเคสบ่อยสุด</div>'
-                f'<div style="font-size:18px;font-weight:600;line-height:1.2;color:#c62828;'
-                f'margin-top:4px;min-height:36px;">'
-                f'{_peak_day_label}</div>'
-                f'<div style="font-size:18px;color:#9e9e9e;margin-top:4px;">'
-                f'{_peak_day_count} เคสรวมทั้งช่วง</div>'
-                f'</div>', unsafe_allow_html=True)
-
-        st.markdown("")  # spacer
 
         # ════ 🏥 เคสนอกเวลาแยกสาขา × ปีงบประมาณ (มุกกี้สั่ง 24 พ.ย. 2026) ════
         #    แถว = สาขา เรียงจากมากไปน้อย · คอลัมน์ = ปีงบในช่วงที่เลือก (เริ่ม 1 ต.ค.) + รวม
