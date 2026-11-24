@@ -146,6 +146,42 @@ def _story_head(text: str):
         unsafe_allow_html=True)
 
 
+def _story_split(big, title, sub, right_title, rows, top_color=None):
+    """🎨 24 พ.ย. 2026 (มุกกี้เลือกแบบนี้กับเคสนอกเวลา แล้วสั่งออกแบบสถิติรับเวรใหม่):
+    บล็อกเล่าเรื่องแบบ ซ้าย = ตัวเลขใหญ่ 1 ตัว + คำอธิบาย · ขวา = แท่งบาง ๆ ไม่ยืดเต็มจอ
+    rows = [(ชื่อ, ค่า, เป็นแท่งเด่นไหม)] เรียงตามลำดับที่อยากให้เห็นจากบนลงล่าง
+    วาดด้วย HTML เอง เพราะแท่งของ plotly ยืดเต็มความกว้างจอ ตัวเลขน้อย ๆ จึงกลายเป็นแท่งยักษ์"""
+    top_color = top_color or _STORY_TOP
+    _fmt = lambda v: (f'{int(v):,}' if float(v).is_integer() else f'{float(v):,.1f}')
+    _mx = max([float(v) for _, v, _ in rows] + [0.0]) or 1.0
+    _r = ''
+    for _lb, _v, _top in rows:
+        _w = round(float(_v) / _mx * 100)
+        _r += (
+            f'<div style="font-size:16px;color:{"#1e293b" if _top else "#475569"};'
+            f'font-weight:{600 if _top else 400};text-align:right;white-space:nowrap;">'
+            f'{html.escape(str(_lb))}</div>'
+            '<div style="display:flex;align-items:center;gap:8px;">'
+            f'<div style="height:14px;width:{_w}%;border-radius:0 4px 4px 0;'
+            f'background:{top_color if _top else _STORY_BASE};"></div>'
+            f'<span style="font-size:16px;color:{"#1e293b" if _top else "#475569"};'
+            f'font-weight:{700 if _top else 400};">{_fmt(_v)}</span></div>')
+    _right = (
+        '<div style="flex:1 1 320px;max-width:520px;border-left:1px solid #e2e8f0;padding-left:28px;">'
+        f'<div style="font-size:16px;color:#64748b;margin-bottom:10px;">{html.escape(right_title)}</div>'
+        '<div style="display:grid;grid-template-columns:max-content 1fr;gap:8px 12px;'
+        f'align-items:center;">{_r}</div></div>') if rows else ''
+    st.markdown(
+        '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:28px;background:#fff;'
+        'border-radius:8px;padding:20px 24px;margin:6px 0 10px;">'
+        '<div style="flex:0 0 auto;min-width:230px;">'
+        f'<div style="font-size:56px;font-weight:700;line-height:1;color:{_STORY_TOP};">'
+        f'{html.escape(str(big))}</div>'
+        f'<div style="font-size:20px;font-weight:600;color:#1e293b;margin-top:8px;">{html.escape(title)}</div>'
+        f'<div style="font-size:16px;color:#64748b;margin-top:2px;">{html.escape(sub)}</div></div>'
+        f'{_right}</div>', unsafe_allow_html=True)
+
+
 @st.cache_data(ttl=900, show_spinner="กำลังโหลดสถิติจาก cloud (ครั้งแรกช้าหน่อย)…")
 def _ca_historical(date_from, date_to, _v):
     return get_historical_analytics(date_from, date_to)
@@ -3570,6 +3606,7 @@ def _hist_sec_eff(date_from, date_to, data=None):
 - **🔄 รับเวร** = เคสที่ทำมาตั้งแต่เช้า/บ่าย (เข้าห้องก่อน 15:30 น.) แล้วเสร็จไม่ทัน 15:30 น. → ทีมต้องอยู่ OT
   - เฉพาะ จ.-ศ. ไม่นับเคสนอกเวลา และไม่นับเคสที่เริ่มหลัง 15:30 น. (เช่น emergency ตอนเย็น)
 - **🌙 นอกเวลา** = set เป็น elective เวลา 15:30 น. ผ่าหลัง 16:00 น. หรือมีคำว่า "นอกเวลา" ใน diagnosis / procedure / procedure note
+  - เฉพาะ จ.-ศ. · เสาร์ อาทิตย์ และวันหยุดราชการเป็นเวร on call ไม่มีทั้งเคสนอกเวลาและเคสรับเวร
 - **🔄 Turnover Time** = ช่วงพักห้องระหว่างเคส (เคสก่อนออก → เคสถัดไปเข้า)
   - เป้า: **≤15 นาที** (ยิ่งสั้น = ใช้ห้องคุ้ม)
 """)
@@ -3621,68 +3658,33 @@ def _hist_sec_eff(date_from, date_to, data=None):
                     unsafe_allow_html=True)
         from main_or_db import get_handover_stats
         ho = _ca_handover(date_from, date_to, _stats_ver())
-        m1, m2, m3 = st.columns(3)
-        with m1:
-            st.metric("เคสรับเวร", f"{ho['n_handover']} เคส")
-        with m2:
-            st.metric("จากทั้งหมด", f"{ho['total']} เคส")
-        with m3:
-            st.metric("สัดส่วน", f"{ho['pct']}%")
-        st.caption("📌 เฉพาะวันธรรมดา (จันทร์-ศุกร์) · เข้าห้องก่อน 15:30 น. · ไม่นับเคสนอกเวลา")
-
-        # 🅰️ Day-of-Week bar
+        # 🎨 24 พ.ย. 2026 (มุกกี้สั่งออกแบบใหม่): การ์ด 3 ใบ + กราฟ A รวมเป็นบล็อกเดียว
+        #    ซ้าย = สัดส่วนเคสรับเวร · ขวา = จำนวนเคสรับเวรตามวัน จ.-ศ. วันมากสุดสีฟ้า
+        _THAI_DAY = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์']
+        _dow_rows_ho = []
         hc = ho.get('handover_cases')
         if hc is not None and not hc.empty:
             hc_dow = hc.copy()
             hc_dow['_dt'] = pd.to_datetime(hc_dow['op_date'], errors='coerce')
             hc_dow = hc_dow.dropna(subset=['_dt'])
-            hc_dow['dow'] = hc_dow['_dt'].dt.dayofweek
-            _THAI_DAY = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์']
-            dow_summary = (hc_dow[hc_dow['dow'].between(0, 4)]
-                              .groupby('dow').size().reset_index(name='n_cases'))
-            all_dows = pd.DataFrame({'dow': range(5)})
-            dow_summary = all_dows.merge(dow_summary, on='dow', how='left').fillna(0)
-            dow_summary['day_name'] = dow_summary['dow'].apply(lambda d: _THAI_DAY[d])
-            dow_summary['n_cases'] = dow_summary['n_cases'].astype(int)
-            max_n = dow_summary['n_cases'].max()
-            dow_summary['color_flag'] = dow_summary['n_cases'].apply(
-                lambda n: 'peak' if n == max_n and n > 0 else 'normal')
-
-            st.markdown(
-                '<div style="font-size:18px;color:#666;margin:10px 0 4px;'
-                'font-weight:500;border-left:3px solid #ef6c00;padding-left:8px;">'
-                '🗓️ <b>A.</b> รับเวรตามวันในสัปดาห์</div>',
-                unsafe_allow_html=True)
-            fig_dow = px.bar(
-                dow_summary, x='n_cases', y='day_name', orientation='h',
-                text='n_cases', color='color_flag',
-                color_discrete_map={'peak': _STORY_TOP, 'normal': _STORY_BASE},
-                labels={'day_name': '', 'n_cases': 'เคส'},
-            )
-            fig_dow.update_traces(textposition='outside', cliponaxis=False)
-            _y_max_ho = max(float(dow_summary['n_cases'].max()), 1.0)
-            fig_dow.update_layout(
-                margin=dict(t=10, b=10, l=10, r=40), height=230,
-                xaxis=dict(range=[0, _y_max_ho * 1.15]),
-            )
-            # 📅 เรียง จ→ศ จากบนลงล่างเสมอ (ไม่เรียงตามลำดับข้อมูล)
-            _story_axes(fig_dow, horizontal=True,
-                        cats=['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์'])
-            st.plotly_chart(fig_dow, use_container_width=True)
+            _cnt_dow = hc_dow['_dt'].dt.dayofweek.value_counts()
+            _n_dow = [int(_cnt_dow.get(d, 0)) for d in range(5)]
+            _mx_dow = max(_n_dow)
+            _dow_rows_ho = [(_THAI_DAY[d], _n_dow[d], _n_dow[d] == _mx_dow and _mx_dow > 0)
+                            for d in range(5)]
+        _story_split(
+            f"{ho['pct']}%", 'ของเคสในเวลา ต้องรับเวรต่อ',
+            f"{ho['n_handover']:,} จาก {ho['total']:,} เคส",
+            'จำนวนเคสรับเวร แยกตามวันในสัปดาห์', _dow_rows_ho)
+        st.caption("📌 รับเวร = เข้าห้องก่อน 15:30 น. แล้วผ่าตัดจบหลัง 15:30 น. · "
+                   "เฉพาะวันจันทร์-ศุกร์ · ไม่นับเคสนอกเวลา")
 
         # 🅱️ Monthly Bar — จำนวนเคสรับเวรต่อเดือน (สีต่างจาก A ให้รู้ว่าคนละ chart)
         monthly = ho.get('monthly')
         if monthly is not None and not monthly.empty:
-            # Visual divider
             st.markdown(
-                '<div style="border-top:1px dashed #cfd8dc;margin:14px 0 0;"></div>',
-                unsafe_allow_html=True)
-            st.markdown(
-                '<div style="font-size:18px;color:#666;margin:10px 0 4px;'
-                'font-weight:500;border-left:3px solid #1565c0;padding-left:8px;">'
-                '📈 <b>B.</b> เคสรับเวรรายเดือน '
-                '<span style="color:#999;font-weight:400;">(สีน้ำเงิน)</span></div>',
-                unsafe_allow_html=True)
+                '<div style="font-size:18px;color:#1e293b;margin:14px 0 4px;font-weight:600;">'
+                'เคสรับเวรรายเดือน</div>', unsafe_allow_html=True)
             _thai_m = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
                        'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
             _m = monthly.copy().sort_values('month')
@@ -3696,7 +3698,7 @@ def _hist_sec_eff(date_from, date_to, data=None):
             _max_n = _m['n_cases'].max()
             _many_b = len(_m) > 18
             _marker_colors = [
-                '#0d47a1' if n == _max_n and n > 0 else '#1976d2'
+                _STORY_TOP if n == _max_n and n > 0 else '#94A3B8'
                 for n in _m['n_cases']
             ]
             _marker_sizes_b = [
@@ -3711,15 +3713,13 @@ def _hist_sec_eff(date_from, date_to, data=None):
             fig_m.add_trace(go.Scatter(
                 x=_m['month_th'], y=_m['n_cases'],
                 mode='lines+markers+text',
-                line=dict(color='#1976d2', width=2 if _many_b else 3),
+                line=dict(color='#94A3B8', width=2),
                 marker=dict(size=_marker_sizes_b, color=_marker_colors,
                             line=dict(width=2, color='white')),
                 text=_text_b,
                 textposition='top center',
-                textfont=dict(size=12, color='#0d47a1'),
+                textfont=dict(size=13, color='#1e293b'),
                 hovertemplate='<b>%{x}</b><br>เคสรับเวร: %{y}<extra></extra>',
-                fill='tozeroy',
-                fillcolor='rgba(25, 118, 210, 0.10)',
             ))
             # เส้นค่าเฉลี่ย (reference line)
             _mean_n = _m['n_cases'].mean()
@@ -3733,24 +3733,20 @@ def _hist_sec_eff(date_from, date_to, data=None):
                 _xaxis_b['dtick'] = 6
                 _xaxis_b['tickangle'] = -30
             fig_m.update_layout(
-                margin=dict(t=30, b=30, l=50, r=10), height=240,
+                margin=dict(t=30, b=30, l=20, r=20), height=220,
                 xaxis=_xaxis_b,
                 showlegend=False,
-                yaxis=dict(title='จำนวนเคสรับเวร',
+                yaxis=dict(title='', showgrid=False, showticklabels=False, zeroline=False,
                            range=[0, _y1_max * 1.30]),
-                plot_bgcolor='#f0f7ff',
+                plot_bgcolor='white',
             )
-            st.plotly_chart(fig_m, use_container_width=True)
-            st.caption("💡 จุดน้ำเงินเข้ม = เดือนรับเวรเยอะสุด · "
-                       "เส้นประ = ค่าเฉลี่ย · "
-                       "ดูชั่วโมง OT ในตาราง 'สรุปรายเดือน' ด้านล่าง")
+            st.plotly_chart(fig_m, use_container_width=True, config={'displayModeBar': False})
+            st.caption("จุดสีฟ้า = เดือนที่รับเวรมากที่สุด · เส้นประ = ค่าเฉลี่ยต่อเดือน")
 
     # ════════════════════════════════════════════════════════════════
     # 🚚 22 พ.ย. 2026 (มุคกี้สั่ง): ย้ายบล็อกนี้มาจากหมวดเคสนอกเวลา ให้อยู่กับสถิติรับเวร
     # ⏱️ เคสรับเวร (ผ่าตัดจบหลัง 15:30 · ไม่นับนอกเวลา) — เวลาจาก intraop
     # ════════════════════════════════════════════════════════════════
-    st.markdown('<div class="sub-title">⏱️ เคสรับเวร (เข้าห้องก่อน 15:30 น. แล้วผ่าตัดจบหลัง 15:30 น. · เฉพาะ จ.-ศ.)</div>',
-                unsafe_allow_html=True)
     try:
         from main_or_db import get_conn as _gc_ho
         _ho_where = "status IN ('post_op','discharged','done')"
@@ -3761,6 +3757,11 @@ def _hist_sec_eff(date_from, date_to, data=None):
         if date_to:
             _ho_where += " AND op_date <= ?"
             _ho_params.append(date_to)
+        # 📅 24 พ.ย. 2026 : วันหยุดราชการ = เวร on call ไม่มีเคสรับเวร (เสาร์-อาทิตย์ตัดด้วย %w แล้ว)
+        from thai_holidays import holidays_between as _hol_btw
+        _ho_hols = _hol_btw(date_from or '2021-01-01', date_to or _now_bkk().date().isoformat())
+        _ho_hol_sql = (f"AND op_date NOT IN ({','.join('?' * len(_ho_hols))}) " if _ho_hols else "")
+        _ho_params = _ho_params + _ho_hols
         _conn_ho = _gc_ho()
         _ho_df = pd.read_sql_query(
             f"SELECT op_date, diagnosis, procedure_name, division_code, "
@@ -3771,6 +3772,7 @@ def _hist_sec_eff(date_from, date_to, data=None):
             #    เคสที่เริ่มเย็น (emergency on call) และวันเสาร์-อาทิตย์ไม่ใช่รับเวร (เกณฑ์เดียวกับ get_handover_stats)
             f"AND CAST(strftime('%w', op_date) AS INTEGER) BETWEEN 1 AND 5 "
             f"AND (in_or_at IS NULL OR LENGTH(in_or_at) < 16 OR SUBSTR(in_or_at, 12, 5) < '15:30') "
+            f"{_ho_hol_sql}"
             f"AND CAST(strftime('%H%M', op_end_at) AS INTEGER) > 1530 "
             f"ORDER BY op_date DESC, op_end_at DESC", _conn_ho, params=_ho_params)
         _conn_ho.close()
@@ -3784,26 +3786,15 @@ def _hist_sec_eff(date_from, date_to, data=None):
                                    else 'ไม่ระบุ'))
             _div_ho = (_ho_df['_div'].value_counts().head(8)
                        .rename_axis('สาขา').reset_index(name='n'))
-            st.caption(f"รวม {len(_ho_df)} เคสรับเวรในช่วงที่เลือก · "
-                       "เวลาจากไฟล์ intraop")
-            fig_ho = px.bar(
-                _div_ho.sort_values('n'), x='n', y='สาขา', orientation='h',
-                text='n', labels={'n': 'จำนวนเคสรับเวร', 'สาขา': ''},
-                color_discrete_sequence=['#1565c0'],
-            )
-            fig_ho.update_traces(textposition='outside', cliponaxis=False)
-            fig_ho.update_layout(
-                margin=dict(t=10, b=30, l=10, r=40),
-                height=max(190, 70 + 34 * len(_div_ho)),
-                plot_bgcolor='white',
-                xaxis=dict(gridcolor='#f0f0f0'),
-                yaxis=dict(tickfont=dict(size=13)),
-            )
-            _story_bars(fig_ho, _div_ho.sort_values('n')['n'], '#1565c0', horizontal=True)
-            _story_head(f"สาขา{_div_ho['สาขา'].iloc[0].replace('ศัลยกรรม', '') or _div_ho['สาขา'].iloc[0]}"
-                        f"รับเวรมากที่สุด {int(_div_ho['n'].iloc[0]):,} เคส")
-            st.plotly_chart(fig_ho, use_container_width=True,
-                            config={'displayModeBar': False})
+            # 🎨 24 พ.ย. 2026 (มุกกี้สั่งออกแบบใหม่): ซ้าย = สาขาที่รับเวรมากที่สุด · ขวา = แท่งบางทุกสาขา
+            _dv_top = _div_ho.iloc[0]
+            _dv_lab = lambda t: (str(t).replace('ศัลยกรรม', '').strip() or str(t))
+            _story_split(
+                f"{int(_dv_top['n']):,}", f"เคส สาขา{_dv_lab(_dv_top['สาขา'])}",
+                f"รับเวรมากที่สุด จาก {len(_ho_df):,} เคส",
+                'จำนวนเคสรับเวร แยกตามสาขา',
+                [(_dv_lab(r['สาขา']), int(r['n']), i == 0)
+                 for i, (_, r) in enumerate(_div_ho.iterrows())])
 
             # รายละเอียดรายเคส — พับเก็บ ไม่รกหน้า
             with st.expander(f"ดูรายเคส ({len(_ho_df)} เคส)", expanded=False):
@@ -3840,6 +3831,10 @@ def _hist_sec_night(date_from, date_to, data=None):
         (df_range['op_date'] <= date_to)
     ]
     aft_range = df_range[df_range['patient_type'] == 'นอกเวลา'].copy()
+    # 📅 24 พ.ย. 2026 (มุกกี้นิยาม): นอกเวลามีเฉพาะจันทร์-ศุกร์ · เสาร์ อาทิตย์ วันหยุดราชการ = เวร on call
+    #    กรองซ้ำตรงนี้ด้วย เผื่อแถวในฐานที่ยังไม่ได้จัดประเภทใหม่ (reclassify_after_hours.py)
+    from thai_holidays import is_on_call_day as _oncall
+    aft_range = aft_range[~aft_range['op_date'].map(_oncall)].copy()
     if aft_range.empty:
         st.info("ไม่มีเคสนอกเวลาในช่วงนี้")
     else:
@@ -3954,7 +3949,7 @@ def _hist_sec_night(date_from, date_to, data=None):
                     f'<table style="width:100%;border-collapse:collapse;"><thead><tr>{_hdr}</tr></thead>'
                     f'<tbody>{_body}</tbody></table></div>', unsafe_allow_html=True)
                 st.caption("📌 นอกเวลา = set เป็น elective ตั้งแต่ 15:30 น. แล้วเข้าห้องหลัง 15:30 น. "
-                           "หรือมีคำว่า \"นอกเวลา\" ใน diagnosis / procedure / procedure note · "
+                           "หรือมีคำว่า \"นอกเวลา\" ใน diagnosis / procedure / procedure note · เฉพาะ จ.-ศ. ที่ไม่ใช่วันหยุดราชการ · "
                            "ปีงบแรกและปีงบล่าสุดอาจมีข้อมูลไม่เต็มปีตามช่วงวันที่ที่เลือก")
         except Exception as _e_dv:
             st.caption(f"สรุปเคสนอกเวลาแยกสาขาไม่สำเร็จ: {_e_dv}")
@@ -3967,15 +3962,17 @@ def _hist_sec_night(date_from, date_to, data=None):
             st.markdown(
                 '<div class="sub-title">📊 เฉลี่ยเคสนอกเวลาตามวันในสัปดาห์ '
                 '<span style="font-size:18px;color:#999;font-weight:400;">'
-                '(วันไหนงานหนักสุด · จ.-อา.)</span></div>',
+                '(วันไหนงานหนักสุด · จ.-ศ. ไม่นับวันหยุดราชการ)</span></div>',
                 unsafe_allow_html=True)
             _aft_wd2['dow'] = _aft_wd2['_dt'].dt.dayofweek
             # เฉลี่ยต่อ "วันปฏิทินจริง" ในช่วง (ไม่ใช่เฉพาะวันที่มีเคสนอกเวลา)
             _tot_by_dow_aft = _aft_wd2.groupby('dow').size()
-            _cal_dow_aft = pd.Series(
-                pd.date_range(date_from, date_to, freq='D').dayofweek).value_counts()
+            # 📅 24 พ.ย. 2026 : ตัวหาร = วันทำการจริง (จ.-ศ. ที่ไม่ใช่วันหยุดราชการ) · ไม่แสดงเสาร์-อาทิตย์
+            _cal_days_aft = [d for d in pd.date_range(date_from, date_to, freq='D')
+                             if not _oncall(d)]
+            _cal_dow_aft = pd.Series([d.dayofweek for d in _cal_days_aft]).value_counts()
             _THAI_DAY_AFT = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์', 'อาทิตย์']
-            _aft_dow_avg = pd.DataFrame({'dow': range(7)})
+            _aft_dow_avg = pd.DataFrame({'dow': range(5)})
             _aft_dow_avg['n'] = _aft_dow_avg['dow'].apply(
                 lambda d: round(_tot_by_dow_aft.get(d, 0) / max(int(_cal_dow_aft.get(d, 0)), 1), 1))
             _aft_dow_avg['day_name'] = _aft_dow_avg['dow'].apply(
@@ -3985,7 +3982,7 @@ def _hist_sec_night(date_from, date_to, data=None):
                 lambda v: 'peak' if v == _max_dow_aft and v > 0 else 'normal')
 
             # 🎨 24 พ.ย. 2026 (มุกกี้สั่ง : ทำแบบเดียวกับกราฟสาขา) : เลิกแท่ง plotly ที่ยืดเต็มจอ วาดด้วย HTML
-            #    ซ้าย = ตัวเลขใหญ่ของวันที่หนักสุด · ขวา = แท่งบางครบ 7 วัน เรียง จ.-อา. วันหนักสุดสีฟ้า
+            #    ซ้าย = ตัวเลขใหญ่ของวันที่หนักสุด · ขวา = แท่งบาง จ.-ศ. (24 พ.ย. 2026 : ตัดเสาร์-อาทิตย์) วันหนักสุดสีฟ้า
             #    กล่องข้อความสรุปใต้กราฟเดิมเอาออก เพราะตัวเลขใหญ่ด้านซ้ายบอกเรื่องเดียวกันแล้ว
             _max_dow_name_aft = _aft_dow_avg.loc[
                 _aft_dow_avg['n'].idxmax(), 'day_name'] if _max_dow_aft > 0 else '-'

@@ -1061,15 +1061,18 @@ def _reclassify_patient_type(conn):
     🌙 24 พ.ย. 2026 : ใช้ is_after_hours_case ตัวเดียวกับตอนนำเข้า · procnote ไม่ถูกเก็บแล้ว (PDPA)
     เคสที่เคยเป็นนอกเวลาจากคำใน procnote จึงคงไว้ ไม่ล้างกลับเป็น OPD/IPD"""
     _cols = {r[1] for r in conn.execute("PRAGMA table_info(cases)").fetchall()}
-    _sel = ['case_id', 'is_ipd', 'estimated_time', 'procnote', 'patient_type']
+    _sel = ['case_id', 'op_date', 'is_ipd', 'estimated_time', 'procnote', 'patient_type']
     _sel += [c for c in ('op_type', 'in_or_at', 'procedure_name', 'diagnosis') if c in _cols]
     rows = conn.execute(f"SELECT {', '.join(_sel)} FROM cases").fetchall()
     for r in rows:
         d = dict(zip(_sel, r))
         note = str(d.get('procnote') or '').strip()
         txt = ' '.join((note, str(d.get('procedure_name') or ''), str(d.get('diagnosis') or '')))
-        if (is_after_hours_case(d.get('estimated_time'), txt, d.get('op_type'), d.get('in_or_at'))
-                or (not note and d.get('patient_type') == 'นอกเวลา')):
+        from thai_holidays import is_on_call_day
+        if (is_after_hours_case(d.get('estimated_time'), txt, d.get('op_type'), d.get('in_or_at'),
+                                d.get('op_date'))
+                or (not note and d.get('patient_type') == 'นอกเวลา'
+                    and not is_on_call_day(d.get('op_date')))):
             pt = 'นอกเวลา'
         elif int(d.get('is_ipd') or 0):
             pt = 'IPD'
@@ -1255,7 +1258,7 @@ def classify_case(row: dict) -> dict:
     # 🌙 24 พ.ย. 2026 (มุกกี้แจ้ง: เคสนอกเวลาปนกับเคสรับเวร): นอกเวลาตรวจก่อน IPD
     #    เดิม IPD มาก่อน = ผู้ป่วยในที่มาผ่านอกเวลาถูกจัดเป็น IPD แล้วไปโผล่ในสถิติรับเวร
     #    (ข้อมูลปี 68-69 : 96 เคส) · ผู้ป่วยในหรือไม่ดูจากคอลัมน์ is_ipd ได้เสมอ
-    if is_after_hours_case(est_time, _after_txt, row.get('op_type'), row.get('in_or_at')):
+    if is_after_hours_case(est_time, _after_txt, row.get('op_type'), row.get('in_or_at'), op_date):
         result['patient_type'] = 'นอกเวลา'
     elif an and an.upper() not in ('', 'NAN', 'NONE', '-'):
         result['patient_type'] = 'IPD'
@@ -1302,12 +1305,18 @@ _TF_FROM_MIN = 23 * 60 + 50
 _SHIFT_END_MIN = 15 * 60 + 30      # สิ้นเวลาราชการของห้องผ่าตัด : เส้นแบ่งเคสรับเวร
 
 
-def is_after_hours_case(est_time='', text='', op_type=None, in_or_at=None) -> bool:
+def is_after_hours_case(est_time='', text='', op_type=None, in_or_at=None, op_date=None) -> bool:
     """เคสนอกเวลาหรือไม่ (นิยามเดียวของทั้งระบบ ใช้ทั้งตอนนำเข้าและจัดประเภทใหม่)
-    1. มีคำว่า "นอกเวลา" ใน text (procnote + หัตถการ + วินิจฉัย) → นอกเวลาเสมอ
+    0. 📅 24 พ.ย. 2026 (มุกกี้นิยาม): นอกเวลามีเฉพาะจันทร์-ศุกร์ · เสาร์ อาทิตย์ วันหยุดราชการ = เวร on call
+       → ส่ง op_date มาแล้วเป็นวัน on call = ไม่ใช่นอกเวลา แม้มีคำว่านอกเวลา (thai_holidays.is_on_call_day)
+    1. มีคำว่า "นอกเวลา" ใน text (procnote + หัตถการ + วินิจฉัย) → นอกเวลา
     2. ไม่มีคำ : เวลานัดตั้งแต่ 15:30 (ไม่ใช่ TF) และไม่ใช่ emergency
        ถ้ารู้เวลาเข้าห้องแล้ว ต้องเข้าห้องตั้งแต่ 15:30 (เข้าก่อนนั้น = ผ่าในเวลา ถูกเลื่อนขึ้นมา)
        emergency ที่ทำตอนเย็น = เวร on call ไม่ใช่เคสนอกเวลา"""
+    if op_date:
+        from thai_holidays import is_on_call_day
+        if is_on_call_day(op_date):
+            return False
     if 'นอกเวลา' in str(text or ''):
         return True
     if str(op_type or '').strip().lower() == 'emergency':
@@ -3685,6 +3694,13 @@ def get_handover_stats(date_from: str = None, date_to: str = None) -> dict:
         where_parts.append("op_date >= ?"); params.append(date_from)
     if date_to:
         where_parts.append("op_date <= ?"); params.append(date_to)
+    # 📅 24 พ.ย. 2026 (มุกกี้นิยาม): วันหยุดราชการ = เวร on call ไม่มีเคสรับเวร (ตัดทั้งตัวตั้งและตัวหาร)
+    from thai_holidays import holidays_between
+    _hols = holidays_between(date_from or '2021-01-01',
+                             date_to or _now_dt().date().isoformat())
+    if _hols:
+        where_parts.append(f"op_date NOT IN ({','.join('?' * len(_hols))})")
+        params.extend(_hols)
     where_sql = " AND ".join(where_parts)
 
     # Handover cases + overtime hours (เลย 15:30 = 930 นาที)
