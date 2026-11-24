@@ -48,6 +48,8 @@ def build_schedule_db_df(schedule_src):
             "estmtime": r[9].strip(),
             "dspname": r[14].strip(),       # ชื่อผู้ป่วย
             "optype_var": r[16].strip(),
+            # 🚑 24 พ.ย. 2026 : optypenm (คอลัมน์ 33) แยก URGENCY ได้ · import_schedule อ่านช่องนี้ก่อน
+            "optypenm": r[33].strip() if len(r) > 33 else "",
             "opedate": HC.to_iso(r[19], _order) or "",   # ISO date — import_schedule group ได้แน่
             "opetime": r[20].strip(),
             "age": r[22].strip(),

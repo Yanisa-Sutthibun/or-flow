@@ -1305,6 +1305,28 @@ _TF_FROM_MIN = 23 * 60 + 50
 _SHIFT_END_MIN = 15 * 60 + 30      # สิ้นเวลาราชการของห้องผ่าตัด : เส้นแบ่งเคสรับเวร
 
 
+def normalize_op_type(optype_var='', optypenm='') -> str:
+    """ประเภทเคสจากตารางผ่าตัด HIS → 'elective' / 'urgent' / 'emergency'
+    🚑 24 พ.ย. 2026 (มุกกี้สั่ง): HIS มี 2 ช่อง · optype_var มีแค่ elective/emergency (URGENCY ถูกรวมเป็น emergency)
+    · optypenm แยก ELECTIVE / URGENCY / EMERGENCY → ใช้ optypenm ก่อน ไม่มีจึงใช้ optype_var
+    (ปี 68-69 มีเคส urgent ที่ผ่าจริง 89 เคส เดิมถูกนับเป็น emergency ทั้งหมด)"""
+    for v in (optypenm, optype_var):
+        t = str(v or '').strip().lower()
+        if not t or t in ('nan', 'none', '-'):
+            continue
+        if 'urg' in t or 'เร่งด่วน' in t:
+            return 'urgent'
+        if 'emer' in t or 'ฉุกเฉิน' in t:
+            return 'emergency'
+        if 'elec' in t:
+            return 'elective'
+        return t
+    return 'elective'
+
+
+_NON_ELECTIVE = ('emergency', 'urgent', 'urgency')
+
+
 def is_after_hours_case(est_time='', text='', op_type=None, in_or_at=None, op_date=None) -> bool:
     """เคสนอกเวลาหรือไม่ (นิยามเดียวของทั้งระบบ ใช้ทั้งตอนนำเข้าและจัดประเภทใหม่)
     0. 📅 24 พ.ย. 2026 (มุกกี้นิยาม): นอกเวลามีเฉพาะจันทร์-ศุกร์ · เสาร์ อาทิตย์ วันหยุดราชการ = เวร on call
@@ -1312,14 +1334,14 @@ def is_after_hours_case(est_time='', text='', op_type=None, in_or_at=None, op_da
     1. มีคำว่า "นอกเวลา" ใน text (procnote + หัตถการ + วินิจฉัย) → นอกเวลา
     2. ไม่มีคำ : เวลานัดตั้งแต่ 15:30 (ไม่ใช่ TF) และไม่ใช่ emergency
        ถ้ารู้เวลาเข้าห้องแล้ว ต้องเข้าห้องตั้งแต่ 15:30 (เข้าก่อนนั้น = ผ่าในเวลา ถูกเลื่อนขึ้นมา)
-       emergency ที่ทำตอนเย็น = เวร on call ไม่ใช่เคสนอกเวลา"""
+       emergency / urgent ที่ทำตอนเย็น = เวร on call ไม่ใช่เคสนอกเวลา"""
     if op_date:
         from thai_holidays import is_on_call_day
         if is_on_call_day(op_date):
             return False
     if 'นอกเวลา' in str(text or ''):
         return True
-    if str(op_type or '').strip().lower() == 'emergency':
+    if str(op_type or '').strip().lower() in _NON_ELECTIVE:   # 🚑 urgent ใช้กติกาเดียวกับ emergency
         return False
     sm = _hm_min(est_time)
     if sm is None or not (_AFTER_FROM_MIN <= sm < _TF_FROM_MIN):
@@ -1659,7 +1681,7 @@ def import_history_6467(progress_cb=None):
             div = _s(r.get('division_intra'))
             est = _s(r.get('estmtime'))
             note = _s(r.get('procnote'))
-            optype = _s(r.get('optype_var')) or 'elective'
+            optype = normalize_op_type(_s(r.get('optype_var')), _s(r.get('optypenm')))
             try:
                 age_v = float(r.get('age'))
                 if not (0 < age_v < 120):
@@ -2027,6 +2049,10 @@ def import_schedule(conn, df: pd.DataFrame, op_date: str) -> int:
         data = {key: str(row.get(mapped.get(key, ''), '') or '').strip()
                 for key in col_map}
         data['op_date'] = op_date
+        # 🚑 24 พ.ย. 2026 : ประเภทเคสอ่าน optypenm ก่อน (แยก URGENCY ได้) ไม่มีจึงใช้คอลัมน์ที่จับได้
+        _ot_nm = next((c for c in df.columns if str(c).strip().lower() == 'optypenm'), None)
+        data['op_type'] = normalize_op_type(data.get('op_type', ''),
+                                            str(row.get(_ot_nm, '') or '') if _ot_nm else '')
 
         proc = data.get('procedure_name', '').strip()
         if not proc or proc.upper() in ('NAN', 'NONE', ''):

@@ -143,10 +143,10 @@ def insert_cases(F, tset):
     ซึ่งตรงกับ unique index ของตาราง · HN ใช้จับคู่ 2 ไฟล์ในหน่วยความจำเท่านั้น ไม่ลงฐานข้อมูล"""
     import his_csv as HC
     from datetime import datetime as _dt
-    from main_or_db import get_conn, classify_case, _predict_for_case
+    from main_or_db import get_conn, classify_case, _predict_for_case, normalize_op_type
     sh, ih = F['sh'], F['ih']
     S = {k: HC.col(sh, k) for k in ('hn', 'reqdate', 'division', 'orroom', 'estmtime', 'an',
-                                    'optype_var', 'opetime', 'age', 'icd9cm_name',
+                                    'optype_var', 'optypenm', 'opetime', 'age', 'icd9cm_name',
                                     'icd10_name', 'surgstfnm', 'procnote')}
     I = {k: HC.col(ih, k) for k in ('roomdatein', 'roomtimein', 'roomdateout', 'roomtimeout',
                                     'hn', 'an', 'division', 'orroom', 'icd9cmnm', 'dctnm',
@@ -211,7 +211,9 @@ def insert_cases(F, tset):
             surg = _clean(g(r, I['dctnm'])) or sched_surg
             div = g(r, I['division']) or (g(s, S['division']) if s is not None else '')
             est = g(s, S['estmtime']) if s is not None else ''
-            optype = (g(s, S['optype_var']).lower() if s is not None else '') or 'elective'
+            # 🚑 24 พ.ย. 2026 : optypenm ก่อน (แยก URGENCY) ไม่มีจึงใช้ optype_var
+            optype = (normalize_op_type(g(s, S['optype_var']), g(s, S['optypenm']))
+                      if s is not None else 'elective')
             an_v = g(r, I['an']) or (g(s, S['an']) if s is not None else '')
             note = g(s, S['procnote']) if s is not None else ''
             try:

@@ -1340,7 +1340,7 @@ def _render_ai_research_tab():
                           - _pd.to_numeric(d['actual_duration_min'], errors='coerce')).abs()
         d = d.dropna(subset=['abs_error'])
         if 'op_type' in d.columns:
-            d = d[d['op_type'].fillna('elective').astype(str).str.lower() != 'emergency']
+            d = d[~d['op_type'].fillna('elective').astype(str).str.lower().isin(['emergency', 'urgent', 'urgency'])]  # 🚑 24 พ.ย. 2026 : urgent ก็ไม่นับ
         return d if len(d) else None
 
     def _be_year_col(d):
@@ -2617,7 +2617,7 @@ def _hist_sec_overview(date_from, date_to, data=None):
     if 'op_type' in df_op.columns:
         op_norm = (df_op['op_type'].fillna('elective')
                    .astype(str).str.lower().str.strip()
-                   .replace('', 'elective'))
+                   .replace({'': 'elective', 'urgency': 'urgent'}))
         n_elec = int((op_norm == 'elective').sum())
         n_urg = int((op_norm == 'urgent').sum())
         n_emer = int((op_norm == 'emergency').sum())
@@ -2633,16 +2633,15 @@ def _hist_sec_overview(date_from, date_to, data=None):
 
         st.markdown('<div class="sub-title">⚠️ ระดับความเร่งด่วน</div>',
                     unsafe_allow_html=True)
-        # ⚡ 26 ก.ค. 2026: HIS จำแนกแค่ elective/emergency (ตรวจข้อมูลจริงแล้ว —
-        #    urgency ถูกคีย์รวมเป็น emergency ที่ต้นทาง) → การ์ด Urgent แสดง
-        #    เฉพาะเมื่อมีค่าจริง (ถ้าวันหน้า HIS ส่ง urgent มา การ์ดโผล่เอง)
+        # 🚑 24 พ.ย. 2026 (มุกกี้สั่ง): HIS แยก URGENCY ไว้ในช่อง optypenm (ช่อง optype_var รวมเป็น emergency)
+        #    ตัวนำเข้าอ่าน optypenm แล้ว (main_or_db.normalize_op_type) → แสดง Urgent เสมอ
+        #    (เดิม 26 ก.ค. 2026 เข้าใจว่า HIS ไม่แยก urgent จึงซ่อนไว้เมื่อเป็น 0)
         # 🎨 24 พ.ย. 2026 (มุกกี้สั่ง): การ์ด 2-3 ใบ → แถบสัดส่วนแถบเดียว (เรื่องสัดส่วน ดูปราดเดียวรู้)
-        #    Elective สีฟ้า · Urgent/Emergency เทา 2 ระดับ · Urgent แสดงเฉพาะเมื่อมีค่าจริง (เหตุผลเดิมข้างบน)
+        #    Elective สีฟ้า · Urgent/Emergency เทา 2 ระดับ
         _urg_parts = [('Elective', n_elec, _STORY_TOP,
-                       f'นัดหมาย {n_elec_set:,} · Walk-in {n_elec_walkin:,}')]
-        if n_urg > 0:
-            _urg_parts.append(('Urgent', n_urg, '#94A3B8', ''))
-        _urg_parts.append(('Emergency', n_emer, '#475569', ''))
+                       f'นัดหมาย {n_elec_set:,} · Walk-in {n_elec_walkin:,}'),
+                      ('Urgent', n_urg, '#94A3B8', ''),
+                      ('Emergency', n_emer, '#475569', '')]
         _urg_tot = max(n_elec + n_urg + n_emer, 1)
         _seg = ''.join(
             f'<div style="flex:{max(_n, 0)} 1 0;min-width:{4 if _n > 0 else 0}px;background:{_c};"></div>'

@@ -235,10 +235,10 @@ def import_historical(sched_path: str, intra_path: str, dry_run: bool = False):
             procnote = None
         estmtime = s.get('estmtime')
 
-        # op_type: elective / urgent / emergency จาก HIS schedule (optype_var)
-        op_type = str(s.get('optype_var', '') or '').strip().lower()
-        if op_type in ('nan', 'none', ''):
-            op_type = 'elective'  # default
+        # op_type: elective / urgent / emergency จาก HIS schedule
+        # 🚑 24 พ.ย. 2026 : optypenm ก่อน (optype_var รวม URGENCY เป็น emergency)
+        from main_or_db import normalize_op_type
+        op_type = normalize_op_type(s.get('optype_var', ''), s.get('optypenm', ''))
 
         pt_type = _classify_patient_type(an_val, estmtime, procnote)
         
