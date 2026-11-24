@@ -551,8 +551,10 @@ def div_workload(O, fy):
 # ════════════════════════════════════════════════════════════════════════════
 import html as _html
 
-_ACC = '#1D6FE0'      # สีเน้นเดียวของทุกกราฟ (ตาม mock-up)
-_BASE = '#C9D6E3'
+# 🎨 25 พ.ย. 2026 (มุกกี้สั่งแก้ตามที่ตรวจ): ใช้ฟ้าเทาชุดเดียวกับหน้าสถิติ (_STORY_TOP / _STORY_BASE ใน main_or_admin.py)
+#    เดิม #1D6FE0 / #C9D6E3 · ตัวอักษรทั้งหน้าขยับขึ้น 2px ให้ใกล้หน้าสถิติ
+_ACC = '#29A3E8'      # สีเน้นเดียวของทุกกราฟ
+_BASE = '#CBD5E1'
 _NEW = '#0B7A6C'      # น้องใหม่
 _WARN = '#E07B39'
 _K_VIEW = '_da_view'
@@ -560,19 +562,19 @@ _WD = ('จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.')
 _WDF = ('จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์')
 _CSS = ('<style>.da-card{background:#FFFFFF;border:1px solid #E3E9EF;border-radius:16px;padding:20px 22px;'
         'margin:0 0 16px;display:flex;flex-direction:column;gap:12px;color:#12212E}'
-        '.da-t{font-size:17px;font-weight:700}.da-s{font-size:13px;color:#5B6B7B}'
-        '.da-f{font-size:13px;color:#3E4C59;border-top:1px solid #EEF2F6;padding-top:10px}'
+        '.da-t{font-size:17px;font-weight:700}.da-s{font-size:15px;color:#5B6B7B}'
+        '.da-f{font-size:15px;color:#3E4C59;border-top:1px solid #EEF2F6;padding-top:10px}'
         '.da-kpi{background:#FFFFFF;border:1px solid #E3E9EF;border-radius:14px;padding:14px 16px;margin:0 0 16px;min-height:118px}'
-        '.da-kpi b{display:block;font-size:30px;line-height:1.2}.da-kpi span{font-size:13px;color:#5B6B7B}'
+        '.da-kpi b{display:block;font-size:30px;line-height:1.2}.da-kpi span{font-size:15px;color:#5B6B7B}'
         '.da-sec{font-size:22px;font-weight:700;margin:18px 0 8px;color:#12212E}'
         '.da-hub{background:#FFFFFF;border:1px solid #E3E9EF;border-radius:18px;padding:20px;min-height:380px;'
         'display:flex;flex-direction:column;gap:10px;color:#12212E}'
         '.da-hub .px{background:#F1F6FB;border-radius:14px;display:flex;justify-content:center;padding:14px 0}'
         '.da-hub .px.img{padding:8px 0;background:#FFFFFF;border:1px solid #E3E9EF}'
         '.da-hub .px.img img{display:block;height:160px;width:auto;max-width:100%;object-fit:contain}'
-        '.da-tag{font-size:12px;font-weight:700;color:#1658B8}.da-ht{font-size:20px;font-weight:700}'
+        '.da-tag{font-size:14px;font-weight:700;color:#1658B8}.da-ht{font-size:20px;font-weight:700}'
         '.da-hd{font-size:14px;color:#3E4C59;line-height:1.6}'
-        '.da-hl{font-size:13px;background:#F5F8FB;border-radius:10px;padding:8px 10px;color:#12212E}</style>')
+        '.da-hl{font-size:15px;background:#F5F8FB;border-radius:10px;padding:8px 10px;color:#12212E}</style>')
 
 
 def _e(s) -> str:
@@ -594,18 +596,19 @@ def _card(title, sub, body, foot='', minh=0) -> str:
             f'{body}' + (f'<div class="da-f">{foot}</div>' if foot else '') + '</div>')
 
 
-def _hbars(rows, label_w=150, val_w=170, accent_first=True) -> str:
-    """rows = [(label_html, value, value_text, color|None)] · เรียงมาแล้ว"""
+def _hbars(rows, label_w=150, val_w=200, accent_first=True, bar_max=420) -> str:
+    """rows = [(label_html, value, value_text, color|None)] · เรียงมาแล้ว
+    bar_max = ความกว้างสูงสุดของแท่ง (px) กันแท่งยืดเต็มจอในการ์ดที่กว้างเต็มหน้า (25 พ.ย. 2026)"""
     if not rows:
         return ''
     mx = max(float(r[1] or 0) for r in rows) or 1
     out = []
     for i, (lab, v, vt, col) in enumerate(rows):
         c = col or (_ACC if (i == 0 and accent_first) else _BASE)
-        out.append(f'<div style="display:grid;grid-template-columns:{label_w}px minmax(0,1fr) {val_w}px;'
-                   f'align-items:center;gap:10px"><div style="font-size:13px">{lab}</div>'
+        out.append(f'<div style="display:grid;grid-template-columns:{label_w}px minmax(0,{int(bar_max)}px) {val_w}px;'
+                   f'align-items:center;justify-content:start;gap:10px"><div style="font-size:15px">{lab}</div>'
                    f'<div><div style="width:{max(float(v or 0) / mx * 100, 0.5):.1f}%;height:16px;border-radius:6px;'
-                   f'background:{c}"></div></div><div style="font-size:13px;text-align:right">{vt}</div></div>')
+                   f'background:{c}"></div></div><div style="font-size:15px;text-align:right">{vt}</div></div>')
     return '<div style="display:flex;flex-direction:column;gap:6px">' + ''.join(out) + '</div>'
 
 
@@ -763,10 +766,10 @@ def _rank_block(title, rows, unit_of) -> str:
     if not rows:
         return f'<div><div class="da-s">{title}</div><div class="da-s">ยังไม่มีข้อมูลพอ</div></div>'
     w = rows[0]
-    rest = ''.join(f'<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 0;'
+    rest = ''.join(f'<div style="display:flex;justify-content:space-between;gap:8px;font-size:15px;padding:6px 0;'
                    f'border-top:1px solid #EEF2F6"><span>{i + 2}. {_nm(r["key"])}</span><b>{unit_of(r)}</b></div>'
                    for i, r in enumerate(rows[1:]))
-    rest += ''.join(f'<div style="font-size:13px;padding:6px 0;border-top:1px solid #EEF2F6;color:#94A3B8">'
+    rest += ''.join(f'<div style="font-size:15px;padding:6px 0;border-top:1px solid #EEF2F6;color:#94A3B8">'
                     f'{i + 2}. -</div>' for i in range(len(rows) - 1, 2))
     return (f'<div style="display:flex;flex-direction:column;gap:4px"><div class="da-s" style="font-weight:600">{title}</div>'
             f'<div style="font-size:24px;font-weight:700">{_nm(w["key"])}</div>'
@@ -832,10 +835,10 @@ def _view_nov(C, L):
     mx = max(n['cases'] for n in nv)
     rows = ''.join(
         f'<div style="display:grid;grid-template-columns:130px minmax(0,1fr) 70px;align-items:center;gap:10px">'
-        f'<div style="font-size:13px">{_nm(n["key"])}</div><div style="display:flex;width:{n["cases"] / mx * 100:.0f}%">'
+        f'<div style="font-size:15px">{_nm(n["key"])}</div><div style="display:flex;width:{n["cases"] / mx * 100:.0f}%">'
         f'<div style="flex:{n["scrub"]};height:16px;background:{_ACC};border-radius:6px 0 0 6px"></div>'
         f'<div style="flex:{n["circ"]};height:16px;background:{_BASE};border-radius:0 6px 6px 0"></div></div>'
-        f'<div style="font-size:13px;text-align:right">{n["cases"]:,}</div></div>' for n in nv)
+        f'<div style="font-size:15px;text-align:right">{n["cases"]:,}</div></div>' for n in nv)
     leg = (f'<div class="da-s"><span style="display:inline-block;width:10px;height:10px;background:{_ACC};'
            f'border-radius:2px"></span> scrub &nbsp; <span style="display:inline-block;width:10px;height:10px;'
            f'background:{_BASE};border-radius:2px"></span> circulate</div>')
@@ -854,7 +857,7 @@ def _view_nov(C, L):
                   _hbars([(_e(k).replace('ศัลยกรรม', '') or _e(k), int(v), f'{int(v):,}', None) for k, v in dv.items()],
                          label_w=150, val_w=60), minh=440))
     with b:
-        pr = ''.join(f'<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;'
+        pr = ''.join(f'<div style="display:flex;justify-content:space-between;gap:10px;font-size:15px;padding:5px 0;'
                      f'border-top:1px solid #EEF2F6"><span>{_e(p)}</span><b>{int(c):,} เคส</b></div>'
                      for p, c in n['procs'].items())
         _md(_card('หัตถการที่เข้าบ่อย 10 อันดับ', f'จากทั้งหมด {n["nprocs"]:,} ชนิด', f'<div>{pr}</div>', minh=440))
@@ -870,11 +873,11 @@ def _month_bars(now, prev, common) -> str:
         m = TH_MON[FY_MONTHS[i] - 1]
         p = prev[i] if i in common else 0
         cols += (f'<div style="display:flex;flex-direction:column;align-items:center;gap:4px">'
-                 f'<div style="font-size:11px;font-weight:700">{now[i] or ""}</div>'
+                 f'<div style="font-size:13px;font-weight:700">{now[i] or ""}</div>'
                  f'<div style="display:flex;align-items:flex-end;gap:3px;height:150px">'
                  f'<div style="width:12px;height:{p / mx * 150:.0f}px;background:{_BASE};border-radius:3px 3px 0 0"></div>'
                  f'<div style="width:12px;height:{now[i] / mx * 150:.0f}px;background:{_ACC};border-radius:3px 3px 0 0"></div>'
-                 f'</div><div style="font-size:11px;color:#5B6B7B">{m}</div></div>')
+                 f'</div><div style="font-size:13px;color:#5B6B7B">{m}</div></div>')
     return f'<div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px">{cols}</div>'
 
 
@@ -919,12 +922,29 @@ def _view_tr(C, L):
         dv = T['divs']
         if dv:
             up, dn = dv[0], dv[-1]
-            rows = [(_e(x['div']).replace('ศัลยกรรม', '') or _e(x['div']), abs(x['pct']), f'{x["pct"]:+.0f}%',
-                     _ACC if x is up else (_WARN if x is dn and x['pct'] < 0 else _BASE)) for x in dv]
+            # ↔️ 25 พ.ย. 2026 (มุกกี้สั่งแก้): แท่งสองฝั่ง ลดไปซ้าย เพิ่มไปขวา จากเส้นกลาง
+            #    เดิมทุกแท่งยื่นขวาด้วยค่าสัมบูรณ์ สาขาที่ลดกับเพิ่มเท่ากันจึงยาวเท่ากัน ต้องอ่านเครื่องหมายเอง
+            _dmx = max(abs(x['pct']) for x in dv) or 1
+            _dvh = ''
+            for x in dv:
+                _c = _ACC if x is up else (_WARN if (x is dn and x['pct'] < 0) else _BASE)
+                _w = max(abs(x['pct']) / _dmx * 100, 1)
+                _neg = x['pct'] < 0
+                _dvh += (
+                    f'<div style="font-size:15px">{_e(x["div"]).replace("ศัลยกรรม", "") or _e(x["div"])}</div>'
+                    '<div style="display:flex;justify-content:flex-end;border-right:1px solid #94A3B8">'
+                    + (f'<div style="width:{_w:.1f}%;height:16px;border-radius:6px 0 0 6px;background:{_c}"></div>'
+                       if _neg else '') + '</div><div style="display:flex">'
+                    + ('' if _neg else
+                       f'<div style="width:{_w:.1f}%;height:16px;border-radius:0 6px 6px 0;background:{_c}"></div>')
+                    + f'</div><div style="font-size:15px;text-align:right">{x["pct"]:+.0f}%</div>')
+            _dv_body = ('<div style="display:grid;grid-template-columns:150px minmax(0,1fr) minmax(0,1fr) 60px;'
+                        f'align-items:center;gap:6px 0;column-gap:0">{_dvh}</div>'
+                        '<div class="da-s" style="text-align:center">◀ ลดลง &nbsp;·&nbsp; เพิ่มขึ้น ▶</div>')
             _md(_card(f'สาขา{_e(up["div"]).replace("ศัลยกรรม", "")} เปลี่ยนเพิ่มมากที่สุด {up["pct"]:+.0f}% · '
                       f'{_e(dn["div"]).replace("ศัลยกรรม", "")} {dn["pct"]:+.0f}%',
                       f'จำนวนเคส {rng} เทียบช่วงเดียวกันปีก่อน (สาขาที่มีอย่างน้อย 100 เคส)',
-                      _hbars(rows, label_w=150, val_w=60, accent_first=False), minh=430))
+                      _dv_body, minh=430))
     with b:
         w1, w0 = T['workload_now'], T['workload_prev']
         v1 = [x for x in w1 if x]
@@ -934,10 +954,11 @@ def _view_tr(C, L):
         mxw = max(v1 + v0 + [1])
         cols = ''.join(
             f'<div style="display:flex;flex-direction:column;align-items:center;gap:4px">'
+            f'<div style="font-size:12px;font-weight:700">{(f"{w1[i]:.0f}" if w1[i] else "")}</div>'
             f'<div style="display:flex;align-items:flex-end;gap:2px;height:120px">'
             f'<div style="width:8px;height:{(w0[i] or 0) / mxw * 120:.0f}px;background:{_BASE};border-radius:2px 2px 0 0"></div>'
             f'<div style="width:8px;height:{(w1[i] or 0) / mxw * 120:.0f}px;background:{_ACC};border-radius:2px 2px 0 0"></div>'
-            f'</div><div style="font-size:10px;color:#5B6B7B">{TH_MON[FY_MONTHS[i] - 1]}</div></div>' for i in range(12))
+            f'</div><div style="font-size:12px;color:#5B6B7B">{TH_MON[FY_MONTHS[i] - 1]}</div></div>' for i in range(12))
         _md(_card(f'ภาระงานต่อคนเฉลี่ย {_fmt(a1, 1)} เคสต่อเดือน (ปีก่อน {_fmt(a0, 1)})',
                   f'จำนวนครั้งที่เข้าเคส (scrub และ circulate) ต่อพยาบาล 1 คน ต่อเดือน {rng}',
                   _legend([(_BASE, f'ปีงบ {fy - 1}'), (_ACC, f'ปีงบ {fy}')]) +
@@ -948,11 +969,11 @@ def _view_tr(C, L):
         mxr = max(r['scrub'] + r['circ'] for r in rp) or 1
         cols = ''.join(
             f'<div style="display:flex;flex-direction:column;align-items:center;gap:4px">'
-            f'<div style="font-size:11px;font-weight:700">{r["scrub"] + r["circ"]:.0f}</div>'
+            f'<div style="font-size:13px;font-weight:700">{r["scrub"] + r["circ"]:.0f}</div>'
             f'<div style="display:flex;flex-direction:column;justify-content:flex-end;height:130px;width:26px">'
             f'<div style="height:{r["circ"] / mxr * 130:.0f}px;background:{_BASE}"></div>'
             f'<div style="height:{r["scrub"] / mxr * 130:.0f}px;background:{_NEW}"></div></div>'
-            f'<div style="font-size:11px;color:#5B6B7B">{r["m"]}</div></div>' for r in rp)
+            f'<div style="font-size:13px;color:#5B6B7B">{r["m"]}</div></div>' for r in rp)
         _md(_card(f'น้องใหม่ปีงบ {fy} เข้าเคสเฉลี่ยสูงสุดในเดือนที่ {pk["m"]} ({pk["scrub"] + pk["circ"]:.0f} เคสต่อคน)',
                   f'เคสเฉลี่ยต่อคนต่อเดือน นับจากเดือนแรกที่เข้าเคส : Novice ปีงบ {fy} {len(nv)} คน '
                   f'(แสดงเฉพาะเดือนที่ทุกคนมีข้อมูลครบ)',
@@ -979,8 +1000,8 @@ def _view_tr(C, L):
                     k = (t - u0) / (u1 - u0)
                     return '#%02X%02X%02X' % tuple(int(a0[j] + (a1[j] - a0[j]) * k) for j in range(3))
             return '#10263D'
-        hdr = ''.join(f'<div style="font-size:11px;color:#5B6B7B;text-align:center">{h}</div>' for h in range(24))
-        rows = ''.join(f'<div style="font-size:13px;align-self:center">{_WD[w]}</div>' + ''.join(
+        hdr = ''.join(f'<div style="font-size:13px;color:#5B6B7B;text-align:center">{h}</div>' for h in range(24))
+        rows = ''.join(f'<div style="font-size:15px;align-self:center">{_WD[w]}</div>' + ''.join(
             f'<div title="{_WD[w]} {h:02d}:00 : {H[w, h]} เคส" style="height:24px;border-radius:4px;'
             f'background:{_cc(H[w, h])}"></div>' for h in range(24)) for w in range(7))
         _md(_card(f'เคสเข้าห้องหนาแน่นสุดช่วง {ph:02d}:00 วัน{_WDF[pw]} · เคสเริ่มหลัง 16:00 มี {D["after16"]:,} เคส '
@@ -1007,21 +1028,21 @@ def _view_tr(C, L):
             if v == 0:
                 return '#F5F7FA', '#C9D3DD'
             t = min(v / 60, 1)
-            return (f'rgb({int(230 - t * 219)},{int(244 - t * 122)},{int(241 - t * 133)})',
+            return (f'rgb({int(232 - t * 203)},{int(240 - t * 129)},{int(251 - t * 27)})',   # ฟ้าโทนเดียวกับตารางภาระงานรายสาขา (เดิมเขียว)
                     '#FFFFFF' if t > 0.55 else '#12212E')
-        head = ''.join(f'<div style="font-size:11px;font-weight:600;text-align:center;line-height:1.3;'
+        head = ''.join(f'<div style="font-size:13px;font-weight:600;text-align:center;line-height:1.3;'
                        f'color:#3E4C59">{_short(d)}<div style="font-weight:500">'
                        f'{int(tot[d]):,} ครั้ง</div></div>' for d in mx.columns)
         body = ''
         for k, r in mx.iterrows():
-            tag = f' <span style="font-size:10px;color:{_NEW};font-weight:700">ใหม่</span>' if k in nvk else ''
+            tag = f' <span style="font-size:12px;color:{_NEW};font-weight:700">ใหม่</span>' if k in nvk else ''
             cells = ''
             for d in mx.columns:
                 bg, fg = _mc(int(r[d]))
-                cells += (f'<div style="height:22px;border-radius:3px;background:{bg};color:{fg};font-size:11px;'
+                cells += (f'<div style="height:22px;border-radius:3px;background:{bg};color:{fg};font-size:13px;'
                           f'display:flex;align-items:center;justify-content:center;font-weight:400">'
                           f'{int(r[d]) or ""}</div>')
-            body += f'<div style="font-size:12px;white-space:nowrap;align-self:center">{_nm(k)}{tag}</div>{cells}'
+            body += f'<div style="font-size:14px;white-space:nowrap;align-self:center">{_nm(k)}{tag}</div>{cells}'
         # 🏷️ 22 พ.ย. 2026 (มุกกี้กำหนดหัว บรรทัดรอง และหมายเหตุท้ายตารางเอง)
         _top, _low = tot.idxmax(), tot.idxmin()
         _md(_card('ตารางการเข้าเคสแยกตามสาขา',
@@ -1042,17 +1063,17 @@ def _view_tr(C, L):
                    ('circulate', f'{_nc:,}', 'ครั้ง'), ('หัตถการที่เคยเข้า', f'{len(NP):,}', 'ชนิด')])
             _TOPN = 20
             _mx = int(NP['total'].max()) or 1
-            th = 'font-size:11px;color:#5B6B7B;font-weight:600;text-align:right'
-            rows = (f'<div style="font-size:11px;color:#5B6B7B;font-weight:600">หัตถการ</div><div></div>'
+            th = 'font-size:13px;color:#5B6B7B;font-weight:600;text-align:right'
+            rows = (f'<div style="font-size:13px;color:#5B6B7B;font-weight:600">หัตถการ</div><div></div>'
                     f'<div style="{th}">scrub</div><div style="{th}">circulate</div><div style="{th}">รวม</div>')
             for r in NP.head(_TOPN).itertuples(index=False):
-                rows += (f'<div style="font-size:13px;align-self:center">{_e(r.proc)}</div>'
+                rows += (f'<div style="font-size:15px;align-self:center">{_e(r.proc)}</div>'
                          f'<div style="display:flex;align-self:center;width:{max(r.total / _mx * 100, 1):.1f}%">'
                          f'<div style="flex:{int(r.scrub)};height:14px;background:{_ACC};border-radius:5px 0 0 5px"></div>'
                          f'<div style="flex:{int(r.circ)};height:14px;background:{_BASE};border-radius:0 5px 5px 0"></div></div>'
-                         f'<div style="font-size:13px;text-align:right">{int(r.scrub):,}</div>'
-                         f'<div style="font-size:13px;text-align:right">{int(r.circ):,}</div>'
-                         f'<div style="font-size:13px;text-align:right"><b>{int(r.total):,}</b></div>')
+                         f'<div style="font-size:15px;text-align:right">{int(r.scrub):,}</div>'
+                         f'<div style="font-size:15px;text-align:right">{int(r.circ):,}</div>'
+                         f'<div style="font-size:15px;text-align:right"><b>{int(r.total):,}</b></div>')
             _t0 = NP.iloc[0]
             _md(_card(f'{_nm(_who)} เข้า {_e(_t0["proc"])} มากที่สุด {int(_t0["total"]):,} ครั้ง '
                       f'(scrub {int(_t0["scrub"]):,} · circulate {int(_t0["circ"]):,})',
@@ -1073,7 +1094,7 @@ def _view_tr(C, L):
         lt = per.sort_values('late', ascending=False).head(12)
         hi = per[per['timed'] >= _MIN_CASES].sort_values('late_pct', ascending=False).head(1)
         nvl = per[per.index.isin(nvk)]['late_pct'].dropna()
-        rows = [(_nm(k) + (f' <span style="font-size:10px;color:{_NEW};font-weight:700">ใหม่</span>' if k in nvk else ''),
+        rows = [(_nm(k) + (f' <span style="font-size:12px;color:{_NEW};font-weight:700">ใหม่</span>' if k in nvk else ''),
                  r['late'], f'<b>{r["late"]:,.0f}</b> เคส · {r["late_pct"]:.0f}% ของเคสที่เข้า', None) for k, r in lt.iterrows()]
         foot = 'ตัวเลขนับตามชื่อที่บันทึกใน HIS จึงรวมเวรที่แลกกันด้วย'
         if len(hi):
@@ -1083,7 +1104,7 @@ def _view_tr(C, L):
         _md(_card(f'เคสที่จบหลัง 16:30 คิดเป็น {_fmt(D["late_all"])}% ของงานทั้งหมด · {_nm(lt.index[0])} อยู่เคสที่จบเย็นมากสุด '
                   f'{lt.iloc[0]["late"]:,.0f} เคส',
                   f'จำนวนเคสที่ออกจากห้องหลัง 16:30 หรือข้ามเที่ยงคืน ต่อพยาบาล 12 อันดับแรก ปีงบ {fy} · นับทั้ง scrub และ '
-                  f'circulate · รวมเคสนอกเวลา', _hbars(rows, label_w=150, val_w=200), foot))
+                  f'circulate · รวมเคสนอกเวลา', _hbars(rows, label_w=150, val_w=240), foot))
     if _SHOW_PER_NURSE and not per.empty:
         a, b = st.columns(2)
         with a:
@@ -1094,12 +1115,12 @@ def _view_tr(C, L):
             bmax = max(x + y for x, y in zip(*cnt)) or 1
             cols = ''.join(
                 f'<div style="display:flex;flex-direction:column;justify-content:flex-end;height:200px">'
-                f'<div style="font-size:12px;text-align:center;font-weight:700;padding-bottom:4px">{cnt[0][i] + cnt[1][i]}</div>'
+                f'<div style="font-size:14px;text-align:center;font-weight:700;padding-bottom:4px">{cnt[0][i] + cnt[1][i]}</div>'
                 + (f'<div style="height:{cnt[1][i] / bmax * 170:.0f}px;background:{_NEW};border-radius:5px 5px 0 0"></div>'
                    if cnt[1][i] else '') +
                 f'<div style="height:{cnt[0][i] / bmax * 170:.0f}px;background:{_BASE};'
                 f'border-radius:{"0 0 5px 5px" if cnt[1][i] else "5px"}"></div></div>' for i in range(len(bins)))
-            labs = ''.join(f'<div style="font-size:11px;color:#5B6B7B;text-align:center">{x}</div>' for x in bl)
+            labs = ''.join(f'<div style="font-size:13px;color:#5B6B7B;text-align:center">{x}</div>' for x in bl)
             q = per['cases'].quantile([0.25, 0.5, 0.75])
             _md(_card(f'ครึ่งหนึ่งเข้าเคสเกิน {q[0.5]:,.0f} ครั้งต่อปี · น้อยสุด {per["cases"].min():,} มากสุด {per["cases"].max():,} ครั้ง',
                       f'จำนวนพยาบาลตามช่วงจำนวนครั้งที่เข้าเคส ปีงบ {fy} ({len(per)} คน)' + (' · สีเขียว = น้องใหม่' if _SHOW_NOVICE else ''),
@@ -1126,10 +1147,10 @@ def _view_tr(C, L):
                       f'สัดส่วนเคสที่เป็น scrub ต่อเคสทั้งหมดของแต่ละคน ปีงบ {fy} · 1 จุด = 1 คน' + (' · สีเขียว = น้องใหม่' if _SHOW_NOVICE else ''),
                       f'<div style="position:relative;height:{hF}px;margin:6px 6px 0"><div style="position:absolute;'
                       f'left:{med:.1f}%;top:0;bottom:0;border-left:1.5px dashed #5B6B7B"></div>{dots}</div>'
-                      '<div style="display:flex;justify-content:space-between;font-size:11px;color:#5B6B7B;'
+                      '<div style="display:flex;justify-content:space-between;font-size:13px;color:#5B6B7B;'
                       'border-top:1px solid #C9D3DD;padding-top:4px"><span>0% : circulate ล้วน</span><span>50%</span>'
                       '<span>100% : scrub ล้วน</span></div>'
-                      + (f'<div style="font-size:12px;color:#3E4C59;line-height:1.6">{lst}</div>' if lst else ''),
+                      + (f'<div style="font-size:14px;color:#3E4C59;line-height:1.6">{lst}</div>' if lst else ''),
                       'เส้นประ = ค่ากลางของทุกคน', minh=470))
     if D['pairs']:
         P = D['pairs']
@@ -1138,14 +1159,14 @@ def _view_tr(C, L):
             return (f'<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;background:#F1F4F7;'
                     f'border-radius:5px"><div style="width:{v:.0f}%;height:12px;border-radius:5px;background:{c}"></div>'
                     f'</div><div style="width:40px;text-align:right">{v:.0f}%</div></div>')
-        th = ''.join(f'<div style="font-size:12px;font-weight:700;color:#3E4C59;{al}">{t}</div>' for t, al in (
+        th = ''.join(f'<div style="font-size:14px;font-weight:700;color:#3E4C59;{al}">{t}</div>' for t, al in (
             ('น้องใหม่', ''), ('ครั้งที่จับคู่', 'text-align:right'), ('จำนวนคู่ที่เคยทำงานด้วย', 'text-align:right'),
             ('คู่บ่อยสุดคิดเป็น', ''), ('คู่กับน้องใหม่ด้วยกัน', ''), ('คู่บ่อยสุด 3 อันดับ (เคส)', '')))
         rows = ''.join(
             f'<div>{_nm(r["key"])}</div><div style="text-align:right">{r["n_pairs"]:,}</div>'
             f'<div style="text-align:right">{r["n_partners"]}</div>{_bar(r["top_share"], _BASE)}'
             f'{_bar(r["with_novice"], _WARN if r["with_novice"] >= 50 else _BASE)}'
-            f'<div style="font-size:12px;color:#5B6B7B">{", ".join(f"{_nm(a)} ({c})" for a, c in r["top3"])}</div>'
+            f'<div style="font-size:14px;color:#5B6B7B">{", ".join(f"{_nm(a)} ({c})" for a, c in r["top3"])}</div>'
             for r in P)
         pr = [r['n_partners'] for r in P]
         _md(_card(f'น้องใหม่แต่ละคนเคยคู่กับคนอื่น {min(pr)}-{max(pr)} คน · {_nm(P[0]["key"])} คู่กับน้องใหม่ด้วยกัน '
@@ -1153,7 +1174,7 @@ def _view_tr(C, L):
                   f'ทีมคู่ scrub กับ circulate ในเคสเดียวกันของน้องใหม่ {len(P)} คน ปีงบ {fy} · เรียงตามสัดส่วนที่คู่กับน้องใหม่ด้วยกัน · '
                   'สีส้ม = ตั้งแต่ครึ่งหนึ่งขึ้นไป',
                   f'<div style="display:grid;grid-template-columns:110px 80px 120px minmax(0,1fr) minmax(0,1fr) 280px;'
-                  f'gap:8px 14px;align-items:center;font-size:13px">{th}{rows}</div>',
+                  f'gap:8px 14px;align-items:center;font-size:15px">{th}{rows}</div>',
                   'ครั้งที่จับคู่อาจมากกว่าจำนวนเคส เพราะบางเคสมีหลายคนในบทบาทเดียวกัน · ตัวเลขนับจากชื่อใน HIS'))
     _md('<div class="da-s" style="line-height:1.7">หมายเหตุ : นับทุกเคสที่บันทึกชื่อพยาบาลรวมเคสนอกเวลาและฉุกเฉิน · '
         'เวลาใช้ห้อง = เข้าห้องถึงออกห้อง · เทียบปีต่อปีเฉพาะเดือนที่มีข้อมูลทั้งสองปี</div>')
@@ -1226,6 +1247,12 @@ def _view_ops(C, L):
         _TURN_HOW = ('วิธีคำนวณ : เวลาเข้าห้องของเคสถัดไป ลบ เวลาออกห้องของเคสก่อนหน้า ในห้องเดียวกันวันเดียวกัน · '
                      'นับเฉพาะช่วง 1 ถึง 90 นาที (นานกว่านั้นถือว่าห้องว่างรอเคส ไม่ใช่พักห้อง)')
 
+        # 📁 25 พ.ย. 2026 (มุกกี้สั่งแก้): คำอธิบายวิธีคำนวณพับเก็บ กดเปิดอ่านได้ ไม่แสดงค้างใต้การ์ด
+        _fold = lambda t, body: (f'<details><summary style="cursor:pointer;color:#1658B8">{t}</summary>'
+                                 f'<div style="margin-top:6px">{body}</div></details>')
+        _UTIL_HOW = _fold('ดูวิธีคำนวณ Utilization', _UTIL_HOW)
+        _TURN_HOW = _fold('ดูวิธีคำนวณเวลาพักห้อง', _TURN_HOW)
+
         def _util_card(rs, tag, foot, lw, vw, minh=0):
             hi, lo = rs[0], rs[-1]
             rows = [(_e(_room_name(r['room'])), r['util'],
@@ -1254,25 +1281,25 @@ def _view_ops(C, L):
             for fn, how in ((_util_card, _UTIL_HOW), (_turn_card, _TURN_HOW)):
                 a, b = st.columns(2)
                 with a:
-                    _md(fn(_old, ' ตึกเก่า', '', 150, 170, _h))
+                    _md(fn(_old, ' ตึกเก่า', '', 150, 200, _h))
                 with b:
-                    _md(fn(_new, ' ตึกใหม่', '', 150, 170, _h))
+                    _md(fn(_new, ' ตึกใหม่', '', 150, 200, _h))
                 _md(f'<div class="da-s" style="line-height:1.7;margin:-4px 0 16px">{how}</div>')
         else:
-            _md(_util_card(R, '', _UTIL_HOW, 170, 230))
-            _md(_turn_card(R, '', _TURN_HOW, 170, 230))
+            _md(_util_card(R, '', _UTIL_HOW, 190, 270))
+            _md(_turn_card(R, '', _TURN_HOW, 190, 270))
     # ── 3. หัตถการที่เวลาแกว่ง ──
     P, n_all = proc_spread(O, fy)
     if P:
         mxq = max(p['q75'] for p in P) or 1
         body = ''.join(
-            f'<div style="display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr) 250px;align-items:center;gap:10px">'
-            f'<div style="font-size:13px">{_e(p["proc"])}</div>'
+            f'<div style="display:grid;grid-template-columns:minmax(0,320px) minmax(0,420px) 300px;align-items:center;justify-content:start;gap:10px">'
+            f'<div style="font-size:15px">{_e(p["proc"])}</div>'
             f'<div style="position:relative;height:16px;background:#F1F5F9;border-radius:6px">'
             f'<div style="position:absolute;left:{p["q25"] / mxq * 100:.1f}%;width:{max(p["iqr"] / mxq * 100, 1):.1f}%;'
             f'top:0;bottom:0;background:{_ACC if i == 0 else _BASE};border-radius:6px"></div>'
             f'<div style="position:absolute;left:{p["med"] / mxq * 100:.1f}%;top:-2px;bottom:-2px;width:2px;background:#12212E"></div></div>'
-            f'<div style="font-size:13px;text-align:right"><b>{p["q25"]:.0f}-{p["q75"]:.0f} นาที</b> · ค่ากลาง {p["med"]:.0f} · '
+            f'<div style="font-size:15px;text-align:right"><b>{p["q25"]:.0f}-{p["q75"]:.0f} นาที</b> · ค่ากลาง {p["med"]:.0f} · '
             f'{p["n"]:,} เคส</div></div>' for i, p in enumerate(P))
         _md(_card(f'{_e(P[0]["proc"])} เวลาใช้ห้องแกว่งมากที่สุด : เคสส่วนใหญ่อยู่ที่ {P[0]["q25"]:.0f}-{P[0]["q75"]:.0f} นาที',
                   f'หัตถการที่เวลาใช้ห้องต่างกันมากระหว่างเคส 10 อันดับ ปีงบ {fy} · จาก {n_all:,} หัตถการที่มีอย่างน้อย {_PROC_MIN_N} เคส',
@@ -1283,8 +1310,8 @@ def _view_ops(C, L):
     W = div_workload(O, fy)
     if W['divs']:
         D_ = W['divs']
-        th = 'font-size:11px;color:#5B6B7B;font-weight:600;text-align:right'
-        head = (f'<div style="font-size:11px;color:#5B6B7B;font-weight:600">สาขา</div><div style="{th}">เคส</div>'
+        th = 'font-size:13px;color:#5B6B7B;font-weight:600;text-align:right'
+        head = (f'<div style="font-size:13px;color:#5B6B7B;font-weight:600">สาขา</div><div style="{th}">เคส</div>'
                 f'<div style="{th}">ชั่วโมงห้อง</div><div style="{th}">เฉลี่ยต่อเคส</div><div style="{th}">เทียบปีงบก่อน</div>'
                 + ''.join(f'<div style="{th};text-align:center">{TH_MON[m - 1]}</div>' for m in FY_MONTHS))
         mmax = max(max(d['months']) for d in D_) or 1
@@ -1296,9 +1323,9 @@ def _view_ops(C, L):
                 t = v / mmax
                 bg = '#F5F7FA' if v == 0 else f'rgb({int(232 - t * 203)},{int(240 - t * 129)},{int(251 - t * 27)})'
                 cells += (f'<div style="height:22px;border-radius:3px;background:{bg};color:{"#FFFFFF" if t > 0.55 else "#12212E"};'
-                          f'font-size:11px;display:flex;align-items:center;justify-content:center">{v or ""}</div>')
-            td = 'font-size:13px;text-align:right;align-self:center'
-            body += (f'<div style="font-size:13px;align-self:center;white-space:nowrap">{_e(d["div"]).replace("ศัลยกรรม", "") or _e(d["div"])}</div>'
+                          f'font-size:13px;display:flex;align-items:center;justify-content:center">{v or ""}</div>')
+            td = 'font-size:15px;text-align:right;align-self:center'
+            body += (f'<div style="font-size:15px;align-self:center;white-space:nowrap">{_e(d["div"]).replace("ศัลยกรรม", "") or _e(d["div"])}</div>'
                      f'<div style="{td}">{d["cases"]:,}</div><div style="{td}"><b>{d["hours"]:,.0f}</b></div>'
                      f'<div style="{td}">{_fmt(d["avg"])} นาที</div><div style="{td}">{pc}</div>{cells}')
         top = D_[0]
