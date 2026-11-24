@@ -3958,37 +3958,44 @@ def _hist_sec_night(date_from, date_to, data=None):
             _top_dv = _dvb.iloc[0]
             _dv_all = max(int(_dvb['รวม'].sum()), 1)
             _top_dv_pct = round(float(_top_dv['รวม']) / _dv_all * 100)
-            st.markdown(
-                '<div style="display:flex;align-items:baseline;gap:12px;margin:6px 0 2px;">'
-                f'<span style="font-size:44px;font-weight:700;line-height:1;color:{_STORY_TOP};">'
-                f'{_top_dv_pct}%</span>'
-                '<span style="font-size:18px;color:#1e293b;font-weight:600;">'
-                f'สาขา{html.escape(str(_top_dv["label"]))} {int(_top_dv["รวม"]):,} เคส '
-                f'<span style="color:#64748b;font-weight:400;">จากเคสนอกเวลาทั้งหมด {_dv_all:,} เคส</span>'
-                '</span></div>', unsafe_allow_html=True)
+            # 🎨 24 พ.ย. 2026 รอบ 2 (มุกกี้ : แท่ง plotly ยืดเต็มจอ ไม่สวย) : วาดด้วย HTML เอง
+            #    ซ้าย = ตัวเลขใหญ่ของสาขาอันดับ 1 · ขวา = แท่งบางของสาขาที่เหลือ กว้างไม่เกิน 520px
             _dvo = _dvb.iloc[1:]
+            _left = (
+                '<div style="flex:0 0 auto;min-width:230px;">'
+                f'<div style="font-size:56px;font-weight:700;line-height:1;color:{_STORY_TOP};">'
+                f'{_top_dv_pct}%</div>'
+                '<div style="font-size:20px;font-weight:600;color:#1e293b;margin-top:8px;">'
+                f'สาขา{html.escape(str(_top_dv["label"]))}</div>'
+                '<div style="font-size:16px;color:#64748b;margin-top:2px;">'
+                f'{int(_top_dv["รวม"]):,} จาก {_dv_all:,} เคส</div></div>')
+            _right = ''
             if not _dvo.empty:
-                st.markdown(
-                    '<div style="font-size:16px;color:#64748b;margin:10px 0 0;">'
-                    f'อีก {int(_dvo["รวม"].sum()):,} เคส มาจาก {len(_dvo)} สาขา</div>',
-                    unsafe_allow_html=True)
-                _dvo_plot = _dvo.iloc[::-1]   # แกน y ของ plotly ไล่จากล่างขึ้นบน → กลับลำดับให้มากสุดอยู่บน
-                _dvo_max = float(_dvo['รวม'].max())
-                fig_aft_div = px.bar(_dvo_plot, x='รวม', y='label', orientation='h', text='รวม',
-                                     labels={'รวม': 'จำนวนเคสนอกเวลา', 'label': ''})
-                fig_aft_div.update_traces(
-                    marker_color=['#94A3B8' if float(v) == _dvo_max else _STORY_BASE
-                                  for v in _dvo_plot['รวม']],
-                    marker_line_width=0, textposition='outside', cliponaxis=False,
-                    hovertemplate='<b>%{y}</b><br>%{x} เคส<extra></extra>')
-                fig_aft_div.update_layout(
-                    margin=dict(t=6, b=10, l=10, r=40),
-                    height=max(120, 40 + 34 * len(_dvo_plot)),
-                    xaxis=dict(range=[0, _dvo_max * 1.15]),
-                    yaxis=dict(tickfont=dict(size=13)))
-                _story_axes(fig_aft_div, horizontal=True)
-                st.plotly_chart(fig_aft_div, use_container_width=True,
-                                config={'displayModeBar': False})
+                _dvo_max = max(float(_dvo['รวม'].max()), 1.0)
+                _rows = ''
+                for _i, (_lb, _n) in enumerate(zip(_dvo['label'], _dvo['รวม'])):
+                    _is_top = (_i == 0)
+                    _w = max(round(float(_n) / _dvo_max * 100), 2)
+                    _rows += (
+                        f'<div style="font-size:16px;color:{"#1e293b" if _is_top else "#475569"};'
+                        f'font-weight:{600 if _is_top else 400};text-align:right;white-space:nowrap;">'
+                        f'{html.escape(str(_lb))}</div>'
+                        '<div style="display:flex;align-items:center;gap:8px;">'
+                        f'<div style="height:14px;width:{_w}%;border-radius:0 4px 4px 0;'
+                        f'background:{"#94A3B8" if _is_top else _STORY_BASE};"></div>'
+                        f'<span style="font-size:16px;color:{"#1e293b" if _is_top else "#475569"};'
+                        f'font-weight:{700 if _is_top else 400};">{int(_n):,}</span></div>')
+                _right = (
+                    '<div style="flex:1 1 320px;max-width:520px;border-left:1px solid #e2e8f0;'
+                    'padding-left:28px;">'
+                    '<div style="font-size:16px;color:#64748b;margin-bottom:10px;">'
+                    f'อีก {int(_dvo["รวม"].sum()):,} เคส มาจาก {len(_dvo)} สาขา</div>'
+                    '<div style="display:grid;grid-template-columns:max-content 1fr;'
+                    f'gap:8px 12px;align-items:center;">{_rows}</div></div>')
+            st.markdown(
+                '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:28px;'
+                'background:#fff;border-radius:8px;padding:20px 24px;margin:6px 0 10px;">'
+                f'{_left}{_right}</div>', unsafe_allow_html=True)
             with st.expander("ดูตารางแยกปีงบประมาณและหัตถการที่ทำบ่อย", expanded=False):
                 st.markdown(
                     '<div style="overflow-x:auto;background:#fff;border-radius:8px;padding:4px 6px;">'
