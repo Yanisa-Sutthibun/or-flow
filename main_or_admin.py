@@ -4032,37 +4032,46 @@ def _hist_sec_night(date_from, date_to, data=None):
             _aft_dow_avg['color_flag'] = _aft_dow_avg['n'].apply(
                 lambda v: 'peak' if v == _max_dow_aft and v > 0 else 'normal')
 
-            fig_aft_dow = px.bar(
-                _aft_dow_avg, x='n', y='day_name', orientation='h', text='n',
-                color='color_flag',
-                color_discrete_map={'peak': _STORY_TOP, 'normal': _STORY_BASE},
-                labels={'day_name': '', 'n': 'เคสนอกเวลาเฉลี่ย/วัน'})
-            fig_aft_dow.update_traces(
-                textposition='outside', cliponaxis=False,
-                hovertemplate='<b>%{y}</b><br>เฉลี่ย %{x} เคส/วัน<extra></extra>')
-            _y_max_aft = max(float(_aft_dow_avg['n'].max()), 1.0)
-            fig_aft_dow.update_layout(
-                margin=dict(t=10, b=10, l=10, r=40), height=290,
-                xaxis=dict(range=[0, _y_max_aft * 1.15]),
-            )
-            _story_axes(fig_aft_dow, horizontal=True, cats=_THAI_DAY_AFT)
-            st.plotly_chart(fig_aft_dow, use_container_width=True,
-                            config={'displayModeBar': False})
-
-            # caption — เปรียบเทียบวันหนัก vs วันเบา
-            _min_dow_aft = _aft_dow_avg[_aft_dow_avg['n'] > 0]['n'].min() \
-                if (_aft_dow_avg['n'] > 0).any() else 0
+            # 🎨 24 พ.ย. 2026 (มุกกี้สั่ง : ทำแบบเดียวกับกราฟสาขา) : เลิกแท่ง plotly ที่ยืดเต็มจอ วาดด้วย HTML
+            #    ซ้าย = ตัวเลขใหญ่ของวันที่หนักสุด · ขวา = แท่งบางครบ 7 วัน เรียง จ.-อา. วันหนักสุดสีฟ้า
+            #    กล่องข้อความสรุปใต้กราฟเดิมเอาออก เพราะตัวเลขใหญ่ด้านซ้ายบอกเรื่องเดียวกันแล้ว
             _max_dow_name_aft = _aft_dow_avg.loc[
                 _aft_dow_avg['n'].idxmax(), 'day_name'] if _max_dow_aft > 0 else '-'
-            # 📌 24 พ.ย. 2026 มุกกี้สั่ง : ตัด "หนักกว่าวันที่น้อยที่สุด ...%" ออก
-            if _max_dow_aft > 0:
-                st.markdown(
-                    f'<div style="background:#ede7f6;border-left:3px solid #5e35b1;'
-                    f'padding:10px 14px;border-radius:0 6px 6px 0;'
-                    f'font-size:18px;color:#311b92;margin-top:6px;">'
-                    f'<b>วัน{_max_dow_name_aft}</b> เคสนอกเวลาหนักสุด '
-                    f'เฉลี่ย {_max_dow_aft} เคส/วัน</div>',
-                    unsafe_allow_html=True)
+            _fmt_dow = lambda v: f'{int(v)}' if float(v).is_integer() else f'{float(v):.1f}'
+            _dow_scale = max(float(_max_dow_aft), 0.1)
+            _dow_rows = ''
+            for _dn, _v, _fl in zip(_aft_dow_avg['day_name'], _aft_dow_avg['n'],
+                                    _aft_dow_avg['color_flag']):
+                _pk = (_fl == 'peak')
+                _w = round(float(_v) / _dow_scale * 100)
+                _dow_rows += (
+                    f'<div style="font-size:16px;color:{"#1e293b" if _pk else "#475569"};'
+                    f'font-weight:{600 if _pk else 400};text-align:right;white-space:nowrap;">'
+                    f'{_dn}</div>'
+                    '<div style="display:flex;align-items:center;gap:8px;">'
+                    f'<div style="height:14px;width:{_w}%;border-radius:0 4px 4px 0;'
+                    f'background:{_STORY_TOP if _pk else _STORY_BASE};"></div>'
+                    f'<span style="font-size:16px;color:{"#1e293b" if _pk else "#475569"};'
+                    f'font-weight:{700 if _pk else 400};">{_fmt_dow(_v)}</span></div>')
+            _dow_left = (
+                '<div style="flex:0 0 auto;min-width:230px;">'
+                f'<div style="font-size:56px;font-weight:700;line-height:1;color:{_STORY_TOP};">'
+                f'{_fmt_dow(_max_dow_aft)}</div>'
+                '<div style="font-size:20px;font-weight:600;color:#1e293b;margin-top:8px;">'
+                f'เคสต่อวัน ในวัน{_max_dow_name_aft}</div>'
+                '<div style="font-size:16px;color:#64748b;margin-top:2px;">'
+                'วันที่เคสนอกเวลาหนักที่สุด</div></div>') if _max_dow_aft > 0 else ''
+            st.markdown(
+                '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:28px;'
+                'background:#fff;border-radius:8px;padding:20px 24px;margin:6px 0 10px;">'
+                f'{_dow_left}'
+                '<div style="flex:1 1 320px;max-width:520px;border-left:1px solid #e2e8f0;'
+                'padding-left:28px;">'
+                '<div style="font-size:16px;color:#64748b;margin-bottom:10px;">'
+                'เฉลี่ยเคสนอกเวลาต่อวัน แยกตามวันในสัปดาห์</div>'
+                '<div style="display:grid;grid-template-columns:max-content 1fr;'
+                f'gap:8px 12px;align-items:center;">{_dow_rows}</div></div></div>',
+                unsafe_allow_html=True)
 
             # 📋 รายเคสนอกเวลา : พับเก็บ กดเปิดดูได้ (มุกกี้สั่ง 24 พ.ย. 2026)
             with st.expander(f"ดูรายเคสนอกเวลา ({_n_total_aft} เคส)", expanded=False):
