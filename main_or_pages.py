@@ -2056,6 +2056,31 @@ def _render_demo_video(caption=True):
         print(f"[demo_video] แสดงไม่ได้ (ข้าม): {_ex}")
 
 
+# 🎬 24 พ.ย. 2026 (มุกกี้สั่ง): แท็บ วิธีใช้บอร์ด มีวิดีโอ 3 เรื่อง เลือกดูจากแท็บย่อย
+#    (หน้าบอร์ดว่างยังใช้ _render_demo_video เรื่องเดียวเหมือนเดิม)
+_HELP_VIDEOS = (
+    ("OR Flow คืออะไร", 'or_flow_explainer.mp4', "วิดีโออธิบายระบบ OR Flow : 30 วินาที"),
+    ("วิธีใช้ 4 ขั้น", 'or_flow_demo.mp4', "วิดีโอสาธิตการใช้ OR Flow ใน 4 ขั้น : 24 วินาที"),
+    ("ปุ่มดินสอ", 'or_flow_pencil.mp4', "วิดีโอสอนปุ่มในดินสอ : 26 วินาที"),
+)
+
+
+def _render_help_videos():
+    """วิดีโอ 3 เรื่องในแท็บ วิธีใช้บอร์ด · ไฟล์ไหนไม่มี = ข้ามเรื่องนั้น ไม่ให้หน้าพัง"""
+    _dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'assets')
+    _have = [(t, _os.path.join(_dir, f), c) for t, f, c in _HELP_VIDEOS
+             if _os.path.exists(_os.path.join(_dir, f))]
+    if not _have:
+        return
+    try:
+        for _tab, (_t, _path, _cap) in zip(st.tabs([h[0] for h in _have]), _have):
+            with _tab:
+                st.video(_path)
+                st.caption(_cap)
+    except Exception as _ex:
+        print(f"[help_videos] แสดงไม่ได้ (ข้าม): {_ex}")
+
+
 def page_or_board():
     """หน้า 📋 ตารางผ่าตัด — เนื้อบอร์ดทั้งหมดย้ายไปอยู่ใน _board_fragment
     (⚡ perf: กดปุ่ม/tick 30 วิ rerun เฉพาะก้อนบอร์ด ไม่ใช่ทั้งแอป)"""
@@ -2511,7 +2536,7 @@ def _board_body():
                     ("- **✏️** = แก้เวลาทำนายการใช้ห้องหรือย้ายห้อง",
                      "- **✏️** ท้ายแถว = แก้เวลาทำนายการใช้ห้อง ย้ายห้อง หรือดู HN")):
                 _txt = _txt.replace(_a, _b)
-        _render_demo_video()
+        _render_help_videos()
         st.markdown(_txt)
 
     # ---------- 🧰 เครื่องมือ — มุคกี้สั่ง 5 ส.ค. 2026: ยุบ 3 แถวเหลือแถวเดียว ----------
