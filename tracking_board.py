@@ -909,6 +909,8 @@ def _quiet_overrun() -> bool:
 
 
 # 🧹 23 พ.ย. 2026 (มุคกี้สั่ง): รายการในเมนูดินสอ (เรียงจากใช้บ่อยไปน้อย) : อีโมจินำให้เห็นแล้วเข้าใจทันที
+# 🧹 24 พ.ย. 2026 (มุคกี้สั่ง): เอา แก้เวลาเข้าห้อง ออกจากเมนูดินสอ เหลือแก้เวลาแค่ แก้เวลาทำนาย · เปิดคืนได้ที่สวิตช์นี้
+_EDIT_ENTERED_ON = False
 _ACT_ENT = "🕒 แก้เวลาเข้าห้อง"
 _ACT_PRED = "⏱️ แก้เวลาทำนาย"
 _ACT_ROOM = "🔀 ย้ายห้อง"
@@ -1680,7 +1682,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 _act = None
                 _ak = f"_tbact_{K}"       # รายการที่เลือกค้างไว้ของเคสนี้ (ต่อเครื่อง)
                 if _mb:
-                    _ent_ok = (c.get('status') == 'in_or' and _scope is None
+                    _ent_ok = (_EDIT_ENTERED_ON and c.get('status') == 'in_or' and _scope is None
                                and c.get('time_entered_or') is not None
                                and hasattr(c.get('time_entered_or'), 'hour'))
                     _acts = []
@@ -1843,7 +1845,7 @@ def _render_row(idx, c, disp, eff, elapsed, now, R, busy_rooms,
                 #    เฉพาะเคสกำลังผ่า · ไม่เกินเวลาปัจจุบัน ไม่ก่อนเวลารับเข้า · เวลาที่กดปุ่ม
                 #    จริงถูกเก็บคู่ไว้ (ดู main_or_pages.apply_edit_entered) · จอรับ-ส่งเท่านั้น
                 _ent0 = c.get('time_entered_or')
-                if (c.get('status') == 'in_or' and _scope is None and _show(_ACT_ENT)
+                if (_EDIT_ENTERED_ON and c.get('status') == 'in_or' and _scope is None and _show(_ACT_ENT)
                         and _ent0 is not None and hasattr(_ent0, 'hour')):
                     st.caption("🕒 เวลาเข้าห้อง (แก้ได้ถ้ากดช้ากว่าความจริง)")
                     _ent_new = st.time_input(

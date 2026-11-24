@@ -586,21 +586,25 @@ def _page_room_settings_body():
                 st.error(f"เปิดส่วนอัปโหลด intraop ไม่สำเร็จ : {type(_rpe).__name__}")
                 print(f"[research_upload] {_rpe}")
 
-    st.markdown("---")
-    with st.expander("📥 นำเข้าข้อมูลย้อนหลังเข้าฐานสถิติ (เฉพาะผู้วิจัย) 🔒",
+    # 🧹 24 พ.ย. 2026 (มุกกี้สั่ง): เหลือช่องอัปโหลดช่องเดียว : กล่องด้านบนเติมฐานสถิติให้แล้ว
+    #    กล่องนำเข้าย้อนหลังรุ่นเก่าปิดไว้ที่สวิตช์นี้ เปิดคืนได้ถ้าต้องเติมย้อนหลังเป็นช่วงยาว
+    _OLD_STATS_IMPORT_ON = False
+    if _OLD_STATS_IMPORT_ON:
+      st.markdown("---")
+      with st.expander("📥 นำเข้าข้อมูลย้อนหลังเข้าฐานสถิติ (เฉพาะผู้วิจัย) 🔒",
                      expanded=False):
-        # 👤 เฉพาะบทบาทผู้ดูแล (login ด้วยรหัสผู้ดูแล) — ไม่ถามรหัสซ้ำ
-        if st.session_state.get('role') != 'admin':
-            st.info("🔒 ส่วนนี้สำหรับผู้วิจัย : ออกจากระบบแล้วเข้าใหม่"
-                    "ด้วยรหัสผู้ดูแลระบบ")
-        else:
-            try:
-                from process_panel import render_process_panel
-                render_process_panel()
-            except Exception as _pe:
-                import traceback
-                st.error(f"❌ โหลดส่วนนำเข้าไม่สำเร็จ: {_pe}")
-                st.code(traceback.format_exc())
+          # 👤 เฉพาะบทบาทผู้ดูแล (login ด้วยรหัสผู้ดูแล) — ไม่ถามรหัสซ้ำ
+          if st.session_state.get('role') != 'admin':
+              st.info("🔒 ส่วนนี้สำหรับผู้วิจัย : ออกจากระบบแล้วเข้าใหม่"
+                      "ด้วยรหัสผู้ดูแลระบบ")
+          else:
+              try:
+                  from process_panel import render_process_panel
+                  render_process_panel()
+              except Exception as _pe:
+                  import traceback
+                  st.error(f"❌ โหลดส่วนนำเข้าไม่สำเร็จ: {_pe}")
+                  st.code(traceback.format_exc())
 
 
 # ============================================================================
