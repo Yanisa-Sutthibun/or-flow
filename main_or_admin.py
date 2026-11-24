@@ -3845,8 +3845,6 @@ def _hist_sec_night(date_from, date_to, data=None):
     else:
         # KPI row: total + done + top-division + peak-day (4 cols)
         _n_total_aft = len(aft_range)
-        _n_done_aft = len(aft_range[aft_range['status'].isin(['discharged', 'post_op'])])
-        _done_rate = round(_n_done_aft / _n_total_aft * 100, 1) if _n_total_aft else 0
 
         # 🏥 สาขาที่มีเคสนอกเวลามากสุด
         _div_top_name = '-'
@@ -3873,7 +3871,8 @@ def _hist_sec_night(date_from, date_to, data=None):
             _peak_day_count = int(_by_dow.max())
             _peak_day_label = _thai_dows[int(_by_dow.idxmax())]
 
-        a1, a2, a3, a4 = st.columns(4)
+        # 📌 24 พ.ย. 2026 มุกกี้สั่ง : เอาการ์ด "ผ่าตัดเสร็จ" ออก เหลือ 3 การ์ด
+        a1, a3, a4 = st.columns(3)
         with a1:
             st.markdown(
                 f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
@@ -3882,16 +3881,6 @@ def _hist_sec_night(date_from, date_to, data=None):
                 f'<div style="font-size:26px;font-weight:600;line-height:1;color:#5e35b1;">'
                 f'{_n_total_aft}</div>'
                 f'<div style="font-size:18px;color:#9e9e9e;margin-top:4px;">เคส</div>'
-                f'</div>', unsafe_allow_html=True)
-        with a2:
-            st.markdown(
-                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-                f'<div style="font-size:18px;color:#757575;margin-bottom:4px;">'
-                f'✅ ผ่าตัดเสร็จ</div>'
-                f'<div style="font-size:26px;font-weight:600;line-height:1;color:#2e7d32;">'
-                f'{_n_done_aft}</div>'
-                f'<div style="font-size:18px;color:#9e9e9e;margin-top:4px;">'
-                f'คิดเป็น {_done_rate}% ของเคสนอกเวลา</div>'
                 f'</div>', unsafe_allow_html=True)
         with a3:
             st.markdown(
@@ -3917,6 +3906,69 @@ def _hist_sec_night(date_from, date_to, data=None):
                 f'</div>', unsafe_allow_html=True)
 
         st.markdown("")  # spacer
+
+        # ════ 🏥 เคสนอกเวลาแยกสาขา × ปีงบประมาณ (มุกกี้สั่ง 24 พ.ย. 2026) ════
+        #    แถว = สาขา เรียงจากมากไปน้อย · คอลัมน์ = ปีงบในช่วงที่เลือก (เริ่ม 1 ต.ค.) + รวม
+        #    + หัตถการที่ทำบ่อย 3 อันดับของสาขา (ชื่อตามที่ลงในฐาน : intraop ก่อน ไม่มีจึงใช้ตารางผ่าตัด)
+        try:
+            _dv = aft_range[['op_date', 'division_code', 'procedure_name']].copy()
+            _dv['_dt'] = pd.to_datetime(_dv['op_date'], errors='coerce')
+            _dv = _dv.dropna(subset=['_dt'])
+            _dv['fy'] = _dv['_dt'].dt.year + 543 + (_dv['_dt'].dt.month >= 10).astype(int)
+            _dv['div'] = _dv['division_code'].fillna('').astype(str).map(
+                lambda c: div_name(c.split('.')[0]) if c.strip() not in ('', '-', 'None', 'nan')
+                else 'ไม่ระบุสาขา')
+            _fys = sorted(_dv['fy'].unique())
+            _pv = (_dv.groupby(['div', 'fy']).size().unstack(fill_value=0)
+                   .reindex(columns=_fys, fill_value=0))
+            _pv['รวม'] = _pv.sum(axis=1)
+            _pv = _pv.sort_values('รวม', ascending=False)
+            _top_pr = {}
+            for _d_name, _g in _dv.groupby('div'):
+                # ตัดคำว่า "นอกเวลา" ที่พิมพ์ต่อท้ายชื่อหัตถการออก ให้ TUR-P กับ TUR-P นอกเวลา นับรวมกัน
+                _vc = (_g['procedure_name'].fillna('').astype(str).str.upper()
+                       .str.replace('นอกเวลา', '', regex=False).str.strip(' -+,()')
+                       .replace('', pd.NA).dropna().value_counts().head(3))
+                _top_pr[_d_name] = ' · '.join(
+                    f'{html.escape(k[:40])} ({int(v)})' for k, v in _vc.items()) or '-'
+            _th = ('padding:8px 10px;font-size:17px;color:#455a64;font-weight:600;'
+                   'border-bottom:2px solid #d1c4e9;white-space:nowrap;')
+            _td = 'padding:7px 10px;font-size:17px;border-bottom:1px solid #eeeeee;'
+            _hdr = (f'<th style="{_th}text-align:left;">สาขา</th>'
+                    + ''.join(f'<th style="{_th}text-align:right;">ปีงบ {y}</th>' for y in _fys)
+                    + f'<th style="{_th}text-align:right;">รวม</th>'
+                    + f'<th style="{_th}text-align:left;">หัตถการที่ทำบ่อย</th>')
+            _body = ''
+            for _d_name, _r in _pv.iterrows():
+                _body += (f'<tr><td style="{_td}white-space:nowrap;">{html.escape(_d_name)}</td>'
+                          + ''.join(f'<td style="{_td}text-align:right;color:'
+                                    f'{"#bdbdbd" if int(_r[y]) == 0 else "#212121"};">{int(_r[y]):,}</td>'
+                                    for y in _fys)
+                          + f'<td style="{_td}text-align:right;font-weight:600;color:#5e35b1;">'
+                            f'{int(_r["รวม"]):,}</td>'
+                          + f'<td style="{_td}color:#616161;font-size:15px;">{_top_pr.get(_d_name, "-")}</td></tr>')
+            _tot = _pv.sum()
+            _body += (f'<tr><td style="{_td}font-weight:600;">รวมทุกสาขา</td>'
+                      + ''.join(f'<td style="{_td}text-align:right;font-weight:600;">{int(_tot[y]):,}</td>'
+                                for y in _fys)
+                      + f'<td style="{_td}text-align:right;font-weight:600;color:#5e35b1;">{int(_tot["รวม"]):,}</td>'
+                      + f'<td style="{_td}"></td></tr>')
+            _n_div = int((_pv['รวม'] > 0).sum())
+            st.markdown(
+                '<div class="sub-title">🏥 เคสนอกเวลาแยกสาขา '
+                '<span style="font-size:18px;color:#999;font-weight:400;">'
+                f'({_n_div} สาขา · นับตามปีงบประมาณ เริ่ม 1 ต.ค.)</span></div>',
+                unsafe_allow_html=True)
+            st.markdown(
+                '<div style="overflow-x:auto;background:#fff;border-radius:8px;padding:4px 6px;">'
+                f'<table style="width:100%;border-collapse:collapse;"><thead><tr>{_hdr}</tr></thead>'
+                f'<tbody>{_body}</tbody></table></div>', unsafe_allow_html=True)
+            st.caption("📌 นอกเวลา = set เป็น elective ตั้งแต่ 15:30 น. แล้วเข้าห้องหลัง 15:30 น. "
+                       "หรือมีคำว่า \"นอกเวลา\" ใน diagnosis / procedure / procedure note · "
+                       "ปีงบแรกและปีงบล่าสุดอาจมีข้อมูลไม่เต็มปีตามช่วงวันที่ที่เลือก")
+        except Exception as _e_dv:
+            st.caption(f"สรุปเคสนอกเวลาแยกสาขาไม่สำเร็จ: {_e_dv}")
+        st.markdown("")
 
         # ════ Bar chart: เฉลี่ยเคสนอกเวลาตามวันในสัปดาห์ (จ.-ศ.) ════
         # คำนวณแบบเดียวกับ "📊 เฉลี่ยเคสตามวันในสัปดาห์" — เฉลี่ยต่อวันที่มีข้อมูล
@@ -3964,20 +4016,54 @@ def _hist_sec_night(date_from, date_to, data=None):
                 if (_aft_dow_avg['n'] > 0).any() else 0
             _max_dow_name_aft = _aft_dow_avg.loc[
                 _aft_dow_avg['n'].idxmax(), 'day_name'] if _max_dow_aft > 0 else '-'
-            if _min_dow_aft > 0 and _max_dow_aft > _min_dow_aft:
-                _pct_heavier_aft = round((_max_dow_aft / _min_dow_aft - 1) * 100)
+            # 📌 24 พ.ย. 2026 มุกกี้สั่ง : ตัด "หนักกว่าวันที่น้อยที่สุด ...%" ออก
+            if _max_dow_aft > 0:
                 st.markdown(
                     f'<div style="background:#ede7f6;border-left:3px solid #5e35b1;'
                     f'padding:10px 14px;border-radius:0 6px 6px 0;'
                     f'font-size:18px;color:#311b92;margin-top:6px;">'
                     f'<b>วัน{_max_dow_name_aft}</b> เคสนอกเวลาหนักสุด '
-                    f'เฉลี่ย {_max_dow_aft} เคส/วัน · '
-                    f'หนักกว่าวันที่น้อยที่สุด {_pct_heavier_aft}%</div>',
+                    f'เฉลี่ย {_max_dow_aft} เคส/วัน</div>',
                     unsafe_allow_html=True)
-            elif _max_dow_aft > 0:
-                st.caption(
-                    f"💡 วัน{_max_dow_name_aft}เคสนอกเวลาเฉลี่ยมากสุด "
-                    f"({_max_dow_aft} เคส/วัน)")
+
+            # 📋 รายเคสนอกเวลา : พับเก็บ กดเปิดดูได้ (มุกกี้สั่ง 24 พ.ย. 2026)
+            with st.expander(f"ดูรายเคสนอกเวลา ({_n_total_aft} เคส)", expanded=False):
+                def _hhmm_aft(ts):
+                    s_ = str(ts)
+                    return s_[11:16] if len(s_) >= 16 and s_[13] == ':' else '-'
+                def _col_aft(name):
+                    return (aft_range[name] if name in aft_range.columns
+                            else pd.Series(['-'] * len(aft_range), index=aft_range.index))
+                # diagnosis ไม่อยู่ในชุดคอลัมน์ของหน้าสถิติ (ตัดออกเพื่อความเร็ว) → ดึงเฉพาะเคสนอกเวลาในช่วงนี้
+                _dx_aft = pd.Series(['-'] * len(aft_range), index=aft_range.index)
+                try:
+                    from main_or_db import db_session as _dbs_aft
+                    with _dbs_aft() as _conn_aft:
+                        _dx_df = pd.read_sql_query(
+                            "SELECT case_id, diagnosis FROM cases "
+                            "WHERE op_date >= ? AND op_date <= ? AND patient_type = ?",
+                            _conn_aft, params=[str(date_from), str(date_to), 'นอกเวลา'])
+                    _dx_map = dict(zip(_dx_df['case_id'], _dx_df['diagnosis']))
+                    _dx_aft = aft_range['case_id'].map(_dx_map).fillna('-')
+                except Exception as _e_dx:
+                    from logger_setup import get_logger as _gl_aft
+                    _gl_aft(__name__).warning("รายเคสนอกเวลา: ดึง diagnosis ไม่ได้ (%s)", _e_dx)
+                _aft_sorted_dt = pd.to_datetime(aft_range['op_date'], errors='coerce')
+                _aft_show = pd.DataFrame({
+                    'วันที่': _aft_sorted_dt.dt.strftime('%d/%m/%Y'),
+                    'วัน': _aft_sorted_dt.dt.dayofweek.map(
+                        lambda d: _THAI_DAY_AFT[int(d)] if pd.notna(d) else '-'),
+                    'สาขา': _col_aft('division_code').fillna('-').astype(str).map(
+                        lambda c: div_name(c) if c not in ('-', '', 'None', 'nan')
+                        else 'ไม่ระบุ'),
+                    'Diagnosis': _dx_aft,
+                    'Operation': _col_aft('procedure_name').fillna('-'),
+                    'เข้าห้อง': _col_aft('in_or_at').map(_hhmm_aft),
+                    'ออกห้อง': _col_aft('op_end_at').map(_hhmm_aft),
+                })
+                _aft_show = _aft_show.assign(_d=_aft_sorted_dt).sort_values(
+                    ['_d', 'เข้าห้อง'], ascending=[False, True]).drop(columns='_d')
+                st.dataframe(_aft_show, use_container_width=True, hide_index=True)
         else:
             st.info("ไม่มีเคสนอกเวลาในช่วงนี้")
 
