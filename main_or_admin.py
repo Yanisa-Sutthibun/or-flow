@@ -3872,7 +3872,8 @@ def _hist_sec_night(date_from, date_to, data=None):
             _peak_day_label = _thai_dows[int(_by_dow.idxmax())]
 
         # 📌 24 พ.ย. 2026 มุกกี้สั่ง : เอาการ์ด "ผ่าตัดเสร็จ" ออก เหลือ 3 การ์ด
-        a1, a3, a4 = st.columns(3)
+        # 📌 24 พ.ย. 2026 : การ์ด "สาขาที่มีเคสมากสุด" ออก เพราะซ้ำกับตัวเลขใหญ่ของกราฟสาขาข้างล่าง
+        a1, a4 = st.columns(2)
         with a1:
             st.markdown(
                 f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
@@ -3881,17 +3882,6 @@ def _hist_sec_night(date_from, date_to, data=None):
                 f'<div style="font-size:26px;font-weight:600;line-height:1;color:#5e35b1;">'
                 f'{_n_total_aft}</div>'
                 f'<div style="font-size:18px;color:#9e9e9e;margin-top:4px;">เคส</div>'
-                f'</div>', unsafe_allow_html=True)
-        with a3:
-            st.markdown(
-                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px;">'
-                f'<div style="font-size:18px;color:#757575;margin-bottom:4px;">'
-                f'🏥 สาขาที่มีเคสมากสุด</div>'
-                f'<div style="font-size:18px;font-weight:600;line-height:1.2;color:#6a1b9a;'
-                f'margin-top:4px;min-height:36px;">'
-                f'{_div_top_name}</div>'
-                f'<div style="font-size:18px;color:#9e9e9e;margin-top:4px;">'
-                f'{_div_top_count} เคส ({_div_top_pct}%)</div>'
                 f'</div>', unsafe_allow_html=True)
         with a4:
             st.markdown(
@@ -3959,27 +3949,46 @@ def _hist_sec_night(date_from, date_to, data=None):
                 '<span style="font-size:18px;color:#999;font-weight:400;">'
                 f'({_n_div} สาขา)</span></div>',
                 unsafe_allow_html=True)
-            # 📊 24 พ.ย. 2026 (มุกกี้สั่ง): ลำดับหัวข้อ = การ์ด → กราฟสาขา → เฉลี่ยตามวัน → รายเคส
-            #    กราฟแท่งแนวนอน เรียงมากไปน้อย อันดับ 1 สีฟ้า (หลัก graph-storytelling) · ตารางปีงบพับไว้ใต้กราฟ
-            _dvb = _pv[_pv['รวม'] > 0].reset_index()[['div', 'รวม']].sort_values('รวม')
+            # 📊 24 พ.ย. 2026 (มุกกี้เลือกแบบ C): ลำดับหัวข้อ = การ์ด → กราฟสาขา → เฉลี่ยตามวัน → รายเคส
+            #    สาขาอันดับ 1 เป็นตัวเลขใหญ่สีฟ้า (ร้อยละ + จำนวนเคส) แล้วแท่งแนวนอนเฉพาะสาขาที่เหลือ
+            #    เหตุผล : สาขาอันดับ 1 กินราว 8 ใน 10 ถ้าวาดรวมกัน แท่งของสาขาอื่นจะสั้นจนเทียบกันไม่ได้
+            _dvb = _pv[_pv['รวม'] > 0].reset_index()[['div', 'รวม']].sort_values('รวม', ascending=False)
             _dvb['label'] = _dvb['div'].str.replace('ศัลยกรรม', '', regex=False).str.strip()
             _dvb.loc[_dvb['label'] == '', 'label'] = _dvb['div']
-            _top_dv = _dvb.iloc[-1]
-            _top_dv_pct = round(float(_top_dv['รวม']) / max(int(_dvb['รวม'].sum()), 1) * 100)
-            _story_head(f"สาขา{_top_dv['label']}ทำเคสนอกเวลามากที่สุด "
-                        f"{int(_top_dv['รวม']):,} เคส ({_top_dv_pct}% ของทั้งหมด)")
-            fig_aft_div = px.bar(_dvb, x='รวม', y='label', orientation='h', text='รวม',
-                                 labels={'รวม': 'จำนวนเคสนอกเวลา', 'label': ''})
-            fig_aft_div.update_traces(
-                hovertemplate='<b>%{y}</b><br>%{x} เคส<extra></extra>')
-            fig_aft_div.update_layout(
-                margin=dict(t=10, b=10, l=10, r=40),
-                height=max(190, 70 + 34 * len(_dvb)),
-                xaxis=dict(range=[0, float(_dvb['รวม'].max()) * 1.15]),
-                yaxis=dict(tickfont=dict(size=13)))
-            _story_bars(fig_aft_div, _dvb['รวม'], _STORY_TOP, horizontal=True)
-            st.plotly_chart(fig_aft_div, use_container_width=True,
-                            config={'displayModeBar': False})
+            _top_dv = _dvb.iloc[0]
+            _dv_all = max(int(_dvb['รวม'].sum()), 1)
+            _top_dv_pct = round(float(_top_dv['รวม']) / _dv_all * 100)
+            st.markdown(
+                '<div style="display:flex;align-items:baseline;gap:12px;margin:6px 0 2px;">'
+                f'<span style="font-size:44px;font-weight:700;line-height:1;color:{_STORY_TOP};">'
+                f'{_top_dv_pct}%</span>'
+                '<span style="font-size:18px;color:#1e293b;font-weight:600;">'
+                f'สาขา{html.escape(str(_top_dv["label"]))} {int(_top_dv["รวม"]):,} เคส '
+                f'<span style="color:#64748b;font-weight:400;">จากเคสนอกเวลาทั้งหมด {_dv_all:,} เคส</span>'
+                '</span></div>', unsafe_allow_html=True)
+            _dvo = _dvb.iloc[1:]
+            if not _dvo.empty:
+                st.markdown(
+                    '<div style="font-size:16px;color:#64748b;margin:10px 0 0;">'
+                    f'อีก {int(_dvo["รวม"].sum()):,} เคส มาจาก {len(_dvo)} สาขา</div>',
+                    unsafe_allow_html=True)
+                _dvo_plot = _dvo.iloc[::-1]   # แกน y ของ plotly ไล่จากล่างขึ้นบน → กลับลำดับให้มากสุดอยู่บน
+                _dvo_max = float(_dvo['รวม'].max())
+                fig_aft_div = px.bar(_dvo_plot, x='รวม', y='label', orientation='h', text='รวม',
+                                     labels={'รวม': 'จำนวนเคสนอกเวลา', 'label': ''})
+                fig_aft_div.update_traces(
+                    marker_color=['#94A3B8' if float(v) == _dvo_max else _STORY_BASE
+                                  for v in _dvo_plot['รวม']],
+                    marker_line_width=0, textposition='outside', cliponaxis=False,
+                    hovertemplate='<b>%{y}</b><br>%{x} เคส<extra></extra>')
+                fig_aft_div.update_layout(
+                    margin=dict(t=6, b=10, l=10, r=40),
+                    height=max(120, 40 + 34 * len(_dvo_plot)),
+                    xaxis=dict(range=[0, _dvo_max * 1.15]),
+                    yaxis=dict(tickfont=dict(size=13)))
+                _story_axes(fig_aft_div, horizontal=True)
+                st.plotly_chart(fig_aft_div, use_container_width=True,
+                                config={'displayModeBar': False})
             with st.expander("ดูตารางแยกปีงบประมาณและหัตถการที่ทำบ่อย", expanded=False):
                 st.markdown(
                     '<div style="overflow-x:auto;background:#fff;border-radius:8px;padding:4px 6px;">'
