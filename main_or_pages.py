@@ -2037,6 +2037,7 @@ def _render_tryout_intro():
 
 
 # 🎬 21 พ.ย. 2026 (มุกกี้สั่ง): วิดีโอสาธิตการใช้ 4 ขั้นแบบ pixel art
+#    24 พ.ย. 2026 (มุกกี้สั่ง): เปลี่ยนไฟล์เป็นรุ่นฉากห้องรับ-ส่ง (ไฟล์ชื่อเดิม เขียนทับ)
 #    ตัวละครและการ์ดเป็นของสมมุติทั้งหมด ไม่มีข้อมูลผู้ป่วยจริง (เข้า git ได้)
 #    วางไว้ 2 จุด : แท็บ วิธีใช้บอร์ด และหน้าบอร์ดว่างของระบบจริง
 _DEMO_VIDEO = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
@@ -2050,7 +2051,7 @@ def _render_demo_video(caption=True):
     try:
         st.video(_DEMO_VIDEO)
         if caption:
-            st.caption("วิดีโอสาธิตการใช้ OR Flow ใน 4 ขั้น : 30 วินาที")
+            st.caption("วิดีโอสาธิตการใช้ OR Flow ใน 4 ขั้น : 24 วินาที")
     except Exception as _ex:
         print(f"[demo_video] แสดงไม่ได้ (ข้าม): {_ex}")
 
