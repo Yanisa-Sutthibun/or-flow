@@ -3957,15 +3957,37 @@ def _hist_sec_night(date_from, date_to, data=None):
             st.markdown(
                 '<div class="sub-title">🏥 เคสนอกเวลาแยกสาขา '
                 '<span style="font-size:18px;color:#999;font-weight:400;">'
-                f'({_n_div} สาขา · นับตามปีงบประมาณ เริ่ม 1 ต.ค.)</span></div>',
+                f'({_n_div} สาขา)</span></div>',
                 unsafe_allow_html=True)
-            st.markdown(
-                '<div style="overflow-x:auto;background:#fff;border-radius:8px;padding:4px 6px;">'
-                f'<table style="width:100%;border-collapse:collapse;"><thead><tr>{_hdr}</tr></thead>'
-                f'<tbody>{_body}</tbody></table></div>', unsafe_allow_html=True)
-            st.caption("📌 นอกเวลา = set เป็น elective ตั้งแต่ 15:30 น. แล้วเข้าห้องหลัง 15:30 น. "
-                       "หรือมีคำว่า \"นอกเวลา\" ใน diagnosis / procedure / procedure note · "
-                       "ปีงบแรกและปีงบล่าสุดอาจมีข้อมูลไม่เต็มปีตามช่วงวันที่ที่เลือก")
+            # 📊 24 พ.ย. 2026 (มุกกี้สั่ง): ลำดับหัวข้อ = การ์ด → กราฟสาขา → เฉลี่ยตามวัน → รายเคส
+            #    กราฟแท่งแนวนอน เรียงมากไปน้อย อันดับ 1 สีฟ้า (หลัก graph-storytelling) · ตารางปีงบพับไว้ใต้กราฟ
+            _dvb = _pv[_pv['รวม'] > 0].reset_index()[['div', 'รวม']].sort_values('รวม')
+            _dvb['label'] = _dvb['div'].str.replace('ศัลยกรรม', '', regex=False).str.strip()
+            _dvb.loc[_dvb['label'] == '', 'label'] = _dvb['div']
+            _top_dv = _dvb.iloc[-1]
+            _top_dv_pct = round(float(_top_dv['รวม']) / max(int(_dvb['รวม'].sum()), 1) * 100)
+            _story_head(f"สาขา{_top_dv['label']}ทำเคสนอกเวลามากที่สุด "
+                        f"{int(_top_dv['รวม']):,} เคส ({_top_dv_pct}% ของทั้งหมด)")
+            fig_aft_div = px.bar(_dvb, x='รวม', y='label', orientation='h', text='รวม',
+                                 labels={'รวม': 'จำนวนเคสนอกเวลา', 'label': ''})
+            fig_aft_div.update_traces(
+                hovertemplate='<b>%{y}</b><br>%{x} เคส<extra></extra>')
+            fig_aft_div.update_layout(
+                margin=dict(t=10, b=10, l=10, r=40),
+                height=max(190, 70 + 34 * len(_dvb)),
+                xaxis=dict(range=[0, float(_dvb['รวม'].max()) * 1.15]),
+                yaxis=dict(tickfont=dict(size=13)))
+            _story_bars(fig_aft_div, _dvb['รวม'], _STORY_TOP, horizontal=True)
+            st.plotly_chart(fig_aft_div, use_container_width=True,
+                            config={'displayModeBar': False})
+            with st.expander("ดูตารางแยกปีงบประมาณและหัตถการที่ทำบ่อย", expanded=False):
+                st.markdown(
+                    '<div style="overflow-x:auto;background:#fff;border-radius:8px;padding:4px 6px;">'
+                    f'<table style="width:100%;border-collapse:collapse;"><thead><tr>{_hdr}</tr></thead>'
+                    f'<tbody>{_body}</tbody></table></div>', unsafe_allow_html=True)
+                st.caption("📌 นอกเวลา = set เป็น elective ตั้งแต่ 15:30 น. แล้วเข้าห้องหลัง 15:30 น. "
+                           "หรือมีคำว่า \"นอกเวลา\" ใน diagnosis / procedure / procedure note · "
+                           "ปีงบแรกและปีงบล่าสุดอาจมีข้อมูลไม่เต็มปีตามช่วงวันที่ที่เลือก")
         except Exception as _e_dv:
             st.caption(f"สรุปเคสนอกเวลาแยกสาขาไม่สำเร็จ: {_e_dv}")
         st.markdown("")
