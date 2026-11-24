@@ -146,7 +146,7 @@ def _story_head(text: str):
         unsafe_allow_html=True)
 
 
-def _story_split(big, title, sub, right_title, rows, top_color=None):
+def _story_split(big, title, sub, right_title, rows, top_color=None, max_w=520):
     """🎨 24 พ.ย. 2026 (มุกกี้เลือกแบบนี้กับเคสนอกเวลา แล้วสั่งออกแบบสถิติรับเวรใหม่):
     บล็อกเล่าเรื่องแบบ ซ้าย = ตัวเลขใหญ่ 1 ตัว + คำอธิบาย · ขวา = แท่งบาง ๆ ไม่ยืดเต็มจอ
     rows = [(ชื่อ, ค่า, เป็นแท่งเด่นไหม)] เรียงตามลำดับที่อยากให้เห็นจากบนลงล่าง
@@ -167,14 +167,14 @@ def _story_split(big, title, sub, right_title, rows, top_color=None):
             f'<span style="font-size:16px;color:{"#1e293b" if _top else "#475569"};'
             f'font-weight:{700 if _top else 400};">{_fmt(_v)}</span></div>')
     _right = (
-        '<div style="flex:1 1 320px;max-width:520px;border-left:1px solid #e2e8f0;padding-left:28px;">'
+        f'<div style="flex:1 1 320px;max-width:{int(max_w)}px;border-left:1px solid #e2e8f0;padding-left:28px;">'
         f'<div style="font-size:16px;color:#64748b;margin-bottom:10px;">{html.escape(right_title)}</div>'
         '<div style="display:grid;grid-template-columns:max-content 1fr;gap:8px 12px;'
         f'align-items:center;">{_r}</div></div>') if rows else ''
     st.markdown(
         '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:28px;background:#fff;'
         'border-radius:8px;padding:20px 24px;margin:6px 0 10px;">'
-        '<div style="flex:0 0 auto;min-width:230px;">'
+        '<div style="flex:0 0 auto;min-width:230px;max-width:320px;">'
         f'<div style="font-size:56px;font-weight:700;line-height:1;color:{_STORY_TOP};">'
         f'{html.escape(str(big))}</div>'
         f'<div style="font-size:20px;font-weight:600;color:#1e293b;margin-top:8px;">{html.escape(title)}</div>'
@@ -2636,33 +2636,37 @@ def _hist_sec_overview(date_from, date_to, data=None):
         # ⚡ 26 ก.ค. 2026: HIS จำแนกแค่ elective/emergency (ตรวจข้อมูลจริงแล้ว —
         #    urgency ถูกคีย์รวมเป็น emergency ที่ต้นทาง) → การ์ด Urgent แสดง
         #    เฉพาะเมื่อมีค่าจริง (ถ้าวันหน้า HIS ส่ง urgent มา การ์ดโผล่เอง)
-        _urg_cols = st.columns(3 if n_urg > 0 else 2)
-        with _urg_cols[0]:
-            st.markdown(
-                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
-                f'<div style="font-size:18px;color:#666;margin-bottom:4px;">📋 Elective</div>'
-                f'<div style="font-size:28px;font-weight:500;line-height:1.1;margin-bottom:8px;">{n_elec}</div>'
-                f'<div style="font-size:18px;color:#888;display:flex;gap:10px;">'
-                f'<span>นัดหมาย <b style="color:#444;font-weight:500;">{n_elec_set}</b></span>'
-                f'<span style="color:#ccc;">|</span>'
-                f'<span>Walk-in <b style="color:#444;font-weight:500;">{n_elec_walkin}</b></span>'
-                f'</div></div>',
-                unsafe_allow_html=True)
+        # 🎨 24 พ.ย. 2026 (มุกกี้สั่ง): การ์ด 2-3 ใบ → แถบสัดส่วนแถบเดียว (เรื่องสัดส่วน ดูปราดเดียวรู้)
+        #    Elective สีฟ้า · Urgent/Emergency เทา 2 ระดับ · Urgent แสดงเฉพาะเมื่อมีค่าจริง (เหตุผลเดิมข้างบน)
+        _urg_parts = [('Elective', n_elec, _STORY_TOP,
+                       f'นัดหมาย {n_elec_set:,} · Walk-in {n_elec_walkin:,}')]
         if n_urg > 0:
-            with _urg_cols[1]:
-                st.markdown(
-                    f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
-                    f'<div style="font-size:18px;color:#666;margin-bottom:4px;">⚡ Urgent</div>'
-                    f'<div style="font-size:28px;font-weight:500;line-height:1.1;">{n_urg}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True)
-        with _urg_cols[-1]:
-            st.markdown(
-                f'<div style="background:#f5f5f5;border-radius:8px;padding:14px 16px;">'
-                f'<div style="font-size:18px;color:#666;margin-bottom:4px;">🚨 Emergency</div>'
-                f'<div style="font-size:28px;font-weight:500;line-height:1.1;">{n_emer}</div>'
-                f'</div>',
-                unsafe_allow_html=True)
+            _urg_parts.append(('Urgent', n_urg, '#94A3B8', ''))
+        _urg_parts.append(('Emergency', n_emer, '#475569', ''))
+        _urg_tot = max(n_elec + n_urg + n_emer, 1)
+        _seg = ''.join(
+            f'<div style="flex:{max(_n, 0)} 1 0;min-width:{4 if _n > 0 else 0}px;background:{_c};"></div>'
+            for _, _n, _c, _ in _urg_parts)
+        _leg = ''.join(
+            '<div style="display:flex;align-items:baseline;gap:8px;">'
+            f'<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:{_c};'
+            'flex:0 0 auto;"></span>'
+            f'<span style="font-size:17px;color:#1e293b;font-weight:600;">{_nm} {_n:,}</span>'
+            f'<span style="font-size:15px;color:#64748b;">{round(_n / _urg_tot * 100, 1)}%'
+            f'{(" · " + _sub) if _sub else ""}</span></div>'
+            for _nm, _n, _c, _sub in _urg_parts)
+        st.markdown(
+            '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:28px;background:#fff;'
+            'border-radius:8px;padding:20px 24px;margin:6px 0 10px;">'
+            '<div style="flex:0 0 auto;min-width:230px;">'
+            f'<div style="font-size:56px;font-weight:700;line-height:1;color:{_STORY_TOP};">'
+            f'{round(n_elec / _urg_tot * 100)}%</div>'
+            '<div style="font-size:20px;font-weight:600;color:#1e293b;margin-top:8px;">เป็นเคส Elective</div>'
+            f'<div style="font-size:16px;color:#64748b;margin-top:2px;">{n_elec:,} จาก {_urg_tot:,} เคส</div></div>'
+            '<div style="flex:1 1 320px;max-width:620px;border-left:1px solid #e2e8f0;padding-left:28px;">'
+            f'<div style="display:flex;height:18px;gap:2px;border-radius:4px;overflow:hidden;">{_seg}</div>'
+            f'<div style="display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:14px;">{_leg}</div>'
+            '</div></div>', unsafe_allow_html=True)
         if n_other > 0:
             st.caption(f"⚠️ มี {n_other} เคสที่ op_type เป็นค่าอื่น "
                        f"(re-upload schedule.xls เพื่ออัปเดต)")
@@ -3077,32 +3081,15 @@ def _hist_sec_trend(date_from, date_to, data=None):
         _dow_avg_s['color_flag'] = _dow_avg_s['n'].apply(
             lambda v: 'peak' if v == _max_dow_s and v > 0 else 'normal')
 
-        fig_dow_s = px.bar(_dow_avg_s, x='n', y='day_name', orientation='h', text='n',
-                           color='color_flag',
-                           color_discrete_map={
-                               'peak': _STORY_TOP, 'normal': _STORY_BASE},
-                           labels={'day_name': '', 'n': 'เคสเฉลี่ย/วัน'})
-        fig_dow_s.update_traces(
-            textposition='outside', cliponaxis=False,
-            hovertemplate='<b>%{y}</b><br>เฉลี่ย %{x} เคส/วัน<extra></extra>')
-        _y_max_dow_s = max(float(_dow_avg_s['n'].max()), 1.0)
-        fig_dow_s.update_layout(
-            margin=dict(t=10, b=10, l=10, r=40), height=290,
-            xaxis=dict(range=[0, _y_max_dow_s * 1.15]),
-        )
-        _story_axes(fig_dow_s, horizontal=True, cats=_THAI_DAY_S)
-        st.plotly_chart(fig_dow_s, use_container_width=True)
-        _min_dow_s = _dow_avg_s[(_dow_avg_s['n'] > 0)
-                                & ((_dow_avg_s['dow'] <= 4) if _demo_trend else True)]['n'].min()
-        if _min_dow_s > 0:
-            _pct_heavier_s = round((_max_dow_s / _min_dow_s - 1) * 100)
-            st.markdown(
-                f'<div style="background:#ffebee;border-left:3px solid #c62828;'
-                f'padding:10px 14px;border-radius:0 6px 6px 0;'
-                f'font-size:18px;color:#b71c1c;margin-top:6px;">'
-                f'<b>วัน{_max_dow_name_s}</b> หนักสุด เฉลี่ย {_max_dow_s} เคส/วัน · '
-                f'หนักกว่าวันที่น้อยที่สุด {_pct_heavier_s}%</div>',
-                unsafe_allow_html=True)
+        # 🎨 24 พ.ย. 2026 (มุกกี้สั่งปรับกราฟที่เหลือให้เป็นชุดเดียวกัน): ตัวเลขใหญ่ซ้าย แท่งบางขวา
+        #    กล่องแดง "หนักกว่าวันที่น้อยที่สุด ...%" เอาออก (ตัวเลขใหญ่บอกเรื่องเดียวกันแล้ว)
+        if _max_dow_s > 0:
+            _story_split(
+                (f'{int(_max_dow_s)}' if float(_max_dow_s).is_integer() else f'{float(_max_dow_s):.1f}'),
+                f'เคสต่อวัน ในวัน{_max_dow_name_s}', 'วันที่งานหนักที่สุด',
+                'เฉลี่ยเคสต่อวัน แยกตามวันในสัปดาห์',
+                [(r['day_name'], float(r['n']), r['color_flag'] == 'peak')
+                 for _, r in _dow_avg_s.iterrows()])
 
     # ⏰ 15 พ.ย. 2026 (มุกกี้สั่ง · DEMO): heatmap อ่านยาก → แท่งรายชั่วโมง 3 ระดับ
     #    ต่อจากกราฟวันในสัปดาห์ · production ยังเป็น heatmap เดิม
@@ -3266,19 +3253,8 @@ def _hist_sec_rank(date_from, date_to, data=None):
     # 4️⃣  🏆 อันดับยอดนิยม — สาขา + Top หัตถการ + Top แพทย์
     # ════════════════════════════════════════════════════════════════
     # Header + Toggle V/H ขวาบน (default = แนวนอน : มุกกี้สั่ง 19 พ.ย. 2026 ชื่อสาขายาว อ่านง่ายกว่า)
-    _hdr_l, _hdr_r = st.columns([3, 1])
-    with _hdr_l:
-        st.markdown('<div id="sec-rank" class="group-header orange">🏆 อันดับยอดนิยม</div>',
-                    unsafe_allow_html=True)
-    with _hdr_r:
-        st.markdown('<div style="height:24px;"></div>', unsafe_allow_html=True)
-        _bar_orient = st.radio(
-            "ทิศทางกราฟ",
-            options=['แนวตั้ง', 'แนวนอน'], index=1,
-            horizontal=True, label_visibility='collapsed',
-            key='ranking_bar_orient',
-        )
-    _is_v = (_bar_orient == 'แนวตั้ง')
+    st.markdown('<div id="sec-rank" class="group-header orange">🏆 อันดับยอดนิยม</div>',
+                unsafe_allow_html=True)
 
     # Helper: ย่อชื่อสาขา (ตัด "ศัลยกรรม" ออก)
     def _short_div(name):
@@ -3294,42 +3270,16 @@ def _hist_sec_rank(date_from, date_to, data=None):
         _div_show = div_df.head(8).copy()
         _div_show['division_short'] = _div_show['division_name'].apply(_short_div)
         _div_total = int(div_df['n'].sum())
+        # 🎨 24 พ.ย. 2026 (มุกกี้สั่ง): บล็อกตัวเลขใหญ่ + แท่งบาง แทนแท่ง plotly เต็มจอ
+        #    ปุ่มสลับแนวตั้ง/แนวนอนเอาออก เพราะบล็อกนี้มีแบบเดียว
         if _div_total > 0:
-            _story_head(
-                f"สาขา{_div_show['division_short'].iloc[0]}ผ่าตัดมากที่สุด "
-                f"{int(_div_show['n'].iloc[0]):,} เคส")  # ร้อยละเอาออก (มุกกี้สั่ง 19 พ.ย. 2026 : อ่านแล้วงง)
-        if _is_v:
-            _y_max_div = max(int(_div_show['n'].max()) * 1.20, 5)
-            fig = px.bar(_div_show, x='division_short', y='n', text='n',
-                         labels={'n': 'จำนวนเคส', 'division_short': 'สาขา'},
-                         color_discrete_sequence=['#7e57c2'],
-                         hover_data={'division_name': True, 'division_short': False})
-            fig.update_traces(
-                textposition='outside',
-                hovertemplate='<b>%{customdata[0]}</b><br>%{y} เคส<extra></extra>')
-            fig.update_layout(
-                margin=dict(t=30, b=80, l=40, r=10), height=320,
-                xaxis=dict(tickangle=-30, title='สาขา'),
-                yaxis=dict(title='จำนวนเคส', range=[0, _y_max_div]),
-            )
-        else:
-            fig = px.bar(_div_show, x='n', y='division_short', orientation='h',
-                         text='n',
-                         labels={'n': 'จำนวนเคส', 'division_short': 'สาขา'},
-                         color_discrete_sequence=['#7e57c2'],
-                         hover_data={'division_name': True, 'division_short': False})
-            _x_max_div = max(int(_div_show['n'].max()) * 1.12, 5)
-            fig.update_traces(
-                textposition='outside',
-                hovertemplate='<b>%{customdata[0]}</b><br>%{x} เคส<extra></extra>')
-            fig.update_layout(
-                margin=dict(t=10, b=30, l=10, r=40),
-                height=max(140, 60 + len(_div_show) * 32),
-                yaxis=dict(autorange='reversed'),
-                xaxis=dict(range=[0, _x_max_div]),
-            )
-        _story_bars(fig, _div_show['n'], '#7e57c2', horizontal=not _is_v, keep_angle=_is_v)
-        st.plotly_chart(fig, use_container_width=True)
+            _story_split(
+                f"{int(_div_show['n'].iloc[0]):,}",
+                f"เคส สาขา{_div_show['division_short'].iloc[0]}",
+                f"ผ่าตัดมากที่สุด จากทั้งหมด {_div_total:,} เคส",
+                f"จำนวนเคส แยกตามสาขา ({len(_div_show)} อันดับแรก)",
+                [(r['division_short'], int(r['n']), i == 0)
+                 for i, (_, r) in enumerate(_div_show.iterrows())])
     else:
         st.caption("ยังไม่มีข้อมูลสาขา")
 
@@ -3379,27 +3329,15 @@ def _hist_sec_rank(date_from, date_to, data=None):
         else:
             _fz['label'] = _fz['_canon'].apply(
                 lambda x: (x[:45] + '…') if isinstance(x, str) and len(x) > 45 else x)
-            _x_max = max(int(_fz['n'].max()) * 1.12, 5)
-            fig = px.bar(_fz.iloc[::-1], x='n', y='label', orientation='h',
-                         text='n', labels={'n': 'จำนวนเคส', 'label': ''},
-                         color_discrete_sequence=['#1D9E75'])
-            fig.update_traces(textposition='outside', cliponaxis=False)
-            fig.update_layout(
-                margin=dict(t=10, b=20, l=10, r=40),
-                height=max(220, 60 + len(_fz) * 30),
-                xaxis=dict(range=[0, _x_max], gridcolor='#f0f0f0'),
-                yaxis=dict(tickfont=dict(size=12)),
-                plot_bgcolor='white',
-            )
-            _story_bars(fig, _fz.iloc[::-1]['n'], '#1D9E75', horizontal=True)
-            _story_head(f"หัตถการที่ทำบ่อยที่สุด : {_fz['label'].iloc[0]} "
-                        f"{int(_fz['n'].iloc[0]):,} เคส")
+            # 🎨 24 พ.ย. 2026 (มุกกี้สั่ง): บล็อกตัวเลขใหญ่ + แท่งบาง แทนแท่ง plotly เต็มจอ
             _scope_lbl = ('ทุกสาขา' if _sel_div == 'ทุกสาขา' else _sel_div)
-            st.caption(f"🔬 {_scope_lbl} · แสดง {len(_fz)} อันดับแรก · "
-                       f"รวม {int(_scope.shape[0]):,} เคส · "
-                       "จัดกลุ่มตามพจนานุกรมหัตถการมาตรฐาน")
-            st.plotly_chart(fig, use_container_width=True,
-                            config={'displayModeBar': False})
+            _story_split(
+                f"{int(_fz['n'].iloc[0]):,}", f"เคส {_fz['label'].iloc[0]}",
+                f"หัตถการที่ทำบ่อยที่สุด : {_scope_lbl}",
+                f"หัตถการที่ทำบ่อย {len(_fz)} อันดับแรก จาก {int(_scope.shape[0]):,} เคส",
+                [(r['label'], int(r['n']), i == 0) for i, (_, r) in enumerate(_fz.iterrows())],
+                max_w=760)
+            st.caption("จัดกลุ่มตามพจนานุกรมหัตถการมาตรฐาน")
 
         # ── ตารางชื่อดิบแยกสาขา + ดาวน์โหลด Excel (1 ชีต/สาขา) ──
         _raw = (_dfp.groupby(['_div', '_pname']).size()
