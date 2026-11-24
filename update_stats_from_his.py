@@ -265,7 +265,8 @@ def insert_cases(F, tset):
                 'an': an_v, 'estimated_time': est, 'procnote': note,
                 'requested_date': (HC.to_dmy(g(s, S['reqdate']), F['s_order'])
                                    if s is not None else ''),
-                'op_date': op_date, 'procedure_name': proc_plan, 'diagnosis': diag})
+                'op_date': op_date, 'procedure_name': proc_plan, 'diagnosis': diag,
+                'op_type': optype, 'in_or_at': in_ts})
             ai_min = _predict_for_case(proc_plan, surg or 'UNKNOWN', div or '75', optype, op_date,
                                        age=age_v, orroom=room, diagnosis=diag)
             # 🔒 procnote ใช้จัดประเภทเคสข้างบนเท่านั้น ไม่เก็บลงฐานข้อมูลบนคลาวด์

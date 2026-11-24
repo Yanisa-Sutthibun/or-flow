@@ -3567,8 +3567,9 @@ def _hist_sec_eff(date_from, date_to, data=None):
         st.markdown("""
 บอก **คุณภาพการให้บริการ** : ทีมทำงานเร็วแค่ไหน
 
-- **🔄 รับเวร** = เคสที่ทำหลัง 15:30 น. → ทีมต้องอยู่ OT
-  - เฉพาะ จ.-ศ. ไม่นับเคสนอกเวลา
+- **🔄 รับเวร** = เคสที่ทำมาตั้งแต่เช้า/บ่าย (เข้าห้องก่อน 15:30 น.) แล้วเสร็จไม่ทัน 15:30 น. → ทีมต้องอยู่ OT
+  - เฉพาะ จ.-ศ. ไม่นับเคสนอกเวลา และไม่นับเคสที่เริ่มหลัง 15:30 น. (เช่น emergency ตอนเย็น)
+- **🌙 นอกเวลา** = set เป็น elective เวลา 15:30 น. ผ่าหลัง 16:00 น. หรือมีคำว่า "นอกเวลา" ใน diagnosis / procedure / procedure note
 - **🔄 Turnover Time** = ช่วงพักห้องระหว่างเคส (เคสก่อนออก → เคสถัดไปเข้า)
   - เป้า: **≤15 นาที** (ยิ่งสั้น = ใช้ห้องคุ้ม)
 """)
@@ -3627,7 +3628,7 @@ def _hist_sec_eff(date_from, date_to, data=None):
             st.metric("จากทั้งหมด", f"{ho['total']} เคส")
         with m3:
             st.metric("สัดส่วน", f"{ho['pct']}%")
-        st.caption("📌 เฉพาะวันธรรมดา (จันทร์-ศุกร์) · ไม่นับเคสนอกเวลา")
+        st.caption("📌 เฉพาะวันธรรมดา (จันทร์-ศุกร์) · เข้าห้องก่อน 15:30 น. · ไม่นับเคสนอกเวลา")
 
         # 🅰️ Day-of-Week bar
         hc = ho.get('handover_cases')
@@ -3748,7 +3749,7 @@ def _hist_sec_eff(date_from, date_to, data=None):
     # 🚚 22 พ.ย. 2026 (มุคกี้สั่ง): ย้ายบล็อกนี้มาจากหมวดเคสนอกเวลา ให้อยู่กับสถิติรับเวร
     # ⏱️ เคสรับเวร (ผ่าตัดจบหลัง 15:30 · ไม่นับนอกเวลา) — เวลาจาก intraop
     # ════════════════════════════════════════════════════════════════
-    st.markdown('<div class="sub-title">⏱️ เคสรับเวร (ผ่าตัดจบหลัง 15:30 น. · ไม่นับเป็นนอกเวลา)</div>',
+    st.markdown('<div class="sub-title">⏱️ เคสรับเวร (เข้าห้องก่อน 15:30 น. แล้วผ่าตัดจบหลัง 15:30 น. · เฉพาะ จ.-ศ.)</div>',
                 unsafe_allow_html=True)
     try:
         from main_or_db import get_conn as _gc_ho
@@ -3766,6 +3767,10 @@ def _hist_sec_eff(date_from, date_to, data=None):
             f"in_or_at, op_end_at, discharged_at "
             f"FROM cases WHERE {_ho_where} AND op_end_at IS NOT NULL "
             f"AND (patient_type IS NULL OR patient_type != 'นอกเวลา') "
+            # 🌙 24 พ.ย. 2026 (มุกกี้นิยาม): รับเวร = เข้าห้องก่อน 15:30 แล้วเสร็จหลัง 15:30 · วันธรรมดาเท่านั้น
+            #    เคสที่เริ่มเย็น (emergency on call) และวันเสาร์-อาทิตย์ไม่ใช่รับเวร (เกณฑ์เดียวกับ get_handover_stats)
+            f"AND CAST(strftime('%w', op_date) AS INTEGER) BETWEEN 1 AND 5 "
+            f"AND (in_or_at IS NULL OR LENGTH(in_or_at) < 16 OR SUBSTR(in_or_at, 12, 5) < '15:30') "
             f"AND CAST(strftime('%H%M', op_end_at) AS INTEGER) > 1530 "
             f"ORDER BY op_date DESC, op_end_at DESC", _conn_ho, params=_ho_params)
         _conn_ho.close()

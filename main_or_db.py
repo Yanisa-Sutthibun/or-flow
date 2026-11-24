@@ -1057,23 +1057,26 @@ def _auto_import_historical():
 
 
 def _reclassify_patient_type(conn):
-    """Re-run patient_type classification on all cases using current logic."""
-    rows = conn.execute(
-        "SELECT case_id, is_ipd, estimated_time, procnote FROM cases"
-    ).fetchall()
+    """Re-run patient_type classification on all cases using current logic.
+    🌙 24 พ.ย. 2026 : ใช้ is_after_hours_case ตัวเดียวกับตอนนำเข้า · procnote ไม่ถูกเก็บแล้ว (PDPA)
+    เคสที่เคยเป็นนอกเวลาจากคำใน procnote จึงคงไว้ ไม่ล้างกลับเป็น OPD/IPD"""
+    _cols = {r[1] for r in conn.execute("PRAGMA table_info(cases)").fetchall()}
+    _sel = ['case_id', 'is_ipd', 'estimated_time', 'procnote', 'patient_type']
+    _sel += [c for c in ('op_type', 'in_or_at', 'procedure_name', 'diagnosis') if c in _cols]
+    rows = conn.execute(f"SELECT {', '.join(_sel)} FROM cases").fetchall()
     for r in rows:
-        cid = r[0]
-        is_ipd = int(r[1] or 0)
-        est = str(r[2] or '').strip()
-        note = str(r[3] or '').strip()
-
-        if is_ipd:
-            pt = 'IPD'
-        elif _is_after_hours(est) or 'นอกเวลา' in note:
+        d = dict(zip(_sel, r))
+        note = str(d.get('procnote') or '').strip()
+        txt = ' '.join((note, str(d.get('procedure_name') or ''), str(d.get('diagnosis') or '')))
+        if (is_after_hours_case(d.get('estimated_time'), txt, d.get('op_type'), d.get('in_or_at'))
+                or (not note and d.get('patient_type') == 'นอกเวลา')):
             pt = 'นอกเวลา'
+        elif int(d.get('is_ipd') or 0):
+            pt = 'IPD'
         else:
             pt = 'OPD'
-        conn.execute("UPDATE cases SET patient_type=? WHERE case_id=?", (pt, cid))
+        if pt != d.get('patient_type'):
+            conn.execute("UPDATE cases SET patient_type=? WHERE case_id=?", (pt, d['case_id']))
     conn.commit()
 
 
@@ -1242,51 +1245,84 @@ def classify_case(row: dict) -> dict:
     an = str(row.get('an', '') or '').strip()
     est_time = str(row.get('estimated_time', '') or row.get('estmtime', '') or row.get('esttime', '') or '').strip()
     procnote = str(row.get('procnote', '') or '').strip()
-    # \u0e19\u0e2d\u0e01\u0e40\u0e27\u0e25\u0e32: \u0e14\u0e39\u0e04\u0e33\u0e27\u0e48\u0e32 "\u0e19\u0e2d\u0e01\u0e40\u0e27\u0e25\u0e32" \u0e17\u0e31\u0e49\u0e07\u0e43\u0e19 procnote + \u0e2b\u0e31\u0e15\u0e16\u0e01\u0e32\u0e23 (ICD-9) + \u0e27\u0e34\u0e19\u0e34\u0e08\u0e09\u0e31\u0e22 (ICD-10)
+    # นอกเวลา: ดูคำว่า "นอกเวลา" ทั้งใน procnote + หัตถการ (ICD-9) + วินิจฉัย (ICD-10)
     _after_txt = ' '.join((
         procnote,
         str(row.get('procedure_name', '') or ''),
         str(row.get('diagnosis', '') or ''),
     ))
 
-    if an and an.upper() not in ('', 'NAN', 'NONE', '-'):
+    # 🌙 24 พ.ย. 2026 (มุกกี้แจ้ง: เคสนอกเวลาปนกับเคสรับเวร): นอกเวลาตรวจก่อน IPD
+    #    เดิม IPD มาก่อน = ผู้ป่วยในที่มาผ่านอกเวลาถูกจัดเป็น IPD แล้วไปโผล่ในสถิติรับเวร
+    #    (ข้อมูลปี 68-69 : 96 เคส) · ผู้ป่วยในหรือไม่ดูจากคอลัมน์ is_ipd ได้เสมอ
+    if is_after_hours_case(est_time, _after_txt, row.get('op_type'), row.get('in_or_at')):
+        result['patient_type'] = 'นอกเวลา'
+    elif an and an.upper() not in ('', 'NAN', 'NONE', '-'):
         result['patient_type'] = 'IPD'
-    elif _is_after_hours(est_time) or '\u0e19\u0e2d\u0e01\u0e40\u0e27\u0e25\u0e32' in _after_txt:
-        result['patient_type'] = '\u0e19\u0e2d\u0e01\u0e40\u0e27\u0e25\u0e32'
     else:
         result['patient_type'] = 'OPD'
 
     return result
 
 
-def _is_after_hours(est_time: str) -> bool:
-    """Check if estimated time is after-hours (>= 16:00).
-    Handles formats: HH:MM, HH.MM, HHMMSS (e.g. 133000), HHMM."""
-    if not est_time:
-        return False
+def _hm_min(v):
+    """เวลาในรูปแบบที่ HIS/ระบบใช้ → นาทีหลังเที่ยงคืน · อ่านไม่ออกคืน None
+    รองรับ HH:MM, HH.MM, HH:MM:SS, HHMMSS (133000 / 80000), HHMM และ 'YYYY-MM-DD HH:MM:SS'"""
+    t = str(v or '').strip()
+    if not t or t.upper() in ('NAN', 'NONE', '-'):
+        return None
+    if len(t) >= 16 and t[4] == '-' and t[10] in ' T':
+        t = t[11:16]
+    if t.endswith('.0'):
+        t = t[:-2]
     try:
-        t = str(est_time).strip()
-        # Remove .0 suffix from float-like strings
-        if t.endswith('.0'):
-            t = t[:-2]
-        # Format: HHMMSS (6 digits) or HHMM (4 digits) — no separator
-        if t.isdigit() and len(t) >= 4:
-            h = int(t[:2]) if len(t) >= 5 else int(t[:1])
-            # 6-digit: 133000 → HH=13, 80000 → need to handle
-            if len(t) == 6:
-                h = int(t[:2])
-            elif len(t) == 5:
-                # e.g. 80000 → 08:00:00 (leading zero dropped)
-                h = int(t[:1])
-            elif len(t) == 4:
-                h = int(t[:2])
-            return h >= 16
-        # Format with separator: HH:MM or HH.MM
-        t = t.replace('.', ':')
-        h = int(t.split(':')[0])
-        return h >= 16
-    except:
+        if t.isdigit():
+            if len(t) in (5, 6):
+                t = t.zfill(6)
+                h, m = int(t[:2]), int(t[2:4])
+            elif len(t) in (3, 4):
+                t = t.zfill(4)
+                h, m = int(t[:2]), int(t[2:])
+            else:
+                h, m = int(t), 0
+        else:
+            parts = t.replace('.', ':').split(':')
+            h, m = int(parts[0]), int(parts[1]) if len(parts) > 1 and parts[1] else 0
+    except (ValueError, IndexError):
+        return None
+    return h * 60 + m if (0 <= h <= 23 and 0 <= m <= 59) else None
+
+
+# 🌙 24 พ.ย. 2026 (มุกกี้นิยาม): เคสนอกเวลา = set เป็น elective เวลา 15:30 ผ่าหลัง 16:00
+#    และมีคำว่า "นอกเวลา" ที่ diagnosis / procedure / procedure note ที่ใดที่หนึ่ง
+#    · HIS เก็บเวลานัด 15:30 เป็น 15:25 จึงเริ่มนับที่ 15:25 · 23:50 ขึ้นไป = เคส TF ไม่ใช่เวลานัดจริง
+#    · ตรวจกับข้อมูลปี 68-69 : เคส elective นัดตั้งแต่ 15:30 ที่ไม่มีคำว่านอกเวลา 197 เคส เข้าห้องหลัง 16:00 ถึง 193 เคส
+_AFTER_FROM_MIN = 15 * 60 + 25
+_TF_FROM_MIN = 23 * 60 + 50
+_SHIFT_END_MIN = 15 * 60 + 30      # สิ้นเวลาราชการของห้องผ่าตัด : เส้นแบ่งเคสรับเวร
+
+
+def is_after_hours_case(est_time='', text='', op_type=None, in_or_at=None) -> bool:
+    """เคสนอกเวลาหรือไม่ (นิยามเดียวของทั้งระบบ ใช้ทั้งตอนนำเข้าและจัดประเภทใหม่)
+    1. มีคำว่า "นอกเวลา" ใน text (procnote + หัตถการ + วินิจฉัย) → นอกเวลาเสมอ
+    2. ไม่มีคำ : เวลานัดตั้งแต่ 15:30 (ไม่ใช่ TF) และไม่ใช่ emergency
+       ถ้ารู้เวลาเข้าห้องแล้ว ต้องเข้าห้องตั้งแต่ 15:30 (เข้าก่อนนั้น = ผ่าในเวลา ถูกเลื่อนขึ้นมา)
+       emergency ที่ทำตอนเย็น = เวร on call ไม่ใช่เคสนอกเวลา"""
+    if 'นอกเวลา' in str(text or ''):
+        return True
+    if str(op_type or '').strip().lower() == 'emergency':
         return False
+    sm = _hm_min(est_time)
+    if sm is None or not (_AFTER_FROM_MIN <= sm < _TF_FROM_MIN):
+        return False
+    im = _hm_min(in_or_at)
+    return im is None or im >= _SHIFT_END_MIN
+
+
+def _is_after_hours(est_time: str) -> bool:
+    """เวลานัดเข้าเกณฑ์นอกเวลาหรือไม่ (ตั้งแต่ 15:30 ไม่ใช่ TF) · เดิมตัดที่ 16:00
+    🌙 24 พ.ย. 2026 : ใช้นิยามเดียวกับ is_after_hours_case"""
+    return is_after_hours_case(est_time)
 
 
 def auto_assign_room(procedure_name: str) -> int:
@@ -1629,6 +1665,7 @@ def import_history_6467(progress_cb=None):
                 'an': an_v or '', 'estimated_time': est, 'procnote': note,
                 'requested_date': _s(r.get('reqdate')), 'op_date': op_date,
                 'procedure_name': proc, 'diagnosis': diag,
+                'op_type': optype, 'in_or_at': in_ts,
             })
             ai_min = _predict_for_case(proc, surg, div or '75', optype,
                                        op_date, age=age_v, orroom=room,
@@ -3625,17 +3662,23 @@ def get_nurse_skill_map(date_from: str = None, date_to: str = None,
 
 
 def get_handover_stats(date_from: str = None, date_to: str = None) -> dict:
-    """สถิติรับเวร — เคสที่ผ่าตัดเสร็จหลัง 15:30 น. เฉพาะวันธรรมดา (จ.-ศ.)
+    """สถิติรับเวร — เคสที่ทำมาตั้งแต่เช้า/บ่าย แล้วเสร็จไม่ทัน 15:30 น. เฉพาะวันธรรมดา (จ.-ศ.)
 
     - ไม่นับเคสนอกเวลา (เคสนอกเวลา = คนละหมวด)
     - ไม่นับวันเสาร์-อาทิตย์ (ราชการไม่ได้ทำงาน)
+    - 🌙 24 พ.ย. 2026 (มุกกี้นิยาม): ต้องเข้าห้องก่อน 15:30 · เคสที่เริ่มหลัง 15:30 ที่ไม่ใช่นอกเวลา
+      (ส่วนใหญ่ emergency ตอนเย็น = เวร on call) ไม่ใช่เคสรับเวร · เดิมนับรวม ทำให้ตัวเลขรับเวรเกินจริง
+      (ข้อมูลวันธรรมดาปี 68-69 : เดิม 1,329 เคส ตามนิยามนี้ราว 585 เคส)
+    - ตัวหาร (total) = เคสวันธรรมดาที่เข้าห้องก่อน 15:30 และไม่ใช่นอกเวลา
     - คำนวณ overtime_hours = ชั่วโมงเลย 15:30 น.
     """
     conn = get_conn()
     where_parts = [
-        "patient_type != 'นอกเวลา'",
+        "(patient_type IS NULL OR patient_type != 'นอกเวลา')",
         # SQLite strftime('%w', d): Sun=0, Mon=1, ..., Sat=6
-        "CAST(strftime('%w', op_date) AS INTEGER) BETWEEN 1 AND 5"
+        "CAST(strftime('%w', op_date) AS INTEGER) BETWEEN 1 AND 5",
+        # เข้าห้องก่อน 15:30 (ไม่รู้เวลาเข้าห้อง = นับไว้ก่อน แบบเดิม)
+        "(in_or_at IS NULL OR LENGTH(in_or_at) < 16 OR SUBSTR(in_or_at, 12, 5) < '15:30')",
     ]
     params = []
     if date_from:
