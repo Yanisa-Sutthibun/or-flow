@@ -326,9 +326,7 @@ def render_screen_links(room_info: dict):
         f'<span style="font-size:22px;font-weight:700;color:#0f172a;">🔗 ลิงก์ติดตั้งจอ</span>'
         f'<span style="background:{_sys_bg};color:{_sys_fg};border-radius:999px;'
         f'padding:5px 16px;font-size:var(--fs-meta);font-weight:700;">{_sys}</span></div>'
-        f'<div style="color:#64748b;font-size:var(--fs-meta);margin:6px 0 14px;">'
-        f'คัดลอกลิงก์ไปสร้าง shortcut บนเครื่องของห้องนั้นครั้งเดียวจบ '
-        f'· อย่าแชร์ลิงก์ข้ามห้อง</div>',
+        f'<div style="margin:0 0 14px;"></div>',
         unsafe_allow_html=True)
 
     _base = _app_base_url()
