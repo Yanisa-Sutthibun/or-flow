@@ -109,16 +109,20 @@ def render_research_upload():
     st.caption("ใช้ทุกเช้า : export ไฟล์ของวันก่อนหน้าแบบเต็มวันจาก HIS แล้วอัปโหลดที่นี่ที่เดียว "
                "ระบบเติมเวลาผ่าตัดจริงลงข้อมูลวิจัย ติดป้ายเลื่อน/ยกเลิกให้เคสที่ไม่พบใน intraop "
                "และเพิ่มเคสของวันนั้นเข้าฐานสถิติ")
+    # ✅ 25 พ.ย. 2026 (มุกกี้แจ้ง): กดบันทึกแล้วไม่รู้ว่าบันทึกหรือยัง
+    #    → ผลการบันทึกล่าสุดค้างเป็นแถบเขียวบนสุดของกล่อง (เดิมอยู่ใต้ปุ่ม เลื่อนจอไม่ถึงก็ไม่เห็น)
+    _last = st.session_state.get('_rs_last')
+    if _last:
+        st.success(f"✅ {_last.get('msg', 'บันทึกแล้ว')}"
+                   + (f" (เมื่อ {_last['at']} น.)" if _last.get('at') else ''))
+        with st.expander("รายละเอียดการบันทึกล่าสุด"):
+            st.code(_last.get('report', ''), language=None)
     c1, c2 = st.columns(2)
     intra = c1.file_uploader("① ไฟล์ intraop (.csv / .xls / .xlsx)", type=["csv", "xls", "xlsx"],
                              key="rs_intra")
     sched = c2.file_uploader("② ไฟล์ตารางผ่าตัดของวันเดียวกัน (.csv)", type=["csv"], key="rs_sched",
                              help="ใช้เติมฐานสถิติ ถ้าไม่ใส่ ระบบจะทำเฉพาะส่วนข้อมูลวิจัย")
     if intra is None:
-        _last = st.session_state.get('_rs_last')
-        if _last:
-            st.success(_last.get('msg', 'บันทึกแล้ว'))
-            st.code(_last.get('report', ''), language=None)
         return
     try:
         pv = _process(intra, sched, apply=False)
@@ -152,18 +156,24 @@ def render_research_upload():
         st.warning("ยังจับคู่กับข้อมูลวิจัยไม่ได้สักเคส : ตรวจว่าตารางผ่าตัดของวันนั้นถูกอัปโหลดขึ้นบอร์ดแล้ว "
                    "และไฟล์นี้เป็นของวันเดียวกัน (ระบบจะไม่ติดป้ายเลื่อน/ยกเลิกให้วันที่จับคู่ไม่ได้เลย)")
     if st.button("💾 บันทึกทั้งหมด", key="rs_apply", type="primary", width='stretch'):
+        _saved = False
         try:
-            ap = _process(intra, sched, apply=True)
+            with st.spinner("กำลังบันทึก : รอสักครู่ อย่าปิดหน้านี้"):
+                ap = _process(intra, sched, apply=True)
             _rep = '\n\n'.join(_day_report(d) for d in (ap['res'].get('dates') or []))
             if ap['stats'] is not None:
                 _rep += '\n\n' + ap['stats']
             _msg = (f"บันทึกแล้ว : เติมเวลาจริง {ap['res']['updated']} เคส · "
                     f"ติดป้ายเลื่อน/ยกเลิก {len(ap['marked'])} เคส"
                     + (" · เติมฐานสถิติแล้ว (ดูรายละเอียดด้านล่าง)" if ap['stats'] is not None else ''))
-            st.session_state['_rs_last'] = {'msg': _msg, 'report': _rep}
-            st.success(_msg)
-            st.code(_rep, language=None)
+            from datetime import datetime as _dt
+            from zoneinfo import ZoneInfo as _ZI
+            st.session_state['_rs_last'] = {'msg': _msg, 'report': _rep,
+                                            'at': _dt.now(_ZI('Asia/Bangkok')).strftime('%H:%M')}
+            _saved = True
         except Exception as _ex:
             st.error("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง ถ้ายังไม่ได้ให้ส่งภาพหน้าจอนี้ให้ผู้วิจัย")
             with st.expander("รายละเอียดทางเทคนิค (สำหรับผู้วิจัย)"):
                 st.code(f"{type(_ex).__name__}: {_ex}"[:600], language=None)
+        if _saved:
+            st.rerun()   # วาดใหม่ให้แถบเขียวขึ้นบนสุดทันที (อยู่นอก try กันถูกดักเป็นข้อผิดพลาด)
