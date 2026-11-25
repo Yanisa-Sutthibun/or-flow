@@ -2232,7 +2232,7 @@ def _render_nurse_progress(op_date: str):
 def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
     """Tab สถิติย้อนหลัง — จัดเรียงตามหลัก information architecture (general→specific):
     1. 📊 ภาพรวมทั้งหมด (= 🎯 KPI Highlights + 📋 สรุปยอดสะสม ยุบรวม 14 ก.ค. 2026)
-    → 2. 📈 กราฟจำนวนเคสรายเดือน → 3. 🏆 อันดับยอดนิยม → 4. ⏱️ ประสิทธิภาพ
+    → 2. 📈 กราฟจำนวนเคสรายเดือน → 3. 🏆 อันดับยอดนิยม → 4. ⏱️ เคสรับเวร 
     → 5. 🌙 นอกเวลา → 6. 💾 Export
     """
     if _secs is None:
@@ -2294,7 +2294,7 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
             <a class="toc-item" data-target="sec-room" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">2</span>🏥 สถิติรายห้อง</a>
             <a class="toc-item" data-target="sec-trend" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">3</span>📈 กราฟจำนวนเคสรายเดือน</a>
             <a class="toc-item" data-target="sec-rank" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">4</span>🏆 อันดับยอดนิยม</a>
-            <a class="toc-item" data-target="sec-eff" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">5</span>⏱️ ประสิทธิภาพ</a>
+            <a class="toc-item" data-target="sec-eff" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">5</span>⏱️ เคสรับเวร</a>
             <a class="toc-item" data-target="sec-night" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">6</span>🌙 นอกเวลา</a>
             <a class="toc-item" data-target="sec-nurse" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">7</span>👥 Progress (PIN)</a>
             <a class="toc-item" data-target="sec-export" style="display:block;font-size:18px;padding:8px 12px;border-radius:6px;color:#455a64;text-decoration:none;cursor:pointer;"><span style="color:#607d8b;margin-right:6px;">8</span>💾 Export</a>
@@ -3532,9 +3532,9 @@ def _hist_sec_rank(date_from, date_to, data=None):
 
 def _hist_sec_eff(date_from, date_to, data=None):
     # ════════════════════════════════════════════════════════════════
-    # 5️⃣  ⏱️ ประสิทธิภาพการให้บริการ — เวลารอ + รับเวร + Turnover
+    # 5️⃣  ⏱️ เคสรับเวร (เดิมชื่อ "ประสิทธิภาพการให้บริการ" · มุกกี้สั่งเปลี่ยน 25 พ.ย. 2026)
     # ════════════════════════════════════════════════════════════════
-    st.markdown('<div id="sec-eff" class="group-header teal">⏱️ ประสิทธิภาพการให้บริการ</div>',
+    st.markdown('<div id="sec-eff" class="group-header teal">⏱️ เคสรับเวร</div>',
                 unsafe_allow_html=True)
     with st.expander("💡 อธิบายส่วนนี้", expanded=False):
         st.markdown("""
@@ -4886,7 +4886,7 @@ def page_admin(section='today'):
                 # 📊 15 พ.ย. 2026 (มุกกี้สั่ง · DEMO): ชื่อตัวเลือกตรงกับหัวข้อ "ภาระงานห้องผ่าตัด"
                 ('trend', _trend_label, False),
                 ('rank',  '🏆 อันดับยอดนิยม',     False),
-                ('eff',   '⏱️ ประสิทธิภาพ (เวลารอ/รับเวร)', False),
+                ('eff',   '⏱️ เคสรับเวร', False),
                 ('night', '🌙 เคสนอกเวลา',        False),
             ]
             _sec_cols = st.columns(3)
