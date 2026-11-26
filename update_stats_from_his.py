@@ -31,6 +31,9 @@ from datetime import date, timedelta
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+# ⛔ 26 พ.ย. 2026 (มุกกี้สั่ง): ข้อความนี้ = มีวันที่ไม่มีตารางผ่าตัดคู่ ถูกข้าม · หน้าอัปโหลดบนเว็บใช้จับเพื่อเตือน
+NOSCHED_MARK = "⛔ ไม่มีตารางผ่าตัดของวัน"
+
 _TH_MON = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
            'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 
@@ -395,6 +398,16 @@ def main():
     in_range = [d for d in sorted(set(i_dates)) if d_from <= d <= d_until]
     target = [d for d in in_range if d not in db_days]
     skipped = [d for d in in_range if d in db_days]
+    # ⛔ 26 พ.ย. 2026 (มุกกี้สั่ง): วันที่ไม่มีแถวในไฟล์ตารางผ่าตัดเลย = ไฟล์ตารางผ่าตัดไม่ใช่ของวันเดียวกัน
+    #    ห้ามนำเข้า ไม่งั้นหัตถการกลายเป็น UNKNOWN และวินิจฉัยว่าง (บทเรียน 23 พ.ย. 2569 : แนบตารางของ 24 พ.ย.)
+    #    และวันนั้นจะถูกล็อกว่ามีแล้ว นำเข้าไฟล์ที่ถูกทีหลังไม่ได้
+    _s_days = {d for d in F['s_iso'] if d}
+    nosched = [d for d in target if d not in _s_days]
+    if nosched:
+        target = [d for d in target if d in _s_days]
+        print(f"    {NOSCHED_MARK} {', '.join(_th(d) for d in nosched)} : ข้าม ไม่นำเข้า "
+              f"(ไฟล์ตารางผ่าตัดที่ใส่มาเป็นของวัน "
+              f"{', '.join(_th(d) for d in sorted(_s_days)) or '-'})")
     tset = set(target)
     n_intra = sum(1 for d in F['i_iso'] if d in tset)
     n_sched = sum(1 for d in F['s_iso'] if d in tset)

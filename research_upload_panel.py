@@ -148,6 +148,12 @@ def render_research_upload():
     with st.expander("ผลจับคู่รายเคสของข้อมูลวิจัย (แสดงเฉพาะรหัสย่อ ไม่มีชื่อหรือ HN)"):
         st.code(pv['log'], language=None)
     if pv['stats'] is not None:
+        # ⛔ 26 พ.ย. 2026 (มุกกี้สั่ง): ตารางผ่าตัดไม่ใช่วันเดียวกับ intraop → เตือน · ฐานสถิติไม่เติมวันนั้น
+        import update_stats_from_his as _U
+        if _U.NOSCHED_MARK in str(pv['stats']):
+            st.error("ไฟล์ตารางผ่าตัดไม่ใช่ของวันเดียวกับไฟล์ intraop : ฐานสถิติจะไม่เติมวันนั้น "
+                     "(ถ้าเติมไป ชื่อหัตถการจะเป็น UNKNOWN) ให้ export ตารางผ่าตัดของวันที่ "
+                     f"{_dates} จาก HIS แล้วอัปโหลดใหม่ · ข้อมูลวิจัยยังบันทึกได้ตามปกติ")
         with st.expander("แผนเติมฐานสถิติ"):
             st.code(pv['stats'], language=None)
     else:
