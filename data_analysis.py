@@ -64,7 +64,8 @@ def check_code(entered) -> bool:
 
 
 def is_unlocked() -> bool:
-    if st.session_state.get('role') == 'admin' and st.session_state.get('authenticated'):
+    # 👔 26 พ.ย. 2026 (มุกกี้สั่ง): เข้าระบบด้วยรหัสผู้บริหาร (role exec) เห็นเนื้อหาเลย ไม่ต้องกรอกซ้ำ
+    if st.session_state.get('role') in ('admin', 'exec') and st.session_state.get('authenticated'):
         return True
     return bool(code_configured() and st.session_state.get(_K_OPEN) is True)
 

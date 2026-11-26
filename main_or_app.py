@@ -1048,11 +1048,23 @@ def _check_password():
                     _admin_pwd = _gap()
                 except Exception:
                     pass
+                try:
+                    _exec_code = str(st.secrets.get('analysis_code', '') or '').strip()
+                except Exception:
+                    _exec_code = ''
                 if _pwd_match(pwd, _admin_pwd):
                     st.session_state['authenticated'] = True
                     st.session_state['role'] = 'admin'
                     st.session_state['_maint_unlocked'] = True
                     st.session_state['_clear_unlocked'] = True
+                    st.session_state['_login_fail_n'] = 0
+                    _touch_activity()
+                    st.rerun()
+                elif _exec_code and _exec_code != str(_pwd_set or '') and _pwd_match(pwd, _exec_code):
+                    # 👔 26 พ.ย. 2026 (มุกกี้สั่ง): รหัสระดับผู้บริหาร (secret analysis_code)
+                    #    ใช้งานได้เหมือนผู้ใช้ทั่วไป + เห็นแท็บ Data analysis · ไม่ได้สิทธิ์ผู้วิจัย
+                    st.session_state['authenticated'] = True
+                    st.session_state['role'] = 'exec'
                     st.session_state['_login_fail_n'] = 0
                     _touch_activity()
                     st.rerun()
@@ -1284,6 +1296,9 @@ def main():
             + ('<span class="or-chip" style="background:#fff3e0;color:#e65100;">'
                '👤 ผู้วิจัย</span>'
                if st.session_state.get('role') == 'admin' else '')
+            + ('<span class="or-chip" style="background:#ede7f6;color:#4527a0;">'
+               '👔 ผู้บริหาร</span>'
+               if st.session_state.get('role') == 'exec' else '')
             + (('<span class="or-chip" style="background:#e3f0fb;color:#1565c0;">'
                 f'🚪 จอประจำห้อง {__import__("room_config").room_label(st.session_state.get("room_scope"))}'
                 '</span>')
@@ -1349,6 +1364,10 @@ def main():
             if _tryout_ui_tabs():
                 _page_options = ["📋 ตารางผ่าตัด", "📊 ภาพรวมวันนี้", "📈 สถิติย้อนหลัง",
                                  "🔍 Data analysis", "⚙️ ตั้งค่าห้องผ่าตัด"]
+                # 👔 26 พ.ย. 2026 (มุกกี้สั่ง): แท็บ Data analysis เห็นเฉพาะรหัสผู้บริหารและผู้วิจัย
+                #    รหัสทั่วไปไม่เห็นแท็บเลย (เดิมทุกคนเห็นแท็บแล้วค่อยกรอกรหัสในหน้า)
+                if st.session_state.get('role') not in ('admin', 'exec'):
+                    _page_options = [p for p in _page_options if 'Data analysis' not in p]
     except Exception:
         pass
     # 🚪 โหมดจอประจำห้อง: เหลือ 3 แท็บ (ทำงาน + รับรู้สถานการณ์ + ดูสถิติ)
