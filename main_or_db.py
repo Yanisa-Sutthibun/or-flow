@@ -684,6 +684,30 @@ def mask_patient_name(name) -> str:
     return ' '.join(title_parts + [core]).strip()
 
 
+def patient_first_name(name) -> str:
+    """ชื่อต้นของผู้ป่วย (ตัดยศ/คำนำหน้าและนามสกุล) : ใช้เทียบป้ายชื่อซ้ำบนบอร์ด
+    26 พ.ย. 2026 (มุกกี้สั่ง): ชื่อต้นตรงกันก็เตือน แม้นามสกุลต่าง
+    'นางสาว ญาณิศา สุทธิบูรณ์' → 'ญาณิศา' · 'นายสุรชัย ใจดี' → 'สุรชัย' · 'น.ส. ญาณิศา ส.' → 'ญาณิศา'
+    ใช้กติกาตัดคำนำหน้าชุดเดียวกับ mask_patient_name"""
+    if not name or not isinstance(name, str):
+        return ''
+    if name.strip().startswith('ผู้ป่วยทดสอบ'):
+        return ' '.join(name.split())      # รหัสผู้ป่วยสาธิตรุ่นเก่า ไม่ใช่ชื่อคน : เทียบทั้งคำ
+    parts = ' '.join(name.split()).split()
+    n_title = 0
+    while len(parts) >= 2 and n_title < 3 and _is_title_token(parts[0]):
+        parts.pop(0)
+        n_title += 1
+    if not n_title and parts:
+        tok = parts[0]
+        for full, _short in _PT_TITLES:
+            if (tok.startswith(full) and len(tok) > len(full)
+                    and tok[len(full)] not in _TH_TRAILING):
+                parts[0] = tok[len(full):]
+                break
+    return parts[0] if parts else ''
+
+
 def mask_hn(hn) -> str:
     """'563009567' → '…9567' (เก็บ 4 ตัวท้าย) · สั้นกว่านั้นคืนเท่าที่มี"""
     s = re.sub(r'\D', '', str(hn or ''))

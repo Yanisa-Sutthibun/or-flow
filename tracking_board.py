@@ -450,14 +450,21 @@ def _dup_name_badges(cases, loc) -> dict:
     (ไม่รวมจำหน่ายแล้ว) — คืน {id(case): badge_html} กันหยิบผิดคนตอนชื่อชนกัน
     เทียบจากชื่อจริง ไม่ใช่ข้อความที่ mask แล้ว เพราะนามสกุลบนจอย่อเหลือตัวเดียว
     ชนกันโดยบังเอิญบ่อยมาก (มุคกี้ตัดสินใจ 9 ส.ค. 2026: เช็กแค่ชื่อเต็มตรงกันพอ)"""
+    # 👥 26 พ.ย. 2026 (มุกกี้สั่ง): เปลี่ยนเป็นเทียบ "ชื่อต้น" : ชื่อต้นตรงกันก็เตือน แม้นามสกุลต่าง
+    #    (เดิมต้องตรงทั้งชื่อและนามสกุล) · ตัดยศ/คำนำหน้าออกก่อนเทียบ
     from collections import defaultdict
+    try:
+        from main_or_db import patient_first_name as _pfn
+    except Exception:
+        _pfn = lambda _n: (_n or '').strip()
     groups = defaultdict(list)
     for c in cases:
         if c.get('status') == 'discharged':
             continue
         nm = (c.get('name') or '').strip()
         if nm and nm != 'ไม่ระบุ':
-            groups[nm].append(c)
+            _key = _pfn(nm) or nm
+            groups[_key].append(c)
     badges = {}
     for group in groups.values():
         if len(group) < 2:
@@ -467,7 +474,7 @@ def _dup_name_badges(cases, loc) -> dict:
             rooms_txt = _esc(', '.join(other_rooms)) if other_rooms else ''
             badges[id(c)] = (
                 f'<span title="ชื่อซ้ำกับอีกเคสวันนี้{(" · " + rooms_txt) if rooms_txt else ""}'
-                f' · ตรวจ HN ก่อนดำเนินการ" style="display:inline-flex;align-items:center;'
+                f' · ตรวจนามสกุลและ HN ก่อนดำเนินการ" style="display:inline-flex;align-items:center;'
                 f'gap:6px;background:#fdf3dd;color:#9a6700;border-radius:999px;'
                 f'padding:{"2px 10px" if _compact() else "4px 14px"};'
                 f'font-size:{14 if _compact() else 18}px;font-weight:600;margin-left:7px;'
