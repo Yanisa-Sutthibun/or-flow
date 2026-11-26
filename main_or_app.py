@@ -132,7 +132,13 @@ def _page_config_kwargs():
         return dict(page_title="DEMO · OR Flow ระบบสาธิต", page_icon="🖥️",
                     layout="wide", initial_sidebar_state="collapsed")
     # 📘 16 ก.ย. 2026 (มุกกี้สั่ง): ชื่อแท็บระบบจริงตรงชื่อระบบในเล่มคู่มือ (บทนำ)
-    return dict(page_title="OR Flow ระบบบริหารห้องผ่าตัดและทำนายเวลาผ่าตัด", page_icon="🏥",
+    # 🎨 26 พ.ย. 2026 (มุกกี้สั่ง): ไอคอนแท็บระบบจริงใช้ภาพ OR Flow ของมุกกี้ (assets/or_flow_icon.png)
+    #    ไม่มีไฟล์ = กลับไปใช้อีโมจิเดิม ไม่ให้แอปล้ม · แอป DEMO คงไอคอน 🖥️ ไว้ให้ต่างกัน
+    import os as _os_ic
+    _ic = _os_ic.path.join(_os_ic.path.dirname(_os_ic.path.abspath(__file__)),
+                           'assets', 'or_flow_icon.png')
+    return dict(page_title="OR Flow ระบบบริหารห้องผ่าตัดและทำนายเวลาผ่าตัด",
+                page_icon=_ic if _os_ic.path.exists(_ic) else "🏥",
                 layout="wide", initial_sidebar_state="collapsed")
 
 
