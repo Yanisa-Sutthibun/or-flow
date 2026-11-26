@@ -504,7 +504,7 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         _n_all = sum(_cnt.values())
         _pill_opts = [f"ทั้งหมด {_n_all}"] + [f"{k} {v}" for k, v in _cnt.items()
                                              if not (_minimal_board() and k == 'จำหน่ายแล้ว')]
-        fc0, fc1, fc2 = st.columns([3.4, 2, 1.1], vertical_alignment="center")
+        fc0, fca, fc1, fc2 = st.columns([3.4, 1.0, 1.7, 1.1], vertical_alignment="center")
         try:
             _sel = fc0.pills("สถานะ", _pill_opts, default=_pill_opts[0],
                              key="tb_status_pill", label_visibility="collapsed")
@@ -515,7 +515,18 @@ def render_tracking_board(cases, do_arrive, do_enter, do_finish, do_undo,
         status_f = 'ทุกสถานะ' if _sel.startswith('ทั้งหมด') else _sel.rsplit(' ', 1)[0]
         fc3 = None
     else:
-        fc1, fc2, fc3 = st.columns([3, 1.4, 1.6])
+        fca, fc1, fc2, fc3 = st.columns([1.1, 3, 1.4, 1.6])
+    # ➕ 26 พ.ย. 2026 (มุกกี้สั่ง): ปุ่มเพิ่มเคสทีละรายอยู่หน้าช่องค้นหา (คนถามหาบ่อย)
+    #    ฟอร์มอยู่ใน main_or_pages.render_quick_add_form · import ตอนกด กัน import วน
+    if st.session_state.get('role') != 'room':
+        with fca:
+            with _popover("➕ เพิ่มเคส", help="เพิ่มเคสทีละราย : พิมพ์เฉพาะที่จำเป็น"):
+                try:
+                    import main_or_pages as _P
+                    _P.render_quick_add_form(st.session_state.get('tb_room'))
+                except Exception as _qx:
+                    print(f"[quick_add] เปิดฟอร์มไม่สำเร็จ: {_qx}")
+                    st.caption("เปิดฟอร์มเพิ่มเคสไม่ได้ : ใช้เมนู ⋯ มุมขวาบนแทน")
     q = fc1.text_input("ค้นหา", key="tb_q", placeholder="ค้นหา ชื่อ / HN / หัตถการ",
                        label_visibility="collapsed")
     rooms_avail = sorted({loc(c) for c in cases})

@@ -61,6 +61,10 @@ def in_research_scope(case) -> bool:
         return False
     if case.get('is_emergency'):
         return False
+    # ➕ 26 พ.ย. 2026 (มุกกี้เคาะ): เคสที่เพิ่มด้วยมือ (id ขึ้นต้น MANUAL_) ไม่เก็บในข้อมูลวิจัย
+    #    ข้อมูลวิจัยใช้เฉพาะเคสจากตารางผ่าตัด HIS · เคสเพิ่มมือไม่มี HN ให้จับคู่ intraop
+    if str(case.get('id') or '').startswith('MANUAL_'):
+        return False
     ct = str(case.get('case_type') or 'Elective').strip().lower()
     if ct != 'elective':
         return False

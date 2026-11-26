@@ -1175,6 +1175,124 @@ def _render_add_case_form(demo_active):
         _rerun_board()
 
 
+# ➕ 26 พ.ย. 2026 (มุกกี้สั่ง): เพิ่มเคสทีละรายจากหน้าบอร์ด (ปุ่มอยู่หน้าช่องค้นหา)
+#    พิมพ์เฉพาะที่จำเป็น 4 ช่อง : ห้อง ชื่อ หัตถการ แพทย์ · ที่เหลือพับไว้ ไม่บังคับ
+#    สาขาไม่ต้องเลือก : อนุมานจากแพทย์ที่เลือก ถ้าไม่รู้จักใช้สาขาประจำห้อง
+#    (ฟอร์มเต็ม _render_add_case_form ในปุ่ม ⋯ ยังอยู่ สำหรับคนที่อยากกรอก ASA/เลือด/ICU)
+_SPEC_TO_DIV = {'GEN': '1', 'NEURO': '2', 'ENT': '3', 'PLASTIC': '4', 'URO': '5',
+                'VAS': '7', 'GEN&ENT': '1', 'EM': '1', 'SCOPE': '1'}
+
+
+def render_quick_add_form(default_room_label=None):
+    """ฟอร์มเพิ่มเคสแบบย่อ · เรียกจาก tracking_board (ใน popover หน้าช่องค้นหา)"""
+    import uuid
+    from datetime import time as _time
+    try:
+        _demo_inst = str(st.secrets.get('instance_mode', '')).lower() == 'demo'
+    except Exception:
+        _demo_inst = False
+    _demo_active = bool(st.session_state.get('_or_demo'))
+    if _demo_active and not _demo_inst:
+        st.caption("ปิดสวิตช์สาธิตด้านบนก่อน เพื่อเพิ่มเคสจริง")
+        return
+    _room_opts = _enabled_room_options()
+    _labels = [lbl for _, lbl in _room_opts]
+    _ri = _labels.index(default_room_label) if default_room_label in _labels else 0
+    st.markdown("**เพิ่มเคส 1 ราย**")
+    _room_label = st.selectbox("ห้อง", _labels, index=_ri, key="qa_room")
+    _room_no = next((rn for rn, lbl in _room_opts if lbl == _room_label), _room_opts[0][0])
+    name = st.text_input("ชื่อผู้ป่วย", key="qa_name", placeholder="ชื่อ นามสกุล")
+    proc = st.text_input("หัตถการ", key="qa_proc", placeholder="เช่น Appendectomy")
+    # 🧑‍⚕️ รายชื่อแพทย์ : สาขาประจำห้องขึ้นก่อน ตามด้วยสาขาอื่น · พิมพ์ชื่อใหม่ได้
+    try:
+        from room_config import ROOM_INFO as _RI
+        _room_div = _SPEC_TO_DIV.get(_RI.get(int(_room_no), ('', ''))[1], '1')
+    except Exception:
+        _room_div = '1'
+    _by_div = _surgeons_by_specialty() or {}
+    _room_div_name = next((d[1] for d in _DIV_OPTIONS if d[0] == _room_div), '')
+    _surg_opts = list(_by_div.get(_room_div_name, []))
+    for _dn, _lst in _by_div.items():
+        _surg_opts += [x for x in _lst if x not in _surg_opts]
+    try:
+        surg = st.selectbox("แพทย์ผ่าตัด", options=_surg_opts, index=None, key="qa_surg",
+                            accept_new_options=True,
+                            placeholder="พิมพ์ค้นหา หรือพิมพ์ชื่อใหม่แล้วกด Enter")
+    except TypeError:
+        surg = st.text_input("แพทย์ผ่าตัด", key="qa_surg_txt", placeholder="ชื่อแพทย์")
+    surg = (surg or '').strip()
+    is_emer = st.checkbox("เคสฉุกเฉิน", key="qa_emer")
+    with st.expander("ใส่เพิ่ม (ไม่บังคับ) : HN เวลานัด อายุ"):
+        hn = st.text_input("HN", key="qa_hn")
+        _has_time = st.checkbox("ระบุเวลานัด (ไม่ระบุ = ต่อท้ายคิวของห้อง)", key="qa_has_time")
+        _sched = st.time_input("เวลานัด", value=_time(9, 0), key="qa_time",
+                               disabled=not _has_time)
+        age = st.number_input("อายุ (ปี)", min_value=0, max_value=120, value=50, step=1,
+                              key="qa_age")
+    if not st.button("เพิ่มเคส", type="primary", width='stretch', key="qa_submit"):
+        return
+    if not (name or '').strip() or not (proc or '').strip() or not surg:
+        st.error("กรอก ชื่อผู้ป่วย หัตถการ และแพทย์ผ่าตัด ให้ครบก่อน")
+        return
+    if _has_time:
+        sched_h, sched_m, is_tf = _sched.hour, _sched.minute, False
+    else:
+        sched_h, sched_m, is_tf = 23, 55, True     # ไม่ระบุเวลา = เรียงท้ายคิว (แบบเคส TF)
+    _div_code = next((c for c, n in _DIV_OPTIONS if surg in _by_div.get(n, [])), _room_div)
+    try:
+        from preop_merge import sex_from_name as _sfn
+        _sex_v = _sfn(name)
+    except Exception:
+        _sex_v = None
+    try:
+        from main_or_core import predict_surgical_time
+        _pred = predict_surgical_time(
+            procedure=proc.strip().upper(), age=int(age), surgeon=surg,
+            division=str(_div_code), op_hour=sched_h if sched_h < 23 else 9,
+            op_date=_now(), orroom=int(_room_no), diagnosis='',
+            asa=None, blood=None, planicu=None, sex=_sex_v,
+            or_room=int(_room_no), sched_hm=(sched_h, sched_m))
+        _pm = int(_pred.get('predicted_min') or 60)
+        _conf, _pn = _pred.get('confidence'), _pred.get('proc_n', 0)
+        _rng, _rngm = _pred.get('predicted_range'), _pred.get('range_method')
+        _psrc = _pred.get('source') or 'default'
+    except Exception as _ex:
+        print(f"[quick_add] predict ล้มเหลว: {_ex}")
+        _pm, _conf, _pn, _rng, _rngm, _psrc = 60, 'ต่ำ', 0, None, None, 'default'
+    from fam_code import gen_fam_code
+    _manual_id = f"MANUAL_{uuid.uuid4().hex[:8]}"
+    case = {
+        'id': _manual_id, 'fam_code': gen_fam_code(_manual_id),
+        'hn': (hn or '').strip(), 'name': name.strip(),
+        'age': int(age), 'diagnosis': '-',
+        'procedure': proc.strip().upper(), 'anesthesia': '-',
+        'surgeon': surg, 'room': _room_no,
+        'division': str(_div_code), 'ororder': 99,
+        'case_type': 'Emergency' if is_emer else 'Elective',
+        'is_emergency': is_emer, 'ward': '',
+        'sched_date': _now().date(), 'sched_hour': sched_h,
+        'sched_min': sched_m, 'is_tf': is_tf, 'is_after_note': False,
+        'procnote': '', 'predicted_min': _pm, 'confidence': _conf,
+        'proc_n': _pn, 'pred_source': _psrc,
+        'predicted_range': _rng, 'range_method': _rngm,
+        'status': 'not_arrived', 'ai_predicted_min': _pm,
+        'user_override_min': None, 'effective_min': _pm,
+        'or_room_assigned': _room_no,
+        'time_arrived_holding': None, 'time_entered_or': None,
+        'time_exited_or': None, 'time_discharged': None,
+        'actual_duration_min': None,
+        'ASA': None, 'blood': None, 'planicu': None, 'sex': _sex_v,
+    }
+    st.session_state.patient_cases = list(st.session_state.patient_cases) + [case]
+    if not (_demo_inst and _demo_active):
+        st.session_state['_or_demo'] = False
+    _mark_board_dirty(case)
+    for _k in ('qa_name', 'qa_proc', 'qa_surg', 'qa_surg_txt', 'qa_hn', 'qa_emer', 'qa_has_time'):
+        st.session_state.pop(_k, None)
+    _toast_ok(f"เพิ่มเคสแล้ว : ทำนายใช้ห้อง {_pm} น.")
+    _rerun_board()
+
+
 def render_csv_upload(bare=False):
     """📤 อัปโหลดตารางผ่าตัด (CSV+preop) — อยู่บนหน้าตารางผ่าตัด เหนือ ➕ เพิ่มเคส
     🔓 19 ก.ค. 2026 (มุคกี้สั่ง): อัปโหลดเปิดให้พยาบาลทุกคน ไม่ต้องใส่ PIN —
