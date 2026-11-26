@@ -106,15 +106,10 @@ def page_data_analysis():
     if not is_unlocked():
         _render_gate()
         return
-    _h, _b = st.columns([5, 1], vertical_alignment="center")
-    with _h:
-        st.markdown('<div style="font-size:22px;font-weight:700;color:#0f172a;">'
-                    '🔍 Data analysis</div>', unsafe_allow_html=True)
-    with _b:
-        if st.button("ล็อกหน้านี้", key="da_lock", width='stretch',
-                     help="ปิดหน้านี้กลับ ต้องกรอกรหัสใหม่เมื่อเปิดครั้งถัดไป"):
-            st.session_state[_K_OPEN] = False
-            st.rerun()
+    # 🧹 26 พ.ย. 2026 (มุกกี้สั่ง): เอาปุ่ม ล็อกหน้านี้ ออก · หน้านี้เห็นเฉพาะรหัสผู้บริหาร/ผู้วิจัยอยู่แล้ว
+    #    ออกจากระบบ = ล็อกเอง
+    st.markdown('<div style="font-size:22px;font-weight:700;color:#0f172a;">'
+                '🔍 Data analysis</div>', unsafe_allow_html=True)
     _render_body()
 
 
