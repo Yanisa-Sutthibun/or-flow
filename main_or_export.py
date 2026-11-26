@@ -5,6 +5,25 @@ Minor OR Export — สร้างไฟล์ Excel สรุปสถิต�
 import io
 import pandas as pd
 
+# 📥 26 พ.ย. 2026 (มุกกี้สั่ง): คอลัมน์ข้อมูลดิบชุดเดียวกันทั้งชีต Excel และไฟล์ CSV
+#    ไม่มีชื่อผู้ป่วย/HN/AN (DB ไม่เก็บ) · ไม่มีแพทย์ พยาบาล และข้อมูลวิจัย (AI ทำนาย เวลาที่แก้ เวลารอ)
+RAW_COL_MAP = {
+    'op_date': 'วันที่', 'is_ipd': 'IPD(1)/OPD(0)',
+    'procedure_name': 'หัตถการ',
+    'division_name': 'สาขา', 'patient_type': 'ประเภท',
+    'case_category': 'หมวด', 'status': 'สถานะ',
+    'room_no': 'ห้อง',
+    'actual_duration_min': 'เวลาใช้ห้องจริง (นาที)',
+    'arrived_at': 'มาถึง', 'in_or_at': 'เข้าห้อง',
+    'op_end_at': 'เสร็จ', 'discharged_at': 'จำหน่าย',
+}
+
+
+def raw_export_df(df):
+    """ข้อมูลดิบสำหรับดาวน์โหลด : เลือกและเปลี่ยนชื่อคอลัมน์ตาม RAW_COL_MAP"""
+    cols = [c for c in RAW_COL_MAP if c in df.columns]
+    return df[cols].rename(columns=RAW_COL_MAP)
+
 
 def export_summary_excel(get_summary_fn, export_cases_fn, div_name_fn,
                          date_from=None, date_to=None) -> bytes:
@@ -104,38 +123,8 @@ def export_summary_excel(get_summary_fn, export_cases_fn, div_name_fn,
                     cell.number_format = num_fmt
             cell.border = border
 
-    # AI Accuracy — 🔧 M-07: คำนวณจาก summary['ai_df'] ที่ get_summary คืนมาจริง
-    #   (เดิมอ่าน key 'ai_accuracy' ที่ไม่เคยมี → ตาราง AI หายทั้งแผ่น)
-    ai_df = summary.get('ai_df')
-    _pred = _act = None
-    if ai_df is not None and len(ai_df) > 0:
-        _pred = pd.to_numeric(ai_df['ai_predicted_min'], errors='coerce')
-        _act = pd.to_numeric(ai_df['actual_duration_min'], errors='coerce')
-        _ok = _pred.notna() & _act.notna() & (_act > 0)
-        _pred, _act = _pred[_ok], _act[_ok]
-    if _pred is not None and len(_pred) > 0:
-        _ae = (_pred - _act).abs()
-        r_start = 18
-        ws1.cell(row=r_start, column=1, value='AI Prediction Accuracy').font = Font(
-            name='Arial', bold=True, size=12, color='1565C0')
-        ai_rows = [
-            ['ตัวชี้วัด', 'ค่า'],
-            ['จำนวนเคสที่วัดได้', int(len(_pred))],
-            ['MAE (นาที)', round(float(_ae.mean()), 1)],
-            ['MAPE (%)', round(float((_ae / _act).mean() * 100), 1)],
-            ['ภายใน +/-15 นาที (%)', round(float((_ae <= 15).mean() * 100), 1)],
-            ['ภายใน +/-30 นาที (%)', round(float((_ae <= 30).mean() * 100), 1)],
-        ]
-        for r, row_data in enumerate(ai_rows, start=r_start + 1):
-            for c, val in enumerate(row_data, start=1):
-                cell = ws1.cell(row=r, column=c, value=val)
-                if r == r_start + 1:
-                    cell.font = header_font
-                    cell.fill = PatternFill('solid', fgColor='1565C0')
-                    cell.alignment = Alignment(horizontal='center')
-                else:
-                    cell.font = data_font
-                cell.border = border
+    # 📥 26 พ.ย. 2026 (มุกกี้สั่ง): ตัดตาราง AI Prediction Accuracy ออก
+    #    ไฟล์นี้ให้คนห้องผ่าตัดโหลดไปใช้ ไม่ใส่ข้อมูลวิจัย
 
     auto_width(ws1)
 
@@ -251,20 +240,7 @@ def export_summary_excel(get_summary_fn, export_cases_fn, div_name_fn,
         ws6['A1'] = 'ข้อมูลเคสทั้งหมด (Raw Data)'
         ws6['A1'].font = title_font
 
-        col_map = {
-            # 🔒 ไม่มี name/hn/an ในข้อมูลส่งออก (DB ไม่เก็บ — privacy by design)
-            'op_date': 'วันที่', 'is_ipd': 'IPD(1)/OPD(0)',
-            'procedure_name': 'หัตถการ', 'surgeon_name': 'แพทย์',
-            'division_name': 'สาขา', 'patient_type': 'ประเภท',
-            'case_category': 'หมวด', 'status': 'สถานะ',
-            'room_no': 'ห้อง', 'scrub_nurse': 'Scrub', 'circ_nurse': 'Circulate',
-            'ai_predicted_min': 'AI ทำนายเวลาใช้ห้อง (นาที)',
-            'actual_duration_min': 'เวลาใช้ห้องจริง (นาที)',
-            'arrived_at': 'มาถึง', 'in_or_at': 'เข้าห้อง',
-            'op_end_at': 'เสร็จ', 'discharged_at': 'จำหน่าย',
-        }
-        cols_to_use = [c for c in col_map if c in df.columns]
-        df_out = df[cols_to_use].rename(columns=col_map)
+        df_out = raw_export_df(df)   # ชุดเดียวกับไฟล์ CSV
 
         for c, col_name in enumerate(df_out.columns, start=1):
             ws6.cell(row=3, column=c, value=col_name)

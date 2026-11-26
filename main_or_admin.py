@@ -2463,19 +2463,15 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
                 'style="color:#546e7a;background:#eceff1;'
                 'border-left-color:#546e7a;">💾 Export ข้อมูล</div>',
                 unsafe_allow_html=True)
-    st.caption("ดาวน์โหลดข้อมูลสำหรับผู้บริหารหรือวิทยานิพนธ์")
-    col_e1, col_e2 = st.columns([1, 3])
-    with col_e1:
-        export_scope = st.radio("ช่วง export", ["ตามที่เลือก", "ทั้งหมด"],
-                                horizontal=True, key="export_scope",
-                                label_visibility='collapsed')
+    # 📥 26 พ.ย. 2026 (มุกกี้สั่ง): ตัดตัวเลือก "ทั้งหมด" ออก ดาวน์โหลดได้เฉพาะช่วงวันที่ที่เลือกไว้ด้านบน
+    st.caption(f"ดาวน์โหลดเฉพาะช่วงที่เลือก : {date_from} ถึง {date_to}")
+    col_e2 = st.container()
     with col_e2:
-        if export_scope == "ทั้งหมด":
-            exp_from, exp_to = None, None
-        else:
-            exp_from, exp_to = date_from, date_to
+        exp_from, exp_to = date_from, date_to
 
-        df_export = export_cases_csv(exp_from, exp_to)
+        # ไม่มีช่วงวันที่ = ไม่ให้ดาวน์โหลด (กันหลุดเป็นทั้งฐานข้อมูล)
+        df_export = (export_cases_csv(exp_from, exp_to)
+                     if (exp_from and exp_to) else pd.DataFrame())
         if not df_export.empty:
             dl_a, dl_b = st.columns(2)
             with dl_a:
@@ -2488,7 +2484,9 @@ def _render_historical_analytics(date_from: str, date_to: str, _secs=None):
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 )
             with dl_b:
-                csv_bytes = df_export.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+                # 📥 26 พ.ย. 2026 (มุกกี้สั่ง): CSV คอลัมน์ชุดเดียวกับชีตข้อมูลดิบใน Excel
+                from main_or_export import raw_export_df
+                csv_bytes = raw_export_df(df_export).to_csv(index=False).encode('utf-8-sig')
                 fname_csv = f"main_or_data_{_now_bkk().strftime('%Y%m%d_%H%M')}.csv"
                 st.download_button(
                     label=f"📥 ข้อมูลดิบ (CSV : {len(df_export)} เคส)",

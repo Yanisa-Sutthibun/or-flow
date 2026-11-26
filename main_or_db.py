@@ -3187,13 +3187,14 @@ def export_cases_csv(date_from=None, date_to=None):
         where_parts.append("op_date <= ?")
         params.append(date_to)
     where_sql = " AND ".join(where_parts)
+    # 📥 26 พ.ย. 2026 (มุกกี้สั่ง): ไฟล์ดาวน์โหลดตัดคอลัมน์ แพทย์ scrub circulate,
+    #    AI ทำนายเวลา, ปลายทางหลังผ่าตัด และเหตุผลที่ยกเลิก ออก (ใช้เฉพาะปุ่ม export ในหน้าสถิติย้อนหลัง)
+    #    ตัดข้อมูลวิจัย (เวลาที่แก้ เวลารอ) ด้วย · หน้าสถิติให้คนห้องผ่าตัดโหลดไปใช้
     sql = f"""
-        SELECT case_id, op_date, is_ipd, procedure_name, surgeon_name,
-               division_code, case_category, patient_type, op_type,
-               status, room_no, scrub_nurse, circ_nurse,
-               ai_predicted_min, user_override_min, actual_duration_min,
-               wait_min, arrived_at, in_or_at, op_end_at, discharged_at,
-               post_op_dest, cancel_reason
+        SELECT op_date, is_ipd, procedure_name,
+               division_code, case_category, patient_type,
+               status, room_no, actual_duration_min,
+               arrived_at, in_or_at, op_end_at, discharged_at
         FROM cases WHERE {where_sql} ORDER BY op_date, case_id
     """
     df = pd.read_sql_query(sql, conn, params=params)
