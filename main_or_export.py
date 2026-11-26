@@ -102,7 +102,7 @@ def export_summary_excel(get_summary_fn, export_cases_fn, div_name_fn,
         ['ตัวชี้วัด', 'จำนวน'],
         ['เคสทั้งหมด', summary['total']],
         ['ผ่าเสร็จ', summary['completed']],
-        ['ยกเลิก', summary['cancelled']],
+        # 📥 26 พ.ย. 2026 (มุกกี้สั่ง): ตัดแถว ยกเลิก ออก (ไฟล์มีเฉพาะเคสที่ผ่าตัดแล้ว)
         ['OPD', summary.get('n_opd', 0)],
         ['IPD', summary.get('n_ipd', 0)],
         ['เคสนัดหมาย', summary.get('n_set', 0)],

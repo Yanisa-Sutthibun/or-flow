@@ -3178,7 +3178,8 @@ def get_historical_analytics(date_from=None, date_to=None):
 
 def export_cases_csv(date_from=None, date_to=None):
     conn = get_conn()
-    where_parts = ["1=1"]
+    # 📥 26 พ.ย. 2026 (มุกกี้สั่ง): เอาเคสเลื่อน/ยกเลิกออก : ส่งออกเฉพาะเคสที่ผ่าตัดแล้ว (ชุดเดียวกับ get_summary)
+    where_parts = [f"status IN {_DONE_STATUSES}"]
     params = []
     if date_from:
         where_parts.append("op_date >= ?")
