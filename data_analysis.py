@@ -1201,13 +1201,15 @@ def _load_ops():
     return ops_prep(raw, DIV_CODE_MAP)
 
 
-def _room_name(r) -> str:
+def _room_name(r, tag=True) -> str:
+    # 🏷️ 26 พ.ย. 2026 (มุกกี้สั่ง): ป้ายในกราฟแท่งไม่ต้องมี "(ตึกเก่า)" (tag=False) · คงไว้ในหัวการ์ด
     # 🏚️ 22 พ.ย. 2026 (มุกกี้สั่ง): ห้องตึกเก่าบอกด้วยว่าเป็นห้องอะไร (สาขาจาก room_config.OLD_HIS_ROOM_INFO)
     from room_config import ROOM_INFO, OLD_HIS_ROOM_INFO
     if r in ROOM_INFO:
         return ROOM_INFO[r][0] + ' ' + ROOM_INFO[r][1]
     sp = OLD_HIS_ROOM_INFO.get(r)
-    return f'ห้อง {r} {sp} (ตึกเก่า)' if sp else f'ห้อง {r} (ตึกเก่า)'
+    _t = ' (ตึกเก่า)' if tag else ''
+    return f'ห้อง {r} {sp}{_t}' if sp else f'ห้อง {r}{_t}'
 
 
 def _ops_headline(O, fy) -> str:
@@ -1260,7 +1262,7 @@ def _view_ops(C, L):
 
         def _util_card(rs, tag, foot, lw, vw, minh=0):
             hi, lo = rs[0], rs[-1]
-            rows = [(_e(_room_name(r['room'])), r['util'],
+            rows = [(_e(_room_name(r['room'], tag=False)), r['util'],
                      f'<b>{r["util"]:.0f}%</b> · {r["days"]:,} วัน · {r["cases"]:,} เคส', None) for r in rs]
             t = (f'{_e(_room_name(hi["room"]))} ใช้ห้องมากที่สุด {hi["util"]:.0f}%'
                  + (f' · {_e(_room_name(lo["room"]))} น้อยที่สุด {lo["util"]:.0f}%' if len(rs) > 1 else ''))
@@ -1271,7 +1273,7 @@ def _view_ops(C, L):
             tr = sorted([r for r in rs if r['turn_med'] is not None], key=lambda r: -r['turn_med'])
             if not tr:
                 return ''
-            rows = [(_e(_room_name(r['room'])), r['turn_med'],
+            rows = [(_e(_room_name(r['room'], tag=False)), r['turn_med'],
                      f'<b>{r["turn_med"]:.0f} นาที</b> · จาก {r["turn_n"]:,} ช่วง', None) for r in tr]
             t = (f'{_e(_room_name(tr[0]["room"]))} พักห้องนานที่สุด ค่ากลาง {tr[0]["turn_med"]:.0f} นาที'
                  + (f' · เร็วที่สุด {_e(_room_name(tr[-1]["room"]))} {tr[-1]["turn_med"]:.0f} นาที' if len(tr) > 1 else ''))
