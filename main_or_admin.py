@@ -4196,16 +4196,25 @@ def _render_today_lean(rooms, kpi, live_cases, op_date):
             else:
                 st.session_state.setdefault('_today_acks', {}).pop(_k, None)
 
+        # 🧹 26 พ.ย. 2026 (มุกกี้สั่ง): เอาปุ่มรับทราบออกทั้งหมดเพื่อความ minimal
+        #    แถบแจ้งเตือนผู้ป่วยรอนานยังขึ้นเต็มความกว้าง · เปิดคืนได้ที่ _ACK_ON
+        _ACK_ON = False
+        _can_ack = _ACK_ON and st.session_state.get('role') in ('exec', 'admin')
         for _i, (sty, t, _key) in enumerate(_items):
             _k = f"{op_date}|{_key}"
-            _at = _acks.get(_k)
-            _c_txt, _c_btn = st.columns([8.6, 1.4])
+            _at = _acks.get(_k) if _can_ack else None
+            if _can_ack:
+                _c_txt, _c_btn = st.columns([8.6, 1.4])
+            else:
+                _c_txt, _c_btn = st.container(), None
             with _c_txt:
                 st.markdown(
                     f'<div style="padding:8px 14px;border-radius:8px;font-size:17px;font-weight:600;'
                     f'margin-bottom:1rem;{_ack_sty if _at else sty}">{_esc(t)}'
                     + (f' | รับทราบแล้ว {_at} น.' if _at else '') + '</div>',
                     unsafe_allow_html=True)
+            if _c_btn is None:
+                continue
             with _c_btn:
                 if _at:
                     st.button("ยกเลิก", key=f"today_unack_{_i}_{_key}", width='stretch',
