@@ -5,7 +5,7 @@
 ⛔ HTML ทั้งก้อนต้องอยู่บรรทัดเดียว (st.markdown ตัด <style> ถ้ามีบรรทัดว่าง)
 """
 import json
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import streamlit as st
@@ -115,13 +115,24 @@ def _greeting(now: datetime):
     return _MOON, 'สวัสดีเวร On Call', 'เวร On Call นี้ขอให้เรียบร้อยและปลอดภัย'
 
 
+_TRYOUT_TXT = 'เริ่มทดลองใช้ 4 ธ.ค. 69 - 4 ม.ค. 70'
+_TRYOUT_END = date(2027, 1, 4)
+
+
 def render_form_head() -> None:
     now = datetime.now(_BKK)
     icon, title, sub = _greeting(now)
     date_txt = 'วัน%s ที่ %d %s %d' % (_TH_DAY[now.weekday()], now.day, _TH_MON[now.month - 1], now.year + 543)
     date_txt = date_txt.replace(' ที่ ', 'ที่ ')
+    # 🧪 28 พ.ย. 2026 (มุกกี้สั่ง): ป้ายช่วงทดลองใช้เหนือวันที่ · หายเองหลังวันสุดท้าย (4 ม.ค. 2570)
+    _tryout = ''
+    if now.date() <= _TRYOUT_END:
+        _tryout = ('<div style="display:inline-flex;align-items:center;gap:8px;background:#E3F2EE;color:#0B5E52;'
+                   'border-radius:999px;padding:6px 14px;font-size:15px;font-weight:600;margin-bottom:12px">'
+                   '<span style="width:8px;height:8px;border-radius:50%;background:#0B7A6C;display:inline-block"></span>'
+                   + _TRYOUT_TXT + '</div>')
     st.markdown(
         '<style>' + _FORM_CSS + '</style>'
-        '<div class="orl-g"><div class="orl-gd"><div class="orl-gi">' + icon + '</div>' + date_txt + '</div>'
+        '<div class="orl-g">' + _tryout + '<div class="orl-gd"><div class="orl-gi">' + icon + '</div>' + date_txt + '</div>'
         '<div class="orl-gt">' + title + '</div><div class="orl-gs">' + sub + '</div></div>',
         unsafe_allow_html=True)
